@@ -133,7 +133,6 @@ async function login() {
 async function register() {
   const accountName = document.getElementById("accountName").value.trim();
   const password = document.getElementById("password").value;
-  const faction = document.getElementById("factionSelect").value;
 
   if (!accountName) {
     alert("Please enter your account name!");
@@ -150,10 +149,6 @@ async function register() {
     return;
   }
 
-  if (!faction) {
-    alert("Please choose a faction!");
-    return;
-  }
 
   // Disable the register button to prevent double-clicking
   const registerBtn = document.getElementById("registerBtn");
@@ -169,7 +164,6 @@ async function register() {
       body: JSON.stringify({
         accountName: accountName,
         password: password,
-        faction: faction
       })
     });
 

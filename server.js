@@ -105,10 +105,10 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { accountName, password, faction } = req.body;
+    const { accountName, password } = req.body;
     
-    if (!accountName || !password || !faction) {
-      return res.status(400).json({ error: 'Account name, password, and faction are required' });
+    if (!accountName || !password ) {
+      return res.status(400).json({ error: 'Account name and password are required' });
     }
 
     // Check if account name already exists
@@ -163,7 +163,6 @@ app.post('/api/auth/register', async (req, res) => {
       body: JSON.stringify({
         id: authData.user.id,
         account_name: accountName,
-        faction: parseInt(faction, 10)
       })
     });
 
