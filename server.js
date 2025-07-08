@@ -80,7 +80,7 @@ app.post('/api/auth/login', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        email: `${accountName}@game.local`, // Use consistent email format
+        email: `${accountName}`, // Use consistent email format
         password: password
       })
     });
@@ -135,7 +135,7 @@ app.post('/api/auth/register', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        email: `${accountName}@game.local`, // Use consistent email format
+        email: `${accountName}`, // Use consistent email format
         password: password,
         options: {
           data: {
