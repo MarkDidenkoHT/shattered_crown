@@ -191,8 +191,28 @@ async function register() {
 }
 
 function redirectToGame() {
-  // You can redirect to your game page here
-  window.location.href = "/character_creation.html"
+  // Check if user needs character creation
+  const profile = getCurrentProfile();
+  if (profile && (!profile.gid || needsCharacterCreation())) {
+    window.location.href = "/character-creation";
+  } else {
+    window.location.href = "/game";
+  }
+}
+
+// Helper function to check if user needs character creation
+async function needsCharacterCreation() {
+  try {
+    const response = await authenticatedFetch(`/api/supabase/rest/v1/characters?player_id=eq.${getCurrentProfile().id}`);
+    if (response.ok) {
+      const characters = await response.json();
+      return characters.length < 3;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error checking character count:', error);
+    return true;
+  }
 }
 
 // Utility function to get current user profile

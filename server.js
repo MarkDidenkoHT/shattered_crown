@@ -309,7 +309,7 @@ app.post('/api/send-relocation-mail', upload.single('file'), async (req, res) =>
             return res.status(400).json({ error: 'No file uploaded' });
         }
         
-        const transporter = nodemailer.createTransporter({
+        const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: parseInt(process.env.SMTP_PORT, 10),
             secure: process.env.SMTP_SECURE === 'true',
@@ -338,6 +338,11 @@ app.post('/api/send-relocation-mail', upload.single('file'), async (req, res) =>
         console.error('Mail send error:', err);
         res.status(500).json({ error: 'Ошибка отправки письма' });
     }
+});
+
+// Add this route handler before the catch-all route
+app.get('/character-creation', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve your main HTML file for all other routes (SPA support)

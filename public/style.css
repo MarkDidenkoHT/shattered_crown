@@ -14,7 +14,7 @@
       overflow: hidden;
     }
 
-    .container {
+    .main-app-container {
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -293,3 +293,156 @@
         margin-bottom: 0.5rem;
       }
     }
+
+.character-creation-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.gods-grid, .races-grid, .classes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+.god-card, .race-card, .class-card {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #8B4513;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.god-card:hover, .race-card:hover, .class-card:hover {
+  border-color: #DAA520;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(218, 165, 32, 0.3);
+}
+
+.god-card h3, .race-card h3, .class-card h3 {
+  color: #DAA520;
+  margin-bottom: 10px;
+  font-size: 1.5em;
+}
+
+.god-card p, .race-card p, .class-card p {
+  color: #D4AF37;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+.base-stats, .stat-bonuses, .starting-abilities {
+  margin: 15px 0;
+  text-align: left;
+}
+
+.base-stats h4, .stat-bonuses h4, .starting-abilities h4 {
+  color: #DAA520;
+  margin-bottom: 8px;
+  font-size: 1.1em;
+}
+
+.stat-item, .ability-item {
+  background: rgba(139, 69, 19, 0.3);
+  padding: 5px 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  color: #F5DEB3;
+  font-size: 0.9em;
+}
+
+.character-summary {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+.summary-card {
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #DAA520;
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.summary-card h3 {
+  color: #DAA520;
+  margin-bottom: 20px;
+  font-size: 1.8em;
+}
+
+.summary-item {
+  margin: 15px 0;
+  color: #F5DEB3;
+  font-size: 1.1em;
+}
+
+.summary-item strong {
+  color: #DAA520;
+}
+
+.final-stats {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.final-stats h4 {
+  color: #DAA520;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.navigation-buttons {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.fantasy-button.secondary-btn {
+  background: linear-gradient(45deg, #8B4513, #A0522D);
+  border: 2px solid #8B4513;
+}
+
+.fantasy-button.secondary-btn:hover {
+  background: linear-gradient(45deg, #A0522D, #CD853F);
+  border-color: #A0522D;
+}
+
+.fantasy-button.confirm-btn {
+  background: linear-gradient(45deg, #228B22, #32CD32);
+  border: 2px solid #228B22;
+}
+
+.fantasy-button.confirm-btn:hover {
+  background: linear-gradient(45deg, #32CD32, #90EE90);
+  border-color: #32CD32;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .gods-grid, .races-grid, .classes-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .navigation-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .fantasy-button {
+    width: 100%;
+  }
+}
+    
