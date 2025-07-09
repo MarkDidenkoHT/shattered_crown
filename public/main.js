@@ -191,6 +191,7 @@ async function register() {
 }
 
 function redirectToGame() {
+  // You can redirect to your game page here
   window.location.href = "/character_creation.html"
 }
 
