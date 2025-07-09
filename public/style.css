@@ -1,71 +1,295 @@
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: 'Georgia', serif;
-  background-color: #1c1c1c;
-  color: #e0e0e0;
-}
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:wght@400;600&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-.container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-}
+    body, html {
+      height: 100%;
+      font-family: 'Crimson Text', serif;
+      background: linear-gradient(135deg, #1d140c 0%, #2a1f16 25%, #3d2914 50%, #1d140c 100%);
+      color: #c4975a;
+      overflow: hidden;
+    }
 
-.art-header {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: relative;
+    }
 
-.art-header h1 {
-  color: #d9463f;
-  font-size: 28px;
-  margin: 10px 0;
-}
+    /* Magical particles background */
+    .particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 1;
+    }
 
-.form-container {
-  width: 80%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+    .particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: #c4975a;
+      border-radius: 50%;
+      animation: float 8s ease-in-out infinite;
+      opacity: 0.4;
+      box-shadow: 0 0 6px rgba(196, 151, 90, 0.3);
+    }
 
-.form-container input, .form-container select {
-  padding: 10px;
-  border: 2px solid #d9463f;
-  background-color: #2a2a2a;
-  color: #e0e0e0;
-  border-radius: 5px;
-  font-size: 16px;
-}
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.4; }
+      50% { transform: translateY(-15px) rotate(180deg); opacity: 0.8; }
+    }
 
-.button-container {
-  width: 80%;
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 20px;
-}
+    .art-header {
+      height: 60%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(180deg, rgba(196,151,90,0.1) 0%, rgba(196,151,90,0.05) 50%, transparent 100%);
+    }
 
-.button-container button {
-  flex: 1;
-  margin: 0 5px;
-  padding: 12px;
-  font-size: 16px;
-  background-color: #d9463f;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
+    .crown-ornament {
+      width: 80px;
+      height: 60px;
+      margin-bottom: 1.5rem;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-.button-container button:hover {
-  background-color: #b33931;
-}
+    .crown-ornament::before {
+      content: '';
+      position: absolute;
+      width: 70px;
+      height: 40px;
+      border: 3px solid #c4975a;
+      border-radius: 8px 8px 0 0;
+      background: linear-gradient(145deg, rgba(196, 151, 90, 0.2), rgba(196, 151, 90, 0.1));
+    }
+
+    .crown-ornament::after {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 12px solid #c4975a;
+    }
+
+    .crown-gems {
+      position: absolute;
+      top: 8px;
+      display: flex;
+      gap: 8px;
+      z-index: 1;
+    }
+
+    .crown-gem {
+      width: 8px;
+      height: 8px;
+      background: #8b0000;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(139, 0, 0, 0.6);
+    }
+
+    .art-header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #c4975a;
+      text-shadow: 
+        2px 2px 0px #3d2914,
+        0 0 10px rgba(196, 151, 90, 0.3);
+      margin-bottom: 0.5rem;
+      text-align: center;
+      letter-spacing: 3px;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #b8b3a8;
+      font-style: italic;
+      text-align: center;
+      opacity: 0.9;
+    }
+
+    .login-section {
+      height: 40%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      position: relative;
+      z-index: 2;
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 350px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .input-group {
+      position: relative;
+    }
+
+    .form-container input {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      border: 2px solid #3d2914;
+      background: rgba(29, 20, 12, 0.8);
+      color: #c4975a;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-family: 'Crimson Text', serif;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+    }
+
+    .form-container input:focus {
+      outline: none;
+      border-color: #c4975a;
+      box-shadow: 
+        0 0 0 1px #c4975a,
+        inset 0 1px 3px rgba(0, 0, 0, 0.3);
+      background: rgba(29, 20, 12, 0.9);
+    }
+
+    .form-container input::placeholder {
+      color: #b8b3a8;
+      opacity: 0.7;
+    }
+
+    .button-container {
+      width: 100%;
+      max-width: 350px;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .fantasy-button {
+      flex: 1;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+      border: 2px solid #3d2914;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: linear-gradient(145deg, #2a1f16, #1d140c);
+      box-shadow: 
+        inset 0 1px 0 rgba(196, 151, 90, 0.2),
+        0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .fantasy-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(196, 151, 90, 0.1), transparent);
+      transition: left 0.6s ease;
+    }
+
+    .fantasy-button:hover::before {
+      left: 100%;
+    }
+
+    .login-btn {
+      color: #c4975a;
+      border-color: #c4975a;
+    }
+
+    .login-btn:hover {
+      background: linear-gradient(145deg, #3d2914, #2a1f16);
+      box-shadow: 
+        inset 0 1px 0 rgba(196, 151, 90, 0.3),
+        0 4px 8px rgba(0, 0, 0, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+      box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .register-btn {
+      color: #8b7355;
+      border-color: #5a4a3a;
+    }
+
+    .register-btn:hover {
+      background: linear-gradient(145deg, #3d2914, #2a1f16);
+      box-shadow: 
+        inset 0 1px 0 rgba(139, 115, 85, 0.3),
+        0 4px 8px rgba(0, 0, 0, 0.4);
+      transform: translateY(-1px);
+      border-color: #8b7355;
+    }
+
+    .register-btn:active {
+      transform: translateY(0);
+      box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 480px) {
+      .art-header h1 {
+        font-size: 2rem;
+      }
+      
+      .crown-symbol {
+        font-size: 3rem;
+      }
+      
+      .login-section {
+        padding: 1.5rem;
+      }
+      
+      .fantasy-button {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .button-container {
+        flex-direction: column;
+      }
+      
+      .fantasy-button {
+        margin-bottom: 0.5rem;
+      }
+    }
