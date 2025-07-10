@@ -1,11 +1,8 @@
-export async function loadModule(main, { currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, authenticatedFetch }) {
+export async function loadModule(main, { currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall }) {
   // Load gods from database
   let gods = [];
   try {
-    const response = await authenticatedFetch('/api/supabase/rest/v1/gods?select=id,name,description');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const response = await apiCall('/api/supabase/rest/v1/gods?select=id,name,description');
     gods = await response.json();
   } catch (error) {
     console.error('Error loading gods:', error);
@@ -370,7 +367,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
       const godName = gods.find(g => g.id == godId)?.name;
       
       if (confirm(`Are you sure you want to choose ${godName} as your deity? This choice cannot be changed later.`)) {
-        await selectGod(godId, godName, authenticatedFetch);
+        await selectGod(godId, godName, apiCall, getCurrentProfile);
       }
     });
   });
@@ -459,14 +456,16 @@ function initializeSlider() {
   });
 }
 
-async function selectGod(godId, godName, authenticatedFetch) {
+async function selectGod(godId, godName, apiCall, getCurrentProfile) {
   try {
     // Get current profile
-    const profile = JSON.parse(localStorage.getItem('profile'));
-    console.log('profile');
+    const profile = getCurrentProfile();
+    if (!profile) {
+      throw new Error('No profile found');
+    }
     
-    // Update profile with selected god
-    const response = await authenticatedFetch(`/api/supabase/rest/v1/profiles?id=eq.${profile.id}`, {
+    // Update profile with selected god using PATCH method
+    const response = await apiCall(`/api/supabase/rest/v1/profiles?id=eq.${profile.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -477,19 +476,19 @@ async function selectGod(godId, godName, authenticatedFetch) {
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const updatedProfiles = await response.json();
+    
+    if (!updatedProfiles || updatedProfiles.length === 0) {
+      throw new Error('Failed to update profile');
     }
-
-    const updatedProfile = await response.json();
     
     // Update local storage with new profile data
-    const newProfile = { ...profile, god: godId };
-    localStorage.setItem('profile', JSON.stringify(newProfile));
+    const updatedProfile = updatedProfiles[0];
+    localStorage.setItem('profile', JSON.stringify(updatedProfile));
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
     
-    // Load character creation module
+    // Load character creation module using the global loadModule function
     window.gameAuth.loadModule('character_creation');
     
   } catch (error) {
