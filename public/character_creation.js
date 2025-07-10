@@ -1,6 +1,5 @@
 // character_creation.js
 
-// Module-level variables to maintain state
 let _main;
 let _apiCall;
 let _getCurrentProfile;
@@ -12,14 +11,6 @@ let _currentCharacterIndex = 0; // 0-indexed for character 1, 2, 3
 let _selectedRace = null;
 let _selectedClass = null;
 
-/**
- * Entry point for the character creation module.
- * Initializes module variables and starts the character creation flow.
- * @param {HTMLElement} main - The main DOM element to render content into.
- * @param {object} authHelpers - Object containing authentication and API helper functions.
- * @param {function} authHelpers.apiCall - Function to make authenticated API calls.
- * @param {function} authHelpers.getCurrentProfile - Function to get the current user profile from local storage.
- */
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
     console.log('[CHAR_CREATE] --- Starting loadModule for Character Creation ---');
     _main = main;
@@ -51,9 +42,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     console.log('[CHAR_CREATE] --- loadModule for Character Creation finished ---');
 }
 
-/**
- * Manages the overall flow of character creation for multiple characters.
- */
 async function startCharacterCreationFlow() {
     console.log(`[CHAR_CREATE_FLOW] Starting flow for Character ${_currentCharacterIndex + 1} of 3.`);
     _selectedRace = null; // Reset selections for new character
@@ -69,9 +57,6 @@ async function startCharacterCreationFlow() {
     await fetchRacesAndRenderSelection();
 }
 
-/**
- * Fetches races based on the selected god and renders the race selection UI.
- */
 async function fetchRacesAndRenderSelection() {
     console.log(`[RACE_FETCH] Fetching races for God ID: ${_godId}...`);
     try {
@@ -91,9 +76,6 @@ async function fetchRacesAndRenderSelection() {
     }
 }
 
-/**
- * Renders the UI for selecting a character race.
- */
 function renderRaceSelection() {
     console.log(`[UI_RENDER] Rendering Race Selection for Character ${_currentCharacterIndex + 1}.`);
     _main.innerHTML = `
@@ -129,10 +111,6 @@ function renderRaceSelection() {
     });
 }
 
-/**
- * Handles the selection of a race, fetches corresponding classes, and renders class selection.
- * @param {number} raceId - The ID of the selected race.
- */
 async function handleRaceSelection(raceId) {
     _selectedRace = _races.find(r => r.id === raceId);
     if (!_selectedRace) {
@@ -165,9 +143,6 @@ async function handleRaceSelection(raceId) {
     }
 }
 
-/**
- * Renders the UI for selecting a character class.
- */
 function renderClassSelection() {
     console.log(`[UI_RENDER] Rendering Class Selection for Character ${_currentCharacterIndex + 1}.`);
     _main.innerHTML = `
@@ -222,10 +197,6 @@ function renderClassSelection() {
     });
 }
 
-/**
- * Handles the selection of a class and renders the character summary.
- * @param {number} classId - The ID of the selected class.
- */
 function handleClassSelection(classId) {
     _selectedClass = _classes.find(c => c.id === classId);
     if (!_selectedClass) {
@@ -237,9 +208,6 @@ function handleClassSelection(classId) {
     renderCharacterSummary();
 }
 
-/**
- * Renders a summary of the created character, including final stats and abilities.
- */
 function renderCharacterSummary() {
     console.log(`[UI_RENDER] Rendering Character Summary for Character ${_currentCharacterIndex + 1}.`);
 
@@ -286,12 +254,6 @@ function renderCharacterSummary() {
     });
 }
 
-/**
- * Calculates the final stats by combining base stats and class bonuses.
- * @param {object} baseStats - The base stats from the selected race.
- * @param {object} statBonuses - The stat bonuses from the selected class.
- * @returns {object} The combined final stats.
- */
 function calculateFinalStats(baseStats, statBonuses) {
     console.log('[STAT_CALC] Calculating final stats...');
     const finalStats = { ...baseStats }; // Start with race base stats
@@ -344,16 +306,10 @@ async function confirmCharacter() {
     }
 }
 
-/**
- * Creates the floating particles background.
- * Reused from god_selection.js.
- */
 function createParticles() {
     console.log('[PARTICLES] Creating particles...');
     const particlesContainer = _main.querySelector('.particles');
-    if (!particlesContainer) {
-        // If particles container doesn't exist, create it.
-        // This assumes .main-app-container is the parent and particles are a direct child.
+    if (!particlesContainer) {.
         const mainAppContainer = _main.querySelector('.main-app-container');
         if (mainAppContainer) {
             const newParticlesDiv = document.createElement('div');
@@ -382,10 +338,6 @@ function createParticles() {
     console.log('[PARTICLES] Particles created and appended.');
 }
 
-/**
- * Displays a custom message box instead of alert().
- * @param {string} message - The message to display.
- */
 function displayMessage(message) {
     console.log(`[MESSAGE] Displaying message: "${message}"`);
     const messageBox = document.createElement('div');
