@@ -191,8 +191,23 @@ async function register() {
 }
 
 function redirectToGame() {
-  // You can redirect to your game page here
-  window.location.href = "/game";
+  // Load the character creation module initially
+  loadModule("character_creation");
+}
+
+// Module loading system
+async function loadModule(name) {
+  const main = document.querySelector(".main-app-container");
+  main.innerHTML = "";
+
+  const module = await import(`./${name}.js`);
+  await module.loadModule(main, {
+    currentSession,
+    supabaseConfig,
+    getCurrentProfile,
+    getCurrentSession,
+    authenticatedFetch
+  });
 }
 
 // Utility function to get current user profile
@@ -245,5 +260,6 @@ window.gameAuth = {
   getCurrentProfile,
   getCurrentSession,
   logout,
-  authenticatedFetch
+  authenticatedFetch,
+  loadModule
 };
