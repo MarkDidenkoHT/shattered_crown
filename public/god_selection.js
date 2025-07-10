@@ -463,6 +463,7 @@ async function selectGod(godId, godName, authenticatedFetch) {
   try {
     // Get current profile
     const profile = JSON.parse(localStorage.getItem('profile'));
+    console.log('profile');
     
     // Update profile with selected god
     const response = await authenticatedFetch(`/api/supabase/rest/v1/profiles?id=eq.${profile.id}`, {
