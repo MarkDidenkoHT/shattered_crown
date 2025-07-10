@@ -4,18 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="stylesheet" href="style.css" />
-  <script src="main.js"></script>
   <title>Shattered Crown - Login</title>
+  <script src="main.js"></script>
 </head>
 <body>
   <div class="main-app-container">
     <div class="particles"></div>
-    
+
     <div class="art-header">
+      <div class="crown-symbol"></div>
       <h1>Shattered Crown</h1>
       <p class="subtitle">Enter the realm of legends</p>
     </div>
-    
+
     <div class="login-section">
       <div class="form-container">
         <div class="input-group">
@@ -25,7 +26,7 @@
           <input type="password" id="password" placeholder="Password" />
         </div>
       </div>
-      
+
       <div class="button-container">
         <button id="loginBtn" class="fantasy-button login-btn">Login</button>
         <button id="registerBtn" class="fantasy-button register-btn">Register</button>
@@ -37,7 +38,7 @@
     function createParticles() {
       const particles = document.querySelector('.particles');
       const particleCount = 20;
-      
+
       for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
