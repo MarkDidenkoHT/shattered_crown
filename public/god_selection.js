@@ -64,7 +64,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
               ${gods.map((god, index) => `
                 <div class="god-slide" data-god-id="${god.id}">
                   <div class="god-art-block">
-                    <img src="assets/art/${god.name.toLowerCase().replace(/\s+/g, '_')}." 
+                    <img src="assets/art/${god.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                          alt="${god.name}" 
                          class="god-art"
                          onerror="this.src='assets/art/placeholder.jpg'">
