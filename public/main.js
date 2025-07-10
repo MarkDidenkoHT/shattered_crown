@@ -115,8 +115,23 @@ async function login() {
       localStorage.setItem('session', JSON.stringify(data.session));
       localStorage.setItem('profile', JSON.stringify(data.profile));
       
-      alert("Login successful! Redirecting...");
-      redirectToGame();
+      // Check how many characters the player has
+      try {
+        const characterCount = await getPlayerCharacterCount(data.profile.id);
+        
+        if (characterCount < 3) {
+          alert("Login successful! Redirecting to character creation...");
+          loadModule("character_creation");
+        } else {
+          alert("Login successful! Redirecting to castle...");
+          loadModule("castle");
+        }
+      } catch (error) {
+        console.error('Error checking character count:', error);
+        // Default to character creation if there's an error
+        alert("Login successful! Redirecting...");
+        loadModule("character_creation");
+      }
     } else {
       alert(data.error || "Login failed!");
     }
@@ -149,7 +164,6 @@ async function register() {
     return;
   }
 
-
   // Disable the register button to prevent double-clicking
   const registerBtn = document.getElementById("registerBtn");
   registerBtn.disabled = true;
@@ -175,8 +189,9 @@ async function register() {
       localStorage.setItem('session', JSON.stringify(data.session));
       localStorage.setItem('profile', JSON.stringify(data.profile));
       
-      alert("Registration successful! Redirecting...");
-      redirectToGame();
+      // New users will have 0 characters, so go to character creation
+      alert("Registration successful! Redirecting to character creation...");
+      loadModule("character_creation");
     } else {
       alert(data.error || "Registration failed!");
     }
@@ -190,9 +205,44 @@ async function register() {
   }
 }
 
-function redirectToGame() {
-  // Load the character creation module initially
-  loadModule("character_creation");
+async function redirectToGame() {
+  // Check how many characters the player has
+  const profile = getCurrentProfile();
+  if (profile) {
+    try {
+      const characterCount = await getPlayerCharacterCount(profile.id);
+      
+      if (characterCount < 3) {
+        loadModule("character_creation");
+      } else {
+        loadModule("castle");
+      }
+    } catch (error) {
+      console.error('Error checking character count:', error);
+      // Default to character creation if there's an error
+      loadModule("character_creation");
+    }
+  } else {
+    // No profile found, default to character creation
+    loadModule("character_creation");
+  }
+}
+
+// Helper function to get player character count
+async function getPlayerCharacterCount(playerId) {
+  try {
+    const response = await authenticatedFetch(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=id`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const characters = await response.json();
+    return characters.length;
+  } catch (error) {
+    console.error('Error fetching character count:', error);
+    throw error;
+  }
 }
 
 // Module loading system
