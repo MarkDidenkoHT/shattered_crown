@@ -42,10 +42,10 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
           ${gods.map(god => `
             <div class="god-card" data-god-id="${god.id}">
               <div class="god-art-block">
-                <img src="assets/art/gods/${god.name.toLowerCase().replace(/\s+/g, '_')}.jpg" 
+                <img src="assets/art/${god.name.toLowerCase().replace(/\s+/g, '_')}.jpg" 
                      alt="${god.name}" 
                      class="god-art"
-                     onerror="this.src='assets/art/gods/placeholder.jpg'">
+                     onerror="this.src='assets/art/placeholder.jpg'">
               </div>
               <div class="god-info-block">
                 <h3 class="god-name">${god.name}</h3>
@@ -64,10 +64,10 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
               ${gods.map((god, index) => `
                 <div class="god-slide" data-god-id="${god.id}">
                   <div class="god-art-block">
-                    <img src="assets/art/gods/${god.name.toLowerCase().replace(/\s+/g, '_')}.jpg" 
+                    <img src="assets/art/${god.name.toLowerCase().replace(/\s+/g, '_')}.jpg" 
                          alt="${god.name}" 
                          class="god-art"
-                         onerror="this.src='assets/art/gods/placeholder.jpg'">
+                         onerror="this.src='assets/art/placeholder.jpg'">
                   </div>
                   <div class="god-info-block">
                     <h3 class="god-name">${god.name}</h3>
