@@ -29,7 +29,12 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     console.log('[CHAR_CREATE] Selected God ID:', _godId);
 
     // Ensure the main container is ready for content
-    _main.innerHTML = '';
+    _main.innerHTML = `
+        <div class="main-app-container">
+            <div class="particles"></div>
+            <div class="character-creation-section"></div>
+        </div>
+    `;
 
     // Add character creation specific styles
     addCharacterCreationStyles();
@@ -78,36 +83,164 @@ async function fetchRacesAndRenderSelection() {
 
 function renderRaceSelection() {
     console.log(`[UI_RENDER] Rendering Race Selection for Character ${_currentCharacterIndex + 1}.`);
-    _main.innerHTML = `
-        <div class="character-creation-section">
-            <div class="art-header">
-                <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Race</h1>
-                <p class="subtitle">Select the lineage that defines your champion's innate strengths.</p>
-            </div>
-            <div class="selection-grid">
-                ${_races.map(race => `
-                    <div class="selection-card" data-id="${race.id}" data-type="race">
-                        <h3 class="card-name">${race.name}</h3>
-                        <p class="card-description">${race.description}</p>
-                        <div class="stats-block">
-                            <h4>Base Stats:</h4>
-                            ${Object.entries(race.base_stats).map(([stat, value]) => `
-                                <p>${stat}: <span>${value}</span></p>
-                            `).join('')}
+    const section = _main.querySelector('.character-creation-section');
+    section.innerHTML = `
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Race</h1>
+            <p class="subtitle">Select the lineage that defines your champion's innate strengths.</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    ${_races.map(race => `
+                        <div class="selection-card" data-id="${race.id}" data-type="race">
+                            <div class="card-art-block">
+                                <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                     alt="${race.name}" 
+                                     class="card-art"
+                                     onerror="this.src='assets/art/placeholder.jpg'">
+                            </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">${race.name}</h3>
+                                <p class="card-description">${race.description}</p>
+                                <div class="stats-block">
+                                    <h4>Base Stats:</h4>
+                                    ${Object.entries(race.base_stats).map(([stat, value]) => `
+                                        <p>${stat}: <span>${value}</span></p>
+                                    `).join('')}
+                                </div>
+                                <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
+                            </div>
                         </div>
-                        <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        ${_races.map((race, index) => `
+                            <div class="selection-slide" data-id="${race.id}" data-type="race">
+                                <div class="card-art-block">
+                                    <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                         alt="${race.name}" 
+                                         class="card-art"
+                                         onerror="this.src='assets/art/placeholder.jpg'">
+                                </div>
+                                <div class="card-info-block">
+                                    <h3 class="card-name">${race.name}</h3>
+                                    <p class="card-description">${race.description}</p>
+                                    <div class="stats-block">
+                                        <h4>Base Stats:</h4>
+                                        ${Object.entries(race.base_stats).map(([stat, value]) => `
+                                            <p>${stat}: <span>${value}</span></p>
+                                        `).join('')}
+                                    </div>
+                                    <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                `).join('')}
+                </div>
+                
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        ${_races.map((_, index) => `
+                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                        `).join('')}
+                    </div>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                </div>
             </div>
         </div>
     `;
 
-    _main.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
+    // Initialize slider if on mobile
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    // Add event listeners to selection buttons
+    section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const raceId = parseInt(e.target.dataset.id);
             console.log(`[UI_EVENT] Race selected: ID ${raceId}`);
             handleRaceSelection(raceId);
         });
+    });
+}
+
+function initializeSelectionSlider() {
+    const sliderTrack = _main.querySelector('.slider-track');
+    const prevBtn = _main.querySelector('.prev-btn');
+    const nextBtn = _main.querySelector('.next-btn');
+    const dots = _main.querySelectorAll('.slider-dot');
+    
+    if (!sliderTrack || !prevBtn || !nextBtn) return;
+    
+    let currentSlide = 0;
+    const totalSlides = dots.length;
+    
+    function updateSlider() {
+        const translateX = -currentSlide * 100;
+        sliderTrack.style.transform = `translateX(${translateX}%)`;
+        
+        // Update dots
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentSlide);
+        });
+    }
+    
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % totalSlides;
+        updateSlider();
+    }
+    
+    function prevSlide() {
+        currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+        updateSlider();
+    }
+    
+    // Event listeners
+    nextBtn.addEventListener('click', nextSlide);
+    prevBtn.addEventListener('click', prevSlide);
+    
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            currentSlide = index;
+            updateSlider();
+        });
+    });
+    
+    // Touch/swipe support
+    let startX = 0;
+    let isDragging = false;
+    
+    sliderTrack.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        isDragging = true;
+    });
+    
+    sliderTrack.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+    });
+    
+    sliderTrack.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+        
+        if (Math.abs(diff) > 50) {
+            if (diff > 0) {
+                nextSlide();
+            } else {
+                prevSlide();
+            }
+        }
     });
 }
 
@@ -122,7 +255,6 @@ async function handleRaceSelection(raceId) {
 
     console.log(`[CLASS_FETCH] Fetching classes for Race ID: ${_selectedRace.id}...`);
     try {
-        // Note: 'faction_id' in classes table refers to 'race.id' as per design.
         const response = await _apiCall(`/api/supabase/rest/v1/classes?faction_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
         _classes = await response.json();
         console.log('[CLASS_FETCH] Classes fetched:', _classes);
@@ -145,44 +277,105 @@ async function handleRaceSelection(raceId) {
 
 function renderClassSelection() {
     console.log(`[UI_RENDER] Rendering Class Selection for Character ${_currentCharacterIndex + 1}.`);
-    _main.innerHTML = `
-        <div class="character-creation-section">
-            <div class="art-header">
-                <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Class</h1>
-                <p class="subtitle">Embrace a discipline that complements your race's heritage.</p>
-            </div>
-            <div class="selected-race-summary">
-                <h3>Selected Race: ${_selectedRace.name}</h3>
-                <p>${_selectedRace.description}</p>
-            </div>
-            <div class="selection-grid">
-                ${_classes.map(cls => `
-                    <div class="selection-card" data-id="${cls.id}" data-type="class">
-                        <h3 class="card-name">${cls.name}</h3>
-                        <p class="card-description">${cls.description}</p>
-                        <div class="stats-block">
-                            <h4>Stat Bonuses:</h4>
-                            ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
-                                <p>${stat}: <span>+${value}</span></p>
-                            `).join('')}
+    const section = _main.querySelector('.character-creation-section');
+    section.innerHTML = `
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Class</h1>
+            <p class="subtitle">Embrace a discipline that complements your race's heritage.</p>
+        </div>
+        <div class="selected-race-summary">
+            <h3>Selected Race: ${_selectedRace.name}</h3>
+            <p>${_selectedRace.description}</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    ${_classes.map(cls => `
+                        <div class="selection-card" data-id="${cls.id}" data-type="class">
+                            <div class="card-art-block">
+                                <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                     alt="${cls.name}" 
+                                     class="card-art"
+                                     onerror="this.src='assets/art/placeholder.jpg'">
+                            </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">${cls.name}</h3>
+                                <p class="card-description">${cls.description}</p>
+                                <div class="stats-block">
+                                    <h4>Stat Bonuses:</h4>
+                                    ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
+                                        <p>${stat}: <span>+${value}</span></p>
+                                    `).join('')}
+                                </div>
+                                <div class="abilities-block">
+                                    <h4>Starting Abilities:</h4>
+                                    <ul>
+                                        ${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
+                            </div>
                         </div>
-                        <div class="abilities-block">
-                            <h4>Starting Abilities:</h4>
-                            <ul>
-                                ${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
-                            </ul>
-                        </div>
-                        <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        ${_classes.map((cls, index) => `
+                            <div class="selection-slide" data-id="${cls.id}" data-type="class">
+                                <div class="card-art-block">
+                                    <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                         alt="${cls.name}" 
+                                         class="card-art"
+                                         onerror="this.src='assets/art/placeholder.jpg'">
+                                </div>
+                                <div class="card-info-block">
+                                    <h3 class="card-name">${cls.name}</h3>
+                                    <p class="card-description">${cls.description}</p>
+                                    <div class="stats-block">
+                                        <h4>Stat Bonuses:</h4>
+                                        ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
+                                            <p>${stat}: <span>+${value}</span></p>
+                                        `).join('')}
+                                    </div>
+                                    <div class="abilities-block">
+                                        <h4>Starting Abilities:</h4>
+                                        <ul>
+                                            ${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                    <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                `).join('')}
+                </div>
+                
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        ${_classes.map((_, index) => `
+                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                        `).join('')}
+                    </div>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                </div>
             </div>
-            <div class="confirm-return-buttons">
-                <button class="fantasy-button return-btn">Return to Race Selection</button>
-            </div>
+        </div>
+        <div class="confirm-return-buttons">
+            <button class="fantasy-button return-btn">Return to Race Selection</button>
         </div>
     `;
 
-    _main.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
+    // Initialize slider if on mobile
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    // Add event listeners to selection buttons
+    section.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const classId = parseInt(e.target.dataset.id);
             console.log(`[UI_EVENT] Class selected: ID ${classId}`);
@@ -190,7 +383,7 @@ function renderClassSelection() {
         });
     });
 
-    _main.querySelector('.return-btn').addEventListener('click', () => {
+    section.querySelector('.return-btn').addEventListener('click', () => {
         console.log('[UI_EVENT] Return to Race Selection clicked.');
         _selectedClass = null; // Clear class selection
         renderRaceSelection();
@@ -210,16 +403,22 @@ function handleClassSelection(classId) {
 
 function renderCharacterSummary() {
     console.log(`[UI_RENDER] Rendering Character Summary for Character ${_currentCharacterIndex + 1}.`);
-
+    const section = _main.querySelector('.character-creation-section');
     const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
 
-    _main.innerHTML = `
-        <div class="character-creation-section">
-            <div class="art-header">
-                <h1>Character ${_currentCharacterIndex + 1} of 3: Summary</h1>
-                <p class="subtitle">Review your champion's destiny before it is sealed.</p>
+    section.innerHTML = `
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Summary</h1>
+            <p class="subtitle">Review your champion's destiny before it is sealed.</p>
+        </div>
+        <div class="summary-card">
+            <div class="summary-art-block">
+                <img src="assets/art/characters/${_selectedRace.name.toLowerCase().replace(/\s+/g, '_')}_${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                     alt="${_selectedRace.name} ${_selectedClass.name}" 
+                     class="summary-art"
+                     onerror="this.src='assets/art/placeholder.jpg'">
             </div>
-            <div class="summary-card">
+            <div class="summary-info-block">
                 <h2>${_selectedRace.name} ${_selectedClass.name}</h2>
                 <p><strong>Race Description:</strong> ${_selectedRace.description}</p>
                 <p><strong>Class Description:</strong> ${_selectedClass.description}</p>
@@ -236,19 +435,19 @@ function renderCharacterSummary() {
                     </ul>
                 </div>
             </div>
-            <div class="confirm-return-buttons">
-                <button class="fantasy-button confirm-btn">Confirm Champion</button>
-                <button class="fantasy-button return-btn">Return to Class Selection</button>
-            </div>
+        </div>
+        <div class="confirm-return-buttons">
+            <button class="fantasy-button confirm-btn">Confirm Champion</button>
+            <button class="fantasy-button return-btn">Return to Class Selection</button>
         </div>
     `;
 
-    _main.querySelector('.confirm-btn').addEventListener('click', () => {
+    section.querySelector('.confirm-btn').addEventListener('click', () => {
         console.log('[UI_EVENT] Confirm Champion clicked.');
         confirmCharacter();
     });
 
-    _main.querySelector('.return-btn').addEventListener('click', () => {
+    section.querySelector('.return-btn').addEventListener('click', () => {
         console.log('[UI_EVENT] Return to Class Selection clicked from summary.');
         renderClassSelection();
     });
@@ -268,9 +467,6 @@ function calculateFinalStats(baseStats, statBonuses) {
     return finalStats;
 }
 
-/**
- * Saves the created character to the database and proceeds to the next step.
- */
 async function confirmCharacter() {
     console.log(`[CHAR_SAVE] Attempting to save Character ${_currentCharacterIndex + 1}...`);
     const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
@@ -309,23 +505,15 @@ async function confirmCharacter() {
 function createParticles() {
     console.log('[PARTICLES] Creating particles...');
     const particlesContainer = _main.querySelector('.particles');
-    if (!particlesContainer) {.
-        const mainAppContainer = _main.querySelector('.main-app-container');
-        if (mainAppContainer) {
-            const newParticlesDiv = document.createElement('div');
-            newParticlesDiv.className = 'particles';
-            mainAppContainer.prepend(newParticlesDiv); // Add as first child
-            console.log('[PARTICLES] .particles container created and added.');
-        } else {
-            console.warn('[PARTICLES] Could not find .main-app-container to add particles.');
-            return;
-        }
+    if (!particlesContainer) {
+        console.warn('[PARTICLES] Particles container not found.');
+        return;
     }
 
     // Clear existing particles if any
     particlesContainer.innerHTML = '';
 
-    const particleCount = 20; // Same count as god_selection
+    const particleCount = 20;
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
@@ -356,15 +544,12 @@ function displayMessage(message) {
     });
 }
 
-/**
- * Adds the CSS styles specific to the character creation module.
- */
 function addCharacterCreationStyles() {
     console.log('[STYLES] Adding character creation styles...');
     const styleId = 'character-creation-styles';
     if (document.getElementById(styleId)) {
         console.log('[STYLES] Styles already present, skipping re-addition.');
-        return; // Prevent re-adding styles if already present
+        return;
     }
 
     const style = document.createElement('style');
@@ -375,22 +560,24 @@ function addCharacterCreationStyles() {
             height: 100%;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* Align content to top */
+            justify-content: flex-start;
             align-items: center;
             padding: 2rem;
             position: relative;
             z-index: 2;
             background: rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(10px);
-            overflow-y: auto; /* Enable scrolling for content overflow */
+            overflow-y: auto;
         }
 
         .character-creation-section .art-header {
-            height: auto; /* Adjust height based on content */
+            height: auto;
             padding-bottom: 1.5rem;
-            background: none; /* Remove header background from god_selection */
+            background: none;
             border-bottom: 1px solid rgba(196, 151, 90, 0.2);
             margin-bottom: 2rem;
+            text-align: center;
+            width: 100%;
         }
 
         .character-creation-section .art-header h1 {
@@ -400,16 +587,29 @@ function addCharacterCreationStyles() {
 
         .character-creation-section .subtitle {
             font-size: 0.9rem;
+            color: #b8b3a8;
         }
 
-        /* Selection Grid for Races and Classes */
+        /* Selection Section */
+        .selection-section {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        /* Desktop View */
+        .desktop-view {
+            display: block;
+        }
+
+        .mobile-view {
+            display: none;
+        }
+
         .selection-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
             width: 100%;
-            max-width: 1200px;
-            margin-bottom: 2rem;
         }
 
         .selection-card {
@@ -422,11 +622,6 @@ function addCharacterCreationStyles() {
             box-shadow: 
                 inset 0 1px 0 rgba(196, 151, 90, 0.1),
                 0 2px 8px rgba(0, 0, 0, 0.3);
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
         }
 
         .selection-card:hover {
@@ -437,23 +632,46 @@ function addCharacterCreationStyles() {
                 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
+        .card-art-block {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card-art {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .selection-card:hover .card-art {
+            transform: scale(1.05);
+        }
+
+        .card-info-block {
+            padding: 1.5rem;
+        }
+
         .card-name {
             font-family: 'Cinzel', serif;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 600;
             color: #c4975a;
             margin-bottom: 0.75rem;
             text-shadow: 1px 1px 0px #3d2914;
             letter-spacing: 1px;
+            text-align: center;
         }
 
         .card-description {
             color: #b8b3a8;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             line-height: 1.4;
             margin-bottom: 1rem;
             font-style: italic;
-            flex-grow: 1; /* Allows description to take available space */
+            min-height: 3rem;
         }
 
         .stats-block, .abilities-block {
@@ -461,7 +679,6 @@ function addCharacterCreationStyles() {
             margin-top: 1rem;
             padding-top: 1rem;
             border-top: 1px solid rgba(196, 151, 90, 0.1);
-            text-align: left;
         }
 
         .stats-block h4, .abilities-block h4 {
@@ -502,7 +719,7 @@ function addCharacterCreationStyles() {
         }
 
         .select-btn {
-            margin-top: auto; /* Pushes button to the bottom */
+            margin-top: 1rem;
             width: 100%;
             padding: 0.75rem 1.5rem;
             font-size: 0.9rem;
@@ -531,14 +748,7 @@ function addCharacterCreationStyles() {
             transform: translateY(-1px);
         }
 
-        .select-btn:active {
-            transform: translateY(0);
-            box-shadow: 
-                inset 0 2px 4px rgba(0, 0, 0, 0.3),
-                0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Selected Race Summary (for Class Selection screen) */
+        /* Selected Race Summary */
         .selected-race-summary {
             background: rgba(29, 20, 12, 0.7);
             border: 2px solid #3d2914;
@@ -567,21 +777,38 @@ function addCharacterCreationStyles() {
             background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
             border: 2px solid #c4975a;
             border-radius: 8px;
-            padding: 2rem;
+            overflow: hidden;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
             box-shadow: 
                 inset 0 1px 0 rgba(196, 151, 90, 0.2),
                 0 4px 12px rgba(0, 0, 0, 0.4);
-            text-align: center;
             margin-bottom: 2rem;
         }
+
+        .summary-art-block {
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+        }
+
+        .summary-art {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .summary-info-block {
+            padding: 2rem;
+        }
+
         .summary-card h2 {
             font-family: 'Cinzel', serif;
             font-size: 1.8rem;
             color: #c4975a;
             margin-bottom: 1rem;
             text-shadow: 1px 1px 0px #3d2914;
+            text-align: center;
         }
         .summary-card p {
             color: #b8b3a8;
@@ -614,78 +841,126 @@ function addCharacterCreationStyles() {
             max-width: 250px;
         }
 
-        /* Custom Message Box (replacement for alert) */
-        .custom-message-box {
-            position: fixed;
-            top: 0;
-            left: 0;
+        /* Mobile View - Slider */
+        .selection-slider {
             width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-
-        .custom-message-box .message-content {
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.95), rgba(42, 31, 22, 0.9));
-            border: 2px solid #c4975a;
-            border-radius: 8px;
-            padding: 2rem;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             max-width: 400px;
-            width: 90%;
         }
 
-        .custom-message-box .message-content p {
-            color: #b8b3a8;
-            font-size: 1.1rem;
+        .slider-container {
+            overflow: hidden;
+            border-radius: 8px;
             margin-bottom: 1.5rem;
         }
 
-        .custom-message-box .message-ok-btn {
-            padding: 0.75rem 2rem;
-            font-size: 1rem;
-            border-color: #c4975a;
+        .slider-track {
+            display: flex;
+            transition: transform 0.4s ease;
+        }
+
+        .selection-slide {
+            min-width: 100%;
+            background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
+            border: 2px solid #3d2914;
+            border-radius: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+            box-shadow: 
+                inset 0 1px 0 rgba(196, 151, 90, 0.1),
+                0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .slider-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+        }
+
+        .slider-btn {
+            background: linear-gradient(145deg, #2a1f16, #1d140c);
+            border: 2px solid #c4975a;
             color: #c4975a;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+        }
+
+        .slider-btn:hover {
+            background: linear-gradient(145deg, #3d2914, #2a1f16);
+            transform: translateY(-1px);
+        }
+
+        .slider-dots {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .slider-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #3d2914;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .slider-dot.active {
+            background: #c4975a;
+            border-color: #c4975a;
+        }
+
+        .slider-dot:hover {
+            border-color: #c4975a;
         }
 
         /* Responsive Adjustments */
+        @media (max-width: 1024px) {
+            .selection-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
             .character-creation-section {
                 padding: 1rem;
             }
-            .character-creation-section .art-header h1 {
+            
+            .desktop-view {
+                display: none;
+            }
+            
+            .mobile-view {
+                display: block;
+            }
+            
+            .art-header h1 {
                 font-size: 1.8rem;
             }
-            .selection-grid {
-                grid-template-columns: 1fr; /* Single column on smaller screens */
-            }
-            .selection-card {
-                padding: 1rem;
-            }
-            .card-name {
-                font-size: 1.2rem;
-            }
-            .card-description {
-                font-size: 0.85rem;
-            }
-            .stats-block p, .abilities-block li {
-                font-size: 0.85rem;
-            }
+            
             .summary-card {
+                max-width: 100%;
+            }
+            
+            .summary-art-block {
+                height: 250px;
+            }
+            
+            .summary-info-block {
                 padding: 1.5rem;
             }
-            .summary-card h2 {
-                font-size: 1.5rem;
-            }
+            
             .confirm-return-buttons {
                 flex-direction: column;
                 gap: 1rem;
             }
+            
             .confirm-return-buttons .fantasy-button {
                 max-width: 100%;
             }
@@ -695,14 +970,17 @@ function addCharacterCreationStyles() {
             .character-creation-section .art-header h1 {
                 font-size: 1.5rem;
             }
+            
             .character-creation-section .subtitle {
                 font-size: 0.8rem;
             }
-            .custom-message-box .message-content {
-                padding: 1.5rem;
+            
+            .summary-art-block {
+                height: 200px;
             }
-            .custom-message-box .message-content p {
-                font-size: 1rem;
+            
+            .summary-card h2 {
+                font-size: 1.5rem;
             }
         }
     `;
