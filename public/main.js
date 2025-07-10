@@ -115,8 +115,16 @@ async function login() {
       localStorage.setItem('session', JSON.stringify(data.session));
       localStorage.setItem('profile', JSON.stringify(data.profile));
       
-      // Check how many characters the player has
+      // Check progression: God selection -> Character creation -> Castle
       try {
+        // First check if player has selected a god
+        if (!data.profile.god) {
+          alert("Login successful! Please select your god...");
+          loadModule("god_selection");
+          return;
+        }
+        
+        // Then check character count
         const characterCount = await getPlayerCharacterCount(data.profile.id);
         
         if (characterCount < 3) {
@@ -127,10 +135,10 @@ async function login() {
           loadModule("castle");
         }
       } catch (error) {
-        console.error('Error checking character count:', error);
-        // Default to character creation if there's an error
+        console.error('Error checking player progression:', error);
+        // Default to god selection if there's an error
         alert("Login successful! Redirecting...");
-        loadModule("character_creation");
+        loadModule("god_selection");
       }
     } else {
       alert(data.error || "Login failed!");
@@ -189,9 +197,9 @@ async function register() {
       localStorage.setItem('session', JSON.stringify(data.session));
       localStorage.setItem('profile', JSON.stringify(data.profile));
       
-      // New users will have 0 characters, so go to character creation
-      alert("Registration successful! Redirecting to character creation...");
-      loadModule("character_creation");
+      // New users will have no god selected, so go to god selection first
+      alert("Registration successful! Please select your god...");
+      loadModule("god_selection");
     } else {
       alert(data.error || "Registration failed!");
     }
@@ -206,10 +214,17 @@ async function register() {
 }
 
 async function redirectToGame() {
-  // Check how many characters the player has
+  // Check player progression: God selection -> Character creation -> Castle
   const profile = getCurrentProfile();
   if (profile) {
     try {
+      // First check if player has selected a god
+      if (!profile.god) {
+        loadModule("god_selection");
+        return;
+      }
+      
+      // Then check character count
       const characterCount = await getPlayerCharacterCount(profile.id);
       
       if (characterCount < 3) {
@@ -218,13 +233,13 @@ async function redirectToGame() {
         loadModule("castle");
       }
     } catch (error) {
-      console.error('Error checking character count:', error);
-      // Default to character creation if there's an error
-      loadModule("character_creation");
+      console.error('Error checking player progression:', error);
+      // Default to god selection if there's an error
+      loadModule("god_selection");
     }
   } else {
-    // No profile found, default to character creation
-    loadModule("character_creation");
+    // No profile found, default to god selection
+    loadModule("god_selection");
   }
 }
 
