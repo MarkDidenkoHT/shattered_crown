@@ -312,28 +312,30 @@ app.post('/api/supabase/*', verifyToken, async (req, res) => {
     }
 });
 
-// NEW: Supabase proxy for PATCH requests
+// Supabase proxy for PATCH requests
 app.patch('/api/supabase/*', verifyToken, async (req, res) => {
     try {
-        const supabasePath = req.params[0];
-        const url = `${process.env.SUPABASE_URL}/${supabasePath}`;
-        console.log(`[PATCH_PROXY] Forwarding PATCH request to Supabase: ${url}`); // Added log
-        console.log(`[PATCH_PROXY] Request body:`, req.body); // Added log
+        const supabasePath = req.params[0]; // e.g., 'rest/v1/profiles'
+        const queryString = req.url.split('?')[1] || ''; // Extract query string if present
+        const url = `${process.env.SUPABASE_URL}/${supabasePath}${queryString ? '?' + queryString : ''}`; // Reconstruct with query string
+
+        console.log(`[PATCH_PROXY] Forwarding PATCH request to Supabase: ${url}`); // Updated log
+        console.log(`[PATCH_PROXY] Request body:`, req.body);
 
         const response = await fetch(url, {
-            method: 'PATCH', // CRUCIAL: Ensure this is 'PATCH'
+            method: 'PATCH',
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`, // See note below about this authorization header
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`, // Or your preferred RLS approach
                 'Content-Type': 'application/json',
-                'Prefer': 'return=representation' // Get the updated record back
+                'Prefer': 'return=representation'
             },
             body: JSON.stringify(req.body)
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error(`[PATCH_PROXY] Supabase returned error status ${response.status}:`, errorData); // Added log
+            console.error(`[PATCH_PROXY] Supabase returned error status ${response.status}:`, errorData);
             return res.status(response.status).json({
                 error: errorData.message || `HTTP error! status: ${response.status}`
             });
@@ -341,7 +343,7 @@ app.patch('/api/supabase/*', verifyToken, async (req, res) => {
 
         const data = await response.json();
         res.json(data);
-        console.log(`[PATCH_PROXY] Supabase PATCH response data:`, data); // Added log
+        console.log(`[PATCH_PROXY] Supabase PATCH response data:`, data);
     } catch (error) {
         console.error('[PATCH_PROXY] Supabase proxy error:', error);
         res.status(500).json({ error: 'Internal server error' });
