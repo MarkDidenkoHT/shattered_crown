@@ -1,15 +1,33 @@
 export async function loadModule(main, { currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall }) {
+  // Console log to indicate the start of the module loading process
+  console.log('--- Starting loadModule function ---');
+  console.log('Parameters received by loadModule:', { main, currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall: typeof apiCall });
+
   // Load gods from database
   let gods = [];
+  console.log('Attempting to load gods from the database...');
   try {
+    // Console log before the API call for gods
+    console.log('Making API call to:', '/api/supabase/rest/v1/gods?select=id,name,description');
     const response = await apiCall('/api/supabase/rest/v1/gods?select=id,name,description');
+    // Console log after successful API response
+    console.log('API call for gods successful. Response status:', response.status);
     gods = await response.json();
+    // Console log the loaded gods data
+    console.log('Gods data loaded:', gods);
+    if (gods.length === 0) {
+      console.warn('No gods found in the database. The display might be empty.');
+    }
   } catch (error) {
     console.error('Error loading gods:', error);
     alert('Failed to load gods. Please try again.');
+    // Console log that the module loading is aborted due to error
+    console.log('--- loadModule function aborted due to error ---');
     return;
   }
 
+  // Console log before rendering the HTML content
+  console.log('Constructing HTML content with loaded gods data...');
   main.innerHTML = `
     <div class="main-app-container">
       <div class="particles"></div>
@@ -20,7 +38,6 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
       </div>
       
       <div class="god-selection-section">
-        <!-- Desktop view -->
         <div class="gods-container desktop-view">
           ${gods.map(god => `
             <div class="god-card" data-god-id="${god.id}">
@@ -41,7 +58,6 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
           `).join('')}
         </div>
 
-        <!-- Mobile view -->
         <div class="gods-slider mobile-view">
           <div class="slider-container">
             <div class="slider-track" style="transform: translateX(0%)">
@@ -78,8 +94,11 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
       </div>
     </div>
   `;
+  // Console log after HTML content has been set
+  console.log('HTML content rendered to main element.');
 
   // Add god selection styles
+  console.log('Adding god selection styles to document head...');
   const style = document.createElement('style');
   style.textContent = `
     .god-selection-section {
@@ -352,22 +371,31 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
     }
   `;
   document.head.appendChild(style);
+  console.log('God selection styles appended to document head.');
 
   // Create floating particles
+  console.log('Calling createParticles function...');
   createParticles();
 
   // Initialize slider functionality
+  console.log('Calling initializeSlider function...');
   initializeSlider();
 
   // Add event listeners to god selection buttons
   const selectButtons = main.querySelectorAll('.select-god-btn');
+  console.log(`Found ${selectButtons.length} god selection buttons. Adding event listeners...`);
   selectButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       const godId = e.target.dataset.godId;
       const godName = gods.find(g => g.id == godId)?.name;
+      // Console log when a god selection button is clicked
+      console.log(`God selection button clicked for God ID: ${godId}, Name: ${godName}`);
       
       if (confirm(`Are you sure you want to choose ${godName} as your deity? This choice cannot be changed later.`)) {
+        console.log(`User confirmed selection of ${godName}. Calling selectGod function...`);
         await selectGod(godId, godName, apiCall, getCurrentProfile);
+      } else {
+        console.log(`User cancelled selection of ${godName}.`);
       }
     });
   });
@@ -375,51 +403,69 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
   // Add button click effects
   selectButtons.forEach(button => {
     button.addEventListener('click', function() {
+      // Console log for visual click effect
+      console.log(`Applying visual click effect to button with God ID: ${this.dataset.godId}`);
       this.style.transform = 'scale(0.95)';
       setTimeout(() => {
         this.style.transform = '';
       }, 150);
     });
   });
+  console.log('--- loadModule function finished ---');
 }
 
 function initializeSlider() {
+  console.log('--- Starting initializeSlider function ---');
   const sliderTrack = document.querySelector('.slider-track');
   const prevBtn = document.querySelector('.prev-btn');
   const nextBtn = document.querySelector('.next-btn');
   const dots = document.querySelectorAll('.slider-dot');
   
-  if (!sliderTrack || !prevBtn || !nextBtn) return;
+  if (!sliderTrack || !prevBtn || !nextBtn) {
+    console.warn('Slider elements not found. Skipping slider initialization.');
+    console.log('--- initializeSlider function aborted ---');
+    return;
+  }
   
   let currentSlide = 0;
   const totalSlides = dots.length;
+  console.log(`Slider initialized with ${totalSlides} slides.`);
   
   function updateSlider() {
     const translateX = -currentSlide * 100;
     sliderTrack.style.transform = `translateX(${translateX}%)`;
+    console.log(`Slider updated. Current slide: ${currentSlide}, translateX: ${translateX}%`);
     
     // Update dots
     dots.forEach((dot, index) => {
-      dot.classList.toggle('active', index === currentSlide);
+      const isActive = index === currentSlide;
+      dot.classList.toggle('active', isActive);
+      // console.log(`Dot ${index} active state: ${isActive}`); // Can be too verbose, uncomment if needed
     });
   }
   
   function nextSlide() {
+    const previousSlide = currentSlide;
     currentSlide = (currentSlide + 1) % totalSlides;
+    console.log(`Next slide triggered. Changing from ${previousSlide} to ${currentSlide}`);
     updateSlider();
   }
   
   function prevSlide() {
+    const previousSlide = currentSlide;
     currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+    console.log(`Previous slide triggered. Changing from ${previousSlide} to ${currentSlide}`);
     updateSlider();
   }
   
   // Event listeners
+  console.log('Adding event listeners for slider buttons and dots.');
   nextBtn.addEventListener('click', nextSlide);
   prevBtn.addEventListener('click', prevSlide);
   
   dots.forEach((dot, index) => {
     dot.addEventListener('click', () => {
+      console.log(`Slider dot clicked for slide: ${index}`);
       currentSlide = index;
       updateSlider();
     });
@@ -428,15 +474,18 @@ function initializeSlider() {
   // Touch/swipe support
   let startX = 0;
   let isDragging = false;
+  console.log('Adding touch/swipe event listeners for slider.');
   
   sliderTrack.addEventListener('touchstart', (e) => {
     startX = e.touches[0].clientX;
     isDragging = true;
+    console.log(`Touch start detected. startX: ${startX}`);
   });
   
   sliderTrack.addEventListener('touchmove', (e) => {
     if (!isDragging) return;
-    e.preventDefault();
+    e.preventDefault(); // Prevent scrolling while swiping
+    // console.log('Touch move detected (dragging).'); // Can be too verbose
   });
   
   sliderTrack.addEventListener('touchend', (e) => {
@@ -445,38 +494,51 @@ function initializeSlider() {
     
     const endX = e.changedTouches[0].clientX;
     const diff = startX - endX;
+    console.log(`Touch end detected. endX: ${endX}, difference: ${diff}`);
     
     if (Math.abs(diff) > 50) {
       if (diff > 0) {
+        console.log('Swipe detected: Swiping left (next slide).');
         nextSlide();
       } else {
+        console.log('Swipe detected: Swiping right (previous slide).');
         prevSlide();
       }
+    } else {
+      console.log('Swipe difference too small, no slide change.');
     }
   });
+  console.log('--- initializeSlider function finished ---');
 }
 
 async function selectGod(godId, godName, apiCall, getCurrentProfile) {
+  console.log(`--- Starting selectGod function for God ID: ${godId}, Name: ${godName} ---`);
   try {
     // Get current profile
+    console.log('Attempting to get current user profile...');
     const profile = getCurrentProfile();
     if (!profile) {
       throw new Error('No profile found');
     }
+    console.log('Current profile retrieved:', profile);
     
     // Update profile with selected god using PATCH method
-    const response = await apiCall(`/api/supabase/rest/v1/profiles?id=eq.${profile.id}`, {
+    const apiUrl = `/api/supabase/rest/v1/profiles?id=eq.${profile.id}`;
+    const requestBody = { god: godId };
+    console.log(`Preparing to update profile. API URL: ${apiUrl}, Request Body:`, requestBody);
+
+    const response = await apiCall(apiUrl, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       },
-      body: JSON.stringify({
-        god: godId
-      })
+      body: JSON.stringify(requestBody)
     });
 
+    console.log('API call to update profile made. Response status:', response.status);
     const updatedProfiles = await response.json();
+    console.log('API response for profile update:', updatedProfiles);
     
     if (!updatedProfiles || updatedProfiles.length === 0) {
       throw new Error('Failed to update profile');
@@ -484,27 +546,40 @@ async function selectGod(godId, godName, apiCall, getCurrentProfile) {
     
     // Update local storage with new profile data
     const updatedProfile = updatedProfiles[0];
+    console.log('Profile successfully updated in database. New profile data:', updatedProfile);
     localStorage.setItem('profile', JSON.stringify(updatedProfile));
+    console.log('Updated profile saved to local storage.');
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
     
     // Load character creation module using the global loadModule function
+    console.log('Attempting to load character_creation module...');
     window.gameAuth.loadModule('character_creation');
+    console.log('Character creation module load initiated.');
     
   } catch (error) {
     console.error('Error selecting god:', error);
     alert('Failed to select god. Please try again.');
+  } finally {
+    console.log('--- selectGod function finished ---');
   }
 }
 
 function createParticles() {
+  console.log('--- Starting createParticles function ---');
   const particles = document.querySelector('.particles');
-  if (!particles) return;
+  if (!particles) {
+    console.warn('Particles container not found. Skipping particle creation.');
+    console.log('--- createParticles function aborted ---');
+    return;
+  }
   
   // Clear existing particles
   particles.innerHTML = '';
+  console.log('Cleared existing particles.');
   
   const particleCount = 20;
+  console.log(`Creating ${particleCount} particles...`);
   
   for (let i = 0; i < particleCount; i++) {
     const particle = document.createElement('div');
@@ -515,4 +590,6 @@ function createParticles() {
     particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
     particles.appendChild(particle);
   }
+  console.log('Particles created and appended to the DOM.');
+  console.log('--- createParticles function finished ---');
 }
