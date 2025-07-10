@@ -193,6 +193,42 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// NEW: Supabase proxy for PATCH requests
+app.patch('/api/supabase/*', verifyToken, async (req, res) => {
+    try {
+        const supabasePath = req.params[0];
+        const url = `${process.env.SUPABASE_URL}/${supabasePath}`;
+        console.log(`[SERVER PATCH PROXY] Forwarding PATCH request to Supabase: ${url}`); // Add this log
+        console.log(`[SERVER PATCH PROXY] Request body:`, req.body); // Add this log
+
+        const response = await fetch(url, {
+            method: 'PATCH', // Crucial: ensure method is PATCH
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`, // Note: Supabase's REST API might expect a JWT from the user, not the anon key, for row-level security. If you encounter permission issues later, this might need to be `Bearer ${req.user.access_token}` if `verifyToken` attaches it, or `Bearer ${token}`. For profile updates, typically the RLS should allow the user to update their own profile using their JWT. For simplicity and consistency with your other proxies, let's keep it this way for now.
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation' // Important for getting the updated record back
+            },
+            body: JSON.stringify(req.body)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error(`[SERVER PATCH PROXY] Supabase returned error status ${response.status}:`, errorData); // Add this log
+            return res.status(response.status).json({
+                error: errorData.message || `HTTP error! status: ${response.status}`
+            });
+        }
+
+        const data = await response.json();
+        console.log(`[SERVER PATCH PROXY] Supabase PATCH response data:`, data); // Add this log
+        res.json(data);
+    } catch (error) {
+        console.error('[SERVER PATCH PROXY] Supabase proxy error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get user profile
 app.get('/api/profile', verifyToken, async (req, res) => {
   try {
