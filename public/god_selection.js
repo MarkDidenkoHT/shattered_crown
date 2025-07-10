@@ -7,9 +7,9 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
   let gods = [];
   console.log('Attempting to load gods from the database...');
   try {
-    // Console log before the API call for gods
-    console.log('Making API call to:', '/api/supabase/rest/v1/gods?select=id,name,description');
-    const response = await apiCall('/api/supabase/rest/v1/gods?select=id,name,description');
+    // Console log before the API call for gods - now including image column
+    console.log('Making API call to:', '/api/supabase/rest/v1/gods?select=id,name,description,image');
+    const response = await apiCall('/api/supabase/rest/v1/gods?select=id,name,description,image');
     // Console log after successful API response
     console.log('API call for gods successful. Response status:', response.status);
     gods = await response.json();
@@ -42,7 +42,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
           ${gods.map(god => `
             <div class="god-card" data-god-id="${god.id}">
               <div class="god-art-block">
-                <img src="assets/art/${god.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                <img src="assets/art/${god.image}.png" 
                      alt="${god.name}" 
                      class="god-art"
                      onerror="this.src='assets/art/placeholder.jpg'">
@@ -64,7 +64,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
               ${gods.map((god, index) => `
                 <div class="god-slide" data-god-id="${god.id}">
                   <div class="god-art-block">
-                    <img src="assets/art/${god.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                    <img src="assets/art/${god.image}.png" 
                          alt="${god.name}" 
                          class="god-art"
                          onerror="this.src='assets/art/placeholder.jpg'">
