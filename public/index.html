@@ -4,16 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="stylesheet" href="style.css" />
-  <title>Shattered Crown - Login</title>
   <script src="main.js"></script>
+  <title>Shattered Crown - Login</title>
 </head>
-
 <body>
   <div class="main-app-container">
     <div class="particles"></div>
     
     <div class="art-header">
-      <div class="crown-symbol"></div>
       <h1>Shattered Crown</h1>
       <p class="subtitle">Enter the realm of legends</p>
     </div>
@@ -34,7 +32,6 @@
       </div>
     </div>
   </div>
-
   <script>
     // Create floating particles
     function createParticles() {
@@ -51,7 +48,6 @@
         particles.appendChild(particle);
       }
     }
-
     // Button click effects
     document.getElementById('loginBtn').addEventListener('click', function() {
       this.style.transform = 'scale(0.95)';
@@ -59,14 +55,12 @@
         this.style.transform = '';
       }, 150);
     });
-
     document.getElementById('registerBtn').addEventListener('click', function() {
       this.style.transform = 'scale(0.95)';
       setTimeout(() => {
         this.style.transform = '';
       }, 150);
     });
-
     // Initialize particles when page loads
     window.addEventListener('load', createParticles);
   </script>
