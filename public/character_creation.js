@@ -777,7 +777,7 @@ function addCharacterCreationStyles() {
             background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
             border: 2px solid #c4975a;
             border-radius: 8px;
-            overflow: hidden;
+            overflow: auto;
             width: 100%;
             max-width: 800px;
             box-shadow: 
