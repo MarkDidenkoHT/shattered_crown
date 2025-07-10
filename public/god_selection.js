@@ -102,7 +102,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
   const style = document.createElement('style');
   style.textContent = `
     .god-selection-section {
-      height: 60%;
+      height: 90%;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -149,7 +149,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
 
     .god-art-block {
       width: 100%;
-      height: 200px;
+      height: 400px;
       overflow: hidden;
       position: relative;
     }
@@ -270,7 +270,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
     }
 
     .god-slide .god-art-block {
-      height: 250px;
+      height: 400px;
     }
 
     .god-slide .god-info-block {
@@ -352,9 +352,13 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
       }
     }
 
+    .art-header {
+      height: 10%;
+    }
+
     @media (max-width: 480px) {
       .god-slide .god-art-block {
-        height: 200px;
+        height: 400px;
       }
       
       .god-slide .god-info-block {
