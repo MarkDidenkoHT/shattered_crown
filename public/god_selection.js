@@ -18,35 +18,65 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
       <div class="particles"></div>
       
       <div class="art-header">
-        <div class="crown-ornament">
-          <div class="crown-gems">
-            <div class="crown-gem"></div>
-            <div class="crown-gem"></div>
-            <div class="crown-gem"></div>
-          </div>
-        </div>
         <h1>Choose Your Deity</h1>
         <p class="subtitle">Select the divine power that will guide your destiny</p>
       </div>
       
       <div class="god-selection-section">
-        <div class="gods-container">
+        <!-- Desktop view -->
+        <div class="gods-container desktop-view">
           ${gods.map(god => `
             <div class="god-card" data-god-id="${god.id}">
-              <div class="god-header">
+              <div class="god-art-block">
+                <img src="assets/art/gods/${god.name.toLowerCase().replace(/\s+/g, '_')}.jpg" 
+                     alt="${god.name}" 
+                     class="god-art"
+                     onerror="this.src='assets/art/gods/placeholder.jpg'">
+              </div>
+              <div class="god-info-block">
                 <h3 class="god-name">${god.name}</h3>
-                <div class="god-divider"></div>
-              </div>
-              <div class="god-description">
-                <p>${god.description}</p>
-              </div>
-              <div class="god-select-overlay">
+                <p class="god-description">${god.description}</p>
                 <button class="fantasy-button select-god-btn" data-god-id="${god.id}">
                   Choose ${god.name}
                 </button>
               </div>
             </div>
           `).join('')}
+        </div>
+
+        <!-- Mobile view -->
+        <div class="gods-slider mobile-view">
+          <div class="slider-container">
+            <div class="slider-track" style="transform: translateX(0%)">
+              ${gods.map((god, index) => `
+                <div class="god-slide" data-god-id="${god.id}">
+                  <div class="god-art-block">
+                    <img src="assets/art/gods/${god.name.toLowerCase().replace(/\s+/g, '_')}.jpg" 
+                         alt="${god.name}" 
+                         class="god-art"
+                         onerror="this.src='assets/art/gods/placeholder.jpg'">
+                  </div>
+                  <div class="god-info-block">
+                    <h3 class="god-name">${god.name}</h3>
+                    <p class="god-description">${god.description}</p>
+                    <button class="fantasy-button select-god-btn" data-god-id="${god.id}">
+                      Choose ${god.name}
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="slider-controls">
+            <button class="slider-btn prev-btn" aria-label="Previous god">&lt;</button>
+            <div class="slider-dots">
+              ${gods.map((_, index) => `
+                <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+              `).join('')}
+            </div>
+            <button class="slider-btn next-btn" aria-label="Next god">&gt;</button>
+          </div>
         </div>
       </div>
     </div>
@@ -56,56 +86,41 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
   const style = document.createElement('style');
   style.textContent = `
     .god-selection-section {
-      height: 40%;
+      height: 60%;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
+      justify-content: center;
       align-items: center;
       padding: 2rem;
       position: relative;
       z-index: 2;
       background: rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(10px);
-      overflow-y: auto;
     }
 
-    .gods-container {
-      width: 100%;
-      max-width: 900px;
+    /* Desktop View */
+    .desktop-view {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
-      margin-bottom: 2rem;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .mobile-view {
+      display: none;
     }
 
     .god-card {
       background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
       border: 2px solid #3d2914;
       border-radius: 8px;
-      padding: 1.5rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
       overflow: hidden;
+      transition: all 0.3s ease;
       backdrop-filter: blur(5px);
       box-shadow: 
         inset 0 1px 0 rgba(196, 151, 90, 0.1),
         0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .god-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(196, 151, 90, 0.05), transparent);
-      transition: left 0.6s ease;
-    }
-
-    .god-card:hover::before {
-      left: 100%;
     }
 
     .god-card:hover {
@@ -116,55 +131,51 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
         0 4px 12px rgba(0, 0, 0, 0.4);
     }
 
-    .god-header {
-      margin-bottom: 1rem;
+    .god-art-block {
+      width: 100%;
+      height: 200px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .god-art {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .god-card:hover .god-art {
+      transform: scale(1.05);
+    }
+
+    .god-info-block {
+      padding: 1.5rem;
+      text-align: center;
     }
 
     .god-name {
       font-family: 'Cinzel', serif;
-      font-size: 1.4rem;
+      font-size: 1.2rem;
       font-weight: 600;
       color: #c4975a;
-      text-align: center;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
       text-shadow: 1px 1px 0px #3d2914;
       letter-spacing: 1px;
     }
 
-    .god-divider {
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #c4975a, transparent);
-      margin: 0 auto;
-      opacity: 0.6;
-    }
-
     .god-description {
-      margin-bottom: 1.5rem;
-      min-height: 4rem;
-    }
-
-    .god-description p {
       color: #b8b3a8;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       line-height: 1.4;
-      text-align: center;
+      margin-bottom: 1.25rem;
       font-style: italic;
-    }
-
-    .god-select-overlay {
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      text-align: center;
-    }
-
-    .god-card:hover .god-select-overlay {
-      opacity: 1;
+      min-height: 3rem;
     }
 
     .select-god-btn {
       padding: 0.75rem 1.5rem;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-family: 'Cinzel', serif;
       font-weight: 600;
       border: 2px solid #c4975a;
@@ -180,6 +191,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
       box-shadow: 
         inset 0 1px 0 rgba(196, 151, 90, 0.2),
         0 2px 4px rgba(0, 0, 0, 0.3);
+      width: 100%;
     }
 
     .select-god-btn::before {
@@ -212,31 +224,133 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
         0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
-    .select-god-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
+    /* Mobile View */
+    .gods-slider {
+      width: 100%;
+      max-width: 400px;
     }
 
-    /* Mobile responsiveness */
+    .slider-container {
+      overflow: hidden;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .slider-track {
+      display: flex;
+      transition: transform 0.4s ease;
+    }
+
+    .god-slide {
+      min-width: 100%;
+      background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
+      border: 2px solid #3d2914;
+      border-radius: 8px;
+      overflow: hidden;
+      backdrop-filter: blur(5px);
+      box-shadow: 
+        inset 0 1px 0 rgba(196, 151, 90, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .god-slide .god-art-block {
+      height: 250px;
+    }
+
+    .god-slide .god-info-block {
+      padding: 1.5rem;
+    }
+
+    .slider-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1rem;
+    }
+
+    .slider-btn {
+      background: linear-gradient(145deg, #2a1f16, #1d140c);
+      border: 2px solid #c4975a;
+      color: #c4975a;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+    }
+
+    .slider-btn:hover {
+      background: linear-gradient(145deg, #3d2914, #2a1f16);
+      transform: translateY(-1px);
+    }
+
+    .slider-dots {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .slider-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid #3d2914;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .slider-dot.active {
+      background: #c4975a;
+      border-color: #c4975a;
+    }
+
+    .slider-dot:hover {
+      border-color: #c4975a;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .desktop-view {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
     @media (max-width: 768px) {
-      .gods-container {
-        grid-template-columns: 1fr;
-        max-width: 400px;
+      .desktop-view {
+        display: none;
+      }
+      
+      .mobile-view {
+        display: block;
       }
       
       .god-selection-section {
         padding: 1.5rem;
       }
+      
+      .art-header h1 {
+        font-size: 2rem;
+      }
     }
 
     @media (max-width: 480px) {
-      .god-card {
+      .god-slide .god-art-block {
+        height: 200px;
+      }
+      
+      .god-slide .god-info-block {
         padding: 1.25rem;
       }
       
       .god-name {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+      }
+      
+      .god-description {
+        font-size: 0.85rem;
       }
     }
   `;
@@ -244,6 +358,9 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
 
   // Create floating particles
   createParticles();
+
+  // Initialize slider functionality
+  initializeSlider();
 
   // Add event listeners to god selection buttons
   const selectButtons = main.querySelectorAll('.select-god-btn');
@@ -266,6 +383,79 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
         this.style.transform = '';
       }, 150);
     });
+  });
+}
+
+function initializeSlider() {
+  const sliderTrack = document.querySelector('.slider-track');
+  const prevBtn = document.querySelector('.prev-btn');
+  const nextBtn = document.querySelector('.next-btn');
+  const dots = document.querySelectorAll('.slider-dot');
+  
+  if (!sliderTrack || !prevBtn || !nextBtn) return;
+  
+  let currentSlide = 0;
+  const totalSlides = dots.length;
+  
+  function updateSlider() {
+    const translateX = -currentSlide * 100;
+    sliderTrack.style.transform = `translateX(${translateX}%)`;
+    
+    // Update dots
+    dots.forEach((dot, index) => {
+      dot.classList.toggle('active', index === currentSlide);
+    });
+  }
+  
+  function nextSlide() {
+    currentSlide = (currentSlide + 1) % totalSlides;
+    updateSlider();
+  }
+  
+  function prevSlide() {
+    currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+    updateSlider();
+  }
+  
+  // Event listeners
+  nextBtn.addEventListener('click', nextSlide);
+  prevBtn.addEventListener('click', prevSlide);
+  
+  dots.forEach((dot, index) => {
+    dot.addEventListener('click', () => {
+      currentSlide = index;
+      updateSlider();
+    });
+  });
+  
+  // Touch/swipe support
+  let startX = 0;
+  let isDragging = false;
+  
+  sliderTrack.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+  });
+  
+  sliderTrack.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+  });
+  
+  sliderTrack.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    const endX = e.changedTouches[0].clientX;
+    const diff = startX - endX;
+    
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    }
   });
 }
 
