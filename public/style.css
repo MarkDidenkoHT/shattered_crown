@@ -55,7 +55,11 @@
       align-items: center;
       position: relative;
       z-index: 2;
-      background: linear-gradient(180deg, rgba(196,151,90,0.1) 0%, rgba(196,151,90,0.05) 50%, transparent 100%);
+      background: linear-gradient(180deg, rgba(196,151,90,0.1) 0%, rgba(196,151,90,0.05) 50%, transparent 100%),
+                  url('public/assets/art/login.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
 
     .crown-ornament {
