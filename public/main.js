@@ -5,8 +5,8 @@ let currentSession = null;
 document.addEventListener('DOMContentLoaded', async () => {
   // Load Supabase configuration
   try {
-    const configResponse = await fetch('/api/config');
-    supabaseConfig = await configResponse.json();
+    const response = await fetch('/api/config');
+    supabaseConfig = await response.json();
   } catch (error) {
     console.error('Failed to load configuration:', error);
     alert('Failed to load application configuration');
@@ -20,20 +20,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentSession = JSON.parse(storedSession);
       
       // Verify the session is still valid
-      const isValid = await validateSession(currentSession.access_token);
+      const isValid = await validateSession();
       if (isValid) {
         redirectToGame();
         return;
       } else {
         // Session expired, clear it
-        localStorage.removeItem('session');
-        localStorage.removeItem('profile');
-        currentSession = null;
+        clearSession();
       }
     } catch (error) {
       console.error('Error checking stored session:', error);
-      localStorage.removeItem('session');
-      localStorage.removeItem('profile');
+      clearSession();
     }
   }
 
@@ -46,7 +43,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function addPasswordField() {
-  const container = document.querySelector('.form-container');
   const accountNameInput = document.getElementById('accountName');
   
   // Check if password field already exists
@@ -62,11 +58,11 @@ function addPasswordField() {
   }
 }
 
-async function validateSession(token) {
+async function validateSession() {
   try {
     const response = await fetch('/api/profile', {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${currentSession.access_token}`
       }
     });
     return response.ok;
@@ -90,7 +86,6 @@ async function login() {
     return;
   }
 
-  // Disable the login button to prevent double-clicking
   const loginBtn = document.getElementById("loginBtn");
   loginBtn.disabled = true;
   loginBtn.textContent = "Logging in...";
@@ -115,31 +110,8 @@ async function login() {
       localStorage.setItem('session', JSON.stringify(data.session));
       localStorage.setItem('profile', JSON.stringify(data.profile));
       
-      // Check progression: God selection -> Character creation -> Castle
-      try {
-        // First check if player has selected a god
-        if (!data.profile.god) {
-          alert("Login successful! Please select your god...");
-          loadModule("god_selection");
-          return;
-        }
-        
-        // Then check character count
-        const characterCount = await getPlayerCharacterCount(data.profile.id);
-        
-        if (characterCount < 3) {
-          alert("Login successful! Redirecting to character creation...");
-          loadModule("character_creation");
-        } else {
-          alert("Login successful! Redirecting to castle...");
-          loadModule("castle");
-        }
-      } catch (error) {
-        console.error('Error checking player progression:', error);
-        // Default to god selection if there's an error
-        alert("Login successful! Redirecting...");
-        loadModule("god_selection");
-      }
+      alert("Login successful!");
+      await redirectToGame();
     } else {
       alert(data.error || "Login failed!");
     }
@@ -147,7 +119,6 @@ async function login() {
     console.error('Login error:', error);
     alert("Login error! Please try again.");
   } finally {
-    // Re-enable the login button
     loginBtn.disabled = false;
     loginBtn.textContent = "Login";
   }
@@ -172,7 +143,6 @@ async function register() {
     return;
   }
 
-  // Disable the register button to prevent double-clicking
   const registerBtn = document.getElementById("registerBtn");
   registerBtn.disabled = true;
   registerBtn.textContent = "Registering...";
@@ -197,9 +167,8 @@ async function register() {
       localStorage.setItem('session', JSON.stringify(data.session));
       localStorage.setItem('profile', JSON.stringify(data.profile));
       
-      // New users will have no god selected, so go to god selection first
-      alert("Registration successful! Please select your god...");
-      loadModule("god_selection");
+      alert("Registration successful!");
+      await redirectToGame();
     } else {
       alert(data.error || "Registration failed!");
     }
@@ -207,38 +176,37 @@ async function register() {
     console.error('Registration error:', error);
     alert("Registration error! Please try again.");
   } finally {
-    // Re-enable the register button
     registerBtn.disabled = false;
     registerBtn.textContent = "Register";
   }
 }
 
 async function redirectToGame() {
-  // Check player progression: God selection -> Character creation -> Castle
   const profile = getCurrentProfile();
-  if (profile) {
-    try {
-      // First check if player has selected a god
-      if (!profile.god) {
-        loadModule("god_selection");
-        return;
-      }
-      
-      // Then check character count
-      const characterCount = await getPlayerCharacterCount(profile.id);
-      
-      if (characterCount < 3) {
-        loadModule("character_creation");
-      } else {
-        loadModule("castle");
-      }
-    } catch (error) {
-      console.error('Error checking player progression:', error);
-      // Default to god selection if there's an error
+  if (!profile) {
+    console.error('No profile found');
+    loadModule("god_selection");
+    return;
+  }
+
+  try {
+    // Check if player has selected a god
+    if (!profile.god) {
       loadModule("god_selection");
+      return;
     }
-  } else {
-    // No profile found, default to god selection
+    
+    // Check character count
+    const characterCount = await getPlayerCharacterCount(profile.id);
+    
+    if (characterCount < 3) {
+      loadModule("character_creation");
+    } else {
+      loadModule("castle");
+    }
+  } catch (error) {
+    console.error('Error checking player progression:', error);
+    // Default to god selection if there's an error
     loadModule("god_selection");
   }
 }
@@ -246,12 +214,7 @@ async function redirectToGame() {
 // Helper function to get player character count
 async function getPlayerCharacterCount(playerId) {
   try {
-    const response = await authenticatedFetch(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=id`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+    const response = await apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=id`);
     const characters = await response.json();
     return characters.length;
   } catch (error) {
@@ -265,14 +228,19 @@ async function loadModule(name) {
   const main = document.querySelector(".main-app-container");
   main.innerHTML = "";
 
-  const module = await import(`./${name}.js`);
-  await module.loadModule(main, {
-    currentSession,
-    supabaseConfig,
-    getCurrentProfile,
-    getCurrentSession,
-    authenticatedFetch
-  });
+  try {
+    const module = await import(`./${name}.js`);
+    await module.loadModule(main, {
+      currentSession,
+      supabaseConfig,
+      getCurrentProfile,
+      getCurrentSession,
+      apiCall
+    });
+  } catch (error) {
+    console.error(`Error loading module ${name}:`, error);
+    main.innerHTML = `<div>Error loading ${name} module</div>`;
+  }
 }
 
 // Utility function to get current user profile
@@ -286,16 +254,21 @@ function getCurrentSession() {
   return currentSession;
 }
 
-// Utility function to logout
-function logout() {
+// Clear session data
+function clearSession() {
   currentSession = null;
   localStorage.removeItem('session');
   localStorage.removeItem('profile');
+}
+
+// Utility function to logout
+function logout() {
+  clearSession();
   window.location.href = "/";
 }
 
-// Utility function to make authenticated API calls
-async function authenticatedFetch(url, options = {}) {
+// Simplified API call function
+async function apiCall(url, options = {}) {
   if (!currentSession) {
     throw new Error('No active session');
   }
@@ -317,6 +290,10 @@ async function authenticatedFetch(url, options = {}) {
     throw new Error('Session expired');
   }
 
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
   return response;
 }
 
@@ -325,6 +302,6 @@ window.gameAuth = {
   getCurrentProfile,
   getCurrentSession,
   logout,
-  authenticatedFetch,
+  apiCall,
   loadModule
 };
