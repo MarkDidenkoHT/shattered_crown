@@ -32,7 +32,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 async function fetchAndRenderCharacters() {
   console.log('[CHAR_MGR] Fetching player characters...');
   try {
-    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,race(name),classes(name),professions(name)`);
+    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,races(name),classes(name),professions(name)`);
     const characters = await response.json();
     console.log('[CHAR_MGR] Characters fetched:', characters);
 
