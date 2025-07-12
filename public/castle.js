@@ -135,13 +135,28 @@ function setupInteractions() {
         button.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
             console.log(`[CASTLE_INTERACTION] Navigation button clicked: ${action}`);
-            displayMessage(`${action.charAt(0).toUpperCase() + action.slice(1)} functionality coming soon!`);
-            // Example:
-            // if (action === 'characters') {
-            //     window.gameAuth.loadModule('character_list'); 
-            // } else if (action === 'trade') {
-            //     window.gameAuth.loadModule('marketplace');
-            // }
+            
+            // Updated logic for navigation buttons
+            if (action === 'characters') {
+                window.gameAuth.loadModule('character_manager'); 
+            } else if (action === 'trade') {
+                displayMessage('Trade functionality coming soon!');
+                // window.gameAuth.loadModule('marketplace');
+            } else if (action === 'bank') {
+                displayMessage('Bank functionality coming soon!');
+                // window.gameAuth.loadModule('bank');
+            } else if (action === 'embark') {
+                displayMessage('Embark functionality coming soon!');
+                // window.gameAuth.loadModule('world_map');
+            } else if (action === 'crafting') {
+                displayMessage('Crafting functionality coming soon!');
+                // window.gameAuth.loadModule('crafting_station');
+            } else if (action === 'altar-nav') { // Note: using 'altar-nav' to distinguish from building hotspot
+                displayMessage('Altar functionality coming soon!');
+                // window.gameAuth.loadModule('altar_scene');
+            } else {
+                displayMessage(`${action.charAt(0).toUpperCase() + action.slice(1)} functionality coming soon!`);
+            }
         });
     });
 
@@ -175,9 +190,13 @@ function setupInteractions() {
                 }
             }
             displayMessage(message);
-            // Implement specific logic for each building
+            // Implement specific logic for each building click
             // if (building === 'inn') {
             //     window.gameAuth.loadModule('inn');
+            // } else if (building === 'altar') {
+            //     window.gameAuth.loadModule('altar_building_scene');
+            // } else if (building === 'blacksmith') {
+            //     window.gameAuth.loadModule('blacksmith_workshop');
             // }
         });
     });
