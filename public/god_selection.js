@@ -42,7 +42,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
           ${gods.map(god => `
             <div class="god-card" data-god-id="${god.id}">
               <div class="god-art-block">
-                <img src="assets/art/${god.image}.png" 
+                <img src="assets/art/gods/${god.image}.png" 
                      alt="${god.name}" 
                      class="god-art"
                      onerror="this.src='assets/art/placeholder.jpg'">
@@ -64,7 +64,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
               ${gods.map((god, index) => `
                 <div class="god-slide" data-god-id="${god.id}">
                   <div class="god-art-block">
-                    <img src="assets/art/${god.image}.png" 
+                    <img src="assets/art/gods/${god.image}.png" 
                          alt="${god.name}" 
                          class="god-art"
                          onerror="this.src='assets/art/placeholder.jpg'">
