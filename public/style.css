@@ -227,6 +227,10 @@
       left: 100%;
     }
 
+    .fantasy-button:hover {
+      background-color: #e79b29c7;
+    }
+
     .login-btn {
       color: #c4975a;
       border-color: #c4975a;
