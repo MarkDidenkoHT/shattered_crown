@@ -86,14 +86,27 @@ function renderCharacters(characters) {
 
 function characterCardHTML(character) {
   const stats = character.stats || {};
-  const strength = stats.strength || 0;
-  const vitality = stats.vitality || 0;
-  const spirit = stats.spirit || 0;
-  const dexterity = stats.dexterity || 0;
 
-  const hp = vitality * 10;
-  const armor = Math.floor(strength * 0.25);
-  const resistance = Math.floor(spirit * 0.25);
+    const normalizedStats = {};
+    for (const [key, value] of Object.entries(stats)) {
+    normalizedStats[key.toLowerCase()] = value;
+    }
+
+    // Handle possible typo (if still present in old data)
+    if ('strenght' in normalizedStats && !('strength' in normalizedStats)) {
+    normalizedStats.strength = normalizedStats.strenght;
+    }
+
+    const strength = normalizedStats.strength || 0;
+    const vitality = normalizedStats.vitality || 0;
+    const spirit = normalizedStats.spirit || 0;
+    const dexterity = normalizedStats.dexterity || 0;
+    const intellect = normalizedStats.intellect || 0;
+
+    // Derived
+    const hp = vitality * 10;
+    const armor = Math.floor(strength * 0.25);
+    const resistance = Math.floor(spirit * 0.25);
 
   const equippedItems = [
     { label: 'Weapon', value: character.equipped_weapon || 'None' },
@@ -135,9 +148,10 @@ function characterCardHTML(character) {
         <div class="stats-block">
           <h4>Primary Stats</h4>
           <p>Strength: <span>${strength}</span></p>
+          <p>Dexterity: <span>${dexterity}</span></p>
           <p>Vitality: <span>${vitality}</span></p>
           <p>Spirit: <span>${spirit}</span></p>
-          <p>Dexterity: <span>${dexterity}</span></p>
+          <p>Intellect: <span>${intellect}</span></p>
         </div>
 
         <div class="stats-block">
