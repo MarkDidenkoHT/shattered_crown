@@ -1,5 +1,3 @@
-// character_creation.js
-
 let _main;
 let _apiCall;
 let _getCurrentProfile;
@@ -7,9 +5,12 @@ let _profile;
 let _godId;
 let _races = [];
 let _classes = [];
+let _professions = []; // Новая переменная для хранения списка профессий
 let _currentCharacterIndex = 0; // 0-indexed for character 1, 2, 3
 let _selectedRace = null;
 let _selectedClass = null;
+let _selectedSex = null; // Новая переменная для хранения выбранного пола
+let _selectedProfession = null; // Новая переменная для хранения выбранной профессии
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
     console.log('[CHAR_CREATE] --- Starting loadModule for Character Creation ---');
@@ -36,13 +37,9 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
         </div>
     `;
 
-    // Add character creation specific styles
     addCharacterCreationStyles();
-
-    // Create floating particles background
     createParticles();
 
-    // Start the character creation process
     await startCharacterCreationFlow();
     console.log('[CHAR_CREATE] --- loadModule for Character Creation finished ---');
 }
@@ -51,6 +48,8 @@ async function startCharacterCreationFlow() {
     console.log(`[CHAR_CREATE_FLOW] Starting flow for Character ${_currentCharacterIndex + 1} of 3.`);
     _selectedRace = null; // Reset selections for new character
     _selectedClass = null;
+    _selectedSex = null; // Сброс выбранного пола
+    _selectedProfession = null; // Сброс выбранной профессии
 
     if (_currentCharacterIndex >= 3) {
         console.log('[CHAR_CREATE_FLOW] All 3 characters created. Loading castle module.');
@@ -86,7 +85,7 @@ function renderRaceSelection() {
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Race</h1>
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Race</h1>
             <p class="subtitle">Select the lineage that defines your champion's innate strengths.</p>
         </div>
         <div class="selection-section">
@@ -96,9 +95,9 @@ function renderRaceSelection() {
                         <div class="selection-card" data-id="${race.id}" data-type="race">
                             <div class="card-art-block">
                                 <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                     alt="${race.name}" 
-                                     class="card-art"
-                                     onerror="this.src='assets/art/placeholder.jpg'">
+                                    alt="${race.name}" 
+                                    class="card-art"
+                                    onerror="this.src='assets/art/placeholder.jpg'">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${race.name}</h3>
@@ -123,9 +122,9 @@ function renderRaceSelection() {
                             <div class="selection-slide" data-id="${race.id}" data-type="race">
                                 <div class="card-art-block">
                                     <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                         alt="${race.name}" 
-                                         class="card-art"
-                                         onerror="this.src='assets/art/placeholder.jpg'">
+                                            alt="${race.name}" 
+                                            class="card-art"
+                                            onerror="this.src='assets/art/placeholder.jpg'">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${race.name}</h3>
@@ -253,6 +252,130 @@ async function handleRaceSelection(raceId) {
     }
     console.log('[RACE_SELECT] Selected Race:', _selectedRace);
 
+    // After race selection, render sex selection
+    renderSexSelection();
+}
+
+// --- Новые функции для выбора пола и профессий ---
+
+function renderSexSelection() {
+    console.log(`[UI_RENDER] Rendering Sex Selection for Character ${_currentCharacterIndex + 1}.`);
+    const section = _main.querySelector('.character-creation-section');
+    section.innerHTML = `
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Sex</h1>
+            <p class="subtitle">Decide the gender of your champion.</p>
+        </div>
+        <div class="selected-race-summary">
+            <h3>Selected Race: ${_selectedRace.name}</h3>
+            <p>${_selectedRace.description}</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    <div class="selection-card" data-sex="male">
+                        <div class="card-art-block">
+                            <img src="assets/art/sex/male.png" 
+                                alt="Male" 
+                                class="card-art"
+                                onerror="this.src='assets/art/placeholder.jpg'">
+                        </div>
+                        <div class="card-info-block">
+                            <h3 class="card-name">Male</h3>
+                            <p class="card-description">Strength and fortitude define this path.</p>
+                            <button class="fantasy-button select-btn" data-sex="male" data-type="sex">Select Male</button>
+                        </div>
+                    </div>
+                    <div class="selection-card" data-sex="female">
+                        <div class="card-art-block">
+                            <img src="assets/art/sex/female.png" 
+                                alt="Female" 
+                                class="card-art"
+                                onerror="this.src='assets/art/placeholder.jpg'">
+                        </div>
+                        <div class="card-info-block">
+                            <h3 class="card-name">Female</h3>
+                            <p class="card-description">Grace and wisdom guide this journey.</p>
+                            <button class="fantasy-button select-btn" data-sex="female" data-type="sex">Select Female</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        <div class="selection-slide" data-sex="male">
+                            <div class="card-art-block">
+                                <img src="assets/art/sex/male.png" 
+                                    alt="Male" 
+                                    class="card-art"
+                                    onerror="this.src='assets/art/placeholder.jpg'">
+                            </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">Male</h3>
+                                <p class="card-description">Strength and fortitude define this path.</p>
+                                <button class="fantasy-button select-btn" data-sex="male" data-type="sex">Select Male</button>
+                            </div>
+                        </div>
+                        <div class="selection-slide" data-sex="female">
+                            <div class="card-art-block">
+                                <img src="assets/art/sex/female.png" 
+                                    alt="Female" 
+                                    class="card-art"
+                                    onerror="this.src='assets/art/placeholder.jpg'">
+                            </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">Female</h3>
+                                <p class="card-description">Grace and wisdom guide this journey.</p>
+                                <button class="fantasy-button select-btn" data-sex="female" data-type="sex">Select Female</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        <button class="slider-dot active" data-slide="0"></button>
+                        <button class="slider-dot" data-slide="1"></button>
+                    </div>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                </div>
+            </div>
+        </div>
+        <div class="confirm-return-buttons">
+            <button class="fantasy-button return-btn">Return to Race Selection</button>
+        </div>
+    `;
+
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    section.querySelectorAll('.select-btn[data-type="sex"]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const sex = e.target.dataset.sex;
+            console.log(`[UI_EVENT] Sex selected: ${sex}`);
+            handleSexSelection(sex);
+        });
+    });
+
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        console.log('[UI_EVENT] Return to Race Selection clicked from sex selection.');
+        _selectedSex = null; // Clear sex selection
+        renderRaceSelection();
+    });
+}
+
+function handleSexSelection(sex) {
+    _selectedSex = sex;
+    console.log('[SEX_SELECT] Selected Sex:', _selectedSex);
+    // After sex selection, fetch classes
+    fetchClassesAndRenderSelection();
+}
+
+async function fetchClassesAndRenderSelection() {
     console.log(`[CLASS_FETCH] Fetching classes for Race ID: ${_selectedRace.id}...`);
     try {
         const response = await _apiCall(`/api/supabase/rest/v1/classes?faction_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
@@ -284,7 +407,7 @@ function renderClassSelection() {
             <p class="subtitle">Embrace a discipline that complements your race's heritage.</p>
         </div>
         <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name}</h3>
+            <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
             <p>${_selectedRace.description}</p>
         </div>
         <div class="selection-section">
@@ -294,9 +417,9 @@ function renderClassSelection() {
                         <div class="selection-card" data-id="${cls.id}" data-type="class">
                             <div class="card-art-block">
                                 <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                     alt="${cls.name}" 
-                                     class="card-art"
-                                     onerror="this.src='assets/art/placeholder.jpg'">
+                                    alt="${cls.name}" 
+                                    class="card-art"
+                                    onerror="this.src='assets/art/placeholder.jpg'">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${cls.name}</h3>
@@ -327,9 +450,9 @@ function renderClassSelection() {
                             <div class="selection-slide" data-id="${cls.id}" data-type="class">
                                 <div class="card-art-block">
                                     <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                         alt="${cls.name}" 
-                                         class="card-art"
-                                         onerror="this.src='assets/art/placeholder.jpg'">
+                                            alt="${cls.name}" 
+                                            class="card-art"
+                                            onerror="this.src='assets/art/placeholder.jpg'">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${cls.name}</h3>
@@ -365,16 +488,14 @@ function renderClassSelection() {
             </div>
         </div>
         <div class="confirm-return-buttons">
-            <button class="fantasy-button return-btn">Return to Race Selection</button>
+            <button class="fantasy-button return-btn">Return to Sex Selection</button>
         </div>
     `;
 
-    // Initialize slider if on mobile
     if (window.innerWidth <= 768) {
         initializeSelectionSlider();
     }
 
-    // Add event listeners to selection buttons
     section.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const classId = parseInt(e.target.dataset.id);
@@ -384,9 +505,9 @@ function renderClassSelection() {
     });
 
     section.querySelector('.return-btn').addEventListener('click', () => {
-        console.log('[UI_EVENT] Return to Race Selection clicked.');
+        console.log('[UI_EVENT] Return to Sex Selection clicked from class selection.');
         _selectedClass = null; // Clear class selection
-        renderRaceSelection();
+        renderSexSelection();
     });
 }
 
@@ -398,8 +519,134 @@ function handleClassSelection(classId) {
         return;
     }
     console.log('[CLASS_SELECT] Selected Class:', _selectedClass);
+    // After class selection, fetch professions
+    fetchProfessionsAndRenderSelection();
+}
+
+
+async function fetchProfessionsAndRenderSelection() {
+    console.log('[PROFESSION_FETCH] Fetching professions...');
+    try {
+        const response = await _apiCall(`/api/supabase/rest/v1/professions?select=id,name,description`);
+        _professions = await response.json();
+        console.log('[PROFESSION_FETCH] Professions fetched:', _professions);
+
+        if (_professions.length === 0) {
+            console.warn('[PROFESSION_FETCH] No professions found.');
+            displayMessage('No professions available. Please contact support.');
+            renderClassSelection(); // Allow re-selection of class
+            return;
+        }
+        renderProfessionSelection();
+    } catch (error) {
+        console.error('[PROFESSION_FETCH] Error fetching professions:', error);
+        displayMessage('Failed to load professions. Please try again.');
+        renderClassSelection(); // Allow re-selection of class
+    }
+}
+
+function renderProfessionSelection() {
+    console.log(`[UI_RENDER] Rendering Profession Selection for Character ${_currentCharacterIndex + 1}.`);
+    const section = _main.querySelector('.character-creation-section');
+    section.innerHTML = `
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Profession</h1>
+            <p class="subtitle">Select a profession that defines your champion's skills and trade.</p>
+        </div>
+        <div class="selected-race-summary">
+            <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
+            <p><strong>Class:</strong> ${_selectedClass.name}</p>
+            <p>${_selectedClass.description}</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    ${_professions.map(profession => `
+                        <div class="selection-card" data-id="${profession.id}" data-type="profession">
+                            <div class="card-art-block">
+                                <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                    alt="${profession.name}" 
+                                    class="card-art"
+                                    onerror="this.src='assets/art/placeholder.jpg'">
+                            </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">${profession.name}</h3>
+                                <p class="card-description">${profession.description}</p>
+                                <button class="fantasy-button select-btn" data-id="${profession.id}" data-type="profession">Select ${profession.name}</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        ${_professions.map((profession, index) => `
+                            <div class="selection-slide" data-id="${profession.id}" data-type="profession">
+                                <div class="card-art-block">
+                                    <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                            alt="${profession.name}" 
+                                            class="card-art"
+                                            onerror="this.src='assets/art/placeholder.jpg'">
+                                </div>
+                                <div class="card-info-block">
+                                    <h3 class="card-name">${profession.name}</h3>
+                                    <p class="card-description">${profession.description}</p>
+                                    <button class="fantasy-button select-btn" data-id="${profession.id}" data-type="profession">Select ${profession.name}</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        ${_professions.map((_, index) => `
+                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                        `).join('')}
+                    </div>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                </div>
+            </div>
+        </div>
+        <div class="confirm-return-buttons">
+            <button class="fantasy-button return-btn">Return to Class Selection</button>
+        </div>
+    `;
+
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    section.querySelectorAll('.select-btn[data-type="profession"]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const professionId = parseInt(e.target.dataset.id);
+            console.log(`[UI_EVENT] Profession selected: ID ${professionId}`);
+            handleProfessionSelection(professionId);
+        });
+    });
+
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        console.log('[UI_EVENT] Return to Class Selection clicked from profession selection.');
+        _selectedProfession = null; // Clear profession selection
+        renderClassSelection();
+    });
+}
+
+function handleProfessionSelection(professionId) {
+    _selectedProfession = _professions.find(p => p.id === professionId);
+    if (!_selectedProfession) {
+        console.error(`[PROFESSION_SELECT] Selected profession with ID ${professionId} not found.`);
+        displayMessage('Selected profession not found. Please try again.');
+        return;
+    }
+    console.log('[PROFESSION_SELECT] Selected Profession:', _selectedProfession);
     renderCharacterSummary();
 }
+
+// --- Конец новых функций ---
 
 function renderCharacterSummary() {
     console.log(`[UI_RENDER] Rendering Character Summary for Character ${_currentCharacterIndex + 1}.`);
@@ -414,14 +661,15 @@ function renderCharacterSummary() {
         <div class="summary-card">
             <div class="summary-art-block">
                 <img src="assets/art/characters/${_selectedRace.name.toLowerCase().replace(/\s+/g, '_')}_${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                     alt="${_selectedRace.name} ${_selectedClass.name}" 
-                     class="summary-art"
-                     onerror="this.src='assets/art/placeholder.jpg'">
+                    alt="${_selectedRace.name} ${_selectedClass.name}" 
+                    class="summary-art"
+                    onerror="this.src='assets/art/placeholder.jpg'">
             </div>
             <div class="summary-info-block">
-                <h2>${_selectedRace.name} ${_selectedClass.name}</h2>
+                <h2>${_selectedSex === 'male' ? 'Male' : 'Female'} ${_selectedRace.name} ${_selectedClass.name}</h2>
                 <p><strong>Race Description:</strong> ${_selectedRace.description}</p>
                 <p><strong>Class Description:</strong> ${_selectedClass.description}</p>
+                <p><strong>Profession:</strong> ${_selectedProfession.name} - ${_selectedProfession.description}</p>
                 <div class="stats-block">
                     <h4>Final Stats:</h4>
                     ${Object.entries(finalStats).map(([stat, value]) => `
@@ -438,7 +686,7 @@ function renderCharacterSummary() {
         </div>
         <div class="confirm-return-buttons">
             <button class="fantasy-button confirm-btn">Confirm Champion</button>
-            <button class="fantasy-button return-btn">Return to Class Selection</button>
+            <button class="fantasy-button return-btn">Return to Profession Selection</button>
         </div>
     `;
 
@@ -448,8 +696,8 @@ function renderCharacterSummary() {
     });
 
     section.querySelector('.return-btn').addEventListener('click', () => {
-        console.log('[UI_EVENT] Return to Class Selection clicked from summary.');
-        renderClassSelection();
+        console.log('[UI_EVENT] Return to Profession Selection clicked from summary.');
+        renderProfessionSelection();
     });
 }
 
@@ -475,8 +723,10 @@ async function confirmCharacter() {
         player_id: _profile.id,
         race_id: _selectedRace.id,
         class_id: _selectedClass.id,
-        final_stats: finalStats,
-        abilities: _selectedClass.starting_abilities
+        sex: _selectedSex, // Добавлено поле пола
+        profession_id: _selectedProfession.id, // Добавлено поле профессии
+        stats: finalStats,
+        starting_abilities: _selectedClass.starting_abilities
     };
     console.log('[CHAR_SAVE] Character data to save:', characterData);
 
@@ -555,434 +805,90 @@ function addCharacterCreationStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        /* General Layout for Character Creation */
-        .character-creation-section {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            padding: 2rem;
-            position: relative;
-            z-index: 2;
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            overflow-y: auto;
-        }
+    /* Styles for Sex and Profession Selection Cards (similar to Race/Class) */
+    .sex-selection, .profession-selection {
+        width: 100%;
+        max-width: 800px; /* Adjust as needed */
+        margin-bottom: 2rem;
+    }
 
-        .character-creation-section .art-header {
-            height: auto;
-            padding-bottom: 1.5rem;
-            background: none;
-            border-bottom: 1px solid rgba(196, 151, 90, 0.2);
-            margin-bottom: 2rem;
-            text-align: center;
-            width: 100%;
-        }
+    .sex-selection .selection-grid, .profession-selection .selection-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Adjust card width */
+    }
+    .sex-selection .selection-card, .profession-selection .selection-card {
+        background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
+        border: 2px solid #3d2914;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+        box-shadow: 
+            inset 0 1px 0 rgba(196, 151, 90, 0.1),
+            0 2px 8px rgba(0, 0, 0, 0.3);
+    }
 
-        .character-creation-section .art-header h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
+    .sex-selection .selection-card:hover, .profession-selection .selection-card:hover {
+        border-color: #c4975a;
+        transform: translateY(-2px);
+        box-shadow: 
+            inset 0 1px 0 rgba(196, 151, 90, 0.2),
+            0 4px 12px rgba(0, 0, 0, 0.4);
+    }
 
-        .character-creation-section .subtitle {
-            font-size: 0.9rem;
-            color: #b8b3a8;
-        }
+    .sex-selection .card-art-block, .profession-selection .card-art-block {
+        width: 100%;
+        height: 200px; /* Adjusted height for sex/profession images */
+        overflow: hidden;
+        position: relative;
+    }
 
-        /* Selection Section */
-        .selection-section {
-            width: 100%;
-            max-width: 1200px;
-        }
+    .sex-selection .card-art, .profession-selection .card-art {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
 
-        /* Desktop View */
-        .desktop-view {
-            display: block;
-        }
+    .sex-selection .selection-card:hover .card-art, .profession-selection .selection-card:hover .card-art {
+        transform: scale(1.05);
+    }
 
-        .mobile-view {
-            display: none;
-        }
+    .sex-selection .card-info-block, .profession-selection .card-info-block {
+        padding: 1rem;
+        text-align: center;
+    }
 
-        .selection-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            width: 100%;
-        }
+    .sex-selection .card-name, .profession-selection .card-name {
+        font-family: 'Cinzel', serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #c4975a;
+        margin-bottom: 0.5rem;
+        text-shadow: 1px 1px 0px #3d2914;
+        letter-spacing: 1px;
+    }
 
-        .selection-card {
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-            border: 2px solid #3d2914;
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.1),
-                0 2px 8px rgba(0, 0, 0, 0.3);
-        }
+    .sex-selection .card-description, .profession-selection .card-description {
+        color: #b8b3a8;
+        font-size: 0.85rem;
+        line-height: 1.3;
+        margin-bottom: 0.75rem;
+        font-style: italic;
+        min-height: 2.5rem; /* Ensure consistent height */
+    }
 
-        .selection-card:hover {
-            border-color: #c4975a;
-            transform: translateY(-2px);
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.2),
-                0 4px 12px rgba(0, 0, 0, 0.4);
-        }
+    .sex-selection .select-btn, .profession-selection .select-btn {
+        margin-top: 0.5rem;
+        width: calc(100% - 2rem); /* Adjust button width */
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
 
-        .card-art-block {
-            width: 100%;
-            height: 200px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .card-art {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-
-        .selection-card:hover .card-art {
-            transform: scale(1.05);
-        }
-
-        .card-info-block {
-            padding: 1.5rem;
-        }
-
-        .card-name {
-            font-family: 'Cinzel', serif;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #c4975a;
-            margin-bottom: 0.75rem;
-            text-shadow: 1px 1px 0px #3d2914;
-            letter-spacing: 1px;
-            text-align: center;
-        }
-
-        .card-description {
-            color: #b8b3a8;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin-bottom: 1rem;
-            font-style: italic;
-            min-height: 3rem;
-        }
-
-        .stats-block, .abilities-block {
-            width: 100%;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(196, 151, 90, 0.1);
-        }
-
-        .stats-block h4, .abilities-block h4 {
-            font-family: 'Cinzel', serif;
-            color: #c4975a;
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-            text-align: center;
-        }
-
-        .stats-block p {
-            color: #b8b3a8;
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: space-between;
-            padding: 0.2rem 0;
-        }
-
-        .stats-block p span {
-            color: #c4975a;
-            font-weight: bold;
-        }
-
-        .abilities-block ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .abilities-block li {
-            background: rgba(196, 151, 90, 0.05);
-            border-left: 3px solid #c4975a;
-            padding: 0.5rem 1rem;
-            margin-bottom: 0.4rem;
-            color: #b8b3a8;
-            font-size: 0.9rem;
-            border-radius: 4px;
-        }
-
-        .select-btn {
-            margin-top: 1rem;
-            width: 100%;
-            padding: 0.75rem 1.5rem;
-            font-size: 0.9rem;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            border: 2px solid #c4975a;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            background: linear-gradient(145deg, #2a1f16, #1d140c);
-            color: #c4975a;
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.2),
-                0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .select-btn:hover {
-            background: linear-gradient(145deg, #3d2914, #2a1f16);
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.3),
-                0 4px 8px rgba(0, 0, 0, 0.4);
-            transform: translateY(-1px);
-        }
-
-        /* Selected Race Summary */
-        .selected-race-summary {
-            background: rgba(29, 20, 12, 0.7);
-            border: 2px solid #3d2914;
-            border-radius: 8px;
-            padding: 1rem 2rem;
-            margin-bottom: 2rem;
-            width: 100%;
-            max-width: 800px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-        .selected-race-summary h3 {
-            font-family: 'Cinzel', serif;
-            color: #c4975a;
-            margin-bottom: 0.5rem;
-            font-size: 1.2rem;
-        }
-        .selected-race-summary p {
-            color: #b8b3a8;
-            font-size: 0.9rem;
-            font-style: italic;
-        }
-
-        /* Character Summary Card */
-        .summary-card {
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-            border: 2px solid #c4975a;
-            border-radius: 8px;
-            overflow: auto;
-            width: 100%;
-            max-width: 800px;
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.2),
-                0 4px 12px rgba(0, 0, 0, 0.4);
-            margin-bottom: 2rem;
-        }
-
-        .summary-art-block {
-            width: 100%;
-            height: 300px;
-            overflow: hidden;
-        }
-
-        .summary-art {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .summary-info-block {
-            padding: 2rem;
-        }
-
-        .summary-card h2 {
-            font-family: 'Cinzel', serif;
-            font-size: 1.8rem;
-            color: #c4975a;
-            margin-bottom: 1rem;
-            text-shadow: 1px 1px 0px #3d2914;
-            text-align: center;
-        }
-        .summary-card p {
-            color: #b8b3a8;
-            margin-bottom: 0.5rem;
-            font-size: 1rem;
-        }
-        .summary-card .stats-block, .summary-card .abilities-block {
-            text-align: left;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(196, 151, 90, 0.2);
-        }
-        .summary-card .stats-block h4, .summary-card .abilities-block h4 {
-            text-align: center;
-            font-size: 1.1rem;
-        }
-
-        /* Confirm/Return Buttons */
-        .confirm-return-buttons {
-            display: flex;
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-            width: 100%;
-            max-width: 600px;
-            justify-content: center;
-        }
-
-        .confirm-return-buttons .fantasy-button {
-            flex: 1;
-            max-width: 250px;
-        }
-
-        /* Mobile View - Slider */
-        .selection-slider {
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .slider-container {
-            overflow: hidden;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-        }
-
-        .slider-track {
-            display: flex;
-            transition: transform 0.4s ease;
-        }
-
-        .selection-slide {
-            min-width: 100%;
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-            border: 2px solid #3d2914;
-            border-radius: 8px;
-            overflow: hidden;
-            backdrop-filter: blur(5px);
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.1),
-                0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .slider-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 1rem;
-        }
-
-        .slider-btn {
-            background: linear-gradient(145deg, #2a1f16, #1d140c);
-            border: 2px solid #c4975a;
-            color: #c4975a;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-        }
-
-        .slider-btn:hover {
-            background: linear-gradient(145deg, #3d2914, #2a1f16);
-            transform: translateY(-1px);
-        }
-
-        .slider-dots {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .slider-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid #3d2914;
-            background: transparent;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .slider-dot.active {
-            background: #c4975a;
-            border-color: #c4975a;
-        }
-
-        .slider-dot:hover {
-            border-color: #c4975a;
-        }
-
-        /* Responsive Adjustments */
-        @media (max-width: 1024px) {
-            .selection-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .character-creation-section {
-                padding: 1rem;
-            }
-            
-            .desktop-view {
-                display: none;
-            }
-            
-            .mobile-view {
-                display: block;
-            }
-            
-            .art-header h1 {
-                font-size: 1.8rem;
-            }
-            
-            .summary-card {
-                max-width: 100%;
-            }
-            
-            .summary-art-block {
-                height: 250px;
-            }
-            
-            .summary-info-block {
-                padding: 1.5rem;
-            }
-            
-            .confirm-return-buttons {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            .confirm-return-buttons .fantasy-button {
-                max-width: 100%;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .character-creation-section .art-header h1 {
-                font-size: 1.5rem;
-            }
-            
-            .character-creation-section .subtitle {
-                font-size: 0.8rem;
-            }
-            
-            .summary-art-block {
-                height: 200px;
-            }
-            
-            .summary-card h2 {
-                font-size: 1.5rem;
-            }
-        }
+    /* Mobile adjustments for sex/profession sliders */
+    .selection-slider.mobile-view .selection-slide[data-type="sex"] .card-art-block,
+    .selection-slider.mobile-view .selection-slide[data-type="profession"] .card-art-block {
+        height: 200px; /* Match desktop card art height */
+    }
     `;
     document.head.appendChild(style);
     console.log('[STYLES] Character creation styles appended to document head.');
