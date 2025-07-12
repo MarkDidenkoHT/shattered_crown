@@ -32,7 +32,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 async function fetchAndRenderCharacters() {
   console.log('[CHAR_MGR] Fetching player characters...');
   try {
-    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*`);
+    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,race(name),classes(name),professions(name)`);
     const characters = await response.json();
     console.log('[CHAR_MGR] Characters fetched:', characters);
 
@@ -87,26 +87,26 @@ function renderCharacters(characters) {
 function characterCardHTML(character) {
   const stats = character.stats || {};
 
-    const normalizedStats = {};
-    for (const [key, value] of Object.entries(stats)) {
+  const normalizedStats = {};
+  for (const [key, value] of Object.entries(stats)) {
     normalizedStats[key.toLowerCase()] = value;
-    }
+  }
 
-    // Handle possible typo (if still present in old data)
-    if ('strenght' in normalizedStats && !('strength' in normalizedStats)) {
+  // Handle possible typo
+  if ('strenght' in normalizedStats && !('strength' in normalizedStats)) {
     normalizedStats.strength = normalizedStats.strenght;
-    }
+  }
 
-    const strength = normalizedStats.strength || 0;
-    const vitality = normalizedStats.vitality || 0;
-    const spirit = normalizedStats.spirit || 0;
-    const dexterity = normalizedStats.dexterity || 0;
-    const intellect = normalizedStats.intellect || 0;
+  const strength = normalizedStats.strength || 0;
+  const vitality = normalizedStats.vitality || 0;
+  const spirit = normalizedStats.spirit || 0;
+  const dexterity = normalizedStats.dexterity || 0;
+  const intellect = normalizedStats.intellect || 0;
 
-    // Derived
-    const hp = vitality * 10;
-    const armor = Math.floor(strength * 0.25);
-    const resistance = Math.floor(spirit * 0.25);
+  // Derived
+  const hp = vitality * 10;
+  const armor = Math.floor(strength * 0.25);
+  const resistance = Math.floor(spirit * 0.25);
 
   const equippedItems = [
     { label: 'Weapon', value: character.equipped_weapon || 'None' },
@@ -129,21 +129,22 @@ function characterCardHTML(character) {
     ? character.learned_abilities.join(', ')
     : 'None';
 
-  // Commented out talents and ability data for future
-  // const talents = character.talents || [];
-  // const abilityData = character.ability_data || [];
+  const raceName = character.race?.name || 'Race';
+  const className = character.classes?.name || 'Class';
+  const professionName = character.professions?.name || 'Profession';
 
   return `
     <div class="selection-card">
       <div class="card-art-block">
-        <img src="assets/art/characters/${(character.race_name || 'placeholder').toLowerCase().replace(/\s+/g, '_')}_${(character.class_name || 'placeholder').toLowerCase().replace(/\s+/g, '_')}.png" 
+        <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
           alt="Character Art" 
           class="card-art"
           onerror="this.src='assets/art/placeholder.jpg'">
       </div>
       <div class="card-info-block">
-        <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${character.race_name || 'Race'} ${character.class_name || 'Class'}</h3>
+        <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${raceName} ${className}</h3>
         <p class="card-description"><strong>EXP:</strong> ${character.exp || 0}</p>
+        <p class="card-description"><strong>Profession:</strong> ${professionName}</p>
 
         <div class="stats-block">
           <h4>Primary Stats</h4>
