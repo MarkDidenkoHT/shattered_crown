@@ -2,475 +2,209 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _playerCharacters = []; // Array to hold fetched characters
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
-    console.log('[CHARACTER_MANAGER] --- Starting loadModule for Character Manager ---');
-    _main = main;
-    _apiCall = apiCall;
-    _getCurrentProfile = getCurrentProfile;
+  console.log('[CHAR_MGR] --- Starting loadModule for Character Manager ---');
+  _main = main;
+  _apiCall = apiCall;
+  _getCurrentProfile = getCurrentProfile;
 
-    _profile = _getCurrentProfile();
-    if (!_profile) {
-        console.error('[CHARACTER_MANAGER] No profile found. Cannot proceed.');
-        displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login'); // Redirect to login if no profile
-        return;
-    }
-    console.log('[CHARACTER_MANAGER] Profile loaded:', _profile);
+  _profile = _getCurrentProfile();
+  if (!_profile) {
+    console.error('[CHAR_MGR] No profile found. Redirecting to login.');
+    displayMessage('User profile not found. Please log in again.');
+    window.gameAuth.loadModule('login');
+    return;
+  }
 
-    _main.innerHTML = `
-        <div class="main-app-container">
-            <div class="character-manager-section">
-                <div class="character-list-panel">
-                    <h2>Your Champions</h2>
-                    <div class="character-list-container">
-                        </div>
-                    <button class="fantasy-button create-new-char-btn">Create New Champion</button>
-                    <button class="fantasy-button back-to-castle-btn">Back to Castle</button>
-                </div>
-                <div class="character-details-panel">
-                    <h2>Champion Details</h2>
-                    <p>Select a champion from the list to view their details.</p>
-                </div>
-            </div>
+  _main.innerHTML = `
+    <div class="main-app-container">
+      <div class="particles"></div>
+      <div class="character-creation-section"></div>
+    </div>
+  `;
+
+  createParticles();
+  await fetchAndRenderCharacters();
+  console.log('[CHAR_MGR] --- loadModule for Character Manager finished ---');
+}
+
+async function fetchAndRenderCharacters() {
+  console.log('[CHAR_MGR] Fetching player characters...');
+  try {
+    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*`);
+    const characters = await response.json();
+    console.log('[CHAR_MGR] Characters fetched:', characters);
+
+    renderCharacters(characters);
+  } catch (error) {
+    console.error('[CHAR_MGR] Error fetching characters:', error);
+    displayMessage('Failed to load characters. Please try again.');
+  }
+}
+
+function renderCharacters(characters) {
+  const section = _main.querySelector('.character-creation-section');
+
+  if (!characters || characters.length === 0) {
+    section.innerHTML = `
+      <div class="art-header">
+        <h1>Your Champions</h1>
+        <p class="subtitle">You have no champions yet. Create some to start your journey.</p>
+      </div>
+      <div class="confirm-return-buttons">
+        <button class="fantasy-button return-btn">Return</button>
+      </div>
+    `;
+    section.querySelector('.return-btn').addEventListener('click', () => {
+      window.gameAuth.loadModule('castle');
+    });
+    return;
+  }
+
+  section.innerHTML = `
+    <div class="art-header">
+      <h1>Your Champions</h1>
+      <p class="subtitle">View your heroes and their current equipment and abilities.</p>
+    </div>
+    <div class="selection-section">
+      <div class="selection-container desktop-view">
+        <div class="selection-grid">
+          ${characters.map(characterCardHTML).join('')}
         </div>
-    `;
+      </div>
+    </div>
+    <div class="confirm-return-buttons">
+      <button class="fantasy-button return-btn">Return</button>
+    </div>
+  `;
 
-    addCharacterManagerStyles(); // Assuming you have this CSS import/function
-    await fetchPlayerCharacters();
-    renderCharacterList();
-    setupEventListeners();
-
-    console.log('[CHARACTER_MANAGER] --- loadModule for Character Manager finished ---');
+  section.querySelector('.return-btn').addEventListener('click', () => {
+    window.gameAuth.loadModule('castle');
+  });
 }
 
-async function fetchPlayerCharacters() {
-    console.log(`[CHARACTER_MANAGER] Fetching characters for player ID: ${_profile.id}...`);
-    try {
-        // Запрос к таблице 'characters', джойним 'races', 'classes', 'professions'
-        // и экипированные предметы по их ID.
-        // `stats_json`, `starting_abilities` и `learned_abilities` будут получены как JSONB.
-        const { data: characters, error } = await _apiCall(
-            `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=id,name,sex,level,exp,current_hp,max_hp,stats_json,starting_abilities,learned_abilities,race_id,class_id,profession_id,races(name),classes(name),professions(name),equipped_weapon_id:items!equipped_weapon_id(name),equipped_armor_id:items!equipped_armor_id(name),equipped_helmet_id:items!equipped_helmet_id(name),equipped_trinket_id:items!equipped_trinket_id(name),equipped_boots_id:items!equipped_boots_id(name),equipped_gloves_id:items!equipped_gloves_id(name)`
-        );
+function characterCardHTML(character) {
+  const stats = character.stats || {};
+  const strength = stats.strength || 0;
+  const vitality = stats.vitality || 0;
+  const spirit = stats.spirit || 0;
+  const dexterity = stats.dexterity || 0;
 
-        if (error) {
-            console.error('[CHARACTER_MANAGER] Supabase error fetching player characters:', error);
-            displayMessage('Failed to load your champions: ' + error.message);
-            return;
-        }
+  const hp = vitality * 10;
+  const armor = Math.floor(strength * 0.25);
+  const resistance = Math.floor(spirit * 0.25);
 
-        _playerCharacters = characters;
-        console.log('[CHARACTER_MANAGER] Player characters fetched:', _playerCharacters);
+  const equippedItems = [
+    { label: 'Weapon', value: character.equipped_weapon || 'None' },
+    { label: 'Armor', value: character.equipped_armor || 'None' },
+    { label: 'Helmet', value: character.equipped_helmet || 'None' },
+    { label: 'Trinket', value: character.equipped_trinket || 'None' },
+    { label: 'Boots', value: character.equipped_boots || 'None' },
+    { label: 'Gloves', value: character.equipped_gloves || 'None' },
+  ];
 
-    } catch (error) {
-        console.error('[CHARACTER_MANAGER] Unexpected error fetching player characters:', error);
-        displayMessage('Failed to load your champions. Please try again.');
-    }
-}
+  const consumables = character.consumable && character.consumable.length > 0
+    ? character.consumable.join(', ')
+    : 'None';
 
-function renderCharacterList() {
-    console.log('[CHARACTER_MANAGER] Rendering character list.');
-    const characterListContainer = _main.querySelector('.character-list-container');
-    characterListContainer.innerHTML = ''; // Clear previous list
+  const startingAbilities = character.starting_abilities && character.starting_abilities.length > 0
+    ? character.starting_abilities.join(', ')
+    : 'None';
 
-    if (_playerCharacters.length === 0) {
-        characterListContainer.innerHTML = '<p>You have no champions yet. Create one!</p>';
-        return;
-    }
+  const learnedAbilities = character.learned_abilities && character.learned_abilities.length > 0
+    ? character.learned_abilities.join(', ')
+    : 'None';
 
-    _playerCharacters.forEach(character => {
-        const charCard = document.createElement('div');
-        charCard.classList.add('character-card');
-        charCard.dataset.characterId = character.id;
+  // Commented out talents and ability data for future
+  // const talents = character.talents || [];
+  // const abilityData = character.ability_data || [];
 
-        const raceName = character.races ? character.races.name : 'Unknown Race';
-        const className = character.classes ? character.classes.name : 'Unknown Class';
-        const professionName = character.professions ? character.professions.name : 'Unknown Profession';
+  return `
+    <div class="selection-card">
+      <div class="card-art-block">
+        <img src="assets/art/characters/${(character.race_name || 'placeholder').toLowerCase().replace(/\s+/g, '_')}_${(character.class_name || 'placeholder').toLowerCase().replace(/\s+/g, '_')}.png" 
+          alt="Character Art" 
+          class="card-art"
+          onerror="this.src='assets/art/placeholder.jpg'">
+      </div>
+      <div class="card-info-block">
+        <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${character.race_name || 'Race'} ${character.class_name || 'Class'}</h3>
+        <p class="card-description"><strong>EXP:</strong> ${character.exp || 0}</p>
 
-        charCard.innerHTML = `
-            <img src="assets/art/characters/placeholder_char.png" alt="${character.name}" class="char-avatar" onerror="this.src='assets/art/placeholder.jpg'">
-            <div class="char-info">
-                <h3>${character.name || 'Unnamed Champion'}</h3>
-                <p>Level ${character.level} ${raceName} ${className}</p>
-                <p>Profession: ${professionName}</p>
-                <p>HP: ${character.current_hp}/${character.max_hp}</p>
-            </div>
-        `;
-        characterListContainer.appendChild(charCard);
-    });
-}
-
-function setupEventListeners() {
-    console.log('[CHARACTER_MANAGER] Setting up event listeners.');
-
-    _main.querySelector('.character-list-container').addEventListener('click', (e) => {
-        const card = e.target.closest('.character-card');
-        if (card) {
-            const charId = card.dataset.characterId;
-            const selectedCharacter = _playerCharacters.find(char => char.id === charId);
-            if (selectedCharacter) {
-                console.log(`[CHARACTER_MANAGER_EVENT] Character card clicked: ${selectedCharacter.name}`);
-                renderCharacterDetails(selectedCharacter);
-
-                // Highlight selected card
-                _main.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-            }
-        }
-    });
-
-    _main.querySelector('.create-new-char-btn').addEventListener('click', () => {
-        console.log('[CHARACTER_MANAGER_EVENT] Create New Champion button clicked.');
-        displayMessage('Redirecting to character creation...');
-        window.gameAuth.loadModule('char_creation'); // Assuming this is your char creation module
-    });
-
-    _main.querySelector('.back-to-castle-btn').addEventListener('click', () => {
-        console.log('[CHARACTER_MANAGER_EVENT] Back to Castle button clicked.');
-        displayMessage('Returning to the Castle...');
-        window.gameAuth.loadModule('castle'); // Assuming this is your castle module
-    });
-}
-
-function renderCharacterDetails(character) {
-    console.log('[CHARACTER_MANAGER] Rendering details for character:', character.name);
-    const detailsPanel = _main.querySelector('.character-details-panel');
-    detailsPanel.innerHTML = ''; // Clear previous details
-
-    const createSection = (title, contentHtml) => `
-        <div class="detail-section">
-            <h3>${title}</h3>
-            <div class="section-content">${contentHtml}</div>
+        <div class="stats-block">
+          <h4>Primary Stats</h4>
+          <p>Strength: <span>${strength}</span></p>
+          <p>Vitality: <span>${vitality}</span></p>
+          <p>Spirit: <span>${spirit}</span></p>
+          <p>Dexterity: <span>${dexterity}</span></p>
         </div>
-    `;
 
-    // Basic Info
-    // Парсим stats_json
-    const stats = character.stats_json || {};
-    const statsHtml = Object.entries(stats).map(([stat, value]) => `<p><strong>${stat}:</strong> <span>${value}</span></p>`).join('');
-
-    const basicInfoHtml = `
-        <p><strong>Name:</strong> ${character.name || 'N/A'}</p>
-        <p><strong>Race:</strong> ${character.races ? character.races.name : 'N/A'}</p>
-        <p><strong>Class:</strong> ${character.classes ? character.classes.name : 'N/A'}</p>
-        <p><strong>Profession:</strong> ${character.professions ? character.professions.name : 'N/A'}</p>
-        <p><strong>Sex:</strong> ${character.sex || 'N/A'}</p>
-        <p><strong>Level:</strong> ${character.level || 1}</p>
-        <p><strong>Experience:</strong> ${character.exp || 0}</p>
-        <p><strong>HP:</strong> ${character.current_hp || 'N/A'} / ${character.max_hp || 'N/A'}</p>
-        <h4>Stats:</h4>
-        ${statsHtml}
-    `;
-    detailsPanel.innerHTML += createSection('Basic Information & Stats', basicInfoHtml);
-
-    // Equipped Items
-    const equippedItems = [
-        { label: 'Weapon', value: character.equipped_weapon_id ? character.equipped_weapon_id.name : null },
-        { label: 'Armor', value: character.equipped_armor_id ? character.equipped_armor_id.name : null },
-        { label: 'Helmet', value: character.equipped_helmet_id ? character.equipped_helmet_id.name : null },
-        { label: 'Trinket', value: character.equipped_trinket_id ? character.equipped_trinket_id.name : null },
-        { label: 'Boots', value: character.equipped_boots_id ? character.equipped_boots_id.name : null },
-        { label: 'Gloves', value: character.equipped_gloves_id ? character.equipped_gloves_id.name : null }
-    ];
-    let equippedItemsHtml = '<ul>';
-    equippedItems.forEach(item => {
-        equippedItemsHtml += `<li><strong>${item.label}:</strong> ${item.value || 'None'}</li>`;
-    });
-    equippedItemsHtml += '</ul>';
-    detailsPanel.innerHTML += createSection('Equipped Items', equippedItemsHtml);
-
-    // Consumables (assuming jsonb array of strings)
-    const consumables = character.consumables && Array.isArray(character.consumables) && character.consumables.length > 0
-        ? character.consumables.join(', ')
-        : 'None';
-    const consumablesHtml = `<p>${consumables}</p>`;
-    detailsPanel.innerHTML += createSection('Consumables', consumablesHtml);
-
-    // Starting Abilities (assuming jsonb array of strings)
-    const startingAbilities = character.starting_abilities && Array.isArray(character.starting_abilities) && character.starting_abilities.length > 0
-        ? `<ul>${character.starting_abilities.map(a => `<li>${a}</li>`).join('')}</ul>`
-        : '<p>None</p>';
-    detailsPanel.innerHTML += createSection('Starting Abilities', startingAbilities);
-
-    // Learned Abilities (assuming jsonb array of strings)
-    const learnedAbilities = character.learned_abilities && Array.isArray(character.learned_abilities) && character.learned_abilities.length > 0
-        ? `<ul>${character.learned_abilities.map(a => `<li>${a}</li>`).join('')}</ul>`
-        : '<p>None</p>';
-    detailsPanel.innerHTML += createSection('Learned Abilities', learnedAbilities);
-
-    // Talents (placeholder)
-    const talentsHtml = '<p>Talents functionality coming soon!</p>';
-    detailsPanel.innerHTML += createSection('Talents', talentsHtml);
-
-    // Add action buttons
-    const actionButtonsHtml = `
-        <div class="action-buttons">
-            <button class="fantasy-button edit-char-btn" data-char-id="${character.id}">Edit Champion</button>
-            <button class="fantasy-button delete-char-btn danger-button" data-char-id="${character.id}">Delete Champion</button>
+        <div class="stats-block">
+          <h4>Derived Stats</h4>
+          <p>HP: <span>${hp}</span></p>
+          <p>Armor: <span>${armor}</span></p>
+          <p>Resistance: <span>${resistance}</span></p>
         </div>
-    `;
-    detailsPanel.innerHTML += actionButtonsHtml;
 
-    // Add event listeners for new buttons
-    detailsPanel.querySelector('.edit-char-btn').addEventListener('click', (e) => {
-        const charId = e.target.dataset.charId;
-        console.log(`[CHARACTER_MANAGER_EVENT] Edit Champion button clicked for ID: ${charId}`);
-        displayMessage('Edit functionality coming soon!');
-        // Implement edit logic here, maybe load a new module or render an edit form
-    });
+        <div class="stats-block">
+          <h4>Equipped Items</h4>
+          ${equippedItems.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+        </div>
 
-    detailsPanel.querySelector('.delete-char-btn').addEventListener('click', async (e) => {
-        const charId = e.target.dataset.charId;
-        console.log(`[CHARACTER_MANAGER_EVENT] Delete Champion button clicked for ID: ${charId}`);
-        if (confirm('Are you sure you want to delete this champion? This action cannot be undone.')) {
-            await deleteCharacter(charId);
-        }
-    });
+        <div class="stats-block">
+          <h4>Consumables</h4>
+          <p>${consumables}</p>
+        </div>
+
+        <div class="abilities-block">
+          <h4>Starting Abilities</h4>
+          <p>${startingAbilities}</p>
+        </div>
+
+        <div class="abilities-block">
+          <h4>Learned Abilities</h4>
+          <p>${learnedAbilities}</p>
+        </div>
+
+        <!-- Future features: talents, detailed ability data -->
+      </div>
+    </div>
+  `;
 }
 
-// Placeholder for delete character function
-async function deleteCharacter(charId) {
-    console.log(`[CHARACTER_MANAGER] Attempting to delete character with ID: ${charId}`);
-    try {
-        // Assuming your _apiCall supports DELETE method
-        // You might need to adjust this depending on how _apiCall is implemented
-        const { error } = await _apiCall(`/api/supabase/rest/v1/characters?id=eq.${charId}`, {
-            method: 'DELETE'
-        });
+function createParticles() {
+  console.log('[PARTICLES] Creating particles in Character Manager...');
+  const particlesContainer = _main.querySelector('.particles');
+  if (!particlesContainer) return;
 
-        if (error) {
-            console.error('[CHARACTER_MANAGER] Error deleting character:', error);
-            displayMessage('Failed to delete champion: ' + error.message);
-        } else {
-            console.log(`[CHARACTER_MANAGER] Character ${charId} deleted successfully.`);
-            displayMessage('Champion successfully deleted!');
-            // Re-fetch and re-render the list
-            await fetchPlayerCharacters();
-            renderCharacterList();
-            // Clear details panel after deletion
-            _main.querySelector('.character-details-panel').innerHTML = '<h2>Champion Details</h2><p>Select a champion from the list to view their details.</p>';
-        }
-    } catch (error) {
-        console.error('[CHARACTER_MANAGER] Unexpected error during character deletion:', error);
-        displayMessage('An error occurred during deletion. Please try again.');
-    }
+  particlesContainer.innerHTML = '';
+  const particleCount = 20;
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.top = Math.random() * 100 + '%';
+    particle.style.animationDelay = Math.random() * 6 + 's';
+    particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+    particlesContainer.appendChild(particle);
+  }
 }
 
-
-// Placeholder for general display message (if not already defined globally)
 function displayMessage(message) {
-    const messageContainer = document.getElementById('game-message-container'); // Assuming a global message container
-    if (messageContainer) {
-        messageContainer.textContent = message;
-        messageContainer.style.opacity = 1;
-        setTimeout(() => {
-            messageContainer.style.opacity = 0;
-            messageContainer.textContent = '';
-        }, 3000);
-    } else {
-        console.warn('Message container not found. Message:', message);
-        alert(message); // Fallback
-    }
+  console.log(`[MESSAGE] Displaying: ${message}`);
+  const messageBox = document.createElement('div');
+  messageBox.className = 'custom-message-box';
+  messageBox.innerHTML = `
+    <div class="message-content">
+      <p>${message}</p>
+      <button class="fantasy-button message-ok-btn">OK</button>
+    </div>
+  `;
+  document.body.appendChild(messageBox);
+
+  messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
+    messageBox.remove();
+    console.log('[MESSAGE] Message box closed.');
+  });
 }
-
-// Placeholder for addCharacterManagerStyles (if not already defined)
-function addCharacterManagerStyles() {
-    if (!document.getElementById('character-manager-styles')) {
-        const style = document.createElement('style');
-        style.id = 'character-manager-styles';
-        style.innerHTML = `
-            .character-manager-section {
-                display: flex;
-                gap: 20px;
-                padding: 20px;
-                justify-content: center;
-                align-items: flex-start;
-                flex-wrap: wrap; /* Allow wrapping on smaller screens */
-            }
-
-            .character-list-panel, .character-details-panel {
-                background-color: rgba(0, 0, 0, 0.7);
-                border: 1px solid #4a3b2b;
-                border-radius: 8px;
-                padding: 20px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-                color: #e0d8c9;
-            }
-
-            .character-list-panel {
-                flex: 1;
-                min-width: 300px;
-                max-width: 400px;
-            }
-
-            .character-details-panel {
-                flex: 2;
-                min-width: 400px;
-                max-width: 700px;
-            }
-
-            .character-list-container {
-                max-height: 500px;
-                overflow-y: auto;
-                margin-bottom: 20px;
-                padding-right: 10px; /* For scrollbar */
-            }
-
-            .character-card {
-                display: flex;
-                align-items: center;
-                background-color: rgba(30, 20, 10, 0.8);
-                border: 1px solid #6b5c4a;
-                border-radius: 6px;
-                padding: 10px;
-                margin-bottom: 10px;
-                cursor: pointer;
-                transition: transform 0.2s, box-shadow 0.2s;
-            }
-
-            .character-card:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-            }
-
-            .character-card.selected {
-                border-color: #ffd700; /* Gold highlight */
-                box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-            }
-
-            .char-avatar {
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                object-fit: cover;
-                margin-right: 15px;
-                border: 2px solid #8b7d6b;
-            }
-
-            .char-info h3 {
-                margin: 0 0 5px 0;
-                color: #f0e6d2;
-                font-size: 1.2em;
-            }
-
-            .char-info p {
-                margin: 0;
-                font-size: 0.9em;
-                color: #c2b5a1;
-            }
-
-            .detail-section {
-                background-color: rgba(40, 30, 20, 0.8);
-                border: 1px solid #5a4b3a;
-                border-radius: 5px;
-                padding: 15px;
-                margin-bottom: 15px;
-            }
-
-            .detail-section h3 {
-                color: #f0e6d2;
-                margin-top: 0;
-                border-bottom: 1px solid #6b5c4a;
-                padding-bottom: 8px;
-                margin-bottom: 10px;
-            }
-
-            .detail-section p {
-                margin: 5px 0;
-                color: #d4c7b8;
-            }
-
-            .detail-section p strong {
-                color: #f0e6d2;
-            }
-
-            .detail-section ul {
-                list-style: none;
-                padding: 0;
-                margin: 5px 0;
-            }
-
-            .detail-section ul li {
-                background-color: rgba(50, 40, 30, 0.7);
-                padding: 5px 10px;
-                border-radius: 3px;
-                margin-bottom: 3px;
-            }
-
-            .fantasy-button {
-                background-color: #8b4513; /* SaddleBrown */
-                color: #fff;
-                border: 2px solid #a0522d; /* Sienna */
-                padding: 10px 15px;
-                border-radius: 5px;
-                cursor: pointer;
-                font-family: 'MedievalSharp', cursive; /* Example fantasy font */
-                font-size: 1em;
-                text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-                box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-                transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
-                margin-top: 10px;
-            }
-
-            .fantasy-button:hover {
-                background-color: #a0522d; /* Sienna */
-                border-color: #cd853f; /* Peru */
-                transform: translateY(-2px);
-            }
-            .fantasy-button:active {
-                transform: translateY(0);
-                box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-            }
-
-            .create-new-char-btn, .back-to-castle-btn {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-
-            .action-buttons {
-                display: flex;
-                gap: 10px;
-                margin-top: 20px;
-                justify-content: flex-end;
-            }
-
-            .danger-button {
-                background-color: #8B0000; /* DarkRed */
-                border-color: #DC143C; /* Crimson */
-            }
-
-            .danger-button:hover {
-                background-color: #DC143C; /* Crimson */
-                border-color: #FF6347; /* Tomato */
-            }
-
-            @media (max-width: 768px) {
-                .character-manager-section {
-                    flex-direction: column;
-                    align-items: center;
-                }
-                .character-list-panel, .character-details-panel {
-                    min-width: unset;
-                    width: 100%;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-// Assuming displayMessage function is globally available or imported.
-// If not, you might need to provide it.
-// Example:
-// function displayMessage(msg) {
-//     const msgElement = document.getElementById('message-area'); // Or similar element
-//     if (msgElement) {
-//         msgElement.textContent = msg;
-//         msgElement.style.display = 'block';
-//         setTimeout(() => msgElement.style.display = 'none', 3000);
-//     } else {
-//         console.log(msg);
-//     }
-// }
