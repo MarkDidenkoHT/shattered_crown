@@ -129,7 +129,7 @@ function characterCardHTML(character) {
     ? character.learned_abilities.join(', ')
     : 'None';
 
-  const raceName = character.race?.name || 'Race';
+  const raceName = character.races?.name || 'Race';
   const className = character.classes?.name || 'Class';
   const professionName = character.professions?.name || 'Profession';
 
