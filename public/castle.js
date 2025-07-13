@@ -147,7 +147,7 @@ function setupInteractions() {
                 // window.gameAuth.loadModule('bank');
             } else if (action === 'embark') {
                 displayMessage('Embark functionality coming soon!');
-                // window.gameAuth.loadModule('world_map');
+                window.gameAuth.loadModule('embark');
             } else if (action === 'crafting') {
                 displayMessage('Crafting functionality coming soon!');
                 // window.gameAuth.loadModule('crafting_station');
