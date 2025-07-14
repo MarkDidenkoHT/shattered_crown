@@ -214,10 +214,10 @@ async function getPlayerCharacterCount(playerId) {
   }
 }
 
-async function loadModule(name) {
+async function loadModule(name, extraArgs = {}) {
   const main = document.querySelector(".main-app-container");
   main.innerHTML = "";
-  console.log(`[MODULE] Loading module: ${name}`); // LOG
+  console.log(`[MODULE] Loading module: ${name}`);
 
   try {
     const module = await import(`./${name}.js`);
@@ -226,9 +226,10 @@ async function loadModule(name) {
       supabaseConfig,
       getCurrentProfile,
       getCurrentSession,
-      apiCall
+      apiCall,
+      ...extraArgs // 👈 ADD THIS LINE!
     });
-    console.log(`[MODULE] Loaded module: ${name}`); // LOG
+    console.log(`[MODULE] Loaded module: ${name}`);
   } catch (error) {
     console.error(`[MODULE] Error loading module ${name}:`, error);
     main.innerHTML = `<div>Error loading ${name} module</div>`;
