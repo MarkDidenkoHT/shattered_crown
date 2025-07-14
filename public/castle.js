@@ -146,7 +146,6 @@ function setupInteractions() {
                 displayMessage('Bank functionality coming soon!');
                 // window.gameAuth.loadModule('bank');
             } else if (action === 'embark') {
-                displayMessage('Embark functionality coming soon!');
                 window.gameAuth.loadModule('embark');
             } else if (action === 'crafting') {
                 displayMessage('Crafting functionality coming soon!');

@@ -17,6 +17,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     return;
   }
 
+  // Clear main container and prepare structure
   _main.innerHTML = `
     <div class="main-app-container">
       <div class="particles"></div>
@@ -26,6 +27,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 
   createParticles();
   renderEmbarkScreen();
+
   console.log('[EMBARK] --- loadModule for Embark finished ---');
 }
 
@@ -39,10 +41,10 @@ function renderEmbarkScreen() {
     </div>
     <div class="selection-section">
       <div class="selection-grid">
-        ${createEmbarkCard('Forest', 'forest', 'assets/art/embark/forest.jpg')}
-        ${createEmbarkCard('Mountain', 'mountain', 'assets/art/embark/mountain.jpg')}
-        ${createEmbarkCard('Dungeon', 'dungeon', 'assets/art/embark/dungeon.jpg')}
-        ${createEmbarkCard('PvP Arena', 'pvp', 'assets/art/embark/pvp.jpg')}
+        ${createEmbarkCard('Forest', 'Forest', 'assets/art/embark/forest.jpg')}
+        ${createEmbarkCard('Mountain', 'Mountain', 'assets/art/embark/mountain.jpg')}
+        ${createEmbarkCard('Dungeon', 'Dungeon', 'assets/art/embark/dungeon.jpg')}
+        ${createEmbarkCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.jpg')}
       </div>
     </div>
     <div class="confirm-return-buttons">
@@ -50,15 +52,17 @@ function renderEmbarkScreen() {
     </div>
   `;
 
-  // Button handlers
+  // Return button handler
   section.querySelector('.return-btn').addEventListener('click', () => {
     window.gameAuth.loadModule('castle');
   });
 
+  // Embark buttons handler
   section.querySelectorAll('.embark-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const mode = e.currentTarget.dataset.mode;
       console.log(`[EMBARK] Selected mode: ${mode}`);
+      // Pass selectedMode to battle_manager when loading
       window.gameAuth.loadModule('battle_manager', { selectedMode: mode });
     });
   });
