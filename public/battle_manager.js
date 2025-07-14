@@ -2,159 +2,176 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _areaType;
-let _layoutData;
 
-export async function loadModule(main, { apiCall, getCurrentProfile }) {
-    console.log('[BATTLE] --- Starting loadModule for Battle Manager ---');
-    _main = main;
-    _apiCall = apiCall;
-    _getCurrentProfile = getCurrentProfile;
+export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode }) {
+  console.log('[BATTLE_MANAGER] --- Starting loadModule ---');
+  _main = main;
+  _apiCall = apiCall;
+  _getCurrentProfile = getCurrentProfile;
 
-    _profile = _getCurrentProfile();
-    if (!_profile) {
-        console.error('[BATTLE] No profile found.');
-        displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login');
-        return;
+  _profile = _getCurrentProfile();
+  if (!_profile) {
+    console.error('[BATTLE_MANAGER] No profile found. Redirecting to login.');
+    displayMessage('User profile not found. Please log in again.');
+    window.gameAuth.loadModule('login');
+    return;
+  }
+
+  if (!selectedMode) {
+    console.error('[BATTLE_MANAGER] No selectedMode provided. Returning to embark.');
+    displayMessage('No mode selected. Returning to embark.');
+    window.gameAuth.loadModule('embark');
+    return;
+  }
+
+  console.log(`[BATTLE_MANAGER] Selected mode: ${selectedMode}`);
+
+  // Determine level (for PvE) or random level (for PvP)
+  let areaLevel = 1;
+  if (selectedMode !== 'pvp') {
+    areaLevel = (_profile.progress && _profile.progress[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)]) || 1;
+  } else {
+    areaLevel = Math.floor(Math.random() * 10) + 1;
+  }
+
+  console.log(`[BATTLE_MANAGER] Area level determined: ${areaLevel}`);
+
+  // Fetch layout data
+  let layoutData;
+  try {
+    const layoutName = selectedMode === 'pvp' ? 'pvp' : selectedMode;
+    const response = await _apiCall(`/api/supabase/rest/v1/layouts?name=eq.${layoutName}&level=eq.${areaLevel}&select=*`);
+    const layouts = await response.json();
+    layoutData = layouts[0];
+
+    if (!layoutData) {
+      throw new Error('No layout data found.');
     }
 
-    // We expect window.battleContext.areaType set by embark.js
-    _areaType = window.battleContext?.areaType;
-    if (!_areaType) {
-        console.error('[BATTLE] No area type set.');
-        displayMessage('Invalid battle entry. Returning to castle.');
-        window.gameAuth.loadModule('castle');
-        return;
-    }
+    console.log('[BATTLE_MANAGER] Layout data fetched:', layoutData);
+  } catch (error) {
+    console.error('[BATTLE_MANAGER] Error fetching layout data:', error);
+    displayMessage('Failed to load battlefield layout. Returning...');
+    window.gameAuth.loadModule('embark');
+    return;
+  }
 
-    // Determine level
-    let level = 1;
-    if (_areaType !== 'PvP') {
-        level = _profile.progress?.[_areaType] || 1;
-        console.log(`[BATTLE] Loading ${_areaType} level ${level}`);
-    } else {
-        level = Math.floor(Math.random() * 10) + 1;
-        console.log(`[BATTLE] Loading PvP layout level ${level}`);
-    }
-
-    await loadLayout(_areaType, level);
-    renderBattleScene();
-
-    // Load character and enemy data (placeholders for now)
-    await window.characterData.loadCharacters();
-    await window.characterData.loadEnemies();
-
-    // Setup turn manager (placeholder)
-    window.turnManager.startTurnManager();
-
-    console.log('[BATTLE] --- Battle Manager fully initialized ---');
+  // Render battle screen
+  renderBattleScreen(selectedMode, areaLevel, layoutData);
 }
 
-async function loadLayout(name, level) {
-    try {
-        const response = await _apiCall(`/api/supabase/rest/v1/layouts?name=eq.${name}&level=eq.${level}&select=*`);
-        const layouts = await response.json();
+function renderBattleScreen(mode, level, layoutData) {
+  _main.innerHTML = `
+    <div class="main-app-container">
+      <div class="battle-top-bar">
+        <button class="fantasy-button return-btn">Retreat</button>
+        <p class="battle-status">Mode: ${mode.toUpperCase()} | Level: ${level}</p>
+        <button class="fantasy-button settings-btn">Settings</button>
+      </div>
+      <div class="battle-grid-container"></div>
+      <div class="battle-bottom-ui"></div>
+    </div>
+  `;
 
-        if (!layouts || layouts.length === 0) {
-            console.error('[BATTLE] No layout found.');
-            displayMessage('No layout found for this area. Returning to castle.');
-            window.gameAuth.loadModule('castle');
-            return;
-        }
+  // Setup buttons
+  _main.querySelector('.return-btn').addEventListener('click', () => {
+    displayMessage('Retreating to embark...');
+    window.gameAuth.loadModule('embark');
+  });
 
-        _layoutData = layouts[0];
-        console.log('[BATTLE] Layout data:', _layoutData);
-    } catch (error) {
-        console.error('[BATTLE] Error loading layout:', error);
-        displayMessage('Error loading layout. Returning to castle.');
-        window.gameAuth.loadModule('castle');
-    }
+  _main.querySelector('.settings-btn').addEventListener('click', () => {
+    displayMessage('Settings coming soon!');
+  });
+
+  // Render grid
+  renderBattleGrid(layoutData.layout);
+
+  // Render bottom UI
+  renderBottomUI();
+
+  createParticles();
 }
 
-function renderBattleScene() {
-    _main.innerHTML = `
-        <div class="main-app-container">
-            <div class="battle-top-bar">
-                <button class="fantasy-button battle-settings-btn">Settings</button>
-                <button class="fantasy-button battle-exit-btn">Exit</button>
-            </div>
-            <div class="battle-grid"></div>
-            <div class="battle-bottom-ui">
-                <div class="button-row"></div>
-                <div class="button-row"></div>
-            </div>
-        </div>
-    `;
+function renderBattleGrid(layoutJson) {
+  const container = _main.querySelector('.battle-grid-container');
+  if (!layoutJson || !layoutJson.tiles) {
+    console.error('[BATTLE_MANAGER] Invalid layout JSON.');
+    container.innerHTML = '<p>Invalid battlefield layout.</p>';
+    return;
+  }
 
-    renderGrid();
-    setupUI();
-}
+  const tiles = layoutJson.tiles;
+  container.innerHTML = ''; // Clear
 
-function renderGrid() {
-    const gridContainer = _main.querySelector('.battle-grid');
-    const tiles = _layoutData.layout.tiles;
+  container.style.display = 'grid';
+  container.style.gridTemplateRows = `repeat(${tiles.length}, 1fr)`;
+  container.style.gridTemplateColumns = `repeat(${tiles[0].length}, 1fr)`;
+  container.style.gap = '2px';
+  container.style.width = '100%';
+  container.style.height = '100%';
 
-    gridContainer.style.display = 'grid';
-    gridContainer.style.gridTemplateRows = `repeat(${tiles.length}, 1fr)`;
-    gridContainer.style.gridTemplateColumns = `repeat(${tiles[0].length}, 1fr)`;
-    gridContainer.style.width = '100%';
-    gridContainer.style.height = '100%';
-
-    tiles.forEach((row, rowIndex) => {
-        row.forEach((tileName, colIndex) => {
-            const tile = document.createElement('div');
-            tile.className = 'battle-tile';
-            tile.dataset.row = rowIndex;
-            tile.dataset.col = colIndex;
-            tile.style.backgroundImage = `url('assets/art/tiles/${tileName.toLowerCase()}.png')`;
-            tile.style.backgroundSize = 'cover';
-            tile.style.border = '1px solid rgba(0,0,0,0.2)';
-            gridContainer.appendChild(tile);
-        });
+  tiles.forEach((row, y) => {
+    row.forEach((tileName, x) => {
+      const tile = document.createElement('div');
+      tile.className = `battle-tile ${tileName.toLowerCase()}`;
+      tile.dataset.x = x;
+      tile.dataset.y = y;
+      tile.innerHTML = `<span class="tile-label">${tileName}</span>`;
+      container.appendChild(tile);
     });
-
-    console.log('[BATTLE] Grid rendered.');
+  });
 }
 
-function setupUI() {
-    const buttonRows = _main.querySelectorAll('.button-row');
+function renderBottomUI() {
+  const ui = _main.querySelector('.battle-bottom-ui');
+  ui.innerHTML = '';
 
-    // Top row
+  // 2 rows of 5 buttons
+  for (let row = 0; row < 2; row++) {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'battle-ui-row';
     for (let i = 0; i < 5; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'fantasy-button';
-        btn.innerText = `Skill ${i + 1}`;
-        buttonRows[0].appendChild(btn);
+      const btn = document.createElement('button');
+      btn.className = 'fantasy-button ui-btn';
+      btn.textContent = `Btn ${row * 5 + i + 1}`;
+      rowDiv.appendChild(btn);
     }
-
-    // Bottom row
-    for (let i = 0; i < 5; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'fantasy-button';
-        btn.innerText = `Action ${i + 1}`;
-        buttonRows[1].appendChild(btn);
-    }
-
-    _main.querySelector('.battle-settings-btn').addEventListener('click', () => {
-        displayMessage('Settings placeholder.');
-    });
-
-    _main.querySelector('.battle-exit-btn').addEventListener('click', () => {
-        displayMessage('Exiting battle...');
-        window.gameAuth.loadModule('castle');
-    });
+    ui.appendChild(rowDiv);
+  }
 }
 
-function displayMessage(msg) {
-    const box = document.createElement('div');
-    box.className = 'custom-message-box';
-    box.innerHTML = `
-        <div class="message-content">
-            <p>${msg}</p>
-            <button class="fantasy-button message-ok-btn">OK</button>
-        </div>
-    `;
-    document.body.appendChild(box);
-    box.querySelector('.message-ok-btn').addEventListener('click', () => box.remove());
+function createParticles() {
+  console.log('[PARTICLES] Creating particles for Battle Manager...');
+  const particlesContainer = document.createElement('div');
+  particlesContainer.className = 'particles';
+  _main.appendChild(particlesContainer);
+
+  const particleCount = 20;
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.top = Math.random() * 100 + '%';
+    particle.style.animationDelay = Math.random() * 6 + 's';
+    particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+    particlesContainer.appendChild(particle);
+  }
+}
+
+function displayMessage(message) {
+  console.log(`[MESSAGE] Displaying: ${message}`);
+  const messageBox = document.createElement('div');
+  messageBox.className = 'custom-message-box';
+  messageBox.innerHTML = `
+    <div class="message-content">
+      <p>${message}</p>
+      <button class="fantasy-button message-ok-btn">OK</button>
+    </div>
+  `;
+  document.body.appendChild(messageBox);
+
+  messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
+    messageBox.remove();
+    console.log('[MESSAGE] Message box closed.');
+  });
 }
