@@ -8,7 +8,7 @@ export function initCharacterData(apiCall, profile) {
   _profile = profile;
 }
 
-export async function loadPlayerCharacters() {
+export async function loadPlayerCharacters(spawnPositions = []) {
   console.log(`[CHARACTER_DATA] Loading characters for player ${_profile.id}`);
   try {
     const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*`);
@@ -20,7 +20,17 @@ export async function loadPlayerCharacters() {
     }
 
     console.log('[CHARACTER_DATA] Player characters loaded:', data);
-    return data.map((char, index) => formatCharacter(char, 'player', index));
+
+    return data.map((char, index) => {
+      const formatted = formatCharacter(char, 'player', index);
+      // Assign spawn position if available
+      if (spawnPositions[index]) {
+        formatted.position = spawnPositions[index];
+      } else {
+        console.warn(`[CHARACTER_DATA] No spawn position for player character ${formatted.name}`);
+      }
+      return formatted;
+    });
   } catch (error) {
     console.error('[CHARACTER_DATA] Error loading player characters:', error);
     return [];
@@ -30,8 +40,10 @@ export async function loadPlayerCharacters() {
 export async function loadEnemiesByNames(enemyNames) {
   console.log('[CHARACTER_DATA] Loading enemies:', enemyNames);
   try {
-    const nameFilters = enemyNames.map(name => `name=eq.${encodeURIComponent(name)}`).join('&or=');
-    const response = await _apiCall(`/api/supabase/rest/v1/enemies?or=(${nameFilters})&select=*`);
+    const uniqueNames = [...new Set(enemyNames)];
+    const orConditions = uniqueNames.map(name => `name.eq.${encodeURIComponent(name)}`);
+    const query = `/api/supabase/rest/v1/enemies?select=*&or=${orConditions.join(',')}`;
+    const response = await _apiCall(query);
     const data = await response.json();
 
     if (!data || data.length === 0) {
