@@ -117,21 +117,25 @@ function renderBattleGrid(layoutJson) {
 
   tiles.forEach((row, y) => {
     row.forEach((tileName, x) => {
+      const normalizedName = tileName.toLowerCase().replace(/\s+/g, '_'); // e.g., "Dark Grass" → "dark_grass"
+      const tileData = _tileMap[normalizedName];
+      const artName = tileData?.art || 'placeholder';
+
       const tile = document.createElement('div');
-      tile.className = `battle-tile ${tileName.toLowerCase()}`;
+      tile.className = `battle-tile tile-${normalizedName}`;
       tile.dataset.x = x;
       tile.dataset.y = y;
-
-      const tileInfo = _tileMap[tileName.toLowerCase()];
-      const art = tileInfo?.art || 'placeholder';
-      tile.style.backgroundImage = `url(assets/tiles/${art}.png)`;
-      tile.style.backgroundSize = 'cover';
       tile.title = tileName;
+
+      tile.style.backgroundImage = `url(assets/art/tiles/${artName}.png)`;
+      tile.style.backgroundSize = 'cover';
+      tile.style.backgroundPosition = 'center';
 
       container.appendChild(tile);
     });
   });
 }
+
 
 function renderBottomUI() {
   const ui = _main.querySelector('.battle-bottom-ui');
