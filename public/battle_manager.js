@@ -4,6 +4,8 @@ let _getCurrentProfile;
 let _profile;
 let _tileMap = {}; // name → tile metadata
 
+import { loadPlayerCharacters, loadEnemiesByNames } from './character_data.js';
+
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode }) {
   console.log('[BATTLE_MANAGER] --- Starting loadModule ---');
   _main = main;

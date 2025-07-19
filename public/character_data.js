@@ -6,7 +6,7 @@ export function initCharacterData(apiCall) {
   _apiCall = apiCall;
 }
 
-export async function loadPlayerCharacters(playerId) {
+export async function loadPlayerCharacters(playerId, spawnPositions = []) {
   console.log(`[CHARACTER_DATA] Loading characters for player ${playerId}`);
   const { data, error } = await _apiCall('characters', {
     select: '*',
@@ -19,10 +19,13 @@ export async function loadPlayerCharacters(playerId) {
     return [];
   }
 
-  return data.map((char, index) => formatCharacter(char, 'player', index));
+  return data.map((char, index) => {
+    const pos = spawnPositions[index] || null;
+    return formatCharacter(char, 'player', index, pos);
+  });
 }
 
-export async function loadEnemiesByNames(enemyNames) {
+export async function loadEnemiesByNames(enemyNames, spawnPositions = []) {
   console.log('[CHARACTER_DATA] Loading enemies:', enemyNames);
   const { data, error } = await _apiCall('enemies', {
     select: '*',
@@ -34,10 +37,13 @@ export async function loadEnemiesByNames(enemyNames) {
     return [];
   }
 
-  return data.map((enemy, index) => formatCharacter(enemy, 'enemy', index));
+  return data.map((enemy, index) => {
+    const pos = spawnPositions[index] || null;
+    return formatCharacter(enemy, 'enemy', index, pos);
+  });
 }
 
-function formatCharacter(raw, type, index) {
+function formatCharacter(raw, type, index, position = null) {
   const stats = raw.stats || {};
 
   const computedStats = {
@@ -53,6 +59,8 @@ function formatCharacter(raw, type, index) {
     stats,
     ...computedStats,
     abilities: raw.starting_abilities || raw.abilities || [],
-    position: null // Will be assigned by layout
+    spriteName: raw.art || raw.name || `${type}_${index}`,
+    position: position ? { x: position[0], y: position[1] } : null,
+    facing: 'down'
   };
 }
