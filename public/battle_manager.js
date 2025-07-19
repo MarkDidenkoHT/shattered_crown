@@ -25,12 +25,13 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     return;
   }
 
-  CharacterData.initCharacterData(_apiCall, _profile);
+  // Initialize character data module with both apiCall and profile
+  initCharacterData(_apiCall, _profile);
 
   if (!selectedMode) {
     console.error('[BATTLE_MANAGER] No selectedMode provided. Returning to embark.');
     displayMessage('No mode selected. Returning to embark.');
-    window.gameAuth.loadModule('embark');f
+    window.gameAuth.loadModule('embark');
     return;
   }
 
@@ -44,9 +45,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
   }
 
   console.log(`[BATTLE_MANAGER] Area level determined: ${areaLevel}`);
-
-  // Init character module
-  initCharacterData(_apiCall);
 
   // Fetch tile definitions
   try {
@@ -81,7 +79,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
   const enemyNames = layoutData.enemy_pos?.enemyNamesToSpawn || [];
   const enemyPos = layoutData.enemy_pos?.enemySpawnPositions || [];
 
-  const players = await loadPlayerCharacters(_profile.id, playerPos);
+  const players = await loadPlayerCharacters(playerPos);
   const enemies = await loadEnemiesByNames(enemyNames, enemyPos);
   _characters = [...players, ...enemies];
 
@@ -200,7 +198,6 @@ function renderCharacters() {
 
   console.log('[RENDER_CHARACTERS] Done rendering characters.');
 }
-
 
 function renderBottomUI() {
   const ui = _main.querySelector('.battle-bottom-ui');
