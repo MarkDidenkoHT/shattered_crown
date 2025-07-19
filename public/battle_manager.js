@@ -28,7 +28,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
   if (!selectedMode) {
     console.error('[BATTLE_MANAGER] No selectedMode provided. Returning to embark.');
     displayMessage('No mode selected. Returning to embark.');
-    window.gameAuth.loadModule('embark');
+    window.gameAuth.loadModule('embark');f
     return;
   }
 
@@ -153,10 +153,22 @@ function renderBattleGrid(layoutJson) {
 
 function renderCharacters() {
   const container = _main.querySelector('.battle-grid-container');
-  if (!container) return;
+
+  if (!container) {
+    console.warn('[RENDER_CHARACTERS] battle-grid-container not found');
+    return;
+  }
+
+  console.log('[RENDER_CHARACTERS] Starting to render characters...');
+  console.log('[RENDER_CHARACTERS] Characters:', _characters);
 
   _characters.forEach(char => {
-    if (!char.position) return;
+    if (!char.position) {
+      console.warn(`[RENDER_CHARACTERS] Character ${char.name} has no position, skipping...`);
+      return;
+    }
+
+    console.log(`[RENDER_CHARACTERS] Rendering character ${char.name} at (${char.position.x}, ${char.position.y})`);
 
     const charEl = document.createElement('div');
     charEl.className = `character-token ${char.type}`;
@@ -166,10 +178,16 @@ function renderCharacters() {
     charEl.style.zIndex = 5;
     charEl.title = char.name;
 
+    const sprite = char.spriteName || 'placeholder';
+    console.log(`[RENDER_CHARACTERS] Using sprite: ${sprite}`);
+
     const img = document.createElement('img');
-    img.src = `assets/art/sprites/${char.spriteName}.png`;
+    img.src = `assets/art/sprites/${sprite}.png`;
     img.alt = char.name;
-    img.onerror = () => { img.src = 'assets/art/sprites/placeholder.png'; };
+    img.onerror = () => {
+      console.warn(`[RENDER_CHARACTERS] Failed to load sprite for ${char.name}, using placeholder.`);
+      img.src = 'assets/art/sprites/placeholder.png';
+    };
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'contain';
@@ -177,7 +195,10 @@ function renderCharacters() {
     charEl.appendChild(img);
     container.appendChild(charEl);
   });
+
+  console.log('[RENDER_CHARACTERS] Done rendering characters.');
 }
+
 
 function renderBottomUI() {
   const ui = _main.querySelector('.battle-bottom-ui');
