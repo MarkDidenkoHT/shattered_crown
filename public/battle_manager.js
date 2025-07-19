@@ -2,6 +2,7 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
+let _tileMap = {}; // name → tile metadata
 
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode }) {
   console.log('[BATTLE_MANAGER] --- Starting loadModule ---');
@@ -26,7 +27,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
   console.log(`[BATTLE_MANAGER] Selected mode: ${selectedMode}`);
 
-  // Determine level (for PvE) or random level (for PvP)
   let areaLevel = 1;
   if (selectedMode !== 'pvp') {
     areaLevel = (_profile.progress && _profile.progress[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)]) || 1;
@@ -35,6 +35,18 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
   }
 
   console.log(`[BATTLE_MANAGER] Area level determined: ${areaLevel}`);
+
+  // Fetch tile definitions
+  try {
+    const tileResponse = await _apiCall(`/api/supabase/rest/v1/tiles?select=name,walkable,vision_block,art`);
+    const tileRows = await tileResponse.json();
+    tileRows.forEach(tile => {
+      _tileMap[tile.name.toLowerCase()] = tile;
+    });
+    console.log('[BATTLE_MANAGER] Tile data loaded:', _tileMap);
+  } catch (err) {
+    console.warn('[BATTLE_MANAGER] Could not fetch tile data.', err);
+  }
 
   // Fetch layout data
   let layoutData;
@@ -56,7 +68,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     return;
   }
 
-  // Render battle screen
   renderBattleScreen(selectedMode, areaLevel, layoutData);
 }
 
@@ -73,7 +84,6 @@ function renderBattleScreen(mode, level, layoutData) {
     </div>
   `;
 
-  // Setup buttons
   _main.querySelector('.return-btn').addEventListener('click', () => {
     displayMessage('Retreating to embark...');
     window.gameAuth.loadModule('embark');
@@ -83,12 +93,8 @@ function renderBattleScreen(mode, level, layoutData) {
     displayMessage('Settings coming soon!');
   });
 
-  // Render grid
   renderBattleGrid(layoutData.layout);
-
-  // Render bottom UI
   renderBottomUI();
-
   createParticles();
 }
 
@@ -101,8 +107,7 @@ function renderBattleGrid(layoutJson) {
   }
 
   const tiles = layoutJson.tiles;
-  container.innerHTML = ''; // Clear
-
+  container.innerHTML = '';
   container.style.display = 'grid';
   container.style.gridTemplateRows = `repeat(${tiles.length}, 1fr)`;
   container.style.gridTemplateColumns = `repeat(${tiles[0].length}, 1fr)`;
@@ -116,7 +121,13 @@ function renderBattleGrid(layoutJson) {
       tile.className = `battle-tile ${tileName.toLowerCase()}`;
       tile.dataset.x = x;
       tile.dataset.y = y;
-      tile.innerHTML = `<span class="tile-label">${tileName}</span>`;
+
+      const tileInfo = _tileMap[tileName.toLowerCase()];
+      const art = tileInfo?.art || 'placeholder';
+      tile.style.backgroundImage = `url(assets/tiles/${art}.png)`;
+      tile.style.backgroundSize = 'cover';
+      tile.title = tileName;
+
       container.appendChild(tile);
     });
   });
@@ -126,7 +137,6 @@ function renderBottomUI() {
   const ui = _main.querySelector('.battle-bottom-ui');
   ui.innerHTML = '';
 
-  // 2 rows of 5 buttons
   for (let row = 0; row < 2; row++) {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'battle-ui-row';
