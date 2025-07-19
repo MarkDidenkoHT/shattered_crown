@@ -3,8 +3,13 @@ let _apiCall;
 let _getCurrentProfile;
 let _profile;
 let _tileMap = {}; // name → tile metadata
+let _characters = [];
 
-import { loadPlayerCharacters, loadEnemiesByNames } from './character_data.js';
+import {
+  loadPlayerCharacters,
+  loadEnemiesByNames,
+  initCharacterData
+} from './character_data.js';
 
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode }) {
   console.log('[BATTLE_MANAGER] --- Starting loadModule ---');
@@ -31,12 +36,15 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
   let areaLevel = 1;
   if (selectedMode !== 'pvp') {
-    areaLevel = (_profile.progress && _profile.progress[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)]) || 1;
+    areaLevel = (_profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)]) || 1;
   } else {
     areaLevel = Math.floor(Math.random() * 10) + 1;
   }
 
   console.log(`[BATTLE_MANAGER] Area level determined: ${areaLevel}`);
+
+  // Init character module
+  initCharacterData(_apiCall);
 
   // Fetch tile definitions
   try {
@@ -50,26 +58,32 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     console.warn('[BATTLE_MANAGER] Could not fetch tile data.', err);
   }
 
-  // Fetch layout data
+  // Fetch layout
   let layoutData;
   try {
     const layoutName = selectedMode === 'pvp' ? 'pvp' : selectedMode;
     const response = await _apiCall(`/api/supabase/rest/v1/layouts?name=eq.${layoutName}&level=eq.${areaLevel}&select=*`);
     const layouts = await response.json();
     layoutData = layouts[0];
-
-    if (!layoutData) {
-      throw new Error('No layout data found.');
-    }
-
+    if (!layoutData) throw new Error('No layout data found.');
     console.log('[BATTLE_MANAGER] Layout data fetched:', layoutData);
-  } catch (error) {
-    console.error('[BATTLE_MANAGER] Error fetching layout data:', error);
+  } catch (err) {
+    console.error('[BATTLE_MANAGER] Error fetching layout data:', err);
     displayMessage('Failed to load battlefield layout. Returning...');
     window.gameAuth.loadModule('embark');
     return;
   }
 
+  // Load characters
+  const playerPos = layoutData.player_pos?.playerSpawnPositions || [];
+  const enemyNames = layoutData.enemy_pos?.enemyNamesToSpawn || [];
+  const enemyPos = layoutData.enemy_pos?.enemySpawnPositions || [];
+
+  const players = await loadPlayerCharacters(_profile.id, playerPos);
+  const enemies = await loadEnemiesByNames(enemyNames, enemyPos);
+  _characters = [...players, ...enemies];
+
+  // Render
   renderBattleScreen(selectedMode, areaLevel, layoutData);
 }
 
@@ -96,14 +110,14 @@ function renderBattleScreen(mode, level, layoutData) {
   });
 
   renderBattleGrid(layoutData.layout);
+  renderCharacters();
   renderBottomUI();
   createParticles();
 }
 
 function renderBattleGrid(layoutJson) {
   const container = _main.querySelector('.battle-grid-container');
-  if (!layoutJson || !layoutJson.tiles) {
-    console.error('[BATTLE_MANAGER] Invalid layout JSON.');
+  if (!layoutJson?.tiles) {
     container.innerHTML = '<p>Invalid battlefield layout.</p>';
     return;
   }
@@ -119,17 +133,16 @@ function renderBattleGrid(layoutJson) {
 
   tiles.forEach((row, y) => {
     row.forEach((tileName, x) => {
-      const normalizedName = tileName.toLowerCase().replace(/\s+/g, '_'); // e.g., "Dark Grass" → "dark_grass"
-      const tileData = _tileMap[normalizedName];
-      const artName = tileData?.art || 'placeholder';
+      const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
+      const tileData = _tileMap[normalized];
+      const art = tileData?.art || 'placeholder';
 
       const tile = document.createElement('div');
-      tile.className = `battle-tile tile-${normalizedName}`;
+      tile.className = `battle-tile tile-${normalized}`;
       tile.dataset.x = x;
       tile.dataset.y = y;
       tile.title = tileName;
-
-      tile.style.backgroundImage = `url(assets/art/tiles/${artName}.png)`;
+      tile.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
       tile.style.backgroundSize = 'cover';
       tile.style.backgroundPosition = 'center';
 
@@ -138,6 +151,33 @@ function renderBattleGrid(layoutJson) {
   });
 }
 
+function renderCharacters() {
+  const container = _main.querySelector('.battle-grid-container');
+  if (!container) return;
+
+  _characters.forEach(char => {
+    if (!char.position) return;
+
+    const charEl = document.createElement('div');
+    charEl.className = `character-token ${char.type}`;
+    charEl.dataset.id = char.id;
+    charEl.style.gridColumnStart = char.position.x + 1;
+    charEl.style.gridRowStart = char.position.y + 1;
+    charEl.style.zIndex = 5;
+    charEl.title = char.name;
+
+    const img = document.createElement('img');
+    img.src = `assets/art/sprites/${char.spriteName}.png`;
+    img.alt = char.name;
+    img.onerror = () => { img.src = 'assets/art/sprites/placeholder.png'; };
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'contain';
+
+    charEl.appendChild(img);
+    container.appendChild(charEl);
+  });
+}
 
 function renderBottomUI() {
   const ui = _main.querySelector('.battle-bottom-ui');
@@ -157,37 +197,30 @@ function renderBottomUI() {
 }
 
 function createParticles() {
-  console.log('[PARTICLES] Creating particles for Battle Manager...');
-  const particlesContainer = document.createElement('div');
-  particlesContainer.className = 'particles';
-  _main.appendChild(particlesContainer);
+  const container = document.createElement('div');
+  container.className = 'particles';
+  _main.appendChild(container);
 
-  const particleCount = 20;
-  for (let i = 0; i < particleCount; i++) {
-    const particle = document.createElement('div');
-    particle.className = 'particle';
-    particle.style.left = Math.random() * 100 + '%';
-    particle.style.top = Math.random() * 100 + '%';
-    particle.style.animationDelay = Math.random() * 6 + 's';
-    particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
-    particlesContainer.appendChild(particle);
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.top = Math.random() * 100 + '%';
+    p.style.animationDelay = Math.random() * 6 + 's';
+    p.style.animationDuration = (Math.random() * 3 + 4) + 's';
+    container.appendChild(p);
   }
 }
 
-function displayMessage(message) {
-  console.log(`[MESSAGE] Displaying: ${message}`);
-  const messageBox = document.createElement('div');
-  messageBox.className = 'custom-message-box';
-  messageBox.innerHTML = `
+function displayMessage(msg) {
+  const box = document.createElement('div');
+  box.className = 'custom-message-box';
+  box.innerHTML = `
     <div class="message-content">
-      <p>${message}</p>
+      <p>${msg}</p>
       <button class="fantasy-button message-ok-btn">OK</button>
     </div>
   `;
-  document.body.appendChild(messageBox);
-
-  messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
-    messageBox.remove();
-    console.log('[MESSAGE] Message box closed.');
-  });
+  document.body.appendChild(box);
+  box.querySelector('.message-ok-btn').addEventListener('click', () => box.remove());
 }
