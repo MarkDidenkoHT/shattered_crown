@@ -25,6 +25,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     return;
   }
 
+  CharacterData.initCharacterData(_apiCall, _profile);
+
   if (!selectedMode) {
     console.error('[BATTLE_MANAGER] No selectedMode provided. Returning to embark.');
     displayMessage('No mode selected. Returning to embark.');
