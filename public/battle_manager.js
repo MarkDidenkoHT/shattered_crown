@@ -2,12 +2,8 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _tileMap = {}; // name → tile metadata
+let _tileMap = {}; 
 let _characters = [];
-
-// Fixed grid dimensions - every layout is exactly 7×8
-const GRID_WIDTH = 7;
-const GRID_HEIGHT = 8;
 
 import {
   loadPlayerCharacters,
@@ -29,7 +25,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     return;
   }
 
-  // Initialize character data module with both apiCall and profile
   initCharacterData(_apiCall, _profile);
 
   if (!selectedMode) {
@@ -50,7 +45,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
   console.log(`[BATTLE_MANAGER] Area level determined: ${areaLevel}`);
 
-  // Fetch tile definitions
   try {
     const tileResponse = await _apiCall(`/api/supabase/rest/v1/tiles?select=name,walkable,vision_block,art`);
     const tileRows = await tileResponse.json();
@@ -62,7 +56,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     console.warn('[BATTLE_MANAGER] Could not fetch tile data.', err);
   }
 
-  // Fetch layout
   let layoutData;
   try {
     const layoutName = selectedMode === 'pvp' ? 'pvp' : selectedMode;
@@ -78,33 +71,14 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     return;
   }
 
-  // Validate layout dimensions
-  if (!layoutData.layout?.tiles || 
-      layoutData.layout.tiles.length !== GRID_HEIGHT || 
-      layoutData.layout.tiles.some(row => row.length !== GRID_WIDTH)) {
-    console.error('[BATTLE_MANAGER] Invalid layout dimensions. Expected 7×8 grid.');
-    console.log('[BATTLE_MANAGER] Actual layout:', layoutData.layout);
-    displayMessage('Invalid battlefield layout dimensions. Returning...');
-    window.gameAuth.loadModule('embark');
-    return;
-  }
-
-  // Load characters
   const playerPos = layoutData.player_pos?.playerSpawnPositions || [];
   const enemyNames = layoutData.enemy_pos?.enemyNamesToSpawn || [];
   const enemyPos = layoutData.enemy_pos?.enemySpawnPositions || [];
-
-  console.log('[BATTLE_MANAGER] Player positions:', playerPos);
-  console.log('[BATTLE_MANAGER] Enemy names:', enemyNames);
-  console.log('[BATTLE_MANAGER] Enemy positions:', enemyPos);
 
   const players = await loadPlayerCharacters(_profile.id, playerPos);
   const enemies = await loadEnemiesByNames(enemyNames, enemyPos);
   _characters = [...players, ...enemies];
 
-  console.log('[BATTLE_MANAGER] All characters loaded:', _characters);
-
-  // Render
   renderBattleScreen(selectedMode, areaLevel, layoutData);
 }
 
@@ -144,26 +118,17 @@ function renderBattleGrid(layoutJson) {
   }
 
   const tiles = layoutJson.tiles;
-  
-  // Validate grid dimensions again
-  if (tiles.length !== GRID_HEIGHT || tiles.some(row => row.length !== GRID_WIDTH)) {
-    console.error('[RENDER_GRID] Grid dimension mismatch!');
-    container.innerHTML = '<p>Grid dimension error. Expected 7×8.</p>';
-    return;
-  }
 
-  console.log(`[RENDER_GRID] Rendering ${GRID_WIDTH}×${GRID_HEIGHT} grid`);
+  const rowCount = 8; // fixed height
+  const colCount = 7; // fixed width
 
   container.innerHTML = '';
   container.style.display = 'grid';
-  container.style.gridTemplateRows = `repeat(${GRID_HEIGHT}, 1fr)`;
-  container.style.gridTemplateColumns = `repeat(${GRID_WIDTH}, 1fr)`;
+  container.style.gridTemplateRows = `repeat(${rowCount}, 1fr)`;
+  container.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
   container.style.gap = '2px';
   container.style.width = '100%';
   container.style.height = '100%';
-  container.style.aspectRatio = `${GRID_WIDTH}/${GRID_HEIGHT}`;
-  container.style.maxWidth = '70vh';
-  container.style.margin = '0 auto';
 
   tiles.forEach((row, y) => {
     row.forEach((tileName, x) => {
@@ -175,38 +140,18 @@ function renderBattleGrid(layoutJson) {
       tile.className = `battle-tile tile-${normalized}`;
       tile.dataset.x = x;
       tile.dataset.y = y;
-      tile.title = `${tileName} (${x},${y})`;
+      tile.title = tileName;
       tile.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
       tile.style.backgroundSize = 'cover';
       tile.style.backgroundPosition = 'center';
-      tile.style.border = '1px solid rgba(255,255,255,0.1)';
-      tile.style.position = 'relative';
-
-      // Debug: Add coordinate display
-      if (process.env.NODE_ENV === 'development') {
-        const coordLabel = document.createElement('span');
-        coordLabel.textContent = `${x},${y}`;
-        coordLabel.style.position = 'absolute';
-        coordLabel.style.top = '2px';
-        coordLabel.style.left = '2px';
-        coordLabel.style.fontSize = '8px';
-        coordLabel.style.color = 'rgba(255,255,255,0.7)';
-        coordLabel.style.backgroundColor = 'rgba(0,0,0,0.5)';
-        coordLabel.style.padding = '1px 2px';
-        coordLabel.style.borderRadius = '2px';
-        tile.appendChild(coordLabel);
-      }
 
       container.appendChild(tile);
     });
   });
-
-  console.log('[RENDER_GRID] Grid rendered successfully');
 }
 
 function renderCharacters() {
   const container = _main.querySelector('.battle-grid-container');
-
   if (!container) {
     console.warn('[RENDER_CHARACTERS] battle-grid-container not found');
     return;
@@ -221,31 +166,15 @@ function renderCharacters() {
       return;
     }
 
-    const { x, y } = char.position;
-    
-    // Validate position bounds
-    if (x < 0 || x >= GRID_WIDTH || y < 0 || y >= GRID_HEIGHT) {
-      console.warn(`[RENDER_CHARACTERS] Character ${char.name} position (${x},${y}) is out of bounds for ${GRID_WIDTH}×${GRID_HEIGHT} grid`);
-      return;
-    }
-
-    console.log(`[RENDER_CHARACTERS] Rendering character ${char.name} at (${x}, ${y})`);
+    console.log(`[RENDER_CHARACTERS] Rendering character ${char.name} at (${char.position.x}, ${char.position.y})`);
 
     const charEl = document.createElement('div');
     charEl.className = `character-token ${char.type}`;
     charEl.dataset.id = char.id;
-    charEl.dataset.x = x;
-    charEl.dataset.y = y;
-    
-    // CSS Grid uses 1-based indexing
-    charEl.style.gridColumnStart = x + 1;
-    charEl.style.gridRowStart = y + 1;
-    charEl.style.zIndex = 10;
-    charEl.style.position = 'relative';
-    charEl.style.display = 'flex';
-    charEl.style.alignItems = 'center';
-    charEl.style.justifyContent = 'center';
-    charEl.title = `${char.name} at (${x},${y})`;
+    charEl.style.gridColumnStart = char.position.x + 1;
+    charEl.style.gridRowStart = char.position.y + 1;
+    charEl.style.zIndex = 5;
+    charEl.title = char.name;
 
     const sprite = char.spriteName || 'placeholder';
     console.log(`[RENDER_CHARACTERS] Using sprite: ${sprite}`);
@@ -257,29 +186,12 @@ function renderCharacters() {
       console.warn(`[RENDER_CHARACTERS] Failed to load sprite for ${char.name}, using placeholder.`);
       img.src = 'assets/art/sprites/placeholder.png';
     };
-    img.style.width = '80%';
-    img.style.height = '80%';
+    img.style.width = '100%';
+    img.style.height = '100%';
     img.style.objectFit = 'contain';
-    img.style.pointerEvents = 'none';
-
-    // Add character type indicator
-    const typeIndicator = document.createElement('div');
-    typeIndicator.className = `character-type-indicator ${char.type}`;
-    typeIndicator.style.position = 'absolute';
-    typeIndicator.style.top = '-2px';
-    typeIndicator.style.right = '-2px';
-    typeIndicator.style.width = '8px';
-    typeIndicator.style.height = '8px';
-    typeIndicator.style.borderRadius = '50%';
-    typeIndicator.style.backgroundColor = char.type === 'player' ? '#00ff00' : '#ff0000';
-    typeIndicator.style.border = '1px solid #ffffff';
-    typeIndicator.style.zIndex = 1;
 
     charEl.appendChild(img);
-    charEl.appendChild(typeIndicator);
     container.appendChild(charEl);
-
-    console.log(`[RENDER_CHARACTERS] Character ${char.name} rendered at grid position (${x + 1}, ${y + 1})`);
   });
 
   console.log('[RENDER_CHARACTERS] Done rendering characters.');
