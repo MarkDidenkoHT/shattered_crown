@@ -79,7 +79,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
   const enemyNames = layoutData.enemy_pos?.enemyNamesToSpawn || [];
   const enemyPos = layoutData.enemy_pos?.enemySpawnPositions || [];
 
-  const players = await loadPlayerCharacters(playerPos);
+  const players = await loadPlayerCharacters(_profile.id, playerPos);
   const enemies = await loadEnemiesByNames(enemyNames, enemyPos);
   _characters = [...players, ...enemies];
 
