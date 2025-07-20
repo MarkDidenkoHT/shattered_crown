@@ -1,92 +1,89 @@
-// character_data.js
-
-let _apiCall;
-let _profile;
+let _apiCall = null;
+let _profile = null;
 
 export function initCharacterData(apiCall, profile) {
   _apiCall = apiCall;
   _profile = profile;
 }
 
-export async function loadPlayerCharacters(spawnPositions = []) {
-  console.log(`[CHARACTER_DATA] Loading characters for player ${_profile.id}`);
-  try {
-    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*`);
-    const data = await response.json();
+export async function loadPlayerCharacters(playerId, spawnPositions = []) {
+  console.log('[CHARACTER_DATA] Loading characters for player', playerId);
 
-    if (!data || data.length === 0) {
-      console.warn('[CHARACTER_DATA] No characters found.');
-      return [];
-    }
+  const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=*`);
+  const rows = await response.json();
 
-    console.log('[CHARACTER_DATA] Player characters loaded:', data);
+  const formatted = rows.map((raw, index) => {
+    const char = formatCharacter(raw);
+    char.position = spawnPositions[index] || null;
+    return char;
+  });
 
-    return data.map((char, index) => {
-      const formatted = formatCharacter(char, 'player', index);
-      // Assign spawn position if available
-      if (spawnPositions[index]) {
-        formatted.position = spawnPositions[index];
-      } else {
-        console.warn(`[CHARACTER_DATA] No spawn position for player character ${formatted.name}`);
-      }
-      return formatted;
-    });
-  } catch (error) {
-    console.error('[CHARACTER_DATA] Error loading player characters:', error);
-    return [];
-  }
+  console.log('[CHARACTER_DATA] Player characters loaded:', formatted);
+  return formatted;
 }
 
-export async function loadEnemiesByNames(enemyNames = [], spawnPositions = []) {
-  console.log('[CHARACTER_DATA] Loading enemies:', enemyNames);
+export async function loadEnemiesByNames(names = [], spawnPositions = []) {
+  // Deduplicate names (optional)
+  const uniqueNames = [...new Set(names)];
 
-  try {
-    const uniqueNames = [...new Set(enemyNames)];
-    const conditions = uniqueNames.map(name => `name.eq.${encodeURIComponent(name)}`).join(',');
-    const query = `/api/supabase/rest/v1/enemies?select=*&or=(${conditions})`;
+  console.log('[CHARACTER_DATA] Loading enemies:', uniqueNames);
 
-    const response = await _apiCall(query);
-    const data = await response.json();
+  if (uniqueNames.length === 0) return [];
 
-    if (!data || data.length === 0) {
-      console.warn('[CHARACTER_DATA] No enemies found.');
-      return [];
-    }
+  const filter = uniqueNames.map(n => `name.eq.${n}`).join(',');
+  const response = await _apiCall(`/api/supabase/rest/v1/enemies?select=*&or=(${filter})`);
 
-    console.log('[CHARACTER_DATA] Enemies loaded:', data);
-
-    return data.map((enemy, index) => {
-      const formatted = formatCharacter(enemy, 'enemy', index);
-      if (spawnPositions[index]) {
-        formatted.position = spawnPositions[index];
-      } else {
-        console.warn(`[CHARACTER_DATA] No spawn position for enemy ${formatted.name}`);
-      }
-      return formatted;
-    });
-  } catch (error) {
-    console.error('[CHARACTER_DATA] Error loading enemies:', error);
-    return [];
+  if (!response.ok) {
+    console.error('[CHARACTER_DATA] Error loading enemies:', response.statusText);
+    throw new Error(`Failed to fetch enemies. Status: ${response.status}`);
   }
+
+  const rows = await response.json();
+
+  // Map enemy types to count how many of each to spawn
+  const enemyCount = {};
+  names.forEach(n => { enemyCount[n] = (enemyCount[n] || 0) + 1; });
+
+  const result = [];
+
+  uniqueNames.forEach(name => {
+    const enemyData = rows.find(e => e.name === name);
+    if (!enemyData) return;
+
+    for (let i = 0; i < enemyCount[name]; i++) {
+      const instance = formatCharacter(enemyData);
+      const spawnIndex = result.length;
+      instance.position = spawnPositions[spawnIndex] || null;
+      result.push(instance);
+    }
+  });
+
+  console.log('[CHARACTER_DATA] Enemies loaded:', result);
+  return result;
 }
 
-function formatCharacter(raw, type, index) {
-  const stats = raw.stats || {};
+export function formatCharacter(raw) {
+  const stats = typeof raw.stats === 'string' ? JSON.parse(raw.stats || '{}') : (raw.stats || {});
 
-  const computedStats = {
-    hp: (stats.vitality || 0) * 10,
-    armor: Math.floor((stats.strength || 0) * 0.25),
-    resistance: Math.floor((stats.spirit || 0) * 0.25),
-  };
-
-  return {
-    id: raw.id || `${type}_${index}`,
-    name: raw.name || `${type}_${index}`,
-    type,
+  const maxHp = stats.hp || 100;
+  const char = {
+    id: raw.id,
+    name: raw.name || 'Unnamed',
+    type: raw.player_id ? 'player' : 'enemy',
     spriteName: raw.sprite_name || 'placeholder',
-    stats,
-    ...computedStats,
-    abilities: raw.starting_abilities || raw.abilities || [],
-    position: null, // will be assigned based on spawn tiles
+    position: null,
+    stats: {
+      hp: maxHp,
+      maxHp,
+      armor: stats.armor || 0,
+      resistance: stats.resistance || 0,
+      strength: stats.strength || 0,
+      agility: stats.agility || 0,
+      intelligence: stats.intelligence || 0,
+      speed: stats.speed || 0
+    },
+    abilities: raw.abilities || [],
   };
+
+  return char;
 }
