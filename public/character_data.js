@@ -37,12 +37,14 @@ export async function loadPlayerCharacters(spawnPositions = []) {
   }
 }
 
-export async function loadEnemiesByNames(enemyNames) {
+export async function loadEnemiesByNames(enemyNames = [], spawnPositions = []) {
   console.log('[CHARACTER_DATA] Loading enemies:', enemyNames);
+
   try {
     const uniqueNames = [...new Set(enemyNames)];
-    const orConditions = uniqueNames.map(name => `name.eq.${encodeURIComponent(name)}`);
-    const query = `/api/supabase/rest/v1/enemies?select=*&or=${orConditions.join(',')}`;
+    const conditions = uniqueNames.map(name => `name.eq.${encodeURIComponent(name)}`).join(',');
+    const query = `/api/supabase/rest/v1/enemies?select=*&or=(${conditions})`;
+
     const response = await _apiCall(query);
     const data = await response.json();
 
@@ -52,7 +54,16 @@ export async function loadEnemiesByNames(enemyNames) {
     }
 
     console.log('[CHARACTER_DATA] Enemies loaded:', data);
-    return data.map((enemy, index) => formatCharacter(enemy, 'enemy', index));
+
+    return data.map((enemy, index) => {
+      const formatted = formatCharacter(enemy, 'enemy', index);
+      if (spawnPositions[index]) {
+        formatted.position = spawnPositions[index];
+      } else {
+        console.warn(`[CHARACTER_DATA] No spawn position for enemy ${formatted.name}`);
+      }
+      return formatted;
+    });
   } catch (error) {
     console.error('[CHARACTER_DATA] Error loading enemies:', error);
     return [];
