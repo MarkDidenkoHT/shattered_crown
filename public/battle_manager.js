@@ -123,10 +123,13 @@ function renderBattleGrid(layoutJson) {
   }
 
   const tiles = layoutJson.tiles;
+  const rowCount = tiles.length;
+  const colCount = Math.max(...tiles.map(row => row.length));
+
   container.innerHTML = '';
   container.style.display = 'grid';
-  container.style.gridTemplateRows = `repeat(8, 1fr)`;
-  container.style.gridTemplateColumns = `repeat(7, 1fr)`;
+  container.style.gridTemplateRows = `repeat(${rowCount}, 1fr)`;
+  container.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
   container.style.gap = '2px';
   container.style.width = '100%';
   container.style.height = '100%';
