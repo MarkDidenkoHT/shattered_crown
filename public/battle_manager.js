@@ -125,8 +125,8 @@ function renderBattleGrid(layoutJson) {
   const tiles = layoutJson.tiles;
   container.innerHTML = '';
   container.style.display = 'grid';
-  container.style.gridTemplateRows = `repeat(${tiles.length}, 1fr)`;
-  container.style.gridTemplateColumns = `repeat(${tiles[0].length}, 1fr)`;
+  container.style.gridTemplateRows = `repeat(8, 1fr)`;
+  container.style.gridTemplateColumns = `repeat(7, 1fr)`;
   container.style.gap = '2px';
   container.style.width = '100%';
   container.style.height = '100%';
