@@ -41,10 +41,10 @@ function renderEmbarkScreen() {
     </div>
     <div class="selection-section">
       <div class="selection-grid">
-        ${createEmbarkCard('Forest', 'Forest', 'assets/art/embark/forest.jpg')}
-        ${createEmbarkCard('Mountain', 'Mountain', 'assets/art/embark/mountain.jpg')}
-        ${createEmbarkCard('Dungeon', 'Dungeon', 'assets/art/embark/dungeon.jpg')}
-        ${createEmbarkCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.jpg')}
+        ${createEmbarkCard('Forest', 'Forest', 'assets/art/embark/forest.png')}
+        ${createEmbarkCard('Mountain', 'Mountain', 'assets/art/embark/mountain.png')}
+        ${createEmbarkCard('Dungeon', 'Dungeon', 'assets/art/embark/dungeon.png')}
+        ${createEmbarkCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.png')}
       </div>
     </div>
     <div class="confirm-return-buttons">
@@ -72,7 +72,7 @@ function createEmbarkCard(title, mode, imgSrc) {
   return `
     <div class="selection-card">
       <div class="card-art-block">
-        <img src="${imgSrc}" alt="${title}" class="card-art" onerror="this.src='assets/art/placeholder.jpg'">
+        <img src="${imgSrc}" alt="${title}" class="card-art" onerror="this.src='assets/art/placeholder.png'">
       </div>
       <div class="card-info-block">
         <h3 class="card-name">${title}</h3>

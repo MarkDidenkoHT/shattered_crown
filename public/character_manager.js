@@ -139,7 +139,7 @@ function characterCardHTML(character) {
         <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
           alt="Character Art" 
           class="card-art"
-          onerror="this.src='assets/art/placeholder.jpg'">
+          onerror="this.src='assets/art/placeholder.png'">
       </div>
       <div class="card-info-block">
         <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${raceName} ${className}</h3>
