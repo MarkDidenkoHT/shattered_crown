@@ -2,7 +2,7 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _tileMap = {};
+let _tileMap = {}; 
 let _characters = [];
 
 import {
@@ -119,8 +119,8 @@ function renderBattleGrid(layoutJson) {
 
   const tiles = layoutJson.tiles;
 
-  const rowCount = 8; // fixed height
-  const colCount = 7; // fixed width
+  const rowCount = 8;
+  const colCount = 7;
 
   container.innerHTML = '';
 
@@ -157,7 +157,7 @@ function renderBattleGrid(layoutJson) {
       td.style.width = `${100 / colCount}%`;
       td.style.padding = '0';
       td.style.margin = '0';
-      td.style.border = '1px solid rgba(0,0,0,0.1)';
+      td.style.position = 'relative';
 
       tr.appendChild(td);
     }
@@ -168,14 +168,16 @@ function renderBattleGrid(layoutJson) {
 }
 
 function renderCharacters() {
-  const table = _main.querySelector('.battle-grid-container table');
-  if (!table) {
-    console.warn('[RENDER_CHARACTERS] battle-grid-table not found');
+  const container = _main.querySelector('.battle-grid-container');
+  if (!container) {
+    console.warn('[RENDER_CHARACTERS] battle-grid-container not found');
     return;
   }
 
   console.log('[RENDER_CHARACTERS] Starting to render characters...');
   console.log('[RENDER_CHARACTERS] Characters:', _characters);
+
+  const cells = container.querySelectorAll('td');
 
   _characters.forEach(char => {
     if (!char.position) {
@@ -183,12 +185,11 @@ function renderCharacters() {
       return;
     }
 
-    const y = char.position.y;
-    const x = char.position.x;
+    const selector = `td[data-x="${char.position.x}"][data-y="${char.position.y}"]`;
+    const cell = container.querySelector(selector);
 
-    const cell = table.rows[y]?.cells[x];
     if (!cell) {
-      console.warn(`[RENDER_CHARACTERS] No cell at (${x}, ${y}) for ${char.name}`);
+      console.warn(`[RENDER_CHARACTERS] No cell at (${char.position.x}, ${char.position.y}) for ${char.name}`);
       return;
     }
 
@@ -196,11 +197,8 @@ function renderCharacters() {
     charEl.className = `character-token ${char.type}`;
     charEl.dataset.id = char.id;
     charEl.title = char.name;
-    charEl.style.position = 'relative';
-    charEl.style.zIndex = 5;
 
     const sprite = char.spriteName || 'placeholder';
-
     const img = document.createElement('img');
     img.src = `assets/art/sprites/${sprite}.png`;
     img.alt = char.name;
@@ -210,6 +208,10 @@ function renderCharacters() {
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'contain';
+    img.style.zIndex = '10';
+    img.style.position = 'absolute';
+    img.style.top = '0';
+    img.style.left = '0';
 
     charEl.appendChild(img);
     cell.appendChild(charEl);
