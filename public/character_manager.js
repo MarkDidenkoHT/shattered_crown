@@ -111,7 +111,7 @@ function renderCharacters(characters) {
     });
   });
 
-  // Initialize slider for mobile view
+  // Initialize slider for mobile view (shows one character at a time)
   initializeCharacterSlider(section);
 }
 
