@@ -1,5 +1,3 @@
-// battle_manager.js
-
 let _main;
 let _apiCall;
 let _getCurrentProfile;
@@ -21,7 +19,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
   _profile = _getCurrentProfile();
   if (!_profile) {
-    console.error('[BATTLE_MANAGER] No profile found. Redirecting to login.');
     displayMessage('User profile not found. Please log in again.');
     window.gameAuth.loadModule('login');
     return;
@@ -30,7 +27,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
   initCharacterData(_apiCall, _profile);
 
   if (!selectedMode) {
-    console.error('[BATTLE_MANAGER] No selectedMode provided. Returning to embark.');
     displayMessage('No mode selected. Returning to embark.');
     window.gameAuth.loadModule('embark');
     return;
@@ -53,7 +49,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     tileRows.forEach(tile => {
       _tileMap[tile.name.toLowerCase()] = tile;
     });
-    console.log('[BATTLE_MANAGER] Tile data loaded:', _tileMap);
   } catch (err) {
     console.warn('[BATTLE_MANAGER] Could not fetch tile data.', err);
   }
@@ -65,17 +60,15 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     const layouts = await response.json();
     layoutData = layouts[0];
     if (!layoutData) throw new Error('No layout data found.');
-    console.log('[BATTLE_MANAGER] Layout data fetched:', layoutData);
   } catch (err) {
-    console.error('[BATTLE_MANAGER] Error fetching layout data:', err);
     displayMessage('Failed to load battlefield layout. Returning...');
     window.gameAuth.loadModule('embark');
     return;
   }
 
-  // 🔷 Swap player & enemy spawns
+  // 🔁 Swap player and enemy spawns
   const playerPos = layoutData.enemy_pos?.enemySpawnPositions || [];
-  const enemyNames = layoutData.enemy_pos?.enemyNamesToSpawn || [];
+  const enemyNames = layoutData.player_pos?.playerSpawnPositions.map(() => "Goblin") || [];
   const enemyPos = layoutData.player_pos?.playerSpawnPositions || [];
 
   const players = await loadPlayerCharacters(_profile.id, playerPos);
@@ -93,7 +86,7 @@ function renderBattleScreen(mode, level, layoutData) {
         <p class="battle-status">Mode: ${mode.toUpperCase()} | Level: ${level}</p>
         <button class="fantasy-button settings-btn">Settings</button>
       </div>
-      <table class="battle-grid-table"></table>
+      <div class="battle-grid-container"></div>
       <div class="battle-bottom-ui"></div>
     </div>
   `;
@@ -114,102 +107,88 @@ function renderBattleScreen(mode, level, layoutData) {
 }
 
 function renderBattleGrid(layoutJson) {
-  const container = _main.querySelector('.battle-grid-table');
+  const container = _main.querySelector('.battle-grid-container');
   if (!layoutJson?.tiles) {
     container.innerHTML = '<p>Invalid battlefield layout.</p>';
     return;
   }
 
   const tiles = layoutJson.tiles;
+  const rowCount = 8;
+  const colCount = 7;
+
   container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateRows = `repeat(${rowCount}, 1fr)`;
+  container.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
+  container.style.gap = '2px';
+  container.style.width = '100%';
+  container.style.height = '100%';
 
   tiles.forEach((row, y) => {
-    const tr = document.createElement('tr');
     row.forEach((tileName, x) => {
       const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
       const tileData = _tileMap[normalized];
       const art = tileData?.art || 'placeholder';
 
-      const td = document.createElement('td');
-      td.dataset.x = x;
-      td.dataset.y = y;
-      td.style.width = '64px';
-      td.style.height = '64px';
-      td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
-      td.style.backgroundSize = 'cover';
-      td.style.backgroundPosition = 'center';
+      const tile = document.createElement('div');
+      tile.className = `battle-tile tile-${normalized}`;
+      tile.dataset.x = x;
+      tile.dataset.y = y;
+      tile.title = tileName;
+      tile.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
+      tile.style.backgroundSize = 'cover';
+      tile.style.backgroundPosition = 'center';
 
-      tr.appendChild(td);
+      container.appendChild(tile);
     });
-    container.appendChild(tr);
   });
 }
 
 function renderCharacters() {
-  const container = _main.querySelector('.battle-grid-table');
-  if (!container) {
-    console.warn('[RENDER_CHARACTERS] battle-grid-table not found');
-    return;
-  }
-
-  console.log('[RENDER_CHARACTERS] Starting to render characters...');
-  console.log('[RENDER_CHARACTERS] Characters:', _characters);
+  const container = _main.querySelector('.battle-grid-container');
+  if (!container) return;
 
   _characters.forEach(char => {
-    if (!char.position || !Array.isArray(char.position)) {
-      console.warn(`[RENDER_CHARACTERS] Character ${char.name} has invalid position, skipping...`);
-      return;
-    }
-
     const [x, y] = char.position;
-    const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
-
-    if (!cell) {
-      console.warn(`[RENDER_CHARACTERS] No cell at (${x}, ${y}) for ${char.name}`);
-      return;
-    }
 
     const charEl = document.createElement('div');
     charEl.className = `character-token ${char.type}`;
     charEl.dataset.id = char.id;
+    charEl.style.gridColumnStart = x + 1;
+    charEl.style.gridRowStart = y + 1;
+    charEl.style.zIndex = 5;
     charEl.title = char.name;
-    charEl.style.position = 'relative';
 
-    const sprite = char.spriteName || 'placeholder';
     const img = document.createElement('img');
-    img.src = `assets/art/sprites/${sprite}.png`;
+    img.src = `assets/art/sprites/${char.spriteName || 'placeholder'}.png`;
     img.alt = char.name;
-    img.onerror = () => { img.src = 'assets/art/sprites/placeholder.png'; };
+    img.onerror = () => {
+      img.src = 'assets/art/sprites/placeholder.png';
+    };
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'contain';
-    img.style.zIndex = '10';
+    img.style.position = 'relative';
+
+    const healthBar = document.createElement('div');
+    healthBar.className = 'health-bar';
+    healthBar.innerHTML = `
+      <div class="health-fill" style="width: 100%;"></div>
+    `;
+    healthBar.style.position = 'absolute';
+    healthBar.style.bottom = '0';
+    healthBar.style.left = '0';
+    healthBar.style.width = '100%';
+    healthBar.style.height = '4px';
+    healthBar.style.backgroundColor = 'red';
+    healthBar.querySelector('.health-fill').style.backgroundColor = 'green';
+    healthBar.querySelector('.health-fill').style.height = '100%';
 
     charEl.appendChild(img);
-
-    const healthBarContainer = document.createElement('div');
-    healthBarContainer.className = 'health-bar';
-    healthBarContainer.style.position = 'absolute';
-    healthBarContainer.style.bottom = '2px';
-    healthBarContainer.style.left = '10%';
-    healthBarContainer.style.width = '80%';
-    healthBarContainer.style.height = '4px';
-    healthBarContainer.style.background = 'red';
-    healthBarContainer.style.zIndex = '15';
-
-    const healthFill = document.createElement('div');
-    healthFill.className = 'health-fill';
-    healthFill.style.width = '100%';
-    healthFill.style.height = '100%';
-    healthFill.style.background = 'limegreen';
-
-    healthBarContainer.appendChild(healthFill);
-    charEl.appendChild(healthBarContainer);
-
-    cell.appendChild(charEl);
+    charEl.appendChild(healthBar);
+    container.appendChild(charEl);
   });
-
-  console.log('[RENDER_CHARACTERS] Done rendering characters.');
 }
 
 function renderBottomUI() {
