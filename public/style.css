@@ -342,8 +342,8 @@
     transition: all 0.2s;
     backdrop-filter: blur(3px);
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    margin-bottom: 1rem;
 }
+
 .card-art-block { width: 100%; height: 80px; overflow: hidden; }
 .card-art { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
 .selection-card:hover { border-color: #c4975a; transform: translateY(-1px); }
@@ -365,9 +365,8 @@
     color: #b8b3a8;
     font-size: 0.9rem;
     line-height: 1.2;
-    margin-bottom: 0.5rem;
     font-style: italic;
-    min-height: 2rem;
+    min-height: 1.5rem;
 }
 
 /* --- Condensed stats/items/consumables blocks --- */
@@ -377,6 +376,7 @@
     padding-top: 0.5rem;
     border-top: 1px solid rgba(196,151,90,0.08);
 }
+
 .stats-block h4, .abilities-block h4 {
     font-family: 'Cinzel', serif;
     color: #c4975a;
@@ -415,18 +415,6 @@
 .condensed-items ul { margin: 0.1rem 0 0.1rem 0.5rem; padding: 0; }
 .condensed-items li { border: none; background: none; color: #c4975a; font-size: 0.8rem; padding: 0; margin: 0; }
 .condensed-items span { color: #b8b3a8; font-size: 0.8rem; }
-
-    .selection-card {
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-            border: 2px solid #3d2914;
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.1),
-                0 2px 8px rgba(0, 0, 0, 0.3);
-        }
 
         .selection-card:hover {
             border-color: #c4975a;
@@ -467,13 +455,6 @@
             text-shadow: 1px 1px 0px #3d2914;
             letter-spacing: 1px;
             text-align: center;
-        }
-
-        .stats-block, .abilities-block {
-            width: 100%;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(196, 151, 90, 0.1);
         }
 
         .stats-block h4, .abilities-block h4 {
@@ -635,7 +616,8 @@
         }
 
         .selection-slider {
-            width: 100%;
+            margin: 0 auto;
+            width: 90%;
             max-width: 400px;
         }
 
@@ -667,7 +649,7 @@
         }
 
         .selection-slide .card-info-block {
-            padding: 1.5rem;
+            padding: 1rem;
         }
 
         .slider-controls {
