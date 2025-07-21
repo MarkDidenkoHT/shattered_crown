@@ -2,7 +2,7 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _tileMap = {}; 
+let _tileMap = {};
 let _characters = [];
 
 import {
@@ -118,42 +118,52 @@ function renderBattleGrid(layoutJson) {
   }
 
   const tiles = layoutJson.tiles;
-
   const rowCount = 8; // fixed height
   const colCount = 7; // fixed width
 
   container.innerHTML = '';
-  container.style.display = 'grid';
-  container.style.gridTemplateRows = `repeat(${rowCount}, 1fr)`;
-  container.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
-  container.style.gap = '2px';
-  container.style.width = '100%';
-  container.style.height = '100%';
 
-  tiles.forEach((row, y) => {
-    row.forEach((tileName, x) => {
+  const table = document.createElement('table');
+  table.className = 'battle-grid-table';
+  table.style.borderCollapse = 'collapse';
+  table.style.width = '100%';
+  table.style.height = '100%';
+
+  for (let y = 0; y < rowCount; y++) {
+    const tr = document.createElement('tr');
+    for (let x = 0; x < colCount; x++) {
+      const tileName = tiles[y]?.[x] || 'Plain';
       const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
       const tileData = _tileMap[normalized];
       const art = tileData?.art || 'placeholder';
 
-      const tile = document.createElement('div');
-      tile.className = `battle-tile tile-${normalized}`;
-      tile.dataset.x = x;
-      tile.dataset.y = y;
-      tile.title = tileName;
-      tile.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
-      tile.style.backgroundSize = 'cover';
-      tile.style.backgroundPosition = 'center';
+      const td = document.createElement('td');
+      td.className = `battle-tile tile-${normalized}`;
+      td.dataset.x = x;
+      td.dataset.y = y;
+      td.title = tileName;
 
-      container.appendChild(tile);
-    });
-  });
+      td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
+      td.style.backgroundSize = 'cover';
+      td.style.backgroundPosition = 'center';
+      td.style.width = '14.28%';  // 100 / 7
+      td.style.height = '12.5%';  // 100 / 8
+      td.style.padding = '0';
+      td.style.margin = '0';
+      td.style.border = '1px solid rgba(0,0,0,0.1)';
+
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+  }
+
+  container.appendChild(table);
 }
 
 function renderCharacters() {
-  const container = _main.querySelector('.battle-grid-container');
-  if (!container) {
-    console.warn('[RENDER_CHARACTERS] battle-grid-container not found');
+  const table = _main.querySelector('.battle-grid-container table');
+  if (!table) {
+    console.warn('[RENDER_CHARACTERS] battle-grid-table not found');
     return;
   }
 
@@ -166,24 +176,28 @@ function renderCharacters() {
       return;
     }
 
-    console.log(`[RENDER_CHARACTERS] Rendering character ${char.name} at (${char.position.x}, ${char.position.y})`);
+    const y = char.position.y;
+    const x = char.position.x;
+
+    const cell = table.rows[y]?.cells[x];
+    if (!cell) {
+      console.warn(`[RENDER_CHARACTERS] No cell at (${x}, ${y}) for ${char.name}`);
+      return;
+    }
 
     const charEl = document.createElement('div');
     charEl.className = `character-token ${char.type}`;
     charEl.dataset.id = char.id;
-    charEl.style.gridColumnStart = char.position.x + 1;
-    charEl.style.gridRowStart = char.position.y + 1;
-    charEl.style.zIndex = 5;
     charEl.title = char.name;
+    charEl.style.position = 'relative';
+    charEl.style.zIndex = 5;
 
     const sprite = char.spriteName || 'placeholder';
-    console.log(`[RENDER_CHARACTERS] Using sprite: ${sprite}`);
 
     const img = document.createElement('img');
     img.src = `assets/art/sprites/${sprite}.png`;
     img.alt = char.name;
     img.onerror = () => {
-      console.warn(`[RENDER_CHARACTERS] Failed to load sprite for ${char.name}, using placeholder.`);
       img.src = 'assets/art/sprites/placeholder.png';
     };
     img.style.width = '100%';
@@ -191,7 +205,7 @@ function renderCharacters() {
     img.style.objectFit = 'contain';
 
     charEl.appendChild(img);
-    container.appendChild(charEl);
+    cell.appendChild(charEl);
   });
 
   console.log('[RENDER_CHARACTERS] Done rendering characters.');
