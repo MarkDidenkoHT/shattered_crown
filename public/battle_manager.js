@@ -177,19 +177,19 @@ function renderCharacters() {
   console.log('[RENDER_CHARACTERS] Starting to render characters...');
   console.log('[RENDER_CHARACTERS] Characters:', _characters);
 
-  const cells = container.querySelectorAll('td');
-
   _characters.forEach(char => {
-    if (!char.position) {
-      console.warn(`[RENDER_CHARACTERS] Character ${char.name} has no position, skipping...`);
+    if (!char.position || !Array.isArray(char.position)) {
+      console.warn(`[RENDER_CHARACTERS] Character ${char.name} has invalid position, skipping...`);
       return;
     }
 
-    const selector = `td[data-x="${char.position.x}"][data-y="${char.position.y}"]`;
+    const [x, y] = char.position;
+
+    const selector = `td[data-x="${x}"][data-y="${y}"]`;
     const cell = container.querySelector(selector);
 
     if (!cell) {
-      console.warn(`[RENDER_CHARACTERS] No cell at (${char.position.x}, ${char.position.y}) for ${char.name}`);
+      console.warn(`[RENDER_CHARACTERS] No cell at (${x}, ${y}) for ${char.name}`);
       return;
     }
 
