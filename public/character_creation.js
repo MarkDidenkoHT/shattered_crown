@@ -97,7 +97,7 @@ function renderRaceSelection() {
                                 <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${race.name}" 
                                     class="card-art"
-                                    onerror="this.src='assets/art/placeholder.jpg'">
+                                    onerror="this.src='assets/art/placeholder.png'">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${race.name}</h3>
@@ -124,7 +124,7 @@ function renderRaceSelection() {
                                     <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                             alt="${race.name}" 
                                             class="card-art"
-                                            onerror="this.src='assets/art/placeholder.jpg'">
+                                            onerror="this.src='assets/art/placeholder.png'">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${race.name}</h3>
@@ -278,7 +278,7 @@ function renderSexSelection() {
                             <img src="assets/art/sex/male.png" 
                                 alt="Male" 
                                 class="card-art"
-                                onerror="this.src='assets/art/placeholder.jpg'">
+                                onerror="this.src='assets/art/placeholder.png'">
                         </div>
                         <div class="card-info-block">
                             <h3 class="card-name">Male</h3>
@@ -291,7 +291,7 @@ function renderSexSelection() {
                             <img src="assets/art/sex/female.png" 
                                 alt="Female" 
                                 class="card-art"
-                                onerror="this.src='assets/art/placeholder.jpg'">
+                                onerror="this.src='assets/art/placeholder.png'">
                         </div>
                         <div class="card-info-block">
                             <h3 class="card-name">Female</h3>
@@ -310,7 +310,7 @@ function renderSexSelection() {
                                 <img src="assets/art/sex/male.png" 
                                     alt="Male" 
                                     class="card-art"
-                                    onerror="this.src='assets/art/placeholder.jpg'">
+                                    onerror="this.src='assets/art/placeholder.png'">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">Male</h3>
@@ -323,7 +323,7 @@ function renderSexSelection() {
                                 <img src="assets/art/sex/female.png" 
                                     alt="Female" 
                                     class="card-art"
-                                    onerror="this.src='assets/art/placeholder.jpg'">
+                                    onerror="this.src='assets/art/placeholder.png'">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">Female</h3>
@@ -419,7 +419,7 @@ function renderClassSelection() {
                                 <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${cls.name}" 
                                     class="card-art"
-                                    onerror="this.src='assets/art/placeholder.jpg'">
+                                    onerror="this.src='assets/art/placeholder.png'">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${cls.name}</h3>
@@ -452,7 +452,7 @@ function renderClassSelection() {
                                     <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                             alt="${cls.name}" 
                                             class="card-art"
-                                            onerror="this.src='assets/art/placeholder.jpg'">
+                                            onerror="this.src='assets/art/placeholder.png'">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${cls.name}</h3>
@@ -567,7 +567,7 @@ function renderProfessionSelection() {
                                 <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${profession.name}" 
                                     class="card-art"
-                                    onerror="this.src='assets/art/placeholder.jpg'">
+                                    onerror="this.src='assets/art/placeholder.png'">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${profession.name}</h3>
@@ -588,7 +588,7 @@ function renderProfessionSelection() {
                                     <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                             alt="${profession.name}" 
                                             class="card-art"
-                                            onerror="this.src='assets/art/placeholder.jpg'">
+                                            onerror="this.src='assets/art/placeholder.png'">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${profession.name}</h3>
@@ -663,7 +663,7 @@ function renderCharacterSummary() {
                 <img src="assets/art/characters/${_selectedRace.name.toLowerCase().replace(/\s+/g, '_')}_${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                     alt="${_selectedRace.name} ${_selectedClass.name}" 
                     class="summary-art"
-                    onerror="this.src='assets/art/placeholder.jpg'">
+                    onerror="this.src='assets/art/placeholder.png'">
             </div>
             <div class="summary-info-block">
                 <h2>${_selectedSex === 'male' ? 'Male' : 'Female'} ${_selectedRace.name} ${_selectedClass.name}</h2>
