@@ -82,6 +82,14 @@ function renderCharacters(characters) {
   section.querySelector('.return-btn').addEventListener('click', () => {
     window.gameAuth.loadModule('castle');
   });
+
+  // Add error handlers to all character art images
+  const characterImages = section.querySelectorAll('.card-art');
+  characterImages.forEach(img => {
+    img.addEventListener('error', function() {
+      this.src = 'assets/art/placeholder.png';
+    });
+  });
 }
 
 function characterCardHTML(character) {
@@ -90,11 +98,6 @@ function characterCardHTML(character) {
   const normalizedStats = {};
   for (const [key, value] of Object.entries(stats)) {
     normalizedStats[key.toLowerCase()] = value;
-  }
-
-  // Handle possible typo
-  if ('strenght' in normalizedStats && !('strength' in normalizedStats)) {
-    normalizedStats.strength = normalizedStats.strenght;
   }
 
   const strength = normalizedStats.strength || 0;
@@ -138,8 +141,7 @@ function characterCardHTML(character) {
       <div class="card-art-block">
         <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
           alt="Character Art" 
-          class="card-art"
-          onerror="this.src='assets/art/placeholder.png'">
+          class="card-art">
       </div>
       <div class="card-info-block">
         <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${raceName} ${className}</h3>
