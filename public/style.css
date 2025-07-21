@@ -82,6 +82,10 @@
       background: linear-gradient(145deg, rgba(196, 151, 90, 0.2), rgba(196, 151, 90, 0.1));
     }
 
+    .ui-btn {
+      max-width: 20%;
+    }
+
     .crown-ornament::after {
       content: '';
       position: absolute;
