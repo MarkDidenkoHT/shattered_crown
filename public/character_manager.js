@@ -141,11 +141,9 @@ function characterCardHTML(character) {
     { label: 'Trinket', value: character.equipped_trinket || 'None' },
     { label: 'Boots', value: character.equipped_boots || 'None' },
     { label: 'Gloves', value: character.equipped_gloves || 'None' },
+    // Add consumables as a slot in equipped items
+    { label: 'Consumables', value: (character.consumable && character.consumable.length > 0) ? character.consumable.join(', ') : 'None' }
   ];
-
-  const consumables = character.consumable && character.consumable.length > 0
-    ? character.consumable.join(', ')
-    : 'None';
 
   const startingAbilities = character.starting_abilities && character.starting_abilities.length > 0
     ? character.starting_abilities.join(', ')
@@ -159,6 +157,9 @@ function characterCardHTML(character) {
   const className = character.classes?.name || 'Class';
   const professionName = character.professions?.name || 'Profession';
 
+  // Condense EXP and Profession into one line
+  const exp = character.exp || 0;
+
   return `
     <div class="selection-card">
       <div class="card-art-block">
@@ -168,45 +169,30 @@ function characterCardHTML(character) {
       </div>
       <div class="card-info-block">
         <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${raceName} ${className}</h3>
-        <p class="card-description"><strong>EXP:</strong> ${character.exp || 0}</p>
-        <p class="card-description"><strong>Profession:</strong> ${professionName}</p>
-
+        <p class="card-description"><strong>EXP:</strong> ${exp} &nbsp; <strong>Profession:</strong> ${professionName}</p>
         <div class="stats-block">
-          <h4>Primary Stats</h4>
+          <h4>Stats</h4>
           <p>Strength: <span>${strength}</span></p>
           <p>Dexterity: <span>${dexterity}</span></p>
           <p>Vitality: <span>${vitality}</span></p>
           <p>Spirit: <span>${spirit}</span></p>
           <p>Intellect: <span>${intellect}</span></p>
-        </div>
-
-        <div class="stats-block">
-          <h4>Derived Stats</h4>
           <p>HP: <span>${hp}</span></p>
           <p>Armor: <span>${armor}</span></p>
           <p>Resistance: <span>${resistance}</span></p>
         </div>
-
         <div class="stats-block">
           <h4>Equipped Items</h4>
           ${equippedItems.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
         </div>
-
-        <div class="stats-block">
-          <h4>Consumables</h4>
-          <p>${consumables}</p>
-        </div>
-
         <div class="abilities-block">
           <h4>Starting Abilities</h4>
           <p>${startingAbilities}</p>
         </div>
-
         <div class="abilities-block">
           <h4>Learned Abilities</h4>
           <p>${learnedAbilities}</p>
         </div>
-
         <!-- Future features: talents, detailed ability data -->
       </div>
     </div>
