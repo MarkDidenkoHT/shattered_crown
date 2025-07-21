@@ -86,9 +86,11 @@ function renderBattleScreen(mode, level, layoutData) {
   _main.innerHTML = `
     <div class="main-app-container">
       <div class="battle-top-bar">
-        <button class="fantasy-button return-btn">Retreat</button>
-        <p class="battle-status">Mode: ${mode.toUpperCase()} | Level: ${level}</p>
-        <button class="fantasy-button settings-btn">Settings</button>
+        <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
+        <div class="battle-top-buttons">
+          <button class="fantasy-button return-btn">Retreat</button>
+          <button class="fantasy-button settings-btn">Settings</button>
+        </div>
       </div>
       <div class="battle-grid-container"></div>
       <div class="battle-bottom-ui"></div>
