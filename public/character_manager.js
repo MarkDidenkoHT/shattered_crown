@@ -73,6 +73,26 @@ function renderCharacters(characters) {
           ${characters.map(characterCardHTML).join('')}
         </div>
       </div>
+      <div class="selection-slider mobile-view">
+        <div class="slider-container">
+          <div class="slider-track">
+            ${characters.map(character => `
+              <div class="selection-slide">
+                ${characterCardHTML(character)}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="slider-controls">
+          <button class="slider-btn prev-btn" aria-label="Previous character">&lt;</button>
+          <div class="slider-dots">
+            ${characters.map((_, idx) => `
+              <button class="slider-dot${idx === 0 ? ' active' : ''}" data-slide="${idx}"></button>
+            `).join('')}
+          </div>
+          <button class="slider-btn next-btn" aria-label="Next character">&gt;</button>
+        </div>
+      </div>
     </div>
     <div class="confirm-return-buttons">
       <button class="fantasy-button return-btn">Return</button>
@@ -90,6 +110,9 @@ function renderCharacters(characters) {
       this.src = 'assets/art/placeholder.png';
     });
   });
+
+  // Initialize slider for mobile view
+  initializeCharacterSlider(section);
 }
 
 function characterCardHTML(character) {
@@ -223,5 +246,69 @@ function displayMessage(message) {
   messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
     messageBox.remove();
     console.log('[MESSAGE] Message box closed.');
+  });
+}
+
+function initializeCharacterSlider(section) {
+  const sliderTrack = section.querySelector('.slider-track');
+  const prevBtn = section.querySelector('.prev-btn');
+  const nextBtn = section.querySelector('.next-btn');
+  const dots = section.querySelectorAll('.slider-dot');
+  if (!sliderTrack || !prevBtn || !nextBtn || dots.length === 0) return;
+
+  let currentSlide = 0;
+  const totalSlides = dots.length;
+
+  function updateSlider() {
+    const translateX = -currentSlide * 100;
+    sliderTrack.style.transform = `translateX(${translateX}%)`;
+    dots.forEach((dot, idx) => {
+      dot.classList.toggle('active', idx === currentSlide);
+    });
+  }
+
+  function nextSlide() {
+    currentSlide = (currentSlide + 1) % totalSlides;
+    updateSlider();
+  }
+
+  function prevSlide() {
+    currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+    updateSlider();
+  }
+
+  nextBtn.addEventListener('click', nextSlide);
+  prevBtn.addEventListener('click', prevSlide);
+
+  dots.forEach((dot, idx) => {
+    dot.addEventListener('click', () => {
+      currentSlide = idx;
+      updateSlider();
+    });
+  });
+
+  // Touch/swipe support
+  let startX = 0;
+  let isDragging = false;
+
+  sliderTrack.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+  });
+
+  sliderTrack.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+  });
+
+  sliderTrack.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    const endX = e.changedTouches[0].clientX;
+    const diff = startX - endX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) nextSlide();
+      else prevSlide();
+    }
   });
 }
