@@ -3,196 +3,108 @@ let currentSession = null;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[INIT] DOMContentLoaded triggered'); // LOG
+  console.log('[INIT] DOMContentLoaded triggered');
+
+  const authStatus = document.getElementById('authStatus');
 
   // Load Supabase configuration
   try {
     const response = await fetch('/api/config');
     supabaseConfig = await response.json();
-    console.log('[CONFIG] Loaded supabaseConfig:', supabaseConfig); // LOG
+    console.log('[CONFIG] Loaded supabaseConfig:', supabaseConfig);
   } catch (error) {
     console.error('[CONFIG] Failed to load configuration:', error);
-    alert('Failed to load application configuration');
+    authStatus.textContent = 'Failed to load configuration';
     return;
   }
 
-  // Check if user is already logged in
-  const storedSession = localStorage.getItem('session');
-  if (storedSession) {
-    console.log('[SESSION] Found stored session in localStorage'); // LOG
-    try {
-      currentSession = JSON.parse(storedSession);
-      console.log('[SESSION] Parsed currentSession:', currentSession); // LOG
-      
-      const isValid = await validateSession();
-      console.log(`[SESSION] Session validity: ${isValid}`); // LOG
-      if (isValid) {
-        console.log('[SESSION] Valid session, redirecting to game...'); // LOG
-        redirectToGame();
-        return;
-      } else {
-        console.warn('[SESSION] Session invalid, clearing'); // LOG
-        clearSession();
-      }
-    } catch (error) {
-      console.error('[SESSION] Error checking stored session:', error);
-      clearSession();
-    }
+  Telegram.WebApp.ready();
+  Telegram.WebApp.expand();
+
+  const tgUser = Telegram.WebApp.initDataUnsafe?.user;
+  console.log('[TELEGRAM] initDataUnsafe user:', tgUser);
+
+  if (!tgUser) {
+    authStatus.textContent = 'Telegram user not found. Please open via Telegram.';
+    return;
   }
 
-  document.getElementById("loginBtn").addEventListener("click", login);
-  document.getElementById("registerBtn").addEventListener("click", register);
+  const chatId = String(tgUser.id);
+  console.log('[TELEGRAM] chatId:', chatId);
 
-  addPasswordField();
-  console.log('[UI] Event listeners attached, password field ensured'); // LOG
+  try {
+    // Try to login with chatId
+    const loginResponse = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId })
+    });
+
+    let data = await loginResponse.json();
+    console.log('[LOGIN] Server response:', data);
+
+    if (loginResponse.ok) {
+      currentSession = data.session;
+      localStorage.setItem('session', JSON.stringify(currentSession));
+      localStorage.setItem('profile', JSON.stringify(data.profile));
+      authStatus.textContent = 'Login successful!';
+      await redirectToGame();
+    } else {
+      console.warn('[LOGIN] Login failed, attempting registration');
+
+      // Try to register
+      const regResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId })
+      });
+
+      data = await regResponse.json();
+      console.log('[REGISTER] Server response:', data);
+
+      if (regResponse.ok) {
+        currentSession = data.session;
+        localStorage.setItem('session', JSON.stringify(currentSession));
+        localStorage.setItem('profile', JSON.stringify(data.profile));
+        authStatus.textContent = 'Registration successful!';
+        await redirectToGame();
+      } else {
+        console.error('[REGISTER] Registration failed:', data.error);
+        authStatus.textContent = data.error || 'Registration failed!';
+      }
+    }
+  } catch (err) {
+    console.error('[AUTH] Error:', err);
+    authStatus.textContent = 'Authentication error!';
+  }
 });
 
-function addPasswordField() {
-  const accountNameInput = document.getElementById('accountName');
-
-  if (!document.getElementById('password')) {
-    const passwordInput = document.createElement('input');
-    passwordInput.type = 'password';
-    passwordInput.id = 'password';
-    passwordInput.placeholder = 'Password';
-    passwordInput.style.marginTop = '10px';
-
-    accountNameInput.parentNode.insertBefore(passwordInput, accountNameInput.nextSibling);
-    console.log('[UI] Password field added'); // LOG
-  }
-}
-
-async function validateSession() {
-  try {
-    const response = await fetch('/api/profile', {
-      headers: {
-        'Authorization': `Bearer ${currentSession.access_token}`
-      }
-    });
-    return response.ok;
-  } catch (error) {
-    console.error('[SESSION] Validation error:', error);
-    return false;
-  }
-}
-
-async function login() {
-  const accountName = document.getElementById("accountName").value.trim();
-  const password = document.getElementById("password").value;
-
-  if (!accountName || !password) {
-    alert("Please enter your account name and password!");
-    return;
-  }
-
-  console.log(`[LOGIN] Attempting login for account: ${accountName}`); // LOG
-
-  const loginBtn = document.getElementById("loginBtn");
-  loginBtn.disabled = true;
-  loginBtn.textContent = "Logging in...";
-
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountName, password })
-    });
-
-    const data = await response.json();
-    console.log('[LOGIN] Server response:', data); // LOG
-
-    if (response.ok) {
-      currentSession = data.session;
-      localStorage.setItem('session', JSON.stringify(data.session));
-      localStorage.setItem('profile', JSON.stringify(data.profile));
-
-      console.log('[LOGIN] Login successful. Session and profile stored'); // LOG
-      alert("Login successful!");
-      await redirectToGame();
-    } else {
-      console.warn('[LOGIN] Login failed:', data.error); // LOG
-      alert(data.error || "Login failed!");
-    }
-  } catch (error) {
-    console.error('[LOGIN] Login error:', error);
-    alert("Login error! Please try again.");
-  } finally {
-    loginBtn.disabled = false;
-    loginBtn.textContent = "Login";
-  }
-}
-
-async function register() {
-  const accountName = document.getElementById("accountName").value.trim();
-  const password = document.getElementById("password").value;
-
-  if (!accountName || !password || password.length < 6) {
-    alert("Invalid input for registration.");
-    return;
-  }
-
-  console.log(`[REGISTER] Attempting registration for account: ${accountName}`); // LOG
-
-  const registerBtn = document.getElementById("registerBtn");
-  registerBtn.disabled = true;
-  registerBtn.textContent = "Registering...";
-
-  try {
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountName, password })
-    });
-
-    const data = await response.json();
-    console.log('[REGISTER] Server response:', data); // LOG
-
-    if (response.ok) {
-      currentSession = data.session;
-      localStorage.setItem('session', JSON.stringify(data.session));
-      localStorage.setItem('profile', JSON.stringify(data.profile));
-
-      console.log('[REGISTER] Registration successful. Session and profile stored'); // LOG
-      alert("Registration successful!");
-      await redirectToGame();
-    } else {
-      console.warn('[REGISTER] Registration failed:', data.error); // LOG
-      alert(data.error || "Registration failed!");
-    }
-  } catch (error) {
-    console.error('[REGISTER] Registration error:', error);
-    alert("Registration error! Please try again.");
-  } finally {
-    registerBtn.disabled = false;
-    registerBtn.textContent = "Register";
-  }
-}
-
+// Redirect logic stays the same
 async function redirectToGame() {
   const profile = getCurrentProfile();
-  console.log('[REDIRECT] Profile loaded:', profile); // LOG
+  console.log('[REDIRECT] Profile loaded:', profile);
 
   if (!profile) {
-    console.warn('[REDIRECT] No profile found, loading god_selection'); // LOG
+    console.warn('[REDIRECT] No profile found, loading god_selection');
     loadModule("god_selection");
     return;
   }
 
   try {
     if (!profile.god) {
-      console.log('[REDIRECT] No god selected, loading god_selection'); // LOG
+      console.log('[REDIRECT] No god selected, loading god_selection');
       loadModule("god_selection");
       return;
     }
 
     const characterCount = await getPlayerCharacterCount(profile.id);
-    console.log(`[REDIRECT] Character count: ${characterCount}`); // LOG
+    console.log(`[REDIRECT] Character count: ${characterCount}`);
 
     if (characterCount < 3) {
-      console.log('[REDIRECT] Less than 3 characters, loading character_creation'); // LOG
+      console.log('[REDIRECT] Less than 3 characters, loading character_creation');
       loadModule("character_creation");
     } else {
-      console.log('[REDIRECT] 3+ characters, loading castle'); // LOG
+      console.log('[REDIRECT] 3+ characters, loading castle');
       loadModule("castle");
     }
   } catch (error) {
@@ -202,11 +114,11 @@ async function redirectToGame() {
 }
 
 async function getPlayerCharacterCount(playerId) {
-  console.log(`[CHARACTERS] Fetching character count for playerId: ${playerId}`); // LOG
+  console.log(`[CHARACTERS] Fetching character count for playerId: ${playerId}`);
   try {
     const response = await apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=id`);
     const characters = await response.json();
-    console.log(`[CHARACTERS] Characters fetched:`, characters); // LOG
+    console.log(`[CHARACTERS] Characters fetched:`, characters);
     return characters.length;
   } catch (error) {
     console.error('[CHARACTERS] Error fetching character count:', error);
@@ -227,7 +139,7 @@ async function loadModule(name, extraArgs = {}) {
       getCurrentProfile,
       getCurrentSession,
       apiCall,
-      ...extraArgs // 👈 ADD THIS LINE!
+      ...extraArgs
     });
     console.log(`[MODULE] Loaded module: ${name}`);
   } catch (error) {
@@ -246,14 +158,14 @@ function getCurrentSession() {
 }
 
 function clearSession() {
-  console.log('[SESSION] Clearing session'); // LOG
+  console.log('[SESSION] Clearing session');
   currentSession = null;
   localStorage.removeItem('session');
   localStorage.removeItem('profile');
 }
 
 function logout() {
-  console.log('[LOGOUT] User logging out'); // LOG
+  console.log('[LOGOUT] User logging out');
   clearSession();
   window.location.href = "/";
 }
@@ -270,13 +182,13 @@ async function apiCall(url, options = {}) {
   const response = await fetch(url, { ...options, headers });
 
   if (response.status === 401) {
-    console.warn('[API] Session expired, logging out'); // LOG
+    console.warn('[API] Session expired, logging out');
     logout();
     throw new Error('Session expired');
   }
 
   if (!response.ok) {
-    console.error(`[API] HTTP error ${response.status} for ${url}`); // LOG
+    console.error(`[API] HTTP error ${response.status} for ${url}`);
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
