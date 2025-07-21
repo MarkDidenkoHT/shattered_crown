@@ -405,7 +405,7 @@
 
         .card-name {
             font-family: 'Cinzel', serif;
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 600;
             color: #c4975a;
             margin-bottom: 0.75rem;
@@ -575,10 +575,10 @@
 
         .confirm-return-buttons {
             display: flex;
-            gap: 1.5rem;
-            margin-top: 1.5rem;
+            gap: 1rem;
+            margin-top: 1rem;
             width: 100%;
-            max-width: 600px;
+            max-width: 100px;
             justify-content: center;
         }
 
