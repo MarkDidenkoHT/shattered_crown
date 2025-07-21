@@ -261,7 +261,7 @@
       }
       
       .fantasy-button {
-        padding: 0.875rem 1.5rem;
+        padding: 0.875rem 2rem;
         font-size: 1rem;
       }
     }
@@ -329,7 +329,7 @@
         .selection-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
+            gap: 0.5rem;
             width: 100%;
         }
 
@@ -344,7 +344,6 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-.card-art-block { width: 100%; height: 80px; overflow: hidden; }
 .card-art { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
 .selection-card:hover { border-color: #c4975a; transform: translateY(-1px); }
 .selection-card:hover .card-art { transform: scale(1.03); }
@@ -410,7 +409,7 @@
 .stats-cols > div, .items-cols > div, .consumables-cols > div {
     flex: 1 1 0;
 }
-.stats-cols p, .items-cols p { margin: 0.08rem 0; }
+
 .condensed-stats, .condensed-items { padding-top: 0.2rem; margin-top: 0.2rem; }
 .condensed-items ul { margin: 0.1rem 0 0.1rem 0.5rem; padding: 0; }
 .condensed-items li { border: none; background: none; color: #c4975a; font-size: 0.8rem; padding: 0; margin: 0; }
