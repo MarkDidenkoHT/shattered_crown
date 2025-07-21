@@ -134,14 +134,30 @@ function characterCardHTML(character) {
   const armor = Math.floor(strength * 0.25);
   const resistance = Math.floor(spirit * 0.25);
 
-  const equippedItems = [
+  // Stats: 5 in col1, 3 in col2
+  const statCol1 = [
+    { label: 'Strength', value: strength },
+    { label: 'Dexterity', value: dexterity },
+    { label: 'Vitality', value: vitality },
+    { label: 'Spirit', value: spirit },
+    { label: 'Intellect', value: intellect }
+  ];
+  const statCol2 = [
+    { label: 'HP', value: hp },
+    { label: 'Armor', value: armor },
+    { label: 'Resistance', value: resistance }
+  ];
+
+  // Equipped: 4 in col1, 3 in col2 (including Consumables)
+  const equippedCol1 = [
     { label: 'Weapon', value: character.equipped_weapon || 'None' },
     { label: 'Armor', value: character.equipped_armor || 'None' },
     { label: 'Helmet', value: character.equipped_helmet || 'None' },
-    { label: 'Trinket', value: character.equipped_trinket || 'None' },
+    { label: 'Trinket', value: character.equipped_trinket || 'None' }
+  ];
+  const equippedCol2 = [
     { label: 'Boots', value: character.equipped_boots || 'None' },
     { label: 'Gloves', value: character.equipped_gloves || 'None' },
-    // Add consumables as a slot in equipped items
     { label: 'Consumables', value: (character.consumable && character.consumable.length > 0) ? character.consumable.join(', ') : 'None' }
   ];
 
@@ -172,18 +188,25 @@ function characterCardHTML(character) {
         <p class="card-description"><strong>EXP:</strong> ${exp} &nbsp; <strong>Profession:</strong> ${professionName}</p>
         <div class="stats-block">
           <h4>Stats</h4>
-          <p>Strength: <span>${strength}</span></p>
-          <p>Dexterity: <span>${dexterity}</span></p>
-          <p>Vitality: <span>${vitality}</span></p>
-          <p>Spirit: <span>${spirit}</span></p>
-          <p>Intellect: <span>${intellect}</span></p>
-          <p>HP: <span>${hp}</span></p>
-          <p>Armor: <span>${armor}</span></p>
-          <p>Resistance: <span>${resistance}</span></p>
+          <div class="stats-pair-grid">
+            <div>
+              ${statCol1.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
+            </div>
+            <div>
+              ${statCol2.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
+            </div>
+          </div>
         </div>
         <div class="stats-block">
           <h4>Equipped Items</h4>
-          ${equippedItems.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+          <div class="equipped-pair-grid">
+            <div>
+              ${equippedCol1.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+            </div>
+            <div>
+              ${equippedCol2.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+            </div>
+          </div>
         </div>
         <div class="abilities-block">
           <h4>Starting Abilities</h4>
@@ -193,7 +216,6 @@ function characterCardHTML(character) {
           <h4>Learned Abilities</h4>
           <p>${learnedAbilities}</p>
         </div>
-        <!-- Future features: talents, detailed ability data -->
       </div>
     </div>
   `;
