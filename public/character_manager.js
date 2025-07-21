@@ -117,47 +117,58 @@ function renderCharacters(characters) {
 
 function characterCardHTML(character) {
   const stats = character.stats || {};
-
   const normalizedStats = {};
   for (const [key, value] of Object.entries(stats)) {
     normalizedStats[key.toLowerCase()] = value;
   }
-
   const strength = normalizedStats.strength || 0;
   const vitality = normalizedStats.vitality || 0;
   const spirit = normalizedStats.spirit || 0;
   const dexterity = normalizedStats.dexterity || 0;
   const intellect = normalizedStats.intellect || 0;
-
   // Derived
   const hp = vitality * 10;
   const armor = Math.floor(strength * 0.25);
   const resistance = Math.floor(spirit * 0.25);
 
+  // Split stats into two columns (5 in first, 3 in second)
+  const statsCol1 = [
+    { label: 'Strength', value: strength },
+    { label: 'Dexterity', value: dexterity },
+    { label: 'Vitality', value: vitality },
+    { label: 'Spirit', value: spirit },
+    { label: 'Intellect', value: intellect }
+  ];
+  const statsCol2 = [
+    { label: 'HP', value: hp },
+    { label: 'Armor', value: armor },
+    { label: 'Resistance', value: resistance }
+  ];
+
+  // Equipped items, split consumables into two columns (4 and 3)
   const equippedItems = [
     { label: 'Weapon', value: character.equipped_weapon || 'None' },
     { label: 'Armor', value: character.equipped_armor || 'None' },
     { label: 'Helmet', value: character.equipped_helmet || 'None' },
     { label: 'Trinket', value: character.equipped_trinket || 'None' },
     { label: 'Boots', value: character.equipped_boots || 'None' },
-    { label: 'Gloves', value: character.equipped_gloves || 'None' },
-    // Add consumables as a slot in equipped items
-    { label: 'Consumables', value: (character.consumable && character.consumable.length > 0) ? character.consumable.join(', ') : 'None' }
+    { label: 'Gloves', value: character.equipped_gloves || 'None' }
   ];
+  const consumables = (character.consumable && character.consumable.length > 0)
+    ? character.consumable
+    : [];
+  const consumablesCol1 = consumables.slice(0, 4);
+  const consumablesCol2 = consumables.slice(4, 7);
 
   const startingAbilities = character.starting_abilities && character.starting_abilities.length > 0
     ? character.starting_abilities.join(', ')
     : 'None';
-
   const learnedAbilities = character.learned_abilities && character.learned_abilities.length > 0
     ? character.learned_abilities.join(', ')
     : 'None';
-
   const raceName = character.races?.name || 'Race';
   const className = character.classes?.name || 'Class';
   const professionName = character.professions?.name || 'Profession';
-
-  // Condense EXP and Profession into one line
   const exp = character.exp || 0;
 
   return `
@@ -170,20 +181,40 @@ function characterCardHTML(character) {
       <div class="card-info-block">
         <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${raceName} ${className}</h3>
         <p class="card-description"><strong>EXP:</strong> ${exp} &nbsp; <strong>Profession:</strong> ${professionName}</p>
-        <div class="stats-block">
+        <div class="stats-block condensed-stats">
           <h4>Stats</h4>
-          <p>Strength: <span>${strength}</span></p>
-          <p>Dexterity: <span>${dexterity}</span></p>
-          <p>Vitality: <span>${vitality}</span></p>
-          <p>Spirit: <span>${spirit}</span></p>
-          <p>Intellect: <span>${intellect}</span></p>
-          <p>HP: <span>${hp}</span></p>
-          <p>Armor: <span>${armor}</span></p>
-          <p>Resistance: <span>${resistance}</span></p>
+          <div class="stats-cols">
+            <div>
+              ${statsCol1.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
+            </div>
+            <div>
+              ${statsCol2.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
+            </div>
+          </div>
         </div>
-        <div class="stats-block">
+        <div class="stats-block condensed-items">
           <h4>Equipped Items</h4>
-          ${equippedItems.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+          <div class="items-cols">
+            <div>
+              ${equippedItems.slice(0, 3).map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+            </div>
+            <div>
+              ${equippedItems.slice(3, 6).map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+            </div>
+          </div>
+          <div class="consumables-cols">
+            <div>
+              <p>Consumables:</p>
+              ${consumablesCol1.length > 0
+                ? `<ul>${consumablesCol1.map(c => `<li>${c}</li>`).join('')}</ul>`
+                : '<span>None</span>'}
+            </div>
+            <div>
+              ${consumablesCol2.length > 0
+                ? `<ul>${consumablesCol2.map(c => `<li>${c}</li>`).join('')}</ul>`
+                : ''}
+            </div>
+          </div>
         </div>
         <div class="abilities-block">
           <h4>Starting Abilities</h4>
