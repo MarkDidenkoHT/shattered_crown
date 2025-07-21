@@ -1,69 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="style.css" />
-  <title>Shattered Crown - Login</title>
-  <script src="main.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="stylesheet" href="style.css" />
+<title>Shattered Crown - Login</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="main.js"></script>
 </head>
 <body>
-  <div class="main-app-container">
-    <div class="particles"></div>
+<div class="main-app-container">
+  <div class="particles"></div>
 
-    <div class="art-header">
-      <div class="crown-symbol"></div>
-      <h1>Shattered Crown</h1>
-      <p class="subtitle">Enter the realm of legends</p>
-    </div>
+  <div class="art-header">
+    <div class="crown-symbol"></div>
+    <h1>Shattered Crown</h1>
+    <p class="subtitle">Enter the realm of legends</p>
+  </div>
 
-    <div class="login-section">
-      <div class="form-container">
-        <div class="input-group">
-          <input type="text" id="accountName" placeholder="Account Name" />
-        </div>
-        <div class="input-group">
-          <input type="password" id="password" placeholder="Password" />
-        </div>
-      </div>
-
-      <div class="button-container">
-        <button id="loginBtn" class="fantasy-button login-btn">Login</button>
-        <button id="registerBtn" class="fantasy-button register-btn">Register</button>
-      </div>
+  <div class="login-section">
+    <div class="form-container">
+      <p id="authStatus">Authenticating via Telegram...</p>
     </div>
   </div>
-  <script>
-    // Create floating particles
-    function createParticles() {
-      const particles = document.querySelector('.particles');
-      const particleCount = 20;
+</div>
 
-      for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.left = Math.random() * 100 + '%';
-        particle.style.top = Math.random() * 100 + '%';
-        particle.style.animationDelay = Math.random() * 6 + 's';
-        particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
-        particles.appendChild(particle);
-      }
+<script>
+  // particles retained as before
+  window.addEventListener('load', () => {
+    const particles = document.querySelector('.particles');
+    for (let i = 0; i < 20; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.top = Math.random() * 100 + '%';
+      particle.style.animationDelay = Math.random() * 6 + 's';
+      particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+      particles.appendChild(particle);
     }
-    // Button click effects
-    document.getElementById('loginBtn').addEventListener('click', function() {
-      this.style.transform = 'scale(0.95)';
-      setTimeout(() => {
-        this.style.transform = '';
-      }, 150);
-    });
-    document.getElementById('registerBtn').addEventListener('click', function() {
-      this.style.transform = 'scale(0.95)';
-      setTimeout(() => {
-        this.style.transform = '';
-      }, 150);
-    });
-    // Initialize particles when page loads
-    window.addEventListener('load', createParticles);
-  </script>
+  });
+</script>
 </body>
 </html>
