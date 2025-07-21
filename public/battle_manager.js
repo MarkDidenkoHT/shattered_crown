@@ -118,19 +118,27 @@ function renderBattleGrid(layoutJson) {
   }
 
   const tiles = layoutJson.tiles;
+
   const rowCount = 8; // fixed height
   const colCount = 7; // fixed width
 
   container.innerHTML = '';
+
+  container.style.width = '100%';
+  container.style.height = '100%';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
 
   const table = document.createElement('table');
   table.className = 'battle-grid-table';
   table.style.borderCollapse = 'collapse';
   table.style.width = '100%';
   table.style.height = '100%';
+  table.style.tableLayout = 'fixed';
 
   for (let y = 0; y < rowCount; y++) {
     const tr = document.createElement('tr');
+    tr.style.height = `${100 / rowCount}%`;
     for (let x = 0; x < colCount; x++) {
       const tileName = tiles[y]?.[x] || 'Plain';
       const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
@@ -146,8 +154,7 @@ function renderBattleGrid(layoutJson) {
       td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
       td.style.backgroundSize = 'cover';
       td.style.backgroundPosition = 'center';
-      td.style.width = '14.28%';  // 100 / 7
-      td.style.height = '12.5%';  // 100 / 8
+      td.style.width = `${100 / colCount}%`;
       td.style.padding = '0';
       td.style.margin = '0';
       td.style.border = '1px solid rgba(0,0,0,0.1)';
