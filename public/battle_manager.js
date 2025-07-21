@@ -1,8 +1,10 @@
+// battle_manager.js
+
 let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _tileMap = {}; 
+let _tileMap = {};
 let _characters = [];
 
 import {
@@ -71,9 +73,10 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     return;
   }
 
-  const playerPos = layoutData.player_pos?.playerSpawnPositions || [];
+  // 🔷 Swap player & enemy spawns
+  const playerPos = layoutData.enemy_pos?.enemySpawnPositions || [];
   const enemyNames = layoutData.enemy_pos?.enemyNamesToSpawn || [];
-  const enemyPos = layoutData.enemy_pos?.enemySpawnPositions || [];
+  const enemyPos = layoutData.player_pos?.playerSpawnPositions || [];
 
   const players = await loadPlayerCharacters(_profile.id, playerPos);
   const enemies = await loadEnemiesByNames(enemyNames, enemyPos);
@@ -90,7 +93,7 @@ function renderBattleScreen(mode, level, layoutData) {
         <p class="battle-status">Mode: ${mode.toUpperCase()} | Level: ${level}</p>
         <button class="fantasy-button settings-btn">Settings</button>
       </div>
-      <div class="battle-grid-container"></div>
+      <table class="battle-grid-table"></table>
       <div class="battle-bottom-ui"></div>
     </div>
   `;
@@ -111,66 +114,41 @@ function renderBattleScreen(mode, level, layoutData) {
 }
 
 function renderBattleGrid(layoutJson) {
-  const container = _main.querySelector('.battle-grid-container');
+  const container = _main.querySelector('.battle-grid-table');
   if (!layoutJson?.tiles) {
     container.innerHTML = '<p>Invalid battlefield layout.</p>';
     return;
   }
 
   const tiles = layoutJson.tiles;
-
-  const rowCount = 8;
-  const colCount = 7;
-
   container.innerHTML = '';
 
-  container.style.width = '100%';
-  container.style.height = '100%';
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-
-  const table = document.createElement('table');
-  table.className = 'battle-grid-table';
-  table.style.borderCollapse = 'collapse';
-  table.style.width = '100%';
-  table.style.height = '100%';
-  table.style.tableLayout = 'fixed';
-
-  for (let y = 0; y < rowCount; y++) {
+  tiles.forEach((row, y) => {
     const tr = document.createElement('tr');
-    tr.style.height = `${100 / rowCount}%`;
-    for (let x = 0; x < colCount; x++) {
-      const tileName = tiles[y]?.[x] || 'Plain';
+    row.forEach((tileName, x) => {
       const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
       const tileData = _tileMap[normalized];
       const art = tileData?.art || 'placeholder';
 
       const td = document.createElement('td');
-      td.className = `battle-tile tile-${normalized}`;
       td.dataset.x = x;
       td.dataset.y = y;
-      td.title = tileName;
-
+      td.style.width = '64px';
+      td.style.height = '64px';
       td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
       td.style.backgroundSize = 'cover';
       td.style.backgroundPosition = 'center';
-      td.style.width = `${100 / colCount}%`;
-      td.style.padding = '0';
-      td.style.margin = '0';
-      td.style.position = 'relative';
 
       tr.appendChild(td);
-    }
-    table.appendChild(tr);
-  }
-
-  container.appendChild(table);
+    });
+    container.appendChild(tr);
+  });
 }
 
 function renderCharacters() {
-  const container = _main.querySelector('.battle-grid-container');
+  const container = _main.querySelector('.battle-grid-table');
   if (!container) {
-    console.warn('[RENDER_CHARACTERS] battle-grid-container not found');
+    console.warn('[RENDER_CHARACTERS] battle-grid-table not found');
     return;
   }
 
@@ -184,9 +162,7 @@ function renderCharacters() {
     }
 
     const [x, y] = char.position;
-
-    const selector = `td[data-x="${x}"][data-y="${y}"]`;
-    const cell = container.querySelector(selector);
+    const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
 
     if (!cell) {
       console.warn(`[RENDER_CHARACTERS] No cell at (${x}, ${y}) for ${char.name}`);
@@ -197,23 +173,39 @@ function renderCharacters() {
     charEl.className = `character-token ${char.type}`;
     charEl.dataset.id = char.id;
     charEl.title = char.name;
+    charEl.style.position = 'relative';
 
     const sprite = char.spriteName || 'placeholder';
     const img = document.createElement('img');
     img.src = `assets/art/sprites/${sprite}.png`;
     img.alt = char.name;
-    img.onerror = () => {
-      img.src = 'assets/art/sprites/placeholder.png';
-    };
+    img.onerror = () => { img.src = 'assets/art/sprites/placeholder.png'; };
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'contain';
     img.style.zIndex = '10';
-    img.style.position = 'absolute';
-    img.style.top = '0';
-    img.style.left = '0';
 
     charEl.appendChild(img);
+
+    const healthBarContainer = document.createElement('div');
+    healthBarContainer.className = 'health-bar';
+    healthBarContainer.style.position = 'absolute';
+    healthBarContainer.style.bottom = '2px';
+    healthBarContainer.style.left = '10%';
+    healthBarContainer.style.width = '80%';
+    healthBarContainer.style.height = '4px';
+    healthBarContainer.style.background = 'red';
+    healthBarContainer.style.zIndex = '15';
+
+    const healthFill = document.createElement('div');
+    healthFill.className = 'health-fill';
+    healthFill.style.width = '100%';
+    healthFill.style.height = '100%';
+    healthFill.style.background = 'limegreen';
+
+    healthBarContainer.appendChild(healthFill);
+    charEl.appendChild(healthBarContainer);
+
     cell.appendChild(charEl);
   });
 
