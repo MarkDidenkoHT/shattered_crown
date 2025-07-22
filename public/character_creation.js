@@ -96,7 +96,7 @@ function renderRaceSelection() {
                             <div class="card-art-block">
                                 <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${race.name}" 
-                                    class="card-art"
+                                    class="card-art">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${race.name}</h3>
@@ -122,7 +122,7 @@ function renderRaceSelection() {
                                 <div class="card-art-block">
                                     <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                             alt="${race.name}" 
-                                            class="card-art"
+                                            class="card-art">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${race.name}</h3>
@@ -275,7 +275,7 @@ function renderSexSelection() {
                         <div class="card-art-block">
                             <img src="assets/art/sex/male.png" 
                                 alt="Male" 
-                                class="card-art"
+                                class="card-art">
                         </div>
                         <div class="card-info-block">
                             <h3 class="card-name">Male</h3>
@@ -287,7 +287,7 @@ function renderSexSelection() {
                         <div class="card-art-block">
                             <img src="assets/art/sex/female.png" 
                                 alt="Female" 
-                                class="card-art"
+                                class="card-art">
                         </div>
                         <div class="card-info-block">
                             <h3 class="card-name">Female</h3>
@@ -305,7 +305,7 @@ function renderSexSelection() {
                             <div class="card-art-block">
                                 <img src="assets/art/sex/male.png" 
                                     alt="Male" 
-                                    class="card-art"
+                                    class="card-art">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">Male</h3>
@@ -317,7 +317,7 @@ function renderSexSelection() {
                             <div class="card-art-block">
                                 <img src="assets/art/sex/female.png" 
                                     alt="Female" 
-                                    class="card-art"
+                                    class="card-art">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">Female</h3>
@@ -412,7 +412,7 @@ function renderClassSelection() {
                             <div class="card-art-block">
                                 <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${cls.name}" 
-                                    class="card-art"
+                                    class="card-art">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${cls.name}</h3>
@@ -444,7 +444,7 @@ function renderClassSelection() {
                                 <div class="card-art-block">
                                     <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                             alt="${cls.name}" 
-                                            class="card-art"
+                                            class="card-art">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${cls.name}</h3>
@@ -558,7 +558,7 @@ function renderProfessionSelection() {
                             <div class="card-art-block">
                                 <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${profession.name}" 
-                                    class="card-art"
+                                    class="card-art">
                             </div>
                             <div class="card-info-block">
                                 <h3 class="card-name">${profession.name}</h3>
@@ -578,7 +578,7 @@ function renderProfessionSelection() {
                                 <div class="card-art-block">
                                     <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                             alt="${profession.name}" 
-                                            class="card-art"
+                                            class="card-art">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${profession.name}</h3>
