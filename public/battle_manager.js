@@ -1,3 +1,5 @@
+// battle_manager.js
+
 let _main;
 let _apiCall;
 let _getCurrentProfile;
