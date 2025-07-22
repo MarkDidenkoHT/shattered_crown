@@ -1,3 +1,5 @@
+// character_data.js
+
 let _apiCall = null;
 let _profile = null;
 
@@ -7,8 +9,6 @@ export function initCharacterData(apiCall, profile) {
 }
 
 export async function loadPlayerCharacters(playerId, spawnPositions = []) {
-  console.log('[CHARACTER_DATA] Loading characters for player', playerId);
-
   const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=*`);
   const rows = await response.json();
 
@@ -18,29 +18,19 @@ export async function loadPlayerCharacters(playerId, spawnPositions = []) {
     return char;
   });
 
-  console.log('[CHARACTER_DATA] Player characters loaded:', formatted);
   return formatted;
 }
 
 export async function loadEnemiesByNames(names = [], spawnPositions = []) {
-  // Deduplicate names (optional)
   const uniqueNames = [...new Set(names)];
-
-  console.log('[CHARACTER_DATA] Loading enemies:', uniqueNames);
-
   if (uniqueNames.length === 0) return [];
 
   const filter = uniqueNames.map(n => `name.eq.${n}`).join(',');
   const response = await _apiCall(`/api/supabase/rest/v1/enemies?select=*&or=(${filter})`);
-
-  if (!response.ok) {
-    console.error('[CHARACTER_DATA] Error loading enemies:', response.statusText);
-    throw new Error(`Failed to fetch enemies. Status: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Failed to fetch enemies. Status: ${response.status}`);
 
   const rows = await response.json();
 
-  // Map enemy types to count how many of each to spawn
   const enemyCount = {};
   names.forEach(n => { enemyCount[n] = (enemyCount[n] || 0) + 1; });
 
@@ -58,32 +48,29 @@ export async function loadEnemiesByNames(names = [], spawnPositions = []) {
     }
   });
 
-  console.log('[CHARACTER_DATA] Enemies loaded:', result);
   return result;
 }
 
 export function formatCharacter(raw) {
-  const stats = typeof raw.stats === 'string' ? JSON.parse(raw.stats || '{}') : (raw.stats || {});
+  const rawStats = typeof raw.stats === 'string' ? JSON.parse(raw.stats) : raw.stats;
+  const stats = {};
+  for (const [key, value] of Object.entries(rawStats)) {
+    stats[key.toLowerCase()] = value;
+  }
 
-  const maxHp = stats.hp || 100;
-  const char = {
+  const maxHp = stats.vitality * 10;
+
+  return {
     id: raw.id,
-    name: raw.name || 'Unnamed',
+    name: raw.name,
     type: raw.player_id ? 'player' : 'enemy',
-    spriteName: raw.sprite_name || 'placeholder',
+    spriteName: raw.sprite_name,
     position: null,
     stats: {
+      ...stats,
       hp: maxHp,
-      maxHp,
-      armor: stats.armor || 0,
-      resistance: stats.resistance || 0,
-      strength: stats.strength || 0,
-      agility: stats.agility || 0,
-      intelligence: stats.intelligence || 0,
-      speed: stats.speed || 0
+      maxHp: maxHp
     },
-    abilities: raw.abilities || [],
+    abilities: raw.abilities
   };
-
-  return char;
 }
