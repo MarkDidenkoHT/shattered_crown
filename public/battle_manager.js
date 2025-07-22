@@ -73,19 +73,18 @@ function renderBattleScreen(mode, level, layoutData) {
   _main.innerHTML = `
     <div class="main-app-container">
       <div class="battle-top-bar">
-        <div class="battle-status">${mode.toUpperCase()} — Level ${level}</div>
-        <div class="battle-entity-info" id="entityInfoPanel">
-          <img id="infoPortrait" src="assets/art/sprites/placeholder.png" />
-          <div class="info-text">
-            <h3 id="infoName">—</h3>
-            <div id="infoHP"></div>
-            <div id="infoStats"></div>
-            <ul id="infoAbilities"></ul>
-          </div>
-        </div>
+        <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
       </div>
       <div class="battle-grid-container"></div>
-      <div class="battle-top-buttons"></div>
+      <div class="battle-top-buttons" id="entityInfoPanel">
+        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" />
+        <div class="info-text">
+          <h3 id="infoName">—</h3>
+          <div id="infoHP"></div>
+          <div id="infoStats"></div>
+          <ul id="infoAbilities"></ul>
+        </div>
+      </div>
       <div class="battle-bottom-ui"></div>
     </div>
   `;
@@ -147,8 +146,12 @@ function renderBattleGrid(layoutJson) {
       td.style.position = 'relative';
 
       td.addEventListener('click', () => {
-        const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
-        showEntityInfo({ tile: _tileMap[normalized] });
+        const char = _characters.find(c => Array.isArray(c.position) && c.position[0] === x && c.position[1] === y);
+        if (char) {
+          showEntityInfo(char);
+        } else {
+          showEntityInfo({ tile: _tileMap[normalized] });
+        }
       });
 
       tr.appendChild(td);
@@ -161,10 +164,7 @@ function renderBattleGrid(layoutJson) {
 
 function renderCharacters() {
   const container = _main.querySelector('.battle-grid-container');
-  if (!container) {
-    console.warn('[RENDER_CHARACTERS] battle-grid-container not found');
-    return;
-  }
+  if (!container) return;
 
   _characters.forEach(char => {
     if (!char.position || !Array.isArray(char.position)) return;
