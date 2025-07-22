@@ -6,6 +6,7 @@ let _getCurrentProfile;
 let _profile;
 let _tileMap = {}; 
 let _characters = [];
+let _selectedCharacterEl = null;
 
 import {
   loadPlayerCharacters,
@@ -149,7 +150,16 @@ function renderBattleGrid(layoutJson) {
 
       td.addEventListener('click', () => {
         const char = _characters.find(c => Array.isArray(c.position) && c.position[0] === x && c.position[1] === y);
+        if (_selectedCharacterEl) {
+          _selectedCharacterEl.classList.remove('character-selected');
+          _selectedCharacterEl = null;
+        }
         if (char) {
+          const el = document.querySelector(`.character-token[data-id="${char.id}"]`);
+          if (el) {
+            el.classList.add('character-selected');
+            _selectedCharacterEl = el;
+          }
           showEntityInfo(char);
         } else {
           showEntityInfo({ tile: _tileMap[normalized] });
@@ -198,6 +208,11 @@ function renderCharacters() {
 
     charEl.appendChild(img);
     charEl.addEventListener('click', () => {
+      if (_selectedCharacterEl) {
+        _selectedCharacterEl.classList.remove('character-selected');
+      }
+      charEl.classList.add('character-selected');
+      _selectedCharacterEl = charEl;
       showEntityInfo(char);
     });
 
