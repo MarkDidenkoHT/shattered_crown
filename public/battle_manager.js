@@ -153,7 +153,8 @@ function renderBattleGrid(layoutJson) {
           _selectedCharacterEl = null;
         }
         if (char) {
-          const el = document.querySelector(`.character-token[data-id="${char.id}"]`);
+          // Find the character element specifically in this cell instead of using a global selector
+          const el = td.querySelector('.character-token');
           if (el) {
             el.classList.add('character-selected');
             _selectedCharacterEl = el;
