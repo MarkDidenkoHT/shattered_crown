@@ -127,7 +127,7 @@ function renderBattleGrid(layoutJson) {
   container.innerHTML = '';
 
   container.style.width = '100%';
-  container.style.height = '100%';
+  container.style.height = '60%';
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
 
