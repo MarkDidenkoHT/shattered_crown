@@ -12,14 +12,12 @@ import {
 } from './character_data.js';
 
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode }) {
-  console.log('[BATTLE_MANAGER] --- Starting loadModule ---');
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
 
   _profile = _getCurrentProfile();
   if (!_profile) {
-    console.error('[BATTLE_MANAGER] No profile found. Redirecting to login.');
     displayMessage('User profile not found. Please log in again.');
     window.gameAuth.loadModule('login');
     return;
@@ -28,44 +26,33 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
   initCharacterData(_apiCall, _profile);
 
   if (!selectedMode) {
-    console.error('[BATTLE_MANAGER] No selectedMode provided. Returning to embark.');
     displayMessage('No mode selected. Returning to embark.');
     window.gameAuth.loadModule('embark');
     return;
   }
 
-  console.log(`[BATTLE_MANAGER] Selected mode: ${selectedMode}`);
-
-  let areaLevel = 1;
-  if (selectedMode !== 'pvp') {
-    areaLevel = (_profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)]) || 1;
-  } else {
-    areaLevel = Math.floor(Math.random() * 10) + 1;
-  }
-
-  console.log(`[BATTLE_MANAGER] Area level determined: ${areaLevel}`);
+  const areaLevel = selectedMode !== 'pvp'
+    ? (_profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
+    : Math.floor(Math.random() * 10) + 1;
 
   try {
-    const tileResponse = await _apiCall(`/api/supabase/rest/v1/tiles?select=name,walkable,vision_block,art`);
-    const tileRows = await tileResponse.json();
+    const tileRes = await _apiCall(`/api/supabase/rest/v1/tiles?select=name,walkable,vision_block,art`);
+    const tileRows = await tileRes.json();
     tileRows.forEach(tile => {
       _tileMap[tile.name.toLowerCase()] = tile;
     });
-    console.log('[BATTLE_MANAGER] Tile data loaded:', _tileMap);
   } catch (err) {
-    console.warn('[BATTLE_MANAGER] Could not fetch tile data.', err);
+    console.warn('[TILES] Could not load tile data:', err);
   }
 
   let layoutData;
   try {
     const layoutName = selectedMode === 'pvp' ? 'pvp' : selectedMode;
-    const response = await _apiCall(`/api/supabase/rest/v1/layouts?name=eq.${layoutName}&level=eq.${areaLevel}&select=*`);
-    const layouts = await response.json();
+    const res = await _apiCall(`/api/supabase/rest/v1/layouts?name=eq.${layoutName}&level=eq.${areaLevel}&select=*`);
+    const layouts = await res.json();
     layoutData = layouts[0];
-    if (!layoutData) throw new Error('No layout data found.');
-    console.log('[BATTLE_MANAGER] Layout data fetched:', layoutData);
+    if (!layoutData) throw new Error('No layout found');
   } catch (err) {
-    console.error('[BATTLE_MANAGER] Error fetching layout data:', err);
     displayMessage('Failed to load battlefield layout. Returning...');
     window.gameAuth.loadModule('embark');
     return;
@@ -86,25 +73,22 @@ function renderBattleScreen(mode, level, layoutData) {
   _main.innerHTML = `
     <div class="main-app-container">
       <div class="battle-top-bar">
-        <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
+        <div class="battle-status">${mode.toUpperCase()} — Level ${level}</div>
+        <div class="battle-entity-info" id="entityInfoPanel">
+          <img id="infoPortrait" src="assets/art/sprites/placeholder.png" />
+          <div class="info-text">
+            <h3 id="infoName">—</h3>
+            <div id="infoHP"></div>
+            <div id="infoStats"></div>
+            <ul id="infoAbilities"></ul>
+          </div>
+        </div>
       </div>
       <div class="battle-grid-container"></div>
-      <div class="battle-top-buttons">
-        <button class="fantasy-button return-btn">Retreat</button>
-        <button class="fantasy-button settings-btn">Settings</button>
-      </div>
+      <div class="battle-top-buttons"></div>
       <div class="battle-bottom-ui"></div>
     </div>
   `;
-
-  _main.querySelector('.return-btn').addEventListener('click', () => {
-    displayMessage('Retreating to embark...');
-    window.gameAuth.loadModule('embark');
-  });
-
-  _main.querySelector('.settings-btn').addEventListener('click', () => {
-    displayMessage('Settings coming soon!');
-  });
 
   renderBattleGrid(layoutData.layout);
   renderCharacters();
@@ -120,12 +104,10 @@ function renderBattleGrid(layoutJson) {
   }
 
   const tiles = layoutJson.tiles;
-
   const rowCount = 7;
   const colCount = 7;
 
   container.innerHTML = '';
-
   container.style.width = '100%';
   container.style.maxWidth = '380px';
   container.style.height = '55%';
@@ -164,6 +146,11 @@ function renderBattleGrid(layoutJson) {
       td.style.margin = '0';
       td.style.position = 'relative';
 
+      td.addEventListener('click', () => {
+        const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
+        showEntityInfo({ tile: _tileMap[normalized] });
+      });
+
       tr.appendChild(td);
     }
     table.appendChild(tr);
@@ -179,24 +166,13 @@ function renderCharacters() {
     return;
   }
 
-  console.log('[RENDER_CHARACTERS] Starting to render characters...');
-  console.log('[RENDER_CHARACTERS] Characters:', _characters);
-
   _characters.forEach(char => {
-    if (!char.position || !Array.isArray(char.position)) {
-      console.warn(`[RENDER_CHARACTERS] Character ${char.name} has invalid position, skipping...`);
-      return;
-    }
+    if (!char.position || !Array.isArray(char.position)) return;
 
     const [x, y] = char.position;
-
     const selector = `td[data-x="${x}"][data-y="${y}"]`;
     const cell = container.querySelector(selector);
-
-    if (!cell) {
-      console.warn(`[RENDER_CHARACTERS] No cell at (${x}, ${y}) for ${char.name}`);
-      return;
-    }
+    if (!cell) return;
 
     const charEl = document.createElement('div');
     charEl.className = `character-token ${char.type}`;
@@ -219,10 +195,12 @@ function renderCharacters() {
     img.style.left = '0';
 
     charEl.appendChild(img);
+    charEl.addEventListener('click', () => {
+      showEntityInfo(char);
+    });
+
     cell.appendChild(charEl);
   });
-
-  console.log('[RENDER_CHARACTERS] Done rendering characters.');
 }
 
 function renderBottomUI() {
@@ -239,6 +217,50 @@ function renderBottomUI() {
       rowDiv.appendChild(btn);
     }
     ui.appendChild(rowDiv);
+  }
+}
+
+function showEntityInfo(entity) {
+  const portrait = document.getElementById('infoPortrait');
+  const nameEl = document.getElementById('infoName');
+  const hpEl = document.getElementById('infoHP');
+  const statsEl = document.getElementById('infoStats');
+  const abilitiesEl = document.getElementById('infoAbilities');
+
+  if (!entity) {
+    nameEl.textContent = '—';
+    hpEl.textContent = '';
+    statsEl.innerHTML = '';
+    abilitiesEl.innerHTML = '';
+    portrait.src = 'assets/art/sprites/placeholder.png';
+    return;
+  }
+
+  nameEl.textContent = entity.name || 'Unnamed';
+
+  if (entity.type === 'player' || entity.type === 'enemy') {
+    const hp = entity.stats?.hp || 0;
+    const maxHp = entity.stats?.maxHp || hp;
+    hpEl.textContent = `HP: ${hp} / ${maxHp}`;
+
+    statsEl.innerHTML = Object.entries(entity.stats || {})
+      .filter(([k]) => !['hp', 'maxHp'].includes(k))
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('<br>');
+
+    abilitiesEl.innerHTML = '';
+    (entity.abilities || []).forEach(a => {
+      const li = document.createElement('li');
+      li.textContent = a;
+      abilitiesEl.appendChild(li);
+    });
+
+    portrait.src = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
+  } else if (entity.tile) {
+    hpEl.textContent = '';
+    statsEl.innerHTML = `Tile: ${entity.tile.name}<br>Walkable: ${entity.tile.walkable}<br>Blocks Vision: ${entity.tile.vision_block}`;
+    abilitiesEl.innerHTML = '';
+    portrait.src = `assets/art/tiles/${entity.tile.art || 'placeholder'}.png`;
   }
 }
 
