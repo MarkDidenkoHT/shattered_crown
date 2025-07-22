@@ -194,9 +194,9 @@ function renderCharacters() {
     const img = document.createElement('img');
     img.src = `assets/art/sprites/${sprite}.png`;
     img.alt = char.name;
-    img.onerror = () => {
+    img.addEventListener('error', () => {
       img.src = 'assets/art/sprites/placeholder.png';
-    };
+    });
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'contain';
