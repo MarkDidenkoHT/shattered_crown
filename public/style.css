@@ -64,6 +64,7 @@
 
     .ui-btn {
       max-width: 20%;
+      padding: 0.2rem 2rem !important;
     }
 
     .battle-top-bar {
@@ -83,6 +84,7 @@
     .battle-top-buttons {
       display: flex;
       gap: 8px;
+      height: 16%;
     }
 
     .art-header h1 {
