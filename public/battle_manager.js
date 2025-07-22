@@ -1,3 +1,5 @@
+// battle_manager.js
+
 let _main;
 let _apiCall;
 let _getCurrentProfile;
@@ -84,16 +86,27 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
 function renderBattleScreen(mode, level, layoutData) {
   _main.innerHTML = `
-    <div class="main-app-container">
-      <div class="battle-top-bar">
-        <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
+    <div class="main-app-container" style="display: flex; flex-direction: row; justify-content: center; align-items: flex-start; gap: 10px;">
+      <div class="battle-left-pane">
+        <div class="battle-top-bar">
+          <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
+        </div>
+        <div class="battle-grid-container"></div>
+        <div class="battle-top-buttons">
+          <button class="fantasy-button return-btn">Retreat</button>
+          <button class="fantasy-button settings-btn">Settings</button>
+        </div>
+        <div class="battle-bottom-ui"></div>
       </div>
-      <div class="battle-grid-container"></div>
-      <div class="battle-top-buttons">
-        <button class="fantasy-button return-btn">Retreat</button>
-        <button class="fantasy-button settings-btn">Settings</button>
+      <div class="battle-info-panel" id="entityInfoPanel">
+        <div class="portrait-wrapper">
+          <img id="infoPortrait" src="assets/art/sprites/placeholder.png" />
+        </div>
+        <h3 id="infoName">—</h3>
+        <div id="infoHP"></div>
+        <div id="infoStats"></div>
+        <ul id="infoAbilities"></ul>
       </div>
-      <div class="battle-bottom-ui"></div>
     </div>
   `;
 
@@ -125,7 +138,6 @@ function renderBattleGrid(layoutJson) {
   const colCount = 7;
 
   container.innerHTML = '';
-
   container.style.width = '100%';
   container.style.maxWidth = '380px';
   container.style.height = '55%';
@@ -164,6 +176,11 @@ function renderBattleGrid(layoutJson) {
       td.style.margin = '0';
       td.style.position = 'relative';
 
+      td.addEventListener('click', () => {
+        const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
+        showEntityInfo({ tile: _tileMap[normalized] });
+      });
+
       tr.appendChild(td);
     }
     table.appendChild(tr);
@@ -189,7 +206,6 @@ function renderCharacters() {
     }
 
     const [x, y] = char.position;
-
     const selector = `td[data-x="${x}"][data-y="${y}"]`;
     const cell = container.querySelector(selector);
 
@@ -219,6 +235,10 @@ function renderCharacters() {
     img.style.left = '0';
 
     charEl.appendChild(img);
+    charEl.addEventListener('click', () => {
+      showEntityInfo(char);
+    });
+
     cell.appendChild(charEl);
   });
 
@@ -239,6 +259,51 @@ function renderBottomUI() {
       rowDiv.appendChild(btn);
     }
     ui.appendChild(rowDiv);
+  }
+}
+
+function showEntityInfo(entity) {
+  const portrait = document.getElementById('infoPortrait');
+  const nameEl = document.getElementById('infoName');
+  const hpEl = document.getElementById('infoHP');
+  const statsEl = document.getElementById('infoStats');
+  const abilitiesEl = document.getElementById('infoAbilities');
+
+  if (!entity) {
+    nameEl.textContent = '—';
+    hpEl.textContent = '';
+    statsEl.innerHTML = '';
+    abilitiesEl.innerHTML = '';
+    portrait.src = 'assets/art/sprites/placeholder.png';
+    return;
+  }
+
+  nameEl.textContent = entity.name || 'Unnamed';
+
+  if (entity.type === 'player' || entity.type === 'enemy') {
+    const hp = entity.stats?.hp || 0;
+    const maxHp = entity.stats?.maxHp || hp;
+    hpEl.textContent = `HP: ${hp} / ${maxHp}`;
+
+    const statList = Object.entries(entity.stats || {})
+      .filter(([k]) => k !== 'hp' && k !== 'maxHp')
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('<br>');
+    statsEl.innerHTML = statList;
+
+    abilitiesEl.innerHTML = '';
+    (entity.abilities || []).forEach(a => {
+      const li = document.createElement('li');
+      li.textContent = a;
+      abilitiesEl.appendChild(li);
+    });
+
+    portrait.src = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
+  } else if (entity.tile) {
+    hpEl.textContent = '';
+    statsEl.innerHTML = `Tile: ${entity.tile.name}<br>Walkable: ${entity.tile.walkable}<br>Blocks Vision: ${entity.tile.vision_block}`;
+    abilitiesEl.innerHTML = '';
+    portrait.src = `assets/art/tiles/${entity.tile.art || 'placeholder'}.png`;
   }
 }
 
