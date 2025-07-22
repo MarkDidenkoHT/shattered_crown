@@ -22,30 +22,35 @@ export async function loadPlayerCharacters(playerId, spawnPositions = []) {
 }
 
 export async function loadEnemiesByNames(names = [], spawnPositions = []) {
-  const uniqueNames = [...new Set(names)];
-  if (uniqueNames.length === 0) return [];
+  if (names.length === 0) return [];
 
+  // Get unique names for the API call
+  const uniqueNames = [...new Set(names)];
   const filter = uniqueNames.map(n => `name.eq.${n}`).join(',');
   const response = await _apiCall(`/api/supabase/rest/v1/enemies?select=*&or=(${filter})`);
+  
   if (!response.ok) throw new Error(`Failed to fetch enemies. Status: ${response.status}`);
-
   const rows = await response.json();
 
-  const enemyCount = {};
-  names.forEach(n => { enemyCount[n] = (enemyCount[n] || 0) + 1; });
+  // Create a lookup map for faster enemy data retrieval
+  const enemyLookup = {};
+  rows.forEach(enemy => {
+    enemyLookup[enemy.name] = enemy;
+  });
 
+  // Process enemies in the original order from the names array
   const result = [];
-
-  uniqueNames.forEach(name => {
-    const enemyData = rows.find(e => e.name === name);
-    if (!enemyData) return;
-
-    for (let i = 0; i < enemyCount[name]; i++) {
-      const instance = formatCharacter(enemyData);
-      const spawnIndex = result.length;
-      instance.position = spawnPositions[spawnIndex] || null;
-      result.push(instance);
+  names.forEach((name, index) => {
+    const enemyData = enemyLookup[name];
+    if (!enemyData) {
+      console.warn(`Enemy '${name}' not found in database`);
+      return;
     }
+
+    const instance = formatCharacter(enemyData);
+    // Assign position based on the original index, not result.length
+    instance.position = spawnPositions[index] || null;
+    result.push(instance);
   });
 
   return result;
