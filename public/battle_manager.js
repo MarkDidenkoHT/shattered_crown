@@ -127,9 +127,12 @@ function renderBattleGrid(layoutJson) {
   container.innerHTML = '';
 
   container.style.width = '100%';
-  container.style.height = '60%';
+  container.style.maxWidth = '380px';
+  container.style.height = '55%';
+  container.style.maxHeight = '380px';
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
+  container.style.margin = '5px';
 
   const table = document.createElement('table');
   table.className = 'battle-grid-table';
