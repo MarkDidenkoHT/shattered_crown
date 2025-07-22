@@ -339,7 +339,7 @@ function renderSexSelection() {
             </div>
         </div>
         <div class="confirm-return-buttons">
-            <button class="fantasy-button return-btn">Return to Race Selection</button>
+            <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
@@ -480,7 +480,7 @@ function renderClassSelection() {
             </div>
         </div>
         <div class="confirm-return-buttons">
-            <button class="fantasy-button return-btn">Return to Sex Selection</button>
+            <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
@@ -602,7 +602,7 @@ function renderProfessionSelection() {
             </div>
         </div>
         <div class="confirm-return-buttons">
-            <button class="fantasy-button return-btn">Return to Class Selection</button>
+            <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
@@ -673,7 +673,7 @@ function renderCharacterSummary() {
         </div>
         <div class="confirm-return-buttons">
             <button class="fantasy-button confirm-btn">Confirm Champion</button>
-            <button class="fantasy-button return-btn">Return to Profession Selection</button>
+            <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
