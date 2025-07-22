@@ -121,7 +121,7 @@ function renderBattleGrid(layoutJson) {
 
   const tiles = layoutJson.tiles;
 
-  const rowCount = 8;
+  const rowCount = 7;
   const colCount = 7;
 
   container.innerHTML = '';
