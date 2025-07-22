@@ -71,6 +71,8 @@ export function formatCharacter(raw) {
       hp: maxHp,
       maxHp: maxHp
     },
-    abilities: raw.abilities
+    abilities: typeof raw.learned_abilities === 'string'
+  ? JSON.parse(raw.learned_abilities)
+  : raw.learned_abilities || []
   };
 }
