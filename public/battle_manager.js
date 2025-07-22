@@ -1,7 +1,3 @@
-look at all code and provide a proper fix
-
-// battle_manager.js
-
 let _main;
 let _apiCall;
 let _getCurrentProfile;
@@ -209,14 +205,29 @@ function renderCharacters() {
     img.style.left = '0';
 
     charEl.appendChild(img);
-    charEl.addEventListener('click', () => {
-      if (_selectedCharacterEl) {
-        _selectedCharacterEl.classList.remove('character-selected');
+    td.addEventListener('click', () => {
+    if (_selectedCharacterEl) {
+      _selectedCharacterEl.classList.remove('character-selected');
+      _selectedCharacterEl = null;
+    }
+
+    const char = _characters.find(c =>
+      Array.isArray(c.position) &&
+      c.position[0] === x &&
+      c.position[1] === y
+    );
+
+    if (char) {
+      const el = document.querySelector(`.character-token[data-id="${char.id}"]`);
+      if (el) {
+        el.classList.add('character-selected');
+        _selectedCharacterEl = el;
       }
-      charEl.classList.add('character-selected');
-      _selectedCharacterEl = charEl;
       showEntityInfo(char);
-    });
+    } else {
+      showEntityInfo({ tile: _tileMap[normalized] });
+    }
+});
 
     cell.appendChild(charEl);
   });
