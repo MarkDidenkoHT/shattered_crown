@@ -1,8 +1,12 @@
+look at all code and provide a proper fix
+
+// battle_manager.js
+
 let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _tileMap = {};
+let _tileMap = {}; 
 let _characters = [];
 let _selectedCharacterEl = null;
 
@@ -108,12 +112,24 @@ function renderBattleGrid(layoutJson) {
   const colCount = 7;
 
   container.innerHTML = '';
+  container.style.width = '100%';
+  container.style.maxWidth = '380px';
+  container.style.height = '55%';
+  container.style.maxHeight = '380px';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.margin = '5px';
 
   const table = document.createElement('table');
   table.className = 'battle-grid-table';
+  table.style.borderCollapse = 'collapse';
+  table.style.width = '100%';
+  table.style.height = '100%';
+  table.style.tableLayout = 'fixed';
 
   for (let y = 0; y < rowCount; y++) {
     const tr = document.createElement('tr');
+    tr.style.height = `${100 / rowCount}%`;
     for (let x = 0; x < colCount; x++) {
       const tileName = tiles[y]?.[x] || 'Plain';
       const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
@@ -129,13 +145,27 @@ function renderBattleGrid(layoutJson) {
       td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
       td.style.backgroundSize = 'cover';
       td.style.backgroundPosition = 'center';
+      td.style.width = `${100 / colCount}%`;
+      td.style.padding = '0';
+      td.style.margin = '0';
+      td.style.position = 'relative';
 
       td.addEventListener('click', () => {
+        const char = _characters.find(c => Array.isArray(c.position) && c.position[0] === x && c.position[1] === y);
         if (_selectedCharacterEl) {
           _selectedCharacterEl.classList.remove('character-selected');
           _selectedCharacterEl = null;
         }
-        showEntityInfo({ tile: _tileMap[normalized] });
+        if (char) {
+          const el = document.querySelector(`.character-token[data-id="${char.id}"]`);
+          if (el) {
+            el.classList.add('character-selected');
+            _selectedCharacterEl = el;
+          }
+          showEntityInfo(char);
+        } else {
+          showEntityInfo({ tile: _tileMap[normalized] });
+        }
       });
 
       tr.appendChild(td);
@@ -170,15 +200,16 @@ function renderCharacters() {
     img.onerror = () => {
       img.src = 'assets/art/sprites/placeholder.png';
     };
-
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'contain';
+    img.style.zIndex = '10';
+    img.style.position = 'absolute';
+    img.style.top = '0';
+    img.style.left = '0';
 
     charEl.appendChild(img);
-
-    charEl.addEventListener('click', (e) => {
-      e.stopPropagation();
+    charEl.addEventListener('click', () => {
       if (_selectedCharacterEl) {
         _selectedCharacterEl.classList.remove('character-selected');
       }
