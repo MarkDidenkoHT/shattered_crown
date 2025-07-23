@@ -11,9 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const response = await fetch('/api/config');
     supabaseConfig = await response.json();
-    console.log('[CONFIG] Loaded supabaseConfig:', supabaseConfig);
   } catch (error) {
-    console.error('[CONFIG] Failed to load configuration:', error);
     authStatus.textContent = 'Failed to load configuration';
     return;
   }
