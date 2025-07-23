@@ -127,7 +127,7 @@ function professionCardHTML(character) {
 async function fetchRecipes(professionId) {
   console.log(`[CRAFTING] Fetching recipes for profession_id=${professionId}...`);
   const response = await _apiCall(
-    `/api/supabase/rest/v1/recipes?profession_id=eq.${professionId}&select=id,name,ingredients,sprite`
+    `/api/supabase/rest/v1/recipes?profession_id=eq.${professionId}&select=id,name,ingridients,sprite`
   );
   const recipes = await response.json();
   console.log('[CRAFTING] Recipes fetched:', recipes);
@@ -155,14 +155,14 @@ function showRecipesModal(recipes, professionName) {
 }
 
 function recipeHTML(recipe) {
-  const ingredients = Array.isArray(recipe.ingredients)
-    ? recipe.ingredients.join(', ')
-    : JSON.stringify(recipe.ingredients);
+  const ingridients = Array.isArray(recipe.ingridients)
+    ? recipe.ingridients.join(', ')
+    : JSON.stringify(recipe.ingridients);
   return `
     <div style="margin-bottom: 1.5rem; text-align: left;">
       <strong style="font-size: 1.1rem;">${recipe.name}</strong><br/>
       <img src="${recipe.sprite}" alt="${recipe.name}" style="width: 64px; height: 64px; margin: 0.5rem 0;"><br/>
-      <span><strong>Ingredients:</strong> ${ingredients}</span>
+      <span><strong>ingridients:</strong> ${ingridients}</span>
     </div>
   `;
 }
