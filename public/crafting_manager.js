@@ -33,7 +33,7 @@ async function fetchAndRenderProfessions() {
   console.log('[CRAFTING] Fetching player characters with professions...');
   try {
     const response = await _apiCall(
-      `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=id,name,profession_id,profession:professions(name)`
+      `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=id,name,profession_id,professions(name)`
     );
     const characters = await response.json();
     console.log('[CRAFTING] Characters fetched:', characters);
@@ -56,7 +56,7 @@ function renderProfessions(characters) {
     <div class="selection-section">
       <div class="selection-grid">
         ${characters
-          .filter(c => c.profession?.name)
+          .filter(c => c.professions?.name)
           .map(professionCardHTML)
           .join('')}
       </div>
@@ -84,7 +84,7 @@ function renderProfessions(characters) {
 }
 
 function professionCardHTML(character) {
-  const profName = character.profession?.name || 'Unknown';
+  const profName = character.professions?.name || 'Unknown';
   return `
     <div class="selection-card">
       <div class="card-info-block">
