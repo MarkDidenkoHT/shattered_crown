@@ -327,9 +327,9 @@ async function startSlotAnimation(resultDiv) {
       console.error('[CRAFTING] Reservation failed:', reserveJson);
       resultDiv.textContent = `Herb verification failed: ${reserveJson?.error || 'Unknown error'}`;
       return;
-  }
+    }
 
-  craftingState.enrichedHerbs = reserveJson.herbs;
+    craftingState.enrichedHerbs = reserveJson.herbs;
 
     slotArea.innerHTML = '';
     craftingState.enrichedHerbs.forEach((herb, idx) => {
@@ -362,7 +362,21 @@ async function startSlotAnimation(resultDiv) {
     enableAdjustment(slotArea, resultDiv);
     resultDiv.textContent = 'You may now apply an adjustment.';
 
-    patchAndSendCraftRequest(resultDiv);
+    // --- Add "Finish Crafting" button ---
+    let finishBtn = document.createElement('button');
+    finishBtn.className = 'fantasy-button';
+    finishBtn.textContent = 'Finish Crafting';
+    finishBtn.style.marginTop = '1rem';
+    finishBtn.disabled = false;
+    resultDiv.parentElement.appendChild(finishBtn);
+
+    finishBtn.addEventListener('click', () => {
+      finishBtn.disabled = true;
+      patchAndSendCraftRequest(resultDiv);
+    });
+
+    // Remove the old call to patchAndSendCraftRequest here
+    // patchAndSendCraftRequest(resultDiv);
   } catch (err) {
     console.error('[CRAFTING] Error during reservation:', err);
     resultDiv.textContent = 'Server error while verifying ingridients.';
