@@ -195,6 +195,8 @@ async function startCraftingSession(professionId, professionName) {
     currentAdjustedCol: null,
     isCraftingStarted: false,
     result: null,
+    adjustmentCount: 0,
+    maxAdjustments: 2,
   };
 
   renderCraftingModal();
@@ -215,6 +217,9 @@ function renderCraftingModal() {
             `).join('')}
           </div>
           <button id="craft-btn" class="fantasy-button" disabled>Craft</button>
+          <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+            Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}
+          </div>
         </div>
 
         <div style="flex: 1; text-align: left;">
@@ -294,11 +299,7 @@ function startSlotAnimation(resultDiv) {
 
   craftingState.randomizedProperties = craftingState.selectedHerbs.map(herb => {
     const props = [...herb.properties];
-    for (let i = props.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [props[i], props[j]] = [props[j], props[i]];
-    }
-    return props;
+    return shuffle(props);
   });
 
   craftingState.originalProperties = craftingState.randomizedProperties.map(arr => [...arr]);
@@ -341,7 +342,7 @@ async function checkCraftingResult(resultDiv) {
   if (matchedRecipe) {
     craftingState.result = matchedRecipe.name;
     resultDiv.innerHTML = `
-      <span style="color:lime;">You crafted: <strong>${matchedRecipe.name}</strong>!</span><br/>
+      <span style="color:lime;">✅ You crafted: <strong>${matchedRecipe.name}</strong>!</span><br/>
       <button id="claim-btn" class="fantasy-button">Claim</button>
     `;
 
@@ -352,7 +353,15 @@ async function checkCraftingResult(resultDiv) {
     });
   } else {
     craftingState.result = 'Failed';
-    resultDiv.innerHTML = `<span style="color:red;">Failed Mixture — ingredients wasted.</span>`;
+    resultDiv.innerHTML = `
+      <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
+      <button class="fantasy-button" id="craft-again">Craft Again</button>
+    `;
+    
+    document.querySelector('#craft-again').addEventListener('click', () => {
+      document.querySelector('.custom-message-box').remove();
+      startCraftingSession(craftingState.professionId, craftingState.professionName);
+    });
   }
 }
 
@@ -366,6 +375,11 @@ function enableAdjustment(slotArea, resultDiv) {
 }
 
 function handleAdjustment(colIdx, direction, resultDiv) {
+  if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
+    resultDiv.textContent = `No more adjustments available (${craftingState.maxAdjustments}/${craftingState.maxAdjustments}).`;
+    return;
+  }
+
   if (craftingState.currentAdjustedCol !== null) {
     const prevCol = craftingState.currentAdjustedCol;
     craftingState.randomizedProperties[prevCol] = [...craftingState.originalProperties[prevCol]];
@@ -385,8 +399,17 @@ function handleAdjustment(colIdx, direction, resultDiv) {
   if (direction === 'up') props.unshift(props.pop());
   else props.push(props.shift());
 
+  craftingState.adjustmentCount++;
   updateSlotColumn(colIdx);
-  resultDiv.textContent = `Adjusted bottle ${colIdx + 1}.`;
+  updateAdjustmentCounter();
+  
+  // Check crafting result after each adjustment
+  checkCraftingResult(resultDiv);
+  
+  // Disable adjustment buttons if limit reached
+  if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
+    disableAdjustmentButtons();
+  }
 }
 
 function updateSlotColumn(colIdx) {
@@ -396,6 +419,33 @@ function updateSlotColumn(colIdx) {
   col.children[0].textContent = props[0];
   col.children[1].textContent = props[1];
   col.children[2].textContent = props[2];
+}
+
+function updateAdjustmentCounter() {
+  const counter = document.querySelector('#adjustment-counter');
+  if (counter) {
+    counter.textContent = `Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}`;
+    if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
+      counter.style.color = '#ff6b6b';
+    }
+  }
+}
+
+function disableAdjustmentButtons() {
+  const buttons = document.querySelectorAll('.adjust-up, .adjust-down');
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  });
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function createParticles() {
