@@ -15,7 +15,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentS
   _getCurrentSession = getCurrentSession;
 
    _profile = _getCurrentProfile();
-  _session = _getCurrentSession();
+   _session = currentSession || getCurrentSession();
   console.log('[DEBUG] Profile:', _profile);
   console.log('[DEBUG] Session:', _session);
 
