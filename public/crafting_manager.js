@@ -11,11 +11,14 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
 
-  _profile = _getCurrentProfile();
+   _profile = _getCurrentProfile();
+  _session = _getCurrentSession();
   console.log('[DEBUG] Profile:', _profile);
-  if (!_profile) {
-    console.error('[CRAFTING] No profile found. Redirecting to login.');
-    displayMessage('User profile not found. Please log in again.');
+  console.log('[DEBUG] Session:', _session);
+
+  if (!_profile || !_session) {
+    console.error('[CRAFTING] No profile or session found. Redirecting to login.');
+    displayMessage('User session not found. Please log in again.');
     window.gameAuth.loadModule('login');
     return;
   }
@@ -307,7 +310,7 @@ async function startSlotAnimation(resultDiv) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_profile.access_token}`,
+        'Authorization': `Bearer ${_session.access_token}`,
       },
       body: JSON.stringify({
         player_id: _profile.id,
@@ -377,7 +380,7 @@ async function patchAndSendCraftRequest(resultDiv) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_profile.access_token}`
+        'Authorization': `Bearer ${_session.access_token}`
       },
       body: JSON.stringify(payload)
     });
