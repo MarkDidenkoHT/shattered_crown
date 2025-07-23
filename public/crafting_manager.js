@@ -4,6 +4,16 @@ let _getCurrentProfile;
 let _profile;
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
+  const styleEl = document.createElement('style');
+  styleEl.textContent = ` 
+  /* For scrollable recipe modal */
+    .scrollable-modal {
+      max-height: 80vh;
+      overflow-y: auto;
+      text-align: center;
+    }
+  `;
+  
   console.log('[CRAFTING] --- Starting loadModule for Crafting Manager ---');
   _main = main;
   _apiCall = apiCall;
@@ -33,7 +43,7 @@ async function fetchAndRenderProfessions() {
   console.log('[CRAFTING] Fetching player characters with professions...');
   try {
     const response = await _apiCall(
-      `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,races(name),classes(name),professions(name)`
+      `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,races(name),classes(name),professions(id,name)`
     );
     const characters = await response.json();
     console.log('[CRAFTING] Characters fetched:', characters);
@@ -71,30 +81,88 @@ function renderProfessions(characters) {
   });
 
   section.querySelectorAll('.recipes-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      displayMessage(`Recipes for ${btn.dataset.profession} coming soon!`);
+    btn.addEventListener('click', async () => {
+      const profName = btn.dataset.profession;
+      const profId = btn.dataset.professionId;
+
+      try {
+        const recipes = await fetchRecipes(profId);
+        showRecipesModal(recipes, profName);
+      } catch (err) {
+        console.error('[CRAFTING] Failed to load recipes:', err);
+        displayMessage(`Failed to load recipes for ${profName}`);
+      }
     });
   });
 
   section.querySelectorAll('.craft-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      displayMessage(`Crafting mini-game for ${btn.dataset.profession} coming soon!`);
+      const profName = btn.dataset.profession;
+      displayMessage(`Crafting mini-game for ${profName} coming soon!`);
     });
   });
 }
 
 function professionCardHTML(character) {
   const profName = character.professions?.name || 'Unknown';
+  const profId = character.professions?.id || 0;
   return `
     <div class="selection-card">
       <div class="card-info-block">
         <h3 class="card-name">${profName}</h3>
         <p class="card-description">Character: ${character.name}</p>
         <div class="confirm-return-buttons">
-          <button class="fantasy-button recipes-btn" data-profession="${profName}">Recipes</button>
-          <button class="fantasy-button craft-btn" data-profession="${profName}">Craft</button>
+          <button class="fantasy-button recipes-btn" data-profession="${profName}" data-profession-id="${profId}">
+            Recipes
+          </button>
+          <button class="fantasy-button craft-btn" data-profession="${profName}">
+            Craft
+          </button>
         </div>
       </div>
+    </div>
+  `;
+}
+
+async function fetchRecipes(professionId) {
+  console.log(`[CRAFTING] Fetching recipes for profession_id=${professionId}...`);
+  const response = await _apiCall(
+    `/api/supabase/rest/v1/recipes?profession_id=eq.${professionId}&select=id,name,ingredients,sprite`
+  );
+  const recipes = await response.json();
+  console.log('[CRAFTING] Recipes fetched:', recipes);
+  return recipes;
+}
+
+function showRecipesModal(recipes, professionName) {
+  const modal = document.createElement('div');
+  modal.className = 'custom-message-box';
+  modal.innerHTML = `
+    <div class="message-content scrollable-modal">
+      <h2>${professionName} Recipes</h2>
+      ${recipes.length === 0
+        ? '<p>No recipes found.</p>'
+        : recipes.map(recipeHTML).join('')}
+      <button class="fantasy-button message-ok-btn">Close</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+    modal.remove();
+    console.log('[CRAFTING] Recipes modal closed.');
+  });
+}
+
+function recipeHTML(recipe) {
+  const ingredients = Array.isArray(recipe.ingredients)
+    ? recipe.ingredients.join(', ')
+    : JSON.stringify(recipe.ingredients);
+  return `
+    <div style="margin-bottom: 1.5rem; text-align: left;">
+      <strong style="font-size: 1.1rem;">${recipe.name}</strong><br/>
+      <img src="${recipe.sprite}" alt="${recipe.name}" style="width: 64px; height: 64px; margin: 0.5rem 0;"><br/>
+      <span><strong>Ingredients:</strong> ${ingredients}</span>
     </div>
   `;
 }
