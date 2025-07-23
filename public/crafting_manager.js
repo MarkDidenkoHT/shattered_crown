@@ -330,7 +330,7 @@ function startSlotAnimation(resultDiv) {
 async function checkCraftingResult(resultDiv) {
   const recipes = await fetchRecipes(craftingState.professionId);
 
-  const resultProps = craftingState.randomizedProperties.map(col => col[0]);
+  const resultProps = craftingState.randomizedProperties.map(col => col[2]);
 
   const matchedRecipe = recipes.find(recipe => {
     if (!Array.isArray(recipe.ingridients)) return false;
