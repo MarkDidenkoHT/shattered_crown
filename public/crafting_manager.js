@@ -323,45 +323,57 @@ function startSlotAnimation(resultDiv) {
 
   setTimeout(() => {
     enableAdjustment(slotArea, resultDiv);
-    checkCraftingResult(resultDiv);
+    patchAndSendCraftRequest(resultDiv);
   }, 1500);
 }
 
-async function checkCraftingResult(resultDiv) {
-  const recipes = await fetchRecipes(craftingState.professionId);
-
-  const resultProps = craftingState.randomizedProperties.map(col => col[2]);
-
-  const matchedRecipe = recipes.find(recipe => {
-    if (!Array.isArray(recipe.ingridients)) return false;
-    const required = [...recipe.ingridients].sort();
-    const actual = [...resultProps].sort();
-    return JSON.stringify(required) === JSON.stringify(actual);
-  });
-
-  if (matchedRecipe) {
-    craftingState.result = matchedRecipe.name;
-    resultDiv.innerHTML = `
-      <span style="color:lime;">✅ You crafted: <strong>${matchedRecipe.name}</strong>!</span><br/>
-      <button id="claim-btn" class="fantasy-button">Claim</button>
-    `;
-
-    document.querySelector('#claim-btn').addEventListener('click', () => {
-      displayMessage(`${matchedRecipe.name} added to your bank (placeholder)`);
-      document.querySelector('.custom-message-box').remove();
-      craftingState = null;
-    });
-  } else {
-    craftingState.result = 'Failed';
-    resultDiv.innerHTML = `
-      <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
-      <button class="fantasy-button" id="craft-again">Craft Again</button>
-    `;
+async function patchAndSendCraftRequest(resultDiv) {
+  try {
+    const payload = {
+      player_id: _profile.id,
+      profession_id: craftingState.professionId,
+      selected_herbs: craftingState.selectedHerbs.map(h => h.name),
+      adjustments: [] // for now
+    };
     
-    document.querySelector('#craft-again').addEventListener('click', () => {
-      document.querySelector('.custom-message-box').remove();
-      startCraftingSession(craftingState.professionId, craftingState.professionName);
+    const res = await fetch('/functions/v1/craft_alchemy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${_profile.access_token}`
+      },
+      body: JSON.stringify(payload)
     });
+    
+    const json = await res.json();
+    
+    if (json.success) {
+      craftingState.result = json.crafted.name;
+      resultDiv.innerHTML = `
+        <span style="color:lime;">✅ You crafted: <strong>${json.crafted.name}</strong>!</span><br/>
+        <button id="claim-btn" class="fantasy-button">Claim</button>
+      `;
+
+      document.querySelector('#claim-btn').addEventListener('click', () => {
+        displayMessage(`${json.crafted.name} added to your bank (server-side)`);
+        document.querySelector('.custom-message-box').remove();
+        craftingState = null;
+      });
+    } else {
+      craftingState.result = 'Failed';
+      resultDiv.innerHTML = `
+        <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
+        <button class="fantasy-button" id="craft-again">Craft Again</button>
+      `;
+      
+      document.querySelector('#craft-again').addEventListener('click', () => {
+        document.querySelector('.custom-message-box').remove();
+        startCraftingSession(craftingState.professionId, craftingState.professionName);
+      });
+    }
+  } catch (err) {
+    console.error('[CRAFTING] Server error:', err);
+    resultDiv.textContent = 'Crafting failed. Try again later.';
   }
 }
 
@@ -403,10 +415,9 @@ function handleAdjustment(colIdx, direction, resultDiv) {
   updateSlotColumn(colIdx);
   updateAdjustmentCounter();
   
-  // Check crafting result after each adjustment
-  checkCraftingResult(resultDiv);
+  // Note: Server-side crafting means adjustments would need to be sent to server
+  // For now, keeping the UI adjustment logic but the actual crafting is server-side
   
-  // Disable adjustment buttons if limit reached
   if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
     disableAdjustmentButtons();
   }
