@@ -323,13 +323,13 @@ async function startSlotAnimation(resultDiv) {
     });
 
     const reserveJson = await reserveRes.json();
-    if (!reserveRes.ok || !Array.isArray(reserveJson.enriched_herbs)) {
-      console.error('[CRAFTING] Reservation failed:', reserveJson?.error || reserveJson);
+    if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
+      console.error('[CRAFTING] Reservation failed:', reserveJson);
       resultDiv.textContent = `Herb verification failed: ${reserveJson?.error || 'Unknown error'}`;
       return;
-    }
+  }
 
-    craftingState.enrichedHerbs = reserveJson.enriched_herbs;
+  craftingState.enrichedHerbs = reserveJson.herbs;
 
     slotArea.innerHTML = '';
     craftingState.enrichedHerbs.forEach((herb, idx) => {
