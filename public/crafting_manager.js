@@ -397,19 +397,22 @@ async function patchAndSendCraftRequest(resultDiv) {
       }
     }
 
-    // --- Normalize enriched_herbs properties to {a,b,c,d} object ---
+    // --- Normalize enriched_herbs properties to {a,b,c} object only ---
     function normalizeProps(input) {
       if (Array.isArray(input)) {
-        const keys = ['a', 'b', 'c', 'd'];
+        const keys = ['a', 'b', 'c'];
         const result = {};
         for (let i = 0; i < keys.length; i++) {
           result[keys[i]] = input[i] ?? 0;
         }
         return result;
       }
-      // If already object, ensure all keys exist
-      const out = { a: 0, b: 0, c: 0, d: 0, ...input };
-      return out;
+      // If already object, ensure only a, b, c keys exist
+      return {
+        a: input.a ?? 0,
+        b: input.b ?? 0,
+        c: input.c ?? 0
+      };
     }
     const normalizedHerbs = (craftingState.enrichedHerbs || []).map(h => ({
       ...h,
