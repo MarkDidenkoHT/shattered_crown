@@ -353,6 +353,12 @@ async function startSlotAnimation(resultDiv) {
     craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
     craftingState.currentAdjustedCol = null;
 
+    // --- Initialize adjustments as { [colIdx]: { up: 0, down: 0 } } ---
+    craftingState.adjustments = {};
+    for (let i = 0; i < 3; i++) {
+      craftingState.adjustments[i] = { up: 0, down: 0 };
+    }
+
     enableAdjustment(slotArea, resultDiv);
     resultDiv.textContent = 'You may now apply an adjustment.';
 
@@ -363,15 +369,19 @@ async function startSlotAnimation(resultDiv) {
   }
 }
 
+// --- PATCH: Build adjustments as array of { bottle, direction, count } ---
 async function patchAndSendCraftRequest(resultDiv) {
   try {
-    // Build the list of adjustments based on the deltas
-    const adjustments = Object.entries(craftingState.adjustments || {})
-      .filter(([_, count]) => count !== 0)
-      .map(([colIdx, count]) => ({
-        bottle: Number(colIdx),
-        count
-      }));
+    // Build the list of adjustments based on up/down counts
+    const adjustments = [];
+    for (const [colIdx, adj] of Object.entries(craftingState.adjustments || {})) {
+      if (adj.up > 0) {
+        adjustments.push({ bottle: Number(colIdx), direction: 'up', count: adj.up });
+      }
+      if (adj.down > 0) {
+        adjustments.push({ bottle: Number(colIdx), direction: 'down', count: adj.down });
+      }
+    }
 
     const payload = {
       player_id: _profile.id,
@@ -441,16 +451,17 @@ function handleAdjustment(colIdx, direction, resultDiv) {
 
   const props = craftingState.randomizedProperties[colIdx];
 
+  // --- Ensure adjustments object exists for this colIdx ---
   if (!craftingState.adjustments[colIdx]) {
-    craftingState.adjustments[colIdx] = 0;
+    craftingState.adjustments[colIdx] = { up: 0, down: 0 };
   }
 
   if (direction === 'up') {
     props.push(props.shift()); // rotate up
-    craftingState.adjustments[colIdx]++;
+    craftingState.adjustments[colIdx].up++;
   } else {
     props.unshift(props.pop()); // rotate down
-    craftingState.adjustments[colIdx]--;
+    craftingState.adjustments[colIdx].down++;
   }
 
   updateSlotColumn(colIdx);
