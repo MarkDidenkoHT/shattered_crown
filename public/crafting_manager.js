@@ -302,7 +302,7 @@ async function startSlotAnimation(resultDiv) {
   const selectedHerbNames = craftingState.selectedHerbs.map(h => h.name);
 
   try {
-    const reserveRes = await fetch('/functions/v1/reserve_ingridients', {
+    const reserveRes = await fetch('/functions/v1/reserve_ingredients', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
