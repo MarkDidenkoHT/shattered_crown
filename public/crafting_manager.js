@@ -33,7 +33,7 @@ async function fetchAndRenderProfessions() {
   console.log('[CRAFTING] Fetching player characters with professions...');
   try {
     const response = await _apiCall(
-      `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=id,name,profession_id,professions(name)`
+      `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,races(name),classes(name),professions(name)`
     );
     const characters = await response.json();
     console.log('[CRAFTING] Characters fetched:', characters);
