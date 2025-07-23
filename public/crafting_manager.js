@@ -7,7 +7,7 @@ let _session;
 
 let craftingState = null;
 
-export async function loadModule(main, { apiCall, getCurrentProfile }) {
+export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentSession }) {
   console.log('[CRAFTING] --- Starting loadModule for Crafting Manager ---');
   _main = main;
   _apiCall = apiCall;
