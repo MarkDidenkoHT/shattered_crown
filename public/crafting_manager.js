@@ -197,6 +197,7 @@ async function startCraftingSession(professionId, professionName) {
     result: null,
     adjustmentCount: 0,
     maxAdjustments: 2,
+    enrichedHerbs: null
   };
 
   renderCraftingModal();
@@ -293,38 +294,66 @@ function renderCraftingModal() {
   }
 }
 
-function startSlotAnimation(resultDiv) {
+async function startSlotAnimation(resultDiv) {
   const slotArea = document.querySelector('#crafting-slots');
   slotArea.innerHTML = '';
+  resultDiv.textContent = 'Verifying ingredients...';
 
-  craftingState.randomizedProperties = craftingState.selectedHerbs.map(herb => {
-    const props = [...herb.properties];
-    return shuffle(props);
-  });
+  const selectedHerbNames = craftingState.selectedHerbs.map(h => h.name);
 
-  craftingState.originalProperties = craftingState.randomizedProperties.map(arr => [...arr]);
-  craftingState.currentAdjustedCol = null;
+  try {
+    const reserveRes = await fetch('/functions/v1/reserve_ingredients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${_profile.access_token}`,
+      },
+      body: JSON.stringify({
+        player_id: _profile.id,
+        profession_id: craftingState.professionId,
+        selected_herbs: selectedHerbNames,
+      }),
+    });
 
-  craftingState.randomizedProperties.forEach((props, idx) => {
-    const col = document.createElement('div');
-    col.style.display = 'inline-block';
-    col.style.margin = '0 1rem';
-    col.innerHTML = `
-      <div>${props[0]}</div>
-      <div>${props[1]}</div>
-      <div>${props[2]}</div>
-      <div>
-        <button class="fantasy-button adjust-up" data-col="${idx}">↑</button>
-        <button class="fantasy-button adjust-down" data-col="${idx}">↓</button>
-      </div>
-    `;
-    slotArea.appendChild(col);
-  });
+    const reserveJson = await reserveRes.json();
+    if (!reserveRes.ok || !Array.isArray(reserveJson.enriched_herbs)) {
+      console.error('[CRAFTING] Reservation failed:', reserveJson);
+      resultDiv.textContent = 'Herb verification failed.';
+      return;
+    }
 
-  setTimeout(() => {
+    craftingState.enrichedHerbs = reserveJson.enriched_herbs;
+
+    slotArea.innerHTML = '';
+    craftingState.enrichedHerbs.forEach((herb, idx) => {
+      const props = Object.values(herb.properties);
+      const col = document.createElement('div');
+      col.style.display = 'inline-block';
+      col.style.margin = '0 1rem';
+      col.innerHTML = `
+        <div>${props[0]}</div>
+        <div>${props[1]}</div>
+        <div>${props[2]}</div>
+        <div>
+          <button class="fantasy-button adjust-up" data-col="${idx}">↑</button>
+          <button class="fantasy-button adjust-down" data-col="${idx}">↓</button>
+        </div>
+      `;
+      slotArea.appendChild(col);
+    });
+
+    craftingState.randomizedProperties = craftingState.enrichedHerbs.map(h => Object.values(h.properties));
+    craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
+    craftingState.currentAdjustedCol = null;
+
     enableAdjustment(slotArea, resultDiv);
+    resultDiv.textContent = 'You may now apply an adjustment.';
+
     patchAndSendCraftRequest(resultDiv);
-  }, 1500);
+  } catch (err) {
+    console.error('[CRAFTING] Error during reservation:', err);
+    resultDiv.textContent = 'Server error while verifying ingredients.';
+  }
 }
 
 async function patchAndSendCraftRequest(resultDiv) {
@@ -336,12 +365,13 @@ async function patchAndSendCraftRequest(resultDiv) {
       adjustments: craftingState.currentAdjustedCol !== null
         ? [{
             bottle: craftingState.currentAdjustedCol,
-            direction: craftingState.lastAdjustmentDirection, // we’ll add this in a sec
+            direction: craftingState.lastAdjustmentDirection,
             count: 1
           }]
-        : []
+        : [],
+      enriched_herbs: craftingState.enrichedHerbs
     };
-    
+
     const res = await fetch('/functions/v1/craft_alchemy', {
       method: 'POST',
       headers: {
@@ -350,9 +380,9 @@ async function patchAndSendCraftRequest(resultDiv) {
       },
       body: JSON.stringify(payload)
     });
-    
+
     const json = await res.json();
-    
+
     if (json.success) {
       craftingState.result = json.crafted.name;
       resultDiv.innerHTML = `
@@ -371,7 +401,7 @@ async function patchAndSendCraftRequest(resultDiv) {
         <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
         <button class="fantasy-button" id="craft-again">Craft Again</button>
       `;
-      
+
       document.querySelector('#craft-again').addEventListener('click', () => {
         document.querySelector('.custom-message-box').remove();
         startCraftingSession(craftingState.professionId, craftingState.professionName);
@@ -419,10 +449,8 @@ function handleAdjustment(colIdx, direction, resultDiv) {
 
   craftingState.lastAdjustmentDirection = direction;
   updateSlotColumn(colIdx);
+  craftingState.adjustmentCount++;
   updateAdjustmentCounter();
-  
-  // Note: Server-side crafting means adjustments would need to be sent to server
-  // For now, keeping the UI adjustment logic but the actual crafting is server-side
   
   if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
     disableAdjustmentButtons();
