@@ -108,6 +108,7 @@ function professionCardHTML(character) {
   return `
     <div class="selection-card">
       <div class="card-info-block">
+        <img src="assets/art/professions/${profName.toLowerCase().replace(/\s+/g, '_')}.png" alt="${profName}" style="width:64px;height:64px;">
         <h3 class="card-name">${profName}</h3>
         <p class="card-description">Character: ${character.name}</p>
         <div class="confirm-return-buttons">
@@ -157,8 +158,8 @@ function recipeHTML(recipe) {
   return `
     <div style="margin-bottom: 1.5rem; text-align: left;">
       <strong style="font-size: 1.1rem;">${recipe.name}</strong><br/>
-      <img src="${recipe.sprite}" alt="${recipe.name}" style="width: 64px; height: 64px; margin: 0.5rem 0;"><br/>
-      <span><strong>Ingredients:</strong> ${ingridients}</span>
+      <img src="assets/art/${recipe.sprite}.png" alt="${recipe.name}" style="width: 64px; height: 64px; margin: 0.5rem 0;"><br/>
+      <span><strong>Ingridients:</strong> ${ingridients}</span>
     </div>
   `;
 }
@@ -172,7 +173,7 @@ async function startCraftingSession(professionId, professionName) {
   const enriched = [];
   for (const item of bankItems) {
     const res = await _apiCall(
-      `/api/supabase/rest/v1/ingredients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
+      `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
     );
     const [ingredient] = await res.json();
     if (ingredient) {
@@ -191,8 +192,9 @@ async function startCraftingSession(professionId, professionName) {
     availableHerbs: enriched,
     selectedHerbs: [null, null, null],
     randomizedProperties: [[], [], []],
+    originalProperties: [[], [], []],
+    currentAdjustedCol: null,
     isCraftingStarted: false,
-    hasAdjusted: false,
     result: null,
   };
 
@@ -208,7 +210,7 @@ function renderCraftingModal() {
       <div style="display: flex; gap: 1rem; justify-content: space-between;">
         
         <div style="flex: 1;">
-          <h3>Selected Ingredients</h3>
+          <h3>Selected Ingridients</h3>
           <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
             ${[0,1,2].map(i => `
               <div class="craft-slot" data-slot="${i}" style="width:64px;height:64px;border:2px dashed #aaa;"></div>
@@ -222,7 +224,7 @@ function renderCraftingModal() {
           <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
             ${craftingState.availableHerbs.map((herb, idx) => `
               <div class="herb" data-index="${idx}" style="cursor:pointer;">
-                <img src="${herb.sprite}" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
+                <img src="assets/art/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
                 <div style="font-size:0.8rem;">x${herb.amount}</div>
               </div>
             `).join('')}
@@ -273,6 +275,9 @@ function renderCraftingModal() {
     craftingState.isCraftingStarted = true;
     resultDiv.textContent = 'Crafting...';
     craftBtn.disabled = true;
+
+    modal.querySelector('#available-herbs').parentElement.style.display = 'none';
+
     startSlotAnimation(resultDiv);
   });
 
@@ -300,6 +305,9 @@ function startSlotAnimation(resultDiv) {
     return props;
   });
 
+  craftingState.originalProperties = craftingState.randomizedProperties.map(arr => [...arr]);
+  craftingState.currentAdjustedCol = null;
+
   craftingState.randomizedProperties.forEach((props, idx) => {
     const col = document.createElement('div');
     col.style.display = 'inline-block';
@@ -322,49 +330,39 @@ function startSlotAnimation(resultDiv) {
 }
 
 function enableAdjustment(slotArea, resultDiv) {
-  const upBtns = slotArea.querySelectorAll('.adjust-up');
-  const downBtns = slotArea.querySelectorAll('.adjust-down');
-
-  upBtns.forEach(btn => {
-    btn.addEventListener('click', () => handleAdjustment(btn.dataset.col, 'up', resultDiv));
-  });
-  downBtns.forEach(btn => {
-    btn.addEventListener('click', () => handleAdjustment(btn.dataset.col, 'down', resultDiv));
-  });
+  slotArea.querySelectorAll('.adjust-up').forEach(btn =>
+    btn.addEventListener('click', () => handleAdjustment(+btn.dataset.col, 'up', resultDiv))
+  );
+  slotArea.querySelectorAll('.adjust-down').forEach(btn =>
+    btn.addEventListener('click', () => handleAdjustment(+btn.dataset.col, 'down', resultDiv))
+  );
 }
 
 function handleAdjustment(colIdx, direction, resultDiv) {
-  if (craftingState.hasAdjusted) {
-    resultDiv.textContent = 'You already used your adjustment.';
-    return;
+  if (craftingState.currentAdjustedCol !== null) {
+    const prevCol = craftingState.currentAdjustedCol;
+    craftingState.randomizedProperties[prevCol] = [...craftingState.originalProperties[prevCol]];
+    updateSlotColumn(prevCol);
   }
 
-  colIdx = +colIdx;
+  craftingState.currentAdjustedCol = colIdx;
+
   const props = craftingState.randomizedProperties[colIdx];
   if (direction === 'up') props.unshift(props.pop());
   else props.push(props.shift());
 
+  updateSlotColumn(colIdx);
+
+  resultDiv.textContent = 'Adjustment applied. You can adjust another bottle if you wish.';
+}
+
+function updateSlotColumn(colIdx) {
+  const props = craftingState.randomizedProperties[colIdx];
   const slotArea = document.querySelector('#crafting-slots');
   const col = slotArea.children[colIdx];
   col.children[0].textContent = props[0];
   col.children[1].textContent = props[1];
   col.children[2].textContent = props[2];
-
-  craftingState.hasAdjusted = true;
-  resultDiv.textContent = 'Adjustment used. Checking result...';
-
-  setTimeout(() => checkCraftResult(resultDiv), 1000);
-}
-
-function checkCraftResult(resultDiv) {
-  const finalProperties = craftingState.randomizedProperties.map(p => p[0]);
-  const unique = new Set(finalProperties);
-
-  if (unique.size === 3) {
-    resultDiv.textContent = '🎉 Success! You crafted a potion!';
-  } else {
-    resultDiv.textContent = '❌ Crafting failed. Better luck next time!';
-  }
 }
 
 function createParticles() {
