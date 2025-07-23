@@ -333,7 +333,13 @@ async function patchAndSendCraftRequest(resultDiv) {
       player_id: _profile.id,
       profession_id: craftingState.professionId,
       selected_herbs: craftingState.selectedHerbs.map(h => h.name),
-      adjustments: [] // for now
+      adjustments: craftingState.currentAdjustedCol !== null
+        ? [{
+            bottle: craftingState.currentAdjustedCol,
+            direction: craftingState.lastAdjustmentDirection, // we’ll add this in a sec
+            count: 1
+          }]
+        : []
     };
     
     const res = await fetch('/functions/v1/craft_alchemy', {
@@ -411,7 +417,7 @@ function handleAdjustment(colIdx, direction, resultDiv) {
   if (direction === 'up') props.unshift(props.pop());
   else props.push(props.shift());
 
-  craftingState.adjustmentCount++;
+  craftingState.lastAdjustmentDirection = direction;
   updateSlotColumn(colIdx);
   updateAdjustmentCounter();
   
