@@ -126,10 +126,9 @@ function professionCardHTML(character) {
 
 async function fetchRecipes(professionId) {
   const response = await _apiCall(
-    `/api/supabase/rest/v1/recipes?profession_id=eq.${professionId}&select=id,name,ingridients,sprite`
+    `/api/supabase/rest/v1/recipes?profession_id=eq.${professionId}&select=name,ingridients,sprite`
   );
-  const recipes = await response.json();
-  return recipes;
+  return await response.json();
 }
 
 function showRecipesModal(recipes, professionName) {
@@ -157,9 +156,9 @@ function recipeHTML(recipe) {
     : JSON.stringify(recipe.ingridients);
   return `
     <div style="margin-bottom: 1.5rem; text-align: left;">
-      <strong style="font-size: 1.1rem;">${recipe.name}</strong><br/>
-      <img src="assets/art/${recipe.sprite}.png" alt="${recipe.name}" style="width: 64px; height: 64px; margin: 0.5rem 0;"><br/>
-      <span><strong>Ingridients:</strong> ${ingridients}</span>
+      <strong>${recipe.name}</strong><br/>
+      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 64px; height: 64px;"><br/>
+      <span><strong>Ingredients:</strong> ${ingridients}</span>
     </div>
   `;
 }
@@ -208,9 +207,8 @@ function renderCraftingModal() {
     <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 90vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
       <div style="display: flex; gap: 1rem; justify-content: space-between;">
-        
         <div style="flex: 1;">
-          <h3>Selected Ingridients</h3>
+          <h3>Selected Ingredients</h3>
           <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
             ${[0,1,2].map(i => `
               <div class="craft-slot" data-slot="${i}" style="width:64px;height:64px;border:2px dashed #aaa;"></div>
@@ -224,17 +222,15 @@ function renderCraftingModal() {
           <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
             ${craftingState.availableHerbs.map((herb, idx) => `
               <div class="herb" data-index="${idx}" style="cursor:pointer;">
-                <img src="assets/art/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
+                <img src="assets/art/ingredients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
                 <div style="font-size:0.8rem;">x${herb.amount}</div>
               </div>
             `).join('')}
           </div>
         </div>
-
       </div>
 
       <div id="craft-result" style="margin-top:1rem;font-weight:bold;">Select 3 herbs to start crafting</div>
-
       <button class="fantasy-button message-ok-btn">Close</button>
     </div>
   `;
@@ -260,7 +256,7 @@ function renderCraftingModal() {
 
       craftingState.selectedHerbs[slotIdx] = herb;
       slots[slotIdx].innerHTML = `
-        <img src="${herb.sprite}" style="width:64px;height:64px;cursor:pointer;" title="Click to remove">
+        <img src="assets/art/ingredients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove">
       `;
       slots[slotIdx].addEventListener('click', () => {
         craftingState.selectedHerbs[slotIdx] = null;
@@ -326,7 +322,38 @@ function startSlotAnimation(resultDiv) {
 
   setTimeout(() => {
     enableAdjustment(slotArea, resultDiv);
+    checkCraftingResult(resultDiv);
   }, 1500);
+}
+
+async function checkCraftingResult(resultDiv) {
+  const recipes = await fetchRecipes(craftingState.professionId);
+
+  const resultProps = craftingState.randomizedProperties.map(col => col[0]);
+
+  const matchedRecipe = recipes.find(recipe => {
+    if (!Array.isArray(recipe.ingridients)) return false;
+    const required = [...recipe.ingridients].sort();
+    const actual = [...resultProps].sort();
+    return JSON.stringify(required) === JSON.stringify(actual);
+  });
+
+  if (matchedRecipe) {
+    craftingState.result = matchedRecipe.name;
+    resultDiv.innerHTML = `
+      <span style="color:lime;">You crafted: <strong>${matchedRecipe.name}</strong>!</span><br/>
+      <button id="claim-btn" class="fantasy-button">Claim</button>
+    `;
+
+    document.querySelector('#claim-btn').addEventListener('click', () => {
+      displayMessage(`${matchedRecipe.name} added to your bank (placeholder)`);
+      document.querySelector('.custom-message-box').remove();
+      craftingState = null;
+    });
+  } else {
+    craftingState.result = 'Failed';
+    resultDiv.innerHTML = `<span style="color:red;">Failed Mixture — ingredients wasted.</span>`;
+  }
 }
 
 function enableAdjustment(slotArea, resultDiv) {
@@ -339,32 +366,27 @@ function enableAdjustment(slotArea, resultDiv) {
 }
 
 function handleAdjustment(colIdx, direction, resultDiv) {
-  const props = craftingState.randomizedProperties[colIdx];
+  if (craftingState.currentAdjustedCol !== null) {
+    const prevCol = craftingState.currentAdjustedCol;
+    craftingState.randomizedProperties[prevCol] = [...craftingState.originalProperties[prevCol]];
+    updateSlotColumn(prevCol);
+  }
 
   if (craftingState.currentAdjustedCol === colIdx) {
-    // Clicking again on the same bottle → reset to original
-    craftingState.randomizedProperties[colIdx] = [...craftingState.originalProperties[colIdx]];
     craftingState.currentAdjustedCol = null;
     updateSlotColumn(colIdx);
     resultDiv.textContent = 'Adjustment cleared.';
     return;
   }
 
-  if (craftingState.currentAdjustedCol !== null) {
-    // Reset previous adjusted bottle
-    const prevCol = craftingState.currentAdjustedCol;
-    craftingState.randomizedProperties[prevCol] = [...craftingState.originalProperties[prevCol]];
-    updateSlotColumn(prevCol);
-  }
-
   craftingState.currentAdjustedCol = colIdx;
 
-  // Apply adjustment on the new bottle
+  const props = craftingState.randomizedProperties[colIdx];
   if (direction === 'up') props.unshift(props.pop());
   else props.push(props.shift());
 
   updateSlotColumn(colIdx);
-  resultDiv.textContent = `Adjusted bottle ${colIdx + 1}. You can adjust a different bottle if desired.`;
+  resultDiv.textContent = `Adjusted bottle ${colIdx + 1}.`;
 }
 
 function updateSlotColumn(colIdx) {
