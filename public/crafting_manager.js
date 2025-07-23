@@ -1,7 +1,9 @@
 let _main;
 let _apiCall;
 let _getCurrentProfile;
+let _getCurrentSession;
 let _profile;
+let _session;
 
 let craftingState = null;
 
