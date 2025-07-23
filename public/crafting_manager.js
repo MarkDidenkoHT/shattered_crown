@@ -12,6 +12,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
   _getCurrentProfile = getCurrentProfile;
 
   _profile = _getCurrentProfile();
+  console.log('[DEBUG] Profile:', _profile);
   if (!_profile) {
     console.error('[CRAFTING] No profile found. Redirecting to login.');
     displayMessage('User profile not found. Please log in again.');
