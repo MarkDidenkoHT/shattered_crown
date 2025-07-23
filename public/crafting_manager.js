@@ -12,6 +12,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentS
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
+  _getCurrentSession = getCurrentSession;
 
    _profile = _getCurrentProfile();
   _session = _getCurrentSession();
