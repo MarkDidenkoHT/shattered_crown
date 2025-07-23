@@ -148,8 +148,7 @@ function setupInteractions() {
             } else if (action === 'embark') {
                 window.gameAuth.loadModule('embark');
             } else if (action === 'crafting') {
-                displayMessage('Crafting functionality coming soon!');
-                // window.gameAuth.loadModule('crafting_station');
+                window.gameAuth.loadModule('crafting_manager');
             } else if (action === 'altar-nav') { // Note: using 'altar-nav' to distinguish from building hotspot
                 displayMessage('Altar functionality coming soon!');
                 // window.gameAuth.loadModule('altar_scene');
