@@ -339,7 +339,19 @@ function enableAdjustment(slotArea, resultDiv) {
 }
 
 function handleAdjustment(colIdx, direction, resultDiv) {
+  const props = craftingState.randomizedProperties[colIdx];
+
+  if (craftingState.currentAdjustedCol === colIdx) {
+    // Clicking again on the same bottle → reset to original
+    craftingState.randomizedProperties[colIdx] = [...craftingState.originalProperties[colIdx]];
+    craftingState.currentAdjustedCol = null;
+    updateSlotColumn(colIdx);
+    resultDiv.textContent = 'Adjustment cleared.';
+    return;
+  }
+
   if (craftingState.currentAdjustedCol !== null) {
+    // Reset previous adjusted bottle
     const prevCol = craftingState.currentAdjustedCol;
     craftingState.randomizedProperties[prevCol] = [...craftingState.originalProperties[prevCol]];
     updateSlotColumn(prevCol);
@@ -347,13 +359,12 @@ function handleAdjustment(colIdx, direction, resultDiv) {
 
   craftingState.currentAdjustedCol = colIdx;
 
-  const props = craftingState.randomizedProperties[colIdx];
+  // Apply adjustment on the new bottle
   if (direction === 'up') props.unshift(props.pop());
   else props.push(props.shift());
 
   updateSlotColumn(colIdx);
-
-  resultDiv.textContent = 'Adjustment applied. You can adjust another bottle if you wish.';
+  resultDiv.textContent = `Adjusted bottle ${colIdx + 1}. You can adjust a different bottle if desired.`;
 }
 
 function updateSlotColumn(colIdx) {
