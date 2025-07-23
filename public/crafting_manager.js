@@ -3,17 +3,9 @@ let _apiCall;
 let _getCurrentProfile;
 let _profile;
 
+let craftingState = null;
+
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
-  const styleEl = document.createElement('style');
-  styleEl.textContent = ` 
-  /* For scrollable recipe modal */
-    .scrollable-modal {
-      max-height: 80vh;
-      overflow-y: auto;
-      text-align: center;
-    }
-  `;
-  
   console.log('[CRAFTING] --- Starting loadModule for Crafting Manager ---');
   _main = main;
   _apiCall = apiCall;
@@ -96,9 +88,16 @@ function renderProfessions(characters) {
   });
 
   section.querySelectorAll('.craft-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const profName = btn.dataset.profession;
-      displayMessage(`Crafting mini-game for ${profName} coming soon!`);
+      const profId = btn.dataset.professionId;
+
+      try {
+        await startCraftingSession(profId, profName);
+      } catch (err) {
+        console.error('[CRAFTING] Failed to start crafting session:', err);
+        displayMessage(`Failed to start crafting for ${profName}`);
+      }
     });
   });
 }
@@ -115,7 +114,7 @@ function professionCardHTML(character) {
           <button class="fantasy-button recipes-btn" data-profession="${profName}" data-profession-id="${profId}">
             Recipes
           </button>
-          <button class="fantasy-button craft-btn" data-profession="${profName}">
+          <button class="fantasy-button craft-btn" data-profession="${profName}" data-profession-id="${profId}">
             Craft
           </button>
         </div>
@@ -125,12 +124,10 @@ function professionCardHTML(character) {
 }
 
 async function fetchRecipes(professionId) {
-  console.log(`[CRAFTING] Fetching recipes for profession_id=${professionId}...`);
   const response = await _apiCall(
     `/api/supabase/rest/v1/recipes?profession_id=eq.${professionId}&select=id,name,ingridients,sprite`
   );
   const recipes = await response.json();
-  console.log('[CRAFTING] Recipes fetched:', recipes);
   return recipes;
 }
 
@@ -150,7 +147,6 @@ function showRecipesModal(recipes, professionName) {
 
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
-    console.log('[CRAFTING] Recipes modal closed.');
   });
 }
 
@@ -162,13 +158,123 @@ function recipeHTML(recipe) {
     <div style="margin-bottom: 1.5rem; text-align: left;">
       <strong style="font-size: 1.1rem;">${recipe.name}</strong><br/>
       <img src="${recipe.sprite}" alt="${recipe.name}" style="width: 64px; height: 64px; margin: 0.5rem 0;"><br/>
-      <span><strong>ingridients:</strong> ${ingridients}</span>
+      <span><strong>Ingredients:</strong> ${ingridients}</span>
     </div>
   `;
 }
 
+async function startCraftingSession(professionId, professionName) {
+  const response = await _apiCall(
+    `/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&profession_id=eq.${professionId}&select=item,amount`
+  );
+  const bankItems = await response.json();
+
+  const enriched = [];
+  for (const item of bankItems) {
+    const res = await _apiCall(
+      `/api/supabase/rest/v1/ingredients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
+    );
+    const [ingredient] = await res.json();
+    if (ingredient) {
+      enriched.push({
+        name: item.item,
+        amount: item.amount,
+        properties: ingredient.properties,
+        sprite: ingredient.sprite,
+      });
+    }
+  }
+
+  craftingState = {
+    professionId,
+    professionName,
+    availableHerbs: enriched,
+    selectedHerbs: [null, null, null],
+    randomizedProperties: [[], [], []],
+    isCraftingStarted: false,
+    hasAdjusted: false,
+    result: null,
+  };
+
+  renderCraftingModal();
+}
+
+function renderCraftingModal() {
+  const modal = document.createElement('div');
+  modal.className = 'custom-message-box';
+  modal.innerHTML = `
+    <div class="message-content" style="width: 90%; max-height: 90vh; overflow-y: auto; text-align: center;">
+      <h2>Crafting: ${craftingState.professionName}</h2>
+      <div style="display: flex; gap: 1rem; justify-content: space-between;">
+        
+        <div style="flex: 1;">
+          <h3>Selected Ingredients</h3>
+          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+            ${[0,1,2].map(i => `
+              <div class="craft-slot" data-slot="${i}" style="width:64px;height:64px;border:2px dashed #aaa;"></div>
+            `).join('')}
+          </div>
+          <button id="craft-btn" class="fantasy-button" disabled>Craft</button>
+        </div>
+
+        <div style="flex: 1; text-align: left;">
+          <h3>Available Herbs</h3>
+          <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            ${craftingState.availableHerbs.map((herb, idx) => `
+              <div class="herb" data-index="${idx}" style="cursor:pointer;">
+                <img src="${herb.sprite}" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
+                <div style="font-size:0.8rem;">x${herb.amount}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>
+
+      <div id="craft-result" style="margin-top:1rem;font-weight:bold;">Select 3 herbs to start crafting</div>
+
+      <button class="fantasy-button message-ok-btn">Close</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+    modal.remove();
+    craftingState = null;
+  });
+
+  const slots = modal.querySelectorAll('.craft-slot');
+  const herbs = modal.querySelectorAll('.herb');
+  const craftBtn = modal.querySelector('#craft-btn');
+  const resultDiv = modal.querySelector('#craft-result');
+
+  herbs.forEach(herbEl => {
+    herbEl.addEventListener('click', () => {
+      const idx = +herbEl.dataset.index;
+      const herb = craftingState.availableHerbs[idx];
+
+      const slotIdx = craftingState.selectedHerbs.findIndex(s => s === null);
+      if (slotIdx === -1) return;
+
+      craftingState.selectedHerbs[slotIdx] = herb;
+      slots[slotIdx].innerHTML = `<img src="${herb.sprite}" style="width:64px;height:64px;">`;
+      
+      if (craftingState.selectedHerbs.every(h => h !== null)) {
+        craftBtn.disabled = false;
+        resultDiv.textContent = 'Ready to craft!';
+      }
+    });
+  });
+
+  craftBtn.addEventListener('click', () => {
+    resultDiv.textContent = 'Crafting in progress (placeholder)...';
+    craftingState.isCraftingStarted = true;
+
+    // TODO: animate bottles, randomize properties, allow 1 adjustment and compute result
+  });
+}
+
 function createParticles() {
-  console.log('[PARTICLES] Creating particles in Crafting Manager...');
   const particlesContainer = _main.querySelector('.particles');
   if (!particlesContainer) return;
 
@@ -186,7 +292,6 @@ function createParticles() {
 }
 
 function displayMessage(message) {
-  console.log(`[MESSAGE] Displaying: ${message}`);
   const messageBox = document.createElement('div');
   messageBox.className = 'custom-message-box';
   messageBox.innerHTML = `
@@ -199,6 +304,5 @@ function displayMessage(message) {
 
   messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
     messageBox.remove();
-    console.log('[MESSAGE] Message box closed.');
   });
 }
