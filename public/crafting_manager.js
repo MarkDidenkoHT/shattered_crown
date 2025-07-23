@@ -203,7 +203,7 @@ async function startCraftingSession(professionId, professionName) {
     isCraftingStarted: false,
     result: null,
     adjustmentCount: 0,
-    maxAdjustments: 2,
+    maxAdjustments: 3,
     enrichedHerbs: null
   };
 
@@ -365,19 +365,23 @@ async function startSlotAnimation(resultDiv) {
 
 async function patchAndSendCraftRequest(resultDiv) {
   try {
+    // Build the list of adjustments based on the deltas
+    const adjustments = Object.entries(craftingState.adjustments || {})
+      .filter(([_, count]) => count !== 0)
+      .map(([colIdx, count]) => ({
+        bottle: Number(colIdx),
+        count
+      }));
+
     const payload = {
       player_id: _profile.id,
       profession_id: craftingState.professionId,
       selected_ingredients: craftingState.selectedHerbs.map(h => h.name),
-      adjustments: craftingState.currentAdjustedCol !== null
-        ? [{
-            bottle: craftingState.currentAdjustedCol,
-            direction: craftingState.lastAdjustmentDirection,
-            count: 1
-          }]
-        : [],
+      adjustments,
       enriched_herbs: craftingState.enrichedHerbs
     };
+
+    console.log('[CRAFTING] Sending craft request payload:', payload);
 
     const res = await fetch('/functions/v1/craft_alchemy', {
       method: 'POST',
@@ -405,7 +409,7 @@ async function patchAndSendCraftRequest(resultDiv) {
     } else {
       craftingState.result = 'Failed';
       resultDiv.innerHTML = `
-        <span style="color:red;">❌ Failed Mixture — ingridients wasted.</span><br/>
+        <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
         <button class="fantasy-button" id="craft-again">Craft Again</button>
       `;
 
@@ -435,34 +439,30 @@ function handleAdjustment(colIdx, direction, resultDiv) {
     return;
   }
 
-  if (craftingState.currentAdjustedCol !== null) {
-    const prevCol = craftingState.currentAdjustedCol;
-    craftingState.randomizedProperties[prevCol] = [...craftingState.originalProperties[prevCol]];
-    updateSlotColumn(prevCol);
-  }
-
-  if (craftingState.currentAdjustedCol === colIdx) {
-    craftingState.currentAdjustedCol = null;
-    updateSlotColumn(colIdx);
-    resultDiv.textContent = 'Adjustment cleared.';
-    return;
-  }
-
-  craftingState.currentAdjustedCol = colIdx;
-
   const props = craftingState.randomizedProperties[colIdx];
-  if (direction === 'up') props.unshift(props.pop());
-  else props.push(props.shift());
 
-  craftingState.lastAdjustmentDirection = direction;
+  if (!craftingState.adjustments[colIdx]) {
+    craftingState.adjustments[colIdx] = 0;
+  }
+
+  if (direction === 'up') {
+    props.push(props.shift()); // rotate up
+    craftingState.adjustments[colIdx]++;
+  } else {
+    props.unshift(props.pop()); // rotate down
+    craftingState.adjustments[colIdx]--;
+  }
+
   updateSlotColumn(colIdx);
+
   craftingState.adjustmentCount++;
   updateAdjustmentCounter();
-  
+
   if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
     disableAdjustmentButtons();
   }
 }
+
 
 function updateSlotColumn(colIdx) {
   const props = craftingState.randomizedProperties[colIdx];
