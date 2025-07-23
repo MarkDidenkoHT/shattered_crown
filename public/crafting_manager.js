@@ -324,8 +324,8 @@ async function startSlotAnimation(resultDiv) {
 
     const reserveJson = await reserveRes.json();
     if (!reserveRes.ok || !Array.isArray(reserveJson.enriched_herbs)) {
-      console.error('[CRAFTING] Reservation failed:', reserveJson);
-      resultDiv.textContent = 'Herb verification failed.';
+      console.error('[CRAFTING] Reservation failed:', reserveJson?.error || reserveJson);
+      resultDiv.textContent = `Herb verification failed: ${reserveJson?.error || 'Unknown error'}`;
       return;
     }
 
