@@ -158,7 +158,7 @@ function recipeHTML(recipe) {
     <div style="margin-bottom: 1.5rem; text-align: left;">
       <strong>${recipe.name}</strong><br/>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 64px; height: 64px;"><br/>
-      <span><strong>Ingredients:</strong> ${ingridients}</span>
+      <span><strong>ingridients:</strong> ${ingridients}</span>
     </div>
   `;
 }
@@ -174,13 +174,13 @@ async function startCraftingSession(professionId, professionName) {
     const res = await _apiCall(
       `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
     );
-    const [ingredient] = await res.json();
-    if (ingredient) {
+    const [ingridient] = await res.json();
+    if (ingridient) {
       enriched.push({
         name: item.item,
         amount: item.amount,
-        properties: ingredient.properties,
-        sprite: ingredient.sprite,
+        properties: ingridient.properties,
+        sprite: ingridient.sprite,
       });
     }
   }
@@ -211,7 +211,7 @@ function renderCraftingModal() {
       <h2>Crafting: ${craftingState.professionName}</h2>
       <div style="display: flex; gap: 1rem; justify-content: space-between;">
         <div style="flex: 1;">
-          <h3>Selected Ingredients</h3>
+          <h3>Selected Ingridients</h3>
           <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
             ${[0,1,2].map(i => `
               <div class="craft-slot" data-slot="${i}" style="width:64px;height:64px;border:2px dashed #aaa;"></div>
@@ -228,7 +228,7 @@ function renderCraftingModal() {
           <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
             ${craftingState.availableHerbs.map((herb, idx) => `
               <div class="herb" data-index="${idx}" style="cursor:pointer;">
-                <img src="assets/art/ingredients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
+                <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
                 <div style="font-size:0.8rem;">x${herb.amount}</div>
               </div>
             `).join('')}
@@ -262,7 +262,7 @@ function renderCraftingModal() {
 
       craftingState.selectedHerbs[slotIdx] = herb;
       slots[slotIdx].innerHTML = `
-        <img src="assets/art/ingredients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove">
+        <img src="assets/art/ingridients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove">
       `;
       slots[slotIdx].addEventListener('click', () => {
         craftingState.selectedHerbs[slotIdx] = null;
@@ -297,12 +297,12 @@ function renderCraftingModal() {
 async function startSlotAnimation(resultDiv) {
   const slotArea = document.querySelector('#crafting-slots');
   slotArea.innerHTML = '';
-  resultDiv.textContent = 'Verifying ingredients...';
+  resultDiv.textContent = 'Verifying ingridients...';
 
   const selectedHerbNames = craftingState.selectedHerbs.map(h => h.name);
 
   try {
-    const reserveRes = await fetch('/functions/v1/reserve_ingredients', {
+    const reserveRes = await fetch('/functions/v1/reserve_ingridients', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -352,7 +352,7 @@ async function startSlotAnimation(resultDiv) {
     patchAndSendCraftRequest(resultDiv);
   } catch (err) {
     console.error('[CRAFTING] Error during reservation:', err);
-    resultDiv.textContent = 'Server error while verifying ingredients.';
+    resultDiv.textContent = 'Server error while verifying ingridients.';
   }
 }
 
@@ -398,7 +398,7 @@ async function patchAndSendCraftRequest(resultDiv) {
     } else {
       craftingState.result = 'Failed';
       resultDiv.innerHTML = `
-        <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
+        <span style="color:red;">❌ Failed Mixture — ingridients wasted.</span><br/>
         <button class="fantasy-button" id="craft-again">Craft Again</button>
       `;
 
