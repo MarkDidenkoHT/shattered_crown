@@ -216,3 +216,22 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+// ✅ Proxy Supabase edge functions
+app.all('/functions/v1/*', async (req, res) => {
+    const supabasePath = req.params[0];
+    const url = `${process.env.SUPABASE_URL}/functions/v1/${supabasePath}`;
+
+    const response = await fetch(url, {
+        method: req.method,
+        headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: ['POST', 'PATCH', 'PUT'].includes(req.method) ? JSON.stringify(req.body) : undefined
+    });
+
+    const text = await response.text();
+    res.status(response.status).send(text);
+});
