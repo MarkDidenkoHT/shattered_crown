@@ -318,7 +318,7 @@ async function startSlotAnimation(resultDiv) {
       body: JSON.stringify({
         player_id: _profile.id,
         profession_id: craftingState.professionId,
-        selected_herbs: selectedHerbNames,
+        selected_ingredients: selectedHerbNames,
       }),
     });
 
@@ -368,7 +368,7 @@ async function patchAndSendCraftRequest(resultDiv) {
     const payload = {
       player_id: _profile.id,
       profession_id: craftingState.professionId,
-      selected_herbs: craftingState.selectedHerbs.map(h => h.name),
+      selected_ingredients: craftingState.selectedHerbs.map(h => h.name),
       adjustments: craftingState.currentAdjustedCol !== null
         ? [{
             bottle: craftingState.currentAdjustedCol,
