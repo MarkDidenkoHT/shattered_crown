@@ -397,12 +397,31 @@ async function patchAndSendCraftRequest(resultDiv) {
       }
     }
 
+    // --- Normalize enriched_herbs properties to {a,b,c,d} object ---
+    function normalizeProps(input) {
+      if (Array.isArray(input)) {
+        const keys = ['a', 'b', 'c', 'd'];
+        const result = {};
+        for (let i = 0; i < keys.length; i++) {
+          result[keys[i]] = input[i] ?? 0;
+        }
+        return result;
+      }
+      // If already object, ensure all keys exist
+      const out = { a: 0, b: 0, c: 0, d: 0, ...input };
+      return out;
+    }
+    const normalizedHerbs = (craftingState.enrichedHerbs || []).map(h => ({
+      ...h,
+      properties: normalizeProps(h.properties)
+    }));
+
     const payload = {
       player_id: _profile.id,
       profession_id: craftingState.professionId,
       selected_ingredients: craftingState.selectedHerbs.map(h => h.name),
       adjustments,
-      enriched_herbs: craftingState.enrichedHerbs
+      enriched_herbs: normalizedHerbs
     };
 
     console.log('[CRAFTING] Sending craft request payload:', payload);
