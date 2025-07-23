@@ -203,7 +203,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 90%; max-height: 90vh; overflow-y: auto; text-align: center;">
+    <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 90vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
       <div style="display: flex; gap: 1rem; justify-content: space-between;">
         
@@ -257,21 +257,114 @@ function renderCraftingModal() {
       if (slotIdx === -1) return;
 
       craftingState.selectedHerbs[slotIdx] = herb;
-      slots[slotIdx].innerHTML = `<img src="${herb.sprite}" style="width:64px;height:64px;">`;
-      
-      if (craftingState.selectedHerbs.every(h => h !== null)) {
-        craftBtn.disabled = false;
-        resultDiv.textContent = 'Ready to craft!';
-      }
+      slots[slotIdx].innerHTML = `
+        <img src="${herb.sprite}" style="width:64px;height:64px;cursor:pointer;" title="Click to remove">
+      `;
+      slots[slotIdx].addEventListener('click', () => {
+        craftingState.selectedHerbs[slotIdx] = null;
+        slots[slotIdx].innerHTML = '';
+        updateCraftButtonState();
+      });
+      updateCraftButtonState();
     });
   });
 
   craftBtn.addEventListener('click', () => {
-    resultDiv.textContent = 'Crafting in progress (placeholder)...';
     craftingState.isCraftingStarted = true;
-
-    // TODO: animate bottles, randomize properties, allow 1 adjustment and compute result
+    resultDiv.textContent = 'Crafting...';
+    craftBtn.disabled = true;
+    startSlotAnimation(resultDiv);
   });
+
+  function updateCraftButtonState() {
+    if (craftingState.selectedHerbs.every(h => h !== null)) {
+      craftBtn.disabled = false;
+      resultDiv.textContent = 'Ready to craft!';
+    } else {
+      craftBtn.disabled = true;
+      resultDiv.textContent = 'Select 3 herbs to start crafting';
+    }
+  }
+}
+
+function startSlotAnimation(resultDiv) {
+  const slotArea = document.querySelector('#crafting-slots');
+  slotArea.innerHTML = '';
+
+  craftingState.randomizedProperties = craftingState.selectedHerbs.map(herb => {
+    const props = [...herb.properties];
+    for (let i = props.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [props[i], props[j]] = [props[j], props[i]];
+    }
+    return props;
+  });
+
+  craftingState.randomizedProperties.forEach((props, idx) => {
+    const col = document.createElement('div');
+    col.style.display = 'inline-block';
+    col.style.margin = '0 1rem';
+    col.innerHTML = `
+      <div>${props[0]}</div>
+      <div>${props[1]}</div>
+      <div>${props[2]}</div>
+      <div>
+        <button class="fantasy-button adjust-up" data-col="${idx}">↑</button>
+        <button class="fantasy-button adjust-down" data-col="${idx}">↓</button>
+      </div>
+    `;
+    slotArea.appendChild(col);
+  });
+
+  setTimeout(() => {
+    enableAdjustment(slotArea, resultDiv);
+  }, 1500);
+}
+
+function enableAdjustment(slotArea, resultDiv) {
+  const upBtns = slotArea.querySelectorAll('.adjust-up');
+  const downBtns = slotArea.querySelectorAll('.adjust-down');
+
+  upBtns.forEach(btn => {
+    btn.addEventListener('click', () => handleAdjustment(btn.dataset.col, 'up', resultDiv));
+  });
+  downBtns.forEach(btn => {
+    btn.addEventListener('click', () => handleAdjustment(btn.dataset.col, 'down', resultDiv));
+  });
+}
+
+function handleAdjustment(colIdx, direction, resultDiv) {
+  if (craftingState.hasAdjusted) {
+    resultDiv.textContent = 'You already used your adjustment.';
+    return;
+  }
+
+  colIdx = +colIdx;
+  const props = craftingState.randomizedProperties[colIdx];
+  if (direction === 'up') props.unshift(props.pop());
+  else props.push(props.shift());
+
+  const slotArea = document.querySelector('#crafting-slots');
+  const col = slotArea.children[colIdx];
+  col.children[0].textContent = props[0];
+  col.children[1].textContent = props[1];
+  col.children[2].textContent = props[2];
+
+  craftingState.hasAdjusted = true;
+  resultDiv.textContent = 'Adjustment used. Checking result...';
+
+  setTimeout(() => checkCraftResult(resultDiv), 1000);
+}
+
+function checkCraftResult(resultDiv) {
+  const finalProperties = craftingState.randomizedProperties.map(p => p[0]);
+  const unique = new Set(finalProperties);
+
+  if (unique.size === 3) {
+    resultDiv.textContent = '🎉 Success! You crafted a potion!';
+  } else {
+    resultDiv.textContent = '❌ Crafting failed. Better luck next time!';
+  }
 }
 
 function createParticles() {
