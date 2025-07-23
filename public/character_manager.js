@@ -4,14 +4,14 @@ let _getCurrentProfile;
 let _profile;
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
-  console.log('[CHAR_MGR] --- Starting loadModule for Character Manager ---');
+  console.log('[CRAFTING] --- Starting loadModule for Crafting Manager ---');
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
 
   _profile = _getCurrentProfile();
   if (!_profile) {
-    console.error('[CHAR_MGR] No profile found. Redirecting to login.');
+    console.error('[CRAFTING] No profile found. Redirecting to login.');
     displayMessage('User profile not found. Please log in again.');
     window.gameAuth.loadModule('login');
     return;
@@ -25,73 +25,40 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
   `;
 
   createParticles();
-  await fetchAndRenderCharacters();
-  console.log('[CHAR_MGR] --- loadModule for Character Manager finished ---');
+  await fetchAndRenderProfessions();
+  console.log('[CRAFTING] --- loadModule for Crafting Manager finished ---');
 }
 
-async function fetchAndRenderCharacters() {
-  console.log('[CHAR_MGR] Fetching player characters...');
+async function fetchAndRenderProfessions() {
+  console.log('[CRAFTING] Fetching player characters with professions...');
   try {
-    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,races(name),classes(name),professions(name)`);
+    const response = await _apiCall(
+      `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=id,name,profession_id,professions(name)`
+    );
     const characters = await response.json();
-    console.log('[CHAR_MGR] Characters fetched:', characters);
+    console.log('[CRAFTING] Characters fetched:', characters);
 
-    renderCharacters(characters);
+    renderProfessions(characters);
   } catch (error) {
-    console.error('[CHAR_MGR] Error fetching characters:', error);
-    displayMessage('Failed to load characters. Please try again.');
+    console.error('[CRAFTING] Error fetching professions:', error);
+    displayMessage('Failed to load professions. Please try again.');
   }
 }
 
-function renderCharacters(characters) {
+function renderProfessions(characters) {
   const section = _main.querySelector('.character-creation-section');
-
-  if (!characters || characters.length === 0) {
-    section.innerHTML = `
-      <div class="art-header">
-        <h1>Your Champions</h1>
-        <p class="subtitle">You have no champions yet. Create some to start your journey.</p>
-      </div>
-      <div class="confirm-return-buttons">
-        <button class="fantasy-button return-btn">Return</button>
-      </div>
-    `;
-    section.querySelector('.return-btn').addEventListener('click', () => {
-      window.gameAuth.loadModule('castle');
-    });
-    return;
-  }
 
   section.innerHTML = `
     <div class="art-header">
-      <h1>Your Champions</h1>
-      <p class="subtitle">View your heroes and their current equipment and abilities.</p>
+      <h1>Your Crafting Professions</h1>
+      <p class="subtitle">Select a profession to view recipes or start crafting.</p>
     </div>
     <div class="selection-section">
-      <div class="selection-container desktop-view">
-        <div class="selection-grid">
-          ${characters.map(characterCardHTML).join('')}
-        </div>
-      </div>
-      <div class="selection-slider mobile-view">
-        <div class="slider-container">
-          <div class="slider-track">
-            ${characters.map(character => `
-              <div class="selection-slide">
-                ${characterCardHTML(character)}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="slider-controls">
-          <button class="slider-btn prev-btn" aria-label="Previous character">&lt;</button>
-          <div class="slider-dots">
-            ${characters.map((_, idx) => `
-              <button class="slider-dot${idx === 0 ? ' active' : ''}" data-slide="${idx}"></button>
-            `).join('')}
-          </div>
-          <button class="slider-btn next-btn" aria-label="Next character">&gt;</button>
-        </div>
+      <div class="selection-grid">
+        ${characters
+          .filter(c => c.professions?.name)
+          .map(professionCardHTML)
+          .join('')}
       </div>
     </div>
     <div class="confirm-return-buttons">
@@ -103,135 +70,37 @@ function renderCharacters(characters) {
     window.gameAuth.loadModule('castle');
   });
 
-  // Add error handlers to all character art images
-  const characterImages = section.querySelectorAll('.card-art');
-  characterImages.forEach(img => {
-    img.addEventListener('error', function() {
-      this.src = 'assets/art/placeholder.png';
+  section.querySelectorAll('.recipes-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      displayMessage(`Recipes for ${btn.dataset.profession} coming soon!`);
     });
   });
 
-  // Initialize slider for mobile view
-  initializeCharacterSlider(section);
+  section.querySelectorAll('.craft-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      displayMessage(`Crafting mini-game for ${btn.dataset.profession} coming soon!`);
+    });
+  });
 }
 
-function characterCardHTML(character) {
-  const stats = character.stats || {};
-  const normalizedStats = {};
-  for (const [key, value] of Object.entries(stats)) {
-    normalizedStats[key.toLowerCase()] = value;
-  }
-  const strength = normalizedStats.strength || 0;
-  const vitality = normalizedStats.vitality || 0;
-  const spirit = normalizedStats.spirit || 0;
-  const dexterity = normalizedStats.dexterity || 0;
-  const intellect = normalizedStats.intellect || 0;
-  // Derived
-  const hp = vitality * 10;
-  const armor = Math.floor(strength * 0.25);
-  const resistance = Math.floor(spirit * 0.25);
-
-  // Split stats into two columns (5 in first, 3 in second)
-  const statsCol1 = [
-    { label: 'Strength', value: strength },
-    { label: 'Dexterity', value: dexterity },
-    { label: 'Vitality', value: vitality },
-    { label: 'Spirit', value: spirit },
-    { label: 'Intellect', value: intellect }
-  ];
-  const statsCol2 = [
-    { label: 'HP', value: hp },
-    { label: 'Armor', value: armor },
-    { label: 'Resistance', value: resistance }
-  ];
-
-  // Equipped items, split consumables into two columns (4 and 3)
-  const equippedItems = [
-    { label: 'Weapon', value: character.equipped_weapon || 'None' },
-    { label: 'Armor', value: character.equipped_armor || 'None' },
-    { label: 'Helmet', value: character.equipped_helmet || 'None' },
-    { label: 'Trinket', value: character.equipped_trinket || 'None' },
-    { label: 'Boots', value: character.equipped_boots || 'None' },
-    { label: 'Gloves', value: character.equipped_gloves || 'None' }
-  ];
-  const consumables = (character.consumable && character.consumable.length > 0)
-    ? character.consumable
-    : [];
-  const consumablesCol1 = consumables.slice(0, 4);
-  const consumablesCol2 = consumables.slice(4, 7);
-
-  const startingAbilities = character.starting_abilities && character.starting_abilities.length > 0
-    ? character.starting_abilities.join(', ')
-    : 'None';
-  const learnedAbilities = character.learned_abilities && character.learned_abilities.length > 0
-    ? character.learned_abilities.join(', ')
-    : 'None';
-  const raceName = character.races?.name || 'Race';
-  const className = character.classes?.name || 'Class';
-  const professionName = character.professions?.name || 'Profession';
-  const exp = character.exp || 0;
-
+function professionCardHTML(character) {
+  const profName = character.professions?.name || 'Unknown';
   return `
     <div class="selection-card">
-      <div class="card-art-block">
-        <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
-          alt="Character Art" 
-          class="card-art">
-      </div>
       <div class="card-info-block">
-        <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${raceName} ${className}</h3>
-        <p class="card-description"><strong>EXP:</strong> ${exp} &nbsp; <strong>Profession:</strong> ${professionName}</p>
-        <div class="stats-block condensed-stats">
-          <h4>Stats</h4>
-          <div class="stats-cols">
-            <div>
-              ${statsCol1.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
-            </div>
-            <div>
-              ${statsCol2.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
-            </div>
-          </div>
+        <h3 class="card-name">${profName}</h3>
+        <p class="card-description">Character: ${character.name}</p>
+        <div class="confirm-return-buttons">
+          <button class="fantasy-button recipes-btn" data-profession="${profName}">Recipes</button>
+          <button class="fantasy-button craft-btn" data-profession="${profName}">Craft</button>
         </div>
-        <div class="stats-block condensed-items">
-          <h4>Equipped Items</h4>
-          <div class="items-cols">
-            <div>
-              ${equippedItems.slice(0, 3).map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
-            </div>
-            <div>
-              ${equippedItems.slice(3, 6).map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
-            </div>
-          </div>
-          <div class="consumables-cols">
-            <div>
-              <p>Consumables:</p>
-              ${consumablesCol1.length > 0
-                ? `<ul>${consumablesCol1.map(c => `<li>${c}</li>`).join('')}</ul>`
-                : '<span>None</span>'}
-            </div>
-            <div>
-              ${consumablesCol2.length > 0
-                ? `<ul>${consumablesCol2.map(c => `<li>${c}</li>`).join('')}</ul>`
-                : ''}
-            </div>
-          </div>
-        </div>
-        <div class="abilities-block">
-          <h4>Starting Abilities</h4>
-          <p>${startingAbilities}</p>
-        </div>
-        <div class="abilities-block">
-          <h4>Learned Abilities</h4>
-          <p>${learnedAbilities}</p>
-        </div>
-        <!-- Future features: talents, detailed ability data -->
       </div>
     </div>
   `;
 }
 
 function createParticles() {
-  console.log('[PARTICLES] Creating particles in Character Manager...');
+  console.log('[PARTICLES] Creating particles in Crafting Manager...');
   const particlesContainer = _main.querySelector('.particles');
   if (!particlesContainer) return;
 
@@ -263,69 +132,5 @@ function displayMessage(message) {
   messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
     messageBox.remove();
     console.log('[MESSAGE] Message box closed.');
-  });
-}
-
-function initializeCharacterSlider(section) {
-  const sliderTrack = section.querySelector('.slider-track');
-  const prevBtn = section.querySelector('.prev-btn');
-  const nextBtn = section.querySelector('.next-btn');
-  const dots = section.querySelectorAll('.slider-dot');
-  if (!sliderTrack || !prevBtn || !nextBtn || dots.length === 0) return;
-
-  let currentSlide = 0;
-  const totalSlides = dots.length;
-
-  function updateSlider() {
-    const translateX = -currentSlide * 100;
-    sliderTrack.style.transform = `translateX(${translateX}%)`;
-    dots.forEach((dot, idx) => {
-      dot.classList.toggle('active', idx === currentSlide);
-    });
-  }
-
-  function nextSlide() {
-    currentSlide = (currentSlide + 1) % totalSlides;
-    updateSlider();
-  }
-
-  function prevSlide() {
-    currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
-    updateSlider();
-  }
-
-  nextBtn.addEventListener('click', nextSlide);
-  prevBtn.addEventListener('click', prevSlide);
-
-  dots.forEach((dot, idx) => {
-    dot.addEventListener('click', () => {
-      currentSlide = idx;
-      updateSlider();
-    });
-  });
-
-  // Touch/swipe support
-  let startX = 0;
-  let isDragging = false;
-
-  sliderTrack.addEventListener('touchstart', (e) => {
-    startX = e.touches[0].clientX;
-    isDragging = true;
-  });
-
-  sliderTrack.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-  });
-
-  sliderTrack.addEventListener('touchend', (e) => {
-    if (!isDragging) return;
-    isDragging = false;
-    const endX = e.changedTouches[0].clientX;
-    const diff = startX - endX;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) nextSlide();
-      else prevSlide();
-    }
   });
 }
