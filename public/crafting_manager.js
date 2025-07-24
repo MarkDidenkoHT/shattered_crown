@@ -417,7 +417,7 @@ async function startSlotAnimation(resultDiv, modal) {
     }
 
     enableAdjustment(slotArea, resultDiv);
-    resultDiv.textContent = 'You may now apply adjustments to the bottles.';
+    resultDiv.textContent = 'You may now apply adjustments.';
 
     // Add "Finish Crafting" button
     let finishBtn = document.createElement('button');
