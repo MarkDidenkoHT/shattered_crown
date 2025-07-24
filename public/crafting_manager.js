@@ -342,6 +342,7 @@ function setupModalEventListeners(modal) {
     resultDiv.textContent = 'Crafting...';
     craftBtn.style.display = 'none';
     finishBtn.style.display = 'block';
+    finishBtn.disabled = false;
 
     // Disable all herb selection
     herbs.forEach(herb => {
@@ -511,14 +512,22 @@ async function patchAndSendCraftRequest(resultDiv) {
     } else {
       craftingState.result = 'Failed';
       resultDiv.innerHTML = `
-        <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
-        <button class="fantasy-button" id="craft-again">Craft Again</button>
+        <span style="color:red; display:block; margin-bottom: 0.5rem;">❌ Failed Mixture — ingredients wasted.</span>
+        <div style="display: flex; justify-content: center; gap: 0.5rem;">
+          <button class="fantasy-button" id="craft-again" style="flex: 1; max-width: 120px;">Craft Again</button>
+          <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 120px;">Close</button>
+        </div>
       `;
 
       document.querySelector('#craft-again').addEventListener('click', () => {
         document.querySelector('.custom-message-box').remove();
         startCraftingSession(craftingState.professionId, craftingState.professionName);
       });
+
+      document.querySelector('.message-ok-btn').addEventListener('click', () => {
+      document.querySelector('.custom-message-box')?.remove();
+      craftingState = null;
+    });
     }
   } catch (err) {
     console.error('[CRAFTING] Server error:', err);
