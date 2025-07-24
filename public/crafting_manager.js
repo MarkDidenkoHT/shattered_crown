@@ -257,7 +257,7 @@ function renderCraftingModal() {
       <h2>Crafting: ${craftingState.professionName}</h2>
       
       <!-- Main crafting area -->
-      <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+      <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 5px;">
         ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
       </div>
       
@@ -275,7 +275,7 @@ function renderCraftingModal() {
       
       <!-- Recipes row (horizontal scrollable) -->
       <h3>Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1);">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none;">
         <!-- Will be populated by loadRecipesIntoModal() -->
       </div>
       
