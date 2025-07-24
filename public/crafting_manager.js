@@ -254,33 +254,35 @@ function renderCraftingModal() {
   modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 90vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
-      <div style="display: flex; gap: 1rem; justify-content: space-between;">
-        <div style="flex: 1;">
-          <h3>Selected Ingredients</h3>
-          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
-            ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
-          </div>
-          <button id="craft-btn" class="fantasy-button" disabled>Craft</button>
-          <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
-            Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}
-          </div>
-        </div>
-
-        <div style="flex: 1; text-align: left;">
-          <h3>Available Herbs</h3>
-          <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-            ${craftingState.availableHerbs.map((herb, idx) => `
-              <div class="herb" data-index="${idx}" style="cursor:pointer;">
-                <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
-                <div style="font-size:0.8rem;">x${herb.amount}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
+      
+      <!-- Main crafting area -->
+      <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+        ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
       </div>
-
+      
+      <!-- Bank row (horizontal scrollable) -->
+      <h3>Available Herbs</h3>
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem;">
+        ${craftingState.availableHerbs.map((herb, idx) => `
+          <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer;">
+            <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
+            <div style="font-size:0.8rem;">x${herb.amount}</div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <!-- Button row -->
+      <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
+        <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Craft</button>
+        <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
+      </div>
+      
+      <!-- Adjustment counter and result display -->
+      <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+        Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}
+      </div>
       <div id="craft-result" style="margin-top:1rem;font-weight:bold;">Select 3 herbs to start crafting</div>
-      <button class="fantasy-button message-ok-btn">Close</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -292,6 +294,7 @@ function setupModalEventListeners(modal) {
   const columns = modal.querySelectorAll('.crafting-column');
   const herbs = modal.querySelectorAll('.herb');
   const craftBtn = modal.querySelector('#craft-btn');
+  const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
 
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
@@ -301,6 +304,8 @@ function setupModalEventListeners(modal) {
 
   herbs.forEach(herbEl => {
     herbEl.addEventListener('click', () => {
+      if (craftingState.isCraftingStarted) return; // Disable selecting herbs after crafting started
+      
       const idx = +herbEl.dataset.index;
       const herb = craftingState.availableHerbs[idx];
 
@@ -320,6 +325,7 @@ function setupModalEventListeners(modal) {
       
       // Add click to remove functionality
       herbSlot.addEventListener('click', () => {
+        if (craftingState.isCraftingStarted) return; // Disable deselecting after crafting started
         craftingState.selectedHerbs[slotIdx] = null;
         herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
         herbSlot.style.border = '2px dashed #aaa';
@@ -334,11 +340,21 @@ function setupModalEventListeners(modal) {
   craftBtn.addEventListener('click', () => {
     craftingState.isCraftingStarted = true;
     resultDiv.textContent = 'Crafting...';
-    craftBtn.disabled = true;
+    craftBtn.style.display = 'none';
+    finishBtn.style.display = 'block';
 
-    modal.querySelector('#available-herbs').parentElement.style.display = 'none';
+    // Disable all herb selection
+    herbs.forEach(herb => {
+      herb.style.opacity = '0.5';
+      herb.style.pointerEvents = 'none';
+    });
 
     startSlotAnimation(resultDiv, modal);
+  });
+
+  finishBtn.addEventListener('click', () => {
+    finishBtn.disabled = true;
+    patchAndSendCraftRequest(resultDiv);
   });
 
   function updateCraftButtonState() {
@@ -418,27 +434,12 @@ async function startSlotAnimation(resultDiv, modal) {
 
     enableAdjustment(slotArea, resultDiv);
     resultDiv.textContent = 'You may now apply adjustments.';
-
-    // Add "Finish Crafting" button
-    let finishBtn = document.createElement('button');
-    finishBtn.className = 'fantasy-button';
-    finishBtn.textContent = 'Finish Crafting';
-    finishBtn.style.marginTop = '1rem';
-    finishBtn.disabled = false;
-    resultDiv.parentElement.appendChild(finishBtn);
-
-    finishBtn.addEventListener('click', () => {
-      finishBtn.disabled = true;
-      patchAndSendCraftRequest(resultDiv);
-    });
-
   } catch (err) {
     console.error('[CRAFTING] Error during reservation:', err);
     resultDiv.textContent = 'Server error while verifying ingridients.';
   }
 }
 
-// Build adjustments as array of { bottle, direction, count }
 async function patchAndSendCraftRequest(resultDiv) {
   try {
     // Build the list of adjustments based on up/down counts
