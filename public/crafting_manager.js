@@ -276,6 +276,7 @@ function renderCraftingModal() {
         <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
         <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Craft</button>
         <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
+        <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
       </div>
       
       <!-- Adjustment counter and result display -->
@@ -464,13 +465,13 @@ async function patchAndSendCraftRequest(resultDiv) {
         }
         return result;
       }
-      // If already object, ensure only a, b, c keys exist
       return {
         a: input.a ?? 0,
         b: input.b ?? 0,
         c: input.c ?? 0
       };
     }
+
     const normalizedHerbs = (craftingState.enrichedHerbs || []).map(h => ({
       ...h,
       properties: normalizeProps(h.properties)
@@ -497,18 +498,23 @@ async function patchAndSendCraftRequest(resultDiv) {
 
     const json = await res.json();
 
+    const claimBtn = document.querySelector('#claim-btn');
+
     if (json.success) {
       craftingState.result = json.crafted.name;
       resultDiv.innerHTML = `
-        <span style="color:lime;">✅ You crafted: <strong>${json.crafted.name}</strong>!</span><br/>
-        <button id="claim-btn" class="fantasy-button">Claim</button>
+        <span style="color:lime;">✅ You crafted: <strong>${json.crafted.name}</strong>!</span>
       `;
 
-      document.querySelector('#claim-btn').addEventListener('click', () => {
-        displayMessage(`${json.crafted.name} added to your bank (server-side)`);
-        document.querySelector('.custom-message-box').remove();
-        craftingState = null;
-      });
+      if (claimBtn) {
+        claimBtn.style.display = 'block';
+        claimBtn.disabled = false;
+        claimBtn.addEventListener('click', () => {
+          displayMessage(`${json.crafted.name} added to your bank (server-side)`);
+          document.querySelector('.custom-message-box')?.remove();
+          craftingState = null;
+        });
+      }
     } else {
       craftingState.result = 'Failed';
       resultDiv.innerHTML = `
@@ -519,15 +525,19 @@ async function patchAndSendCraftRequest(resultDiv) {
         </div>
       `;
 
+      if (claimBtn) {
+        claimBtn.style.display = 'none';
+      }
+
       document.querySelector('#craft-again').addEventListener('click', () => {
-        document.querySelector('.custom-message-box').remove();
+        document.querySelector('.custom-message-box')?.remove();
         startCraftingSession(craftingState.professionId, craftingState.professionName);
       });
 
       document.querySelector('.message-ok-btn').addEventListener('click', () => {
-      document.querySelector('.custom-message-box')?.remove();
-      craftingState = null;
-    });
+        document.querySelector('.custom-message-box')?.remove();
+        craftingState = null;
+      });
     }
   } catch (err) {
     console.error('[CRAFTING] Server error:', err);
