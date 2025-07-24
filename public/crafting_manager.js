@@ -210,6 +210,44 @@ async function startCraftingSession(professionId, professionName) {
   renderCraftingModal();
 }
 
+function createCraftingSlotHTML(slotIndex) {
+  return `
+    <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+      <!-- Herb Slot -->
+      <div class="herb-slot" style="width: 80px; height: 80px; border: 2px dashed #aaa; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+        <span style="color: #666; font-size: 0.8rem;">Drop Herb</span>
+      </div>
+      
+      <!-- Up Arrow -->
+      <div class="arrow-up" style="display: none;">
+        <button class="fantasy-button adjust-up" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem;">↑</button>
+      </div>
+      
+      <!-- Properties Bottle -->
+      <div class="properties-bottle" style="width: 60px; height: 120px; border: 2px solid #8B4513; border-radius: 10px 10px 20px 20px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative;">
+        <!-- Bottle Cork/Top -->
+        <div style="position: absolute; top: -8px; width: 20px; height: 16px; background: #8B4513; border-radius: 4px 4px 0 0;"></div>
+        
+        <!-- Property Slots -->
+        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333;">
+          -
+        </div>
+        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333;">
+          -
+        </div>
+        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333;">
+          -
+        </div>
+      </div>
+      
+      <!-- Down Arrow -->
+      <div class="arrow-down" style="display: none;">
+        <button class="fantasy-button adjust-down" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem;">↓</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
@@ -218,11 +256,9 @@ function renderCraftingModal() {
       <h2>Crafting: ${craftingState.professionName}</h2>
       <div style="display: flex; gap: 1rem; justify-content: space-between;">
         <div style="flex: 1;">
-          <h3>Selected Ingridients</h3>
-          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
-            ${[0,1,2].map(i => `
-              <div class="craft-slot" data-slot="${i}" style="width:64px;height:64px;border:2px dashed #aaa;"></div>
-            `).join('')}
+          <h3>Selected Ingredients</h3>
+          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem;">
+            ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
           </div>
           <button id="craft-btn" class="fantasy-button" disabled>Craft</button>
           <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
@@ -249,15 +285,19 @@ function renderCraftingModal() {
   `;
   document.body.appendChild(modal);
 
+  setupModalEventListeners(modal);
+}
+
+function setupModalEventListeners(modal) {
+  const columns = modal.querySelectorAll('.crafting-column');
+  const herbs = modal.querySelectorAll('.herb');
+  const craftBtn = modal.querySelector('#craft-btn');
+  const resultDiv = modal.querySelector('#craft-result');
+
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
     craftingState = null;
   });
-
-  const slots = modal.querySelectorAll('.craft-slot');
-  const herbs = modal.querySelectorAll('.herb');
-  const craftBtn = modal.querySelector('#craft-btn');
-  const resultDiv = modal.querySelector('#craft-result');
 
   herbs.forEach(herbEl => {
     herbEl.addEventListener('click', () => {
@@ -268,14 +308,25 @@ function renderCraftingModal() {
       if (slotIdx === -1) return;
 
       craftingState.selectedHerbs[slotIdx] = herb;
-      slots[slotIdx].innerHTML = `
-        <img src="assets/art/ingridients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove">
+      
+      // Update the herb slot visual
+      const column = columns[slotIdx];
+      const herbSlot = column.querySelector('.herb-slot');
+      herbSlot.innerHTML = `
+        <img src="assets/art/ingridients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove ${herb.name}">
       `;
-      slots[slotIdx].addEventListener('click', () => {
+      herbSlot.style.border = '2px solid #4CAF50';
+      herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
+      
+      // Add click to remove functionality
+      herbSlot.addEventListener('click', () => {
         craftingState.selectedHerbs[slotIdx] = null;
-        slots[slotIdx].innerHTML = '';
+        herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
+        herbSlot.style.border = '2px dashed #aaa';
+        herbSlot.style.background = 'rgba(0,0,0,0.2)';
         updateCraftButtonState();
       });
+      
       updateCraftButtonState();
     });
   });
@@ -287,7 +338,7 @@ function renderCraftingModal() {
 
     modal.querySelector('#available-herbs').parentElement.style.display = 'none';
 
-    startSlotAnimation(resultDiv);
+    startSlotAnimation(resultDiv, modal);
   });
 
   function updateCraftButtonState() {
@@ -301,9 +352,8 @@ function renderCraftingModal() {
   }
 }
 
-async function startSlotAnimation(resultDiv) {
-  const slotArea = document.querySelector('#crafting-slots');
-  slotArea.innerHTML = '';
+async function startSlotAnimation(resultDiv, modal) {
+  const slotArea = modal.querySelector('#crafting-slots');
   resultDiv.textContent = 'Verifying ingridients...';
 
   const selectedHerbNames = craftingState.selectedHerbs.map(h => h.name);
@@ -331,38 +381,41 @@ async function startSlotAnimation(resultDiv) {
 
     craftingState.enrichedHerbs = reserveJson.herbs;
 
-    slotArea.innerHTML = '';
+    // Show arrows and populate bottles with properties
     craftingState.enrichedHerbs.forEach((herb, idx) => {
+      const column = slotArea.children[idx];
       const props = Object.values(herb.properties);
-      const col = document.createElement('div');
-      col.style.display = 'inline-block';
-      col.style.margin = '0 1rem';
-      col.innerHTML = `
-        <div>${props[0]}</div>
-        <div>${props[1]}</div>
-        <div>${props[2]}</div>
-        <div>
-          <button class="fantasy-button adjust-up" data-col="${idx}">↑</button>
-          <button class="fantasy-button adjust-down" data-col="${idx}">↓</button>
-        </div>
-      `;
-      slotArea.appendChild(col);
+      
+      // Show adjustment arrows
+      column.querySelector('.arrow-up').style.display = 'block';
+      column.querySelector('.arrow-down').style.display = 'block';
+      
+      // Populate property slots
+      const propertySlots = column.querySelectorAll('.property-slot');
+      propertySlots[0].textContent = props[0];
+      propertySlots[1].textContent = props[1];
+      propertySlots[2].textContent = props[2];
+      
+      // Add some visual flair to show the bottle is "active"
+      const bottle = column.querySelector('.properties-bottle');
+      bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)';
+      bottle.style.boxShadow = '0 0 10px rgba(139,69,19,0.5)';
     });
 
     craftingState.randomizedProperties = craftingState.enrichedHerbs.map(h => Object.values(h.properties));
     craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
     craftingState.currentAdjustedCol = null;
 
-    // --- Initialize adjustments as { [colIdx]: { up: 0, down: 0 } } ---
+    // Initialize adjustments as { [colIdx]: { up: 0, down: 0 } }
     craftingState.adjustments = {};
     for (let i = 0; i < 3; i++) {
       craftingState.adjustments[i] = { up: 0, down: 0 };
     }
 
     enableAdjustment(slotArea, resultDiv);
-    resultDiv.textContent = 'You may now apply an adjustment.';
+    resultDiv.textContent = 'You may now apply adjustments to the bottles.';
 
-    // --- Add "Finish Crafting" button ---
+    // Add "Finish Crafting" button
     let finishBtn = document.createElement('button');
     finishBtn.className = 'fantasy-button';
     finishBtn.textContent = 'Finish Crafting';
@@ -375,15 +428,13 @@ async function startSlotAnimation(resultDiv) {
       patchAndSendCraftRequest(resultDiv);
     });
 
-    // Remove the old call to patchAndSendCraftRequest here
-    // patchAndSendCraftRequest(resultDiv);
   } catch (err) {
     console.error('[CRAFTING] Error during reservation:', err);
     resultDiv.textContent = 'Server error while verifying ingridients.';
   }
 }
 
-// --- PATCH: Build adjustments as array of { bottle, direction, count } ---
+// Build adjustments as array of { bottle, direction, count }
 async function patchAndSendCraftRequest(resultDiv) {
   try {
     // Build the list of adjustments based on up/down counts
@@ -397,7 +448,7 @@ async function patchAndSendCraftRequest(resultDiv) {
       }
     }
 
-    // --- Normalize enriched_herbs properties to {a,b,c} object only ---
+    // Normalize enriched_herbs properties to {a,b,c} object only
     function normalizeProps(input) {
       if (Array.isArray(input)) {
         const keys = ['a', 'b', 'c'];
@@ -487,7 +538,7 @@ function handleAdjustment(colIdx, direction, resultDiv) {
 
   const props = craftingState.randomizedProperties[colIdx];
 
-  // --- Ensure adjustments object exists for this colIdx ---
+  // Ensure adjustments object exists for this colIdx
   if (!craftingState.adjustments[colIdx]) {
     craftingState.adjustments[colIdx] = { up: 0, down: 0 };
   }
@@ -510,14 +561,21 @@ function handleAdjustment(colIdx, direction, resultDiv) {
   }
 }
 
-
 function updateSlotColumn(colIdx) {
   const props = craftingState.randomizedProperties[colIdx];
   const slotArea = document.querySelector('#crafting-slots');
-  const col = slotArea.children[colIdx];
-  col.children[0].textContent = props[0];
-  col.children[1].textContent = props[1];
-  col.children[2].textContent = props[2];
+  const column = slotArea.children[colIdx];
+  const propertySlots = column.querySelectorAll('.property-slot');
+  
+  propertySlots[0].textContent = props[0];
+  propertySlots[1].textContent = props[1];
+  propertySlots[2].textContent = props[2];
+  
+  // Add a brief animation to show the change
+  const bottle = column.querySelector('.properties-bottle');
+  bottle.style.animation = 'none';
+  bottle.offsetHeight; // Trigger reflow
+  bottle.style.animation = 'bottle-shake 0.3s ease-in-out';
 }
 
 function updateAdjustmentCounter() {
