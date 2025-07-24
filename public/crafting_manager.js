@@ -257,7 +257,7 @@ function renderCraftingModal() {
       <div style="display: flex; gap: 1rem; justify-content: space-between;">
         <div style="flex: 1;">
           <h3>Selected Ingredients</h3>
-          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem;">
+          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
             ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
           </div>
           <button id="craft-btn" class="fantasy-button" disabled>Craft</button>
