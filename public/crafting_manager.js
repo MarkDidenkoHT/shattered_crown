@@ -204,7 +204,8 @@ async function startCraftingSession(professionId, professionName) {
     result: null,
     adjustmentCount: 0,
     maxAdjustments: 3,
-    enrichedHerbs: null
+    enrichedHerbs: null,
+    recipes: null
   };
 
   renderCraftingModal();
@@ -262,13 +263,20 @@ function renderCraftingModal() {
       
       <!-- Bank row (horizontal scrollable) -->
       <h3>Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem;">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1);">
         ${craftingState.availableHerbs.map((herb, idx) => `
-          <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer;">
+          <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(255,255,255,0.05);">
             <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
             <div style="font-size:0.8rem;">x${herb.amount}</div>
+            <div class="info-icon" data-herb="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
           </div>
         `).join('')}
+      </div>
+      
+      <!-- Recipes row (horizontal scrollable) -->
+      <h3>Recipes</h3>
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1);">
+        <!-- Will be populated by loadRecipesIntoModal() -->
       </div>
       
       <!-- Button row -->
@@ -289,6 +297,153 @@ function renderCraftingModal() {
   document.body.appendChild(modal);
 
   setupModalEventListeners(modal);
+  loadRecipesIntoModal(modal);
+}
+
+// Load recipes into the crafting modal
+async function loadRecipesIntoModal(modal) {
+  try {
+    const recipes = await fetchRecipes(craftingState.professionId);
+    const recipesContainer = modal.querySelector('#available-recipes');
+    
+    if (recipes.length === 0) {
+      recipesContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes available</div>';
+      return;
+    }
+    
+    recipesContainer.innerHTML = recipes.map((recipe, idx) => `
+      <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center;">
+        <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
+        <div style="font-size: 0.8rem; margin-top: 4px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
+        <div style="font-size: 0.7rem; color: #999; margin-top: 2px;">Tap for ingredients</div>
+      </div>
+    `).join('');
+    
+    // Store recipes in craftingState for reference
+    craftingState.recipes = recipes;
+    
+    // Add click handlers for recipes
+    recipesContainer.querySelectorAll('.recipe-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const recipeIdx = parseInt(card.dataset.recipe);
+        showRecipeDetails(recipes[recipeIdx]);
+      });
+    });
+    
+  } catch (error) {
+    console.error('[CRAFTING] Failed to load recipes:', error);
+    const recipesContainer = modal.querySelector('#available-recipes');
+    recipesContainer.innerHTML = '<div style="color: #ff6b6b; padding: 1rem;">Failed to load recipes</div>';
+  }
+}
+
+// Show recipe details popup
+function showRecipeDetails(recipe) {
+  const detailsModal = document.createElement('div');
+  detailsModal.className = 'custom-message-box';
+  detailsModal.style.zIndex = '10001'; // Above the main crafting modal
+  
+  // Parse ingredients - handle both array and object formats
+  let ingredientsList = '';
+  if (Array.isArray(recipe.ingridients)) {
+    ingredientsList = recipe.ingridients.join(', ');
+  } else if (typeof recipe.ingridients === 'object') {
+    ingredientsList = Object.values(recipe.ingridients).join(', ');
+  } else {
+    ingredientsList = recipe.ingridients || 'Unknown ingredients';
+  }
+  
+  detailsModal.innerHTML = `
+    <div class="message-content" style="max-width: 400px; text-align: center;">
+      <h3 style="color: #c4975a; margin-bottom: 1rem;">${recipe.name}</h3>
+      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
+      
+      <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
+        <h4 style="color: #c4975a; margin-bottom: 0.5rem;">Required Ingredients:</h4>
+        <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${ingredientsList}</div>
+      </div>
+      
+      ${recipe.description ? `
+        <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem; font-style: italic; color: #ccc; font-size: 0.85rem;">
+          ${recipe.description}
+        </div>
+      ` : ''}
+      
+      <button class="fantasy-button close-details-btn" style="width: 100%;">Close</button>
+    </div>
+  `;
+  
+  document.body.appendChild(detailsModal);
+  
+  detailsModal.querySelector('.close-details-btn').addEventListener('click', () => {
+    detailsModal.remove();
+  });
+  
+  // Close when clicking outside
+  detailsModal.addEventListener('click', (e) => {
+    if (e.target === detailsModal) {
+      detailsModal.remove();
+    }
+  });
+}
+
+// Show herb properties popup
+function showHerbProperties(herbIndex) {
+  const herb = craftingState.availableHerbs[herbIndex];
+  const propsModal = document.createElement('div');
+  propsModal.className = 'custom-message-box';
+  propsModal.style.zIndex = '10001';
+  
+  // Parse properties - handle both array and object formats
+  let propertiesDisplay = '';
+  if (typeof herb.properties === 'object' && herb.properties !== null) {
+    if (Array.isArray(herb.properties)) {
+      propertiesDisplay = herb.properties.map((prop, idx) => 
+        `<div class="property-item" style="background: rgba(76,175,80,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
+          <strong>Property ${idx + 1}:</strong> ${prop}
+        </div>`
+      ).join('');
+    } else {
+      propertiesDisplay = Object.entries(herb.properties).map(([key, value]) => 
+        `<div class="property-item" style="background: rgba(76,175,80,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
+          <strong>${key.toUpperCase()}:</strong> ${value}
+        </div>`
+      ).join('');
+    }
+  } else {
+    propertiesDisplay = '<div style="color: #999; font-style: italic;">No properties available</div>';
+  }
+  
+  propsModal.innerHTML = `
+    <div class="message-content" style="max-width: 350px; text-align: center;">
+      <h3 style="color: #4CAF50; margin-bottom: 1rem;">${herb.name}</h3>
+      <img src="assets/art/ingridients/${herb.sprite}.png" alt="${herb.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
+      
+      <div style="background: rgba(0,0,0,0.3); border: 1px solid #4CAF50; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
+        <h4 style="color: #4CAF50; margin-bottom: 0.8rem; text-align: center;">Properties:</h4>
+        ${propertiesDisplay}
+      </div>
+      
+      <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 0.6rem; margin-bottom: 1rem; font-size: 0.9rem;">
+        <strong>Available:</strong> ${herb.amount} units
+      </div>
+      
+      <button class="fantasy-button close-props-btn" style="width: 100%;">Close</button>
+    </div>
+  `;
+  
+  document.body.appendChild(propsModal);
+  
+  propsModal.querySelector('.close-props-btn').addEventListener('click', () => {
+    propsModal.remove();
+  });
+  
+  // Close when clicking outside
+  propsModal.addEventListener('click', (e) => {
+    if (e.target === propsModal) {
+      propsModal.remove();
+    }
+  });
 }
 
 function setupModalEventListeners(modal) {
@@ -303,8 +458,12 @@ function setupModalEventListeners(modal) {
     craftingState = null;
   });
 
+  // Herb selection listeners
   herbs.forEach(herbEl => {
-    herbEl.addEventListener('click', () => {
+    herbEl.addEventListener('click', (e) => {
+      // Prevent triggering when clicking the info icon
+      if (e.target.classList.contains('info-icon')) return;
+      
       if (craftingState.isCraftingStarted) return; // Disable selecting herbs after crafting started
       
       const idx = +herbEl.dataset.index;
@@ -335,6 +494,15 @@ function setupModalEventListeners(modal) {
       });
       
       updateCraftButtonState();
+    });
+  });
+
+  // Info icon listeners for herb properties
+  modal.querySelectorAll('.info-icon').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent herb selection
+      const herbIndex = parseInt(icon.dataset.herb);
+      showHerbProperties(herbIndex);
     });
   });
 
