@@ -253,7 +253,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 90vh; overflow-y: auto; text-align: center;">
+    <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 97vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
       
       <!-- Main crafting area -->
@@ -263,7 +263,7 @@ function renderCraftingModal() {
       
       <!-- Bank row (horizontal scrollable) -->
       <h3>Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1);">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5pxrem; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1); scrollbar-width: none;">
         ${craftingState.availableHerbs.map((herb, idx) => `
           <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(255,255,255,0.05);">
             <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
