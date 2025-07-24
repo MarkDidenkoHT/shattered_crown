@@ -219,8 +219,8 @@ function createCraftingSlotHTML(slotIndex) {
       </div>
       
       <!-- Up Arrow -->
-      <div class="arrow-up" style="display: none;">
-        <button class="fantasy-button adjust-up" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem;">↑</button>
+      <div class="arrow-up">
+        <button class="fantasy-button adjust-up" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>↑</button>
       </div>
       
       <!-- Properties Bottle -->
@@ -241,8 +241,8 @@ function createCraftingSlotHTML(slotIndex) {
       </div>
       
       <!-- Down Arrow -->
-      <div class="arrow-down" style="display: none;">
-        <button class="fantasy-button adjust-down" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem;">↓</button>
+      <div class="arrow-down">
+        <button class="fantasy-button adjust-down" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>↓</button>
       </div>
     </div>
   `;
@@ -386,9 +386,13 @@ async function startSlotAnimation(resultDiv, modal) {
       const column = slotArea.children[idx];
       const props = Object.values(herb.properties);
       
-      // Show adjustment arrows
-      column.querySelector('.arrow-up').style.display = 'block';
-      column.querySelector('.arrow-down').style.display = 'block';
+      // Enable adjustment arrows
+      const upBtn = column.querySelector('.adjust-up');
+      const downBtn = column.querySelector('.adjust-down');
+      upBtn.disabled = false;
+      upBtn.style.opacity = '1';
+      downBtn.disabled = false;
+      downBtn.style.opacity = '1';
       
       // Populate property slots
       const propertySlots = column.querySelectorAll('.property-slot');
