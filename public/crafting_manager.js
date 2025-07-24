@@ -28,12 +28,11 @@ export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentS
 
   _main.innerHTML = `
     <div class="main-app-container">
-      <div class="particles"></div>
       <div class="character-creation-section"></div>
     </div>
   `;
 
-  createParticles();
+  // Remove particle creation for faster loading
   await fetchAndRenderProfessions();
   console.log('[CRAFTING] --- loadModule for Crafting Manager finished ---');
 }
@@ -210,437 +209,112 @@ async function startCraftingSession(professionId, professionName) {
   renderCraftingModal();
 }
 
-// Enhanced createCraftingSlotHTML with GSAP-ready elements
+// Simplified crafting slot HTML without complex animations
 function createCraftingSlotHTML(slotIndex) {
   return `
     <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-      <!-- Herb Slot with glow container -->
+      <!-- Herb Slot -->
       <div class="herb-slot-container" style="position: relative;">
-        <div class="herb-slot" style="width: 80px; height: 80px; border: 2px dashed #aaa; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); position: relative; overflow: hidden;">
+        <div class="herb-slot" style="width: 80px; height: 80px; border: 2px dashed #aaa; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
           <span style="color: #666; font-size: 0.8rem;">Drop Herb</span>
-          <!-- Magical sparkles container -->
-          <div class="herb-sparkles" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
         </div>
-        <!-- Herb glow effect -->
-        <div class="herb-glow" style="position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px; border-radius: 12px; background: radial-gradient(circle, rgba(76,175,80,0.4) 0%, transparent 70%); opacity: 0; pointer-events: none;"></div>
       </div>
       
-      <!-- Up Arrow with hover effects -->
+      <!-- Up Arrow -->
       <div class="arrow-up">
-        <button class="fantasy-button adjust-up arrow-btn" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3; position: relative; overflow: hidden;" disabled>
+        <button class="fantasy-button adjust-up arrow-btn" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>
           ↑
-          <div class="button-glow" style="position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: radial-gradient(circle, rgba(255,215,0,0.6) 0%, transparent 70%); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;"></div>
         </button>
       </div>
       
-      <!-- Enhanced Properties Bottle -->
-      <div class="properties-bottle" style="width: 60px; height: 120px; border: 2px solid #8B4513; border-radius: 10px 10px 20px 20px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative; overflow: hidden;">
+      <!-- Simplified Properties Bottle -->
+      <div class="properties-bottle" style="width: 60px; height: 120px; border: 2px solid #8B4513; border-radius: 10px 10px 20px 20px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative;">
         <!-- Bottle Cork/Top -->
         <div class="bottle-cork" style="position: absolute; top: -8px; width: 20px; height: 16px; background: #8B4513; border-radius: 4px 4px 0 0;"></div>
         
-        <!-- Liquid background animation -->
-        <div class="liquid-bg" style="position: absolute; bottom: 0; left: 2px; right: 2px; height: 0%; background: linear-gradient(to top, rgba(100,200,255,0.3) 0%, rgba(150,255,150,0.2) 50%, rgba(255,200,100,0.1) 100%); border-radius: 0 0 16px 16px; transition: height 0.5s ease;"></div>
-        
-        <!-- Bubble effects container -->
-        <div class="bottle-bubbles" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden;"></div>
-        
-        <!-- Property Slots with enhanced styling -->
-        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333; position: relative; z-index: 2; backdrop-filter: blur(2px);">
+        <!-- Property Slots -->
+        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333;">
           -
-          <div class="property-glow" style="position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 6px; background: linear-gradient(45deg, transparent, rgba(255,215,0,0.3), transparent); opacity: 0;"></div>
         </div>
-        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333; position: relative; z-index: 2; backdrop-filter: blur(2px);">
+        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333;">
           -
-          <div class="property-glow" style="position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 6px; background: linear-gradient(45deg, transparent, rgba(255,215,0,0.3), transparent); opacity: 0;"></div>
         </div>
-        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333; position: relative; z-index: 2; backdrop-filter: blur(2px);">
+        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333;">
           -
-          <div class="property-glow" style="position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 6px; background: linear-gradient(45deg, transparent, rgba(255,215,0,0.3), transparent); opacity: 0;"></div>
         </div>
-        
-        <!-- Bottle magical aura -->
-        <div class="bottle-aura" style="position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; border-radius: 20px; background: radial-gradient(ellipse, rgba(139,69,19,0.2) 0%, transparent 70%); opacity: 0; pointer-events: none;"></div>
       </div>
       
       <!-- Down Arrow -->
       <div class="arrow-down">
-        <button class="fantasy-button adjust-down arrow-btn" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3; position: relative; overflow: hidden;" disabled>
+        <button class="fantasy-button adjust-down arrow-btn" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>
           ↓
-          <div class="button-glow" style="position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: radial-gradient(circle, rgba(255,215,0,0.6) 0%, transparent 70%); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;"></div>
         </button>
       </div>
     </div>
   `;
 }
 
-// GSAP Animation Functions
-const AlchemyAnimations = {
+// Simplified animation functions without GSAP dependency
+const SimpleAnimations = {
   
-  // Initialize GSAP timeline for the entire crafting interface
-  initCraftingTimeline() {
-    // Check if GSAP is available
-    if (typeof gsap === 'undefined') {
-      console.warn('[CRAFTING] GSAP not loaded, animations disabled');
-      return { play: () => {} }; // Return dummy timeline
-    }
-
-    const tl = gsap.timeline({ paused: true });
-    
-    // Animate bottles appearing
-    tl.from('.crafting-column', {
-      duration: 0.8,
-      y: 50,
-      opacity: 0,
-      stagger: 0.2,
-      ease: "back.out(1.7)"
-    })
-    
-    // Add subtle breathing animation to bottles
-    .to('.properties-bottle', {
-      duration: 2,
-      scale: 1.02,
-      yoyo: true,
-      repeat: -1,
-      ease: "power2.inOut",
-      stagger: 0.3
-    }, "-=0.5");
-    
-    return tl;
-  },
-
-  // Animate herb placement
-  placeHerb(slotIndex, herbData) {
-    if (typeof gsap === 'undefined') return;
-
+  // Simple herb placement feedback
+  placeHerb(slotIndex) {
     const column = document.querySelector(`[data-slot="${slotIndex}"]`);
     const herbSlot = column.querySelector('.herb-slot');
-    const herbGlow = column.querySelector('.herb-glow');
-    const sparkles = column.querySelector('.herb-sparkles');
     
-    // Create sparkle particles
-    this.createSparkles(sparkles);
+    // Simple scale animation using CSS
+    herbSlot.style.transform = 'scale(1.1)';
+    herbSlot.style.transition = 'transform 0.2s ease';
     
-    // Animate herb placement
-    gsap.timeline()
-      .to(herbGlow, { opacity: 1, duration: 0.3 })
-      .to(herbSlot, { 
-        scale: 1.1, 
-        duration: 0.2,
-        ease: "back.out(2)"
-      })
-      .to(herbSlot, { 
-        scale: 1, 
-        duration: 0.3,
-        ease: "elastic.out(1, 0.5)"
-      })
-      .to(herbGlow, { 
-        opacity: 0.7, 
-        duration: 0.5 
-      }, "-=0.3");
+    setTimeout(() => {
+      herbSlot.style.transform = 'scale(1)';
+    }, 200);
   },
 
-  // Animate bottle activation when crafting starts
+  // Simple bottle activation
   activateBottles() {
-    if (typeof gsap === 'undefined') return;
-
-    const bottles = document.querySelectorAll('.properties-bottle');
     const arrows = document.querySelectorAll('.arrow-btn');
-    
-    gsap.timeline()
-      // Fill bottles with liquid
-      .to('.liquid-bg', {
-        height: '80%',
-        duration: 1.5,
-        ease: "power2.out",
-        stagger: 0.3
-      })
-      
-      // Activate bottle auras
-      .to('.bottle-aura', {
-        opacity: 0.6,
-        duration: 1,
-        stagger: 0.2
-      }, "-=1")
-      
-      // Enable and animate arrows
-      .to(arrows, {
-        opacity: 1,
-        scale: 1.05,
-        duration: 0.5,
-        ease: "back.out(1.7)",
-        stagger: 0.1
-      }, "-=0.5")
-      
-      // Start bubble animations
-      .call(() => {
-        bottles.forEach((bottle, index) => {
-          this.startBubbleAnimation(bottle.querySelector('.bottle-bubbles'));
-        });
-      });
+    arrows.forEach(arrow => {
+      arrow.style.opacity = '1';
+      arrow.style.transition = 'opacity 0.3s ease';
+    });
   },
 
-  // Animate property rotation with smooth transitions
-  rotateProperties(columnIndex, direction) {
-    if (typeof gsap === 'undefined') return;
-
+  // Simple property rotation feedback
+  rotateProperties(columnIndex) {
     const column = document.querySelector(`[data-slot="${columnIndex}"]`);
-    const propertySlots = column.querySelectorAll('.property-slot');
     const bottle = column.querySelector('.properties-bottle');
     
-    // Get current and new property values
-    const props = craftingState.randomizedProperties[columnIndex];
-    const newProps = [...props];
+    // Simple flash effect
+    bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.3) 0%, rgba(139,69,19,0.5) 100%)';
+    bottle.style.transition = 'background 0.3s ease';
     
-    if (direction === 'up') {
-      newProps.push(newProps.shift());
-    } else {
-      newProps.unshift(newProps.pop());
-    }
-    
-    // Create rotation timeline
-    const tl = gsap.timeline();
-    
-    // Add bottle shake and glow
-    tl.to(bottle, {
-      rotation: direction === 'up' ? 5 : -5,
-      duration: 0.1,
-      ease: "power2.out"
-    })
-    .to(bottle, {
-      rotation: 0,
-      duration: 0.4,
-      ease: "elastic.out(1, 0.5)"
-    })
-    
-    // Animate properties sliding
-    .to(propertySlots, {
-      y: direction === 'up' ? -30 : 30,
-      opacity: 0,
-      duration: 0.3,
-      stagger: 0.05,
-      ease: "power2.in"
-    }, 0)
-    
-    // Update property values and animate back
-    .call(() => {
-      propertySlots.forEach((slot, index) => {
-        slot.textContent = newProps[index];
-      });
-    })
-    .to(propertySlots, {
-      y: 0,
-      opacity: 1,
-      duration: 0.4,
-      stagger: 0.05,
-      ease: "back.out(1.7)"
-    })
-    
-    // Add property glow effect
-    .to('.property-glow', {
-      opacity: 1,
-      duration: 0.2
-    }, "-=0.2")
-    .to('.property-glow', {
-      opacity: 0,
-      duration: 0.5
-    });
-    
-    // Create magical particles
-    this.createMagicalBurst(bottle);
-    
-    return tl;
+    setTimeout(() => {
+      bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%)';
+    }, 300);
   },
 
-  // Create sparkle particles for herb placement
-  createSparkles(container) {
-    if (typeof gsap === 'undefined') return;
-
-    const sparkleCount = 8;
-    
-    for (let i = 0; i < sparkleCount; i++) {
-      const sparkle = document.createElement('div');
-      sparkle.style.cssText = `
-        position: absolute;
-        width: 4px;
-        height: 4px;
-        background: #FFD700;
-        border-radius: 50%;
-        top: 50%;
-        left: 50%;
-      `;
-      container.appendChild(sparkle);
-      
-      // Animate sparkle
-      gsap.to(sparkle, {
-        x: (Math.random() - 0.5) * 60,
-        y: (Math.random() - 0.5) * 60,
-        opacity: 0,
-        scale: 0,
-        duration: 1,
-        ease: "power2.out",
-        delay: Math.random() * 0.3,
-        onComplete: () => sparkle.remove()
-      });
-    }
-  },
-
-  // Create bubble animation inside bottles
-  startBubbleAnimation(container) {
-    if (typeof gsap === 'undefined') return;
-
-    const createBubble = () => {
-      if (!container.parentElement) return; // Stop if bottle is removed
-      
-      const bubble = document.createElement('div');
-      bubble.style.cssText = `
-        position: absolute;
-        width: ${2 + Math.random() * 6}px;
-        height: ${2 + Math.random() * 6}px;
-        background: rgba(255,255,255,0.6);
-        border-radius: 50%;
-        bottom: 0;
-        left: ${10 + Math.random() * 40}px;
-      `;
-      container.appendChild(bubble);
-      
-      gsap.to(bubble, {
-        y: -120,
-        x: (Math.random() - 0.5) * 20,
-        opacity: 0,
-        duration: 2 + Math.random() * 2,
-        ease: "power1.out",
-        onComplete: () => bubble.remove()
-      });
-    };
-    
-    // Create bubbles periodically
-    const bubbleInterval = setInterval(createBubble, 500 + Math.random() * 1000);
-    
-    // Store interval to clear later if needed
-    container.bubbleInterval = bubbleInterval;
-  },
-
-  // Create magical burst effect for property changes
-  createMagicalBurst(bottle) {
-    if (typeof gsap === 'undefined') return;
-
-    const burst = document.createElement('div');
-    burst.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 20px;
-      height: 20px;
-      background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,100,100,0.4) 50%, transparent 100%);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    `;
-    bottle.appendChild(burst);
-    
-    gsap.to(burst, {
-      scale: 4,
-      opacity: 0,
-      rotation: 360,
-      duration: 0.6,
-      ease: "power2.out",
-      onComplete: () => burst.remove()
-    });
-  },
-
-  // Animate button hover effects
-  initButtonHovers() {
-    if (typeof gsap === 'undefined') return;
-
-    document.querySelectorAll('.arrow-btn').forEach(btn => {
-      const glow = btn.querySelector('.button-glow');
-      
-      btn.addEventListener('mouseenter', () => {
-        if (!btn.disabled) {
-          gsap.to(glow, {
-            width: 40,
-            height: 40,
-            duration: 0.3,
-            ease: "power2.out"
-          });
-          gsap.to(btn, {
-            scale: 1.1,
-            duration: 0.2,
-            ease: "back.out(2)"
-          });
-        }
-      });
-      
-      btn.addEventListener('mouseleave', () => {
-        gsap.to(glow, {
-          width: 0,
-          height: 0,
-          duration: 0.3,
-          ease: "power2.in"
-        });
-        gsap.to(btn, {
-          scale: 1,
-          duration: 0.2,
-          ease: "power2.out"
-        });
-      });
-    });
-  },
-
-  // Final crafting success animation
-  craftingSuccess(resultName) {
-    if (typeof gsap === 'undefined') return;
-
+  // Simple success feedback
+  craftingSuccess() {
     const bottles = document.querySelectorAll('.properties-bottle');
-    
-    gsap.timeline()
-      .to(bottles, {
-        scale: 1.2,
-        rotation: 360,
-        duration: 1,
-        ease: "back.out(1.7)",
-        stagger: 0.2
-      })
-      .to('.liquid-bg', {
-        background: 'linear-gradient(to top, rgba(0,255,0,0.6) 0%, rgba(255,215,0,0.4) 50%, rgba(255,255,255,0.2) 100%)',
-        duration: 0.5
-      }, "-=0.5")
-      .to('.bottle-aura', {
-        opacity: 1,
-        scale: 1.5,
-        duration: 0.8
-      }, "-=0.8");
+    bottles.forEach(bottle => {
+      bottle.style.background = 'linear-gradient(to bottom, rgba(0,255,0,0.2) 0%, rgba(0,255,0,0.4) 100%)';
+      bottle.style.transition = 'background 0.5s ease';
+    });
   },
 
-  // Crafting failure animation
+  // Simple failure feedback
   craftingFailure() {
-    if (typeof gsap === 'undefined') return;
-
     const bottles = document.querySelectorAll('.properties-bottle');
-    
-    gsap.timeline()
-      .to(bottles, {
-        x: -10,
-        duration: 0.1,
-        ease: "power2.inOut",
-        stagger: 0.05
-      })
-      .to(bottles, {
-        x: 10,
-        duration: 0.1,
-        ease: "power2.inOut",
-        stagger: 0.05
-      })
-      .to(bottles, {
-        x: 0,
-        duration: 0.1,
-        ease: "power2.inOut",
-        stagger: 0.05
-      })
-      .to('.liquid-bg', {
-        background: 'linear-gradient(to top, rgba(255,0,0,0.6) 0%, rgba(100,100,100,0.4) 50%, transparent 100%)',
-        duration: 0.5
-      }, 0);
+    bottles.forEach(bottle => {
+      bottle.style.background = 'linear-gradient(to bottom, rgba(255,0,0,0.2) 0%, rgba(255,0,0,0.4) 100%)';
+      bottle.style.transition = 'background 0.5s ease';
+      
+      // Quick shake using transform
+      bottle.style.transform = 'translateX(-5px)';
+      setTimeout(() => bottle.style.transform = 'translateX(5px)', 50);
+      setTimeout(() => bottle.style.transform = 'translateX(0)', 100);
+    });
   }
 };
 
@@ -650,10 +324,10 @@ function renderCraftingModal() {
   modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 90vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
-      <div style="display: flex; gap: 1rem; justify-content: space-between;">
-        <div style="flex: 1;">
+      <div style="display: flex; gap: 1rem; justify-content: space-between; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px;">
           <h3>Selected Ingredients</h3>
-          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem;">
+          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap;">
             ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
           </div>
           <button id="craft-btn" class="fantasy-button" disabled>Craft</button>
@@ -662,11 +336,11 @@ function renderCraftingModal() {
           </div>
         </div>
 
-        <div style="flex: 1; text-align: left;">
+        <div style="flex: 1; text-align: left; min-width: 300px;">
           <h3>Available Herbs</h3>
-          <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 300px; overflow-y: auto;">
             ${craftingState.availableHerbs.map((herb, idx) => `
-              <div class="herb" data-index="${idx}" style="cursor:pointer;">
+              <div class="herb" data-index="${idx}" style="cursor:pointer; padding: 5px; border: 1px solid #ccc; border-radius: 5px; text-align: center;">
                 <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
                 <div style="font-size:0.8rem;">x${herb.amount}</div>
               </div>
@@ -690,12 +364,6 @@ function setupModalEventListeners(modal) {
   const craftBtn = modal.querySelector('#craft-btn');
   const resultDiv = modal.querySelector('#craft-result');
 
-  // Initialize GSAP animations
-  const craftingTimeline = AlchemyAnimations.initCraftingTimeline();
-  craftingTimeline.play();
-  
-  AlchemyAnimations.initButtonHovers();
-
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
     craftingState = null;
@@ -716,13 +384,12 @@ function setupModalEventListeners(modal) {
       const herbSlot = column.querySelector('.herb-slot');
       herbSlot.innerHTML = `
         <img src="assets/art/ingridients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove ${herb.name}">
-        <div class="herb-sparkles" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
       `;
       herbSlot.style.border = '2px solid #4CAF50';
       herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
       
-      // Animate herb placement
-      AlchemyAnimations.placeHerb(slotIdx, herb);
+      // Simple placement animation
+      SimpleAnimations.placeHerb(slotIdx);
       
       // Add click to remove functionality
       herbSlot.addEventListener('click', () => {
@@ -730,13 +397,6 @@ function setupModalEventListeners(modal) {
         herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
         herbSlot.style.border = '2px dashed #aaa';
         herbSlot.style.background = 'rgba(0,0,0,0.2)';
-        
-        // Reset glow
-        const herbGlow = column.querySelector('.herb-glow');
-        if (typeof gsap !== 'undefined') {
-          gsap.to(herbGlow, { opacity: 0, duration: 0.3 });
-        }
-        
         updateCraftButtonState();
       });
       
@@ -812,8 +472,8 @@ async function startSlotAnimation(resultDiv, modal) {
       propertySlots[2].textContent = props[2];
     });
 
-    // Use GSAP to activate bottles
-    AlchemyAnimations.activateBottles();
+    // Simple bottle activation
+    SimpleAnimations.activateBottles();
 
     craftingState.randomizedProperties = craftingState.enrichedHerbs.map(h => Object.values(h.properties));
     craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
@@ -908,7 +568,7 @@ async function patchAndSendCraftRequest(resultDiv) {
       craftingState.result = json.crafted.name;
       
       // Add success animation
-      AlchemyAnimations.craftingSuccess(json.crafted.name);
+      SimpleAnimations.craftingSuccess();
       
       resultDiv.innerHTML = `
         <span style="color:lime;">✅ You crafted: <strong>${json.crafted.name}</strong>!</span><br/>
@@ -924,7 +584,7 @@ async function patchAndSendCraftRequest(resultDiv) {
       craftingState.result = 'Failed';
       
       // Add failure animation
-      AlchemyAnimations.craftingFailure();
+      SimpleAnimations.craftingFailure();
       
       resultDiv.innerHTML = `
         <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
@@ -972,8 +632,11 @@ function handleAdjustment(colIdx, direction, resultDiv) {
     craftingState.adjustments[colIdx].down++;
   }
 
-  // Use GSAP animation instead of simple update
-  AlchemyAnimations.rotateProperties(colIdx, direction);
+  // Update UI immediately
+  updateSlotColumn(colIdx);
+  
+  // Simple animation feedback
+  SimpleAnimations.rotateProperties(colIdx);
 
   craftingState.adjustmentCount++;
   updateAdjustmentCounter();
@@ -992,12 +655,6 @@ function updateSlotColumn(colIdx) {
   propertySlots[0].textContent = props[0];
   propertySlots[1].textContent = props[1];
   propertySlots[2].textContent = props[2];
-  
-  // Add a brief animation to show the change
-  const bottle = column.querySelector('.properties-bottle');
-  bottle.style.animation = 'none';
-  bottle.offsetHeight; // Trigger reflow
-  bottle.style.animation = 'bottle-shake 0.3s ease-in-out';
 }
 
 function updateAdjustmentCounter() {
@@ -1025,23 +682,6 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
-}
-
-function createParticles() {
-  const particlesContainer = _main.querySelector('.particles');
-  if (!particlesContainer) return;
-
-  particlesContainer.innerHTML = '';
-  const particleCount = 20;
-  for (let i = 0; i < particleCount; i++) {
-    const particle = document.createElement('div');
-    particle.className = 'particle';
-    particle.style.left = Math.random() * 100 + '%';
-    particle.style.top = Math.random() * 100 + '%';
-    particle.style.animationDelay = Math.random() * 6 + 's';
-    particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
-    particlesContainer.appendChild(particle);
-  }
 }
 
 function displayMessage(message) {
