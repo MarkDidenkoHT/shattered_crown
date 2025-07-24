@@ -28,11 +28,12 @@ export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentS
 
   _main.innerHTML = `
     <div class="main-app-container">
+      <div class="particles"></div>
       <div class="character-creation-section"></div>
     </div>
   `;
 
-  // Remove particle creation for faster loading
+  createParticles();
   await fetchAndRenderProfessions();
   console.log('[CRAFTING] --- loadModule for Crafting Manager finished ---');
 }
@@ -209,28 +210,23 @@ async function startCraftingSession(professionId, professionName) {
   renderCraftingModal();
 }
 
-// Simplified crafting slot HTML without complex animations
 function createCraftingSlotHTML(slotIndex) {
   return `
     <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
       <!-- Herb Slot -->
-      <div class="herb-slot-container" style="position: relative;">
-        <div class="herb-slot" style="width: 80px; height: 80px; border: 2px dashed #aaa; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
-          <span style="color: #666; font-size: 0.8rem;">Drop Herb</span>
-        </div>
+      <div class="herb-slot" style="width: 80px; height: 80px; border: 2px dashed #aaa; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+        <span style="color: #666; font-size: 0.8rem;">Drop Herb</span>
       </div>
       
       <!-- Up Arrow -->
       <div class="arrow-up">
-        <button class="fantasy-button adjust-up arrow-btn" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>
-          ↑
-        </button>
+        <button class="fantasy-button adjust-up" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>↑</button>
       </div>
       
-      <!-- Simplified Properties Bottle -->
+      <!-- Properties Bottle -->
       <div class="properties-bottle" style="width: 60px; height: 120px; border: 2px solid #8B4513; border-radius: 10px 10px 20px 20px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative;">
         <!-- Bottle Cork/Top -->
-        <div class="bottle-cork" style="position: absolute; top: -8px; width: 20px; height: 16px; background: #8B4513; border-radius: 4px 4px 0 0;"></div>
+        <div style="position: absolute; top: -8px; width: 20px; height: 16px; background: #8B4513; border-radius: 4px 4px 0 0;"></div>
         
         <!-- Property Slots -->
         <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333;">
@@ -246,77 +242,11 @@ function createCraftingSlotHTML(slotIndex) {
       
       <!-- Down Arrow -->
       <div class="arrow-down">
-        <button class="fantasy-button adjust-down arrow-btn" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>
-          ↓
-        </button>
+        <button class="fantasy-button adjust-down" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>↓</button>
       </div>
     </div>
   `;
 }
-
-// Simplified animation functions without GSAP dependency
-const SimpleAnimations = {
-  
-  // Simple herb placement feedback
-  placeHerb(slotIndex) {
-    const column = document.querySelector(`[data-slot="${slotIndex}"]`);
-    const herbSlot = column.querySelector('.herb-slot');
-    
-    // Simple scale animation using CSS
-    herbSlot.style.transform = 'scale(1.1)';
-    herbSlot.style.transition = 'transform 0.2s ease';
-    
-    setTimeout(() => {
-      herbSlot.style.transform = 'scale(1)';
-    }, 200);
-  },
-
-  // Simple bottle activation
-  activateBottles() {
-    const arrows = document.querySelectorAll('.arrow-btn');
-    arrows.forEach(arrow => {
-      arrow.style.opacity = '1';
-      arrow.style.transition = 'opacity 0.3s ease';
-    });
-  },
-
-  // Simple property rotation feedback
-  rotateProperties(columnIndex) {
-    const column = document.querySelector(`[data-slot="${columnIndex}"]`);
-    const bottle = column.querySelector('.properties-bottle');
-    
-    // Simple flash effect
-    bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.3) 0%, rgba(139,69,19,0.5) 100%)';
-    bottle.style.transition = 'background 0.3s ease';
-    
-    setTimeout(() => {
-      bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%)';
-    }, 300);
-  },
-
-  // Simple success feedback
-  craftingSuccess() {
-    const bottles = document.querySelectorAll('.properties-bottle');
-    bottles.forEach(bottle => {
-      bottle.style.background = 'linear-gradient(to bottom, rgba(0,255,0,0.2) 0%, rgba(0,255,0,0.4) 100%)';
-      bottle.style.transition = 'background 0.5s ease';
-    });
-  },
-
-  // Simple failure feedback
-  craftingFailure() {
-    const bottles = document.querySelectorAll('.properties-bottle');
-    bottles.forEach(bottle => {
-      bottle.style.background = 'linear-gradient(to bottom, rgba(255,0,0,0.2) 0%, rgba(255,0,0,0.4) 100%)';
-      bottle.style.transition = 'background 0.5s ease';
-      
-      // Quick shake using transform
-      bottle.style.transform = 'translateX(-5px)';
-      setTimeout(() => bottle.style.transform = 'translateX(5px)', 50);
-      setTimeout(() => bottle.style.transform = 'translateX(0)', 100);
-    });
-  }
-};
 
 function renderCraftingModal() {
   const modal = document.createElement('div');
@@ -324,10 +254,10 @@ function renderCraftingModal() {
   modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 90vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
-      <div style="display: flex; gap: 1rem; justify-content: space-between; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 300px;">
+      <div style="display: flex; gap: 1rem; justify-content: space-between;">
+        <div style="flex: 1;">
           <h3>Selected Ingredients</h3>
-          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap;">
+          <div id="crafting-slots" style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem;">
             ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
           </div>
           <button id="craft-btn" class="fantasy-button" disabled>Craft</button>
@@ -336,11 +266,11 @@ function renderCraftingModal() {
           </div>
         </div>
 
-        <div style="flex: 1; text-align: left; min-width: 300px;">
+        <div style="flex: 1; text-align: left;">
           <h3>Available Herbs</h3>
-          <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 300px; overflow-y: auto;">
+          <div id="available-herbs" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
             ${craftingState.availableHerbs.map((herb, idx) => `
-              <div class="herb" data-index="${idx}" style="cursor:pointer; padding: 5px; border: 1px solid #ccc; border-radius: 5px; text-align: center;">
+              <div class="herb" data-index="${idx}" style="cursor:pointer;">
                 <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
                 <div style="font-size:0.8rem;">x${herb.amount}</div>
               </div>
@@ -387,9 +317,6 @@ function setupModalEventListeners(modal) {
       `;
       herbSlot.style.border = '2px solid #4CAF50';
       herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
-      
-      // Simple placement animation
-      SimpleAnimations.placeHerb(slotIdx);
       
       // Add click to remove functionality
       herbSlot.addEventListener('click', () => {
@@ -454,7 +381,7 @@ async function startSlotAnimation(resultDiv, modal) {
 
     craftingState.enrichedHerbs = reserveJson.herbs;
 
-    // Populate bottles with properties
+    // Show arrows and populate bottles with properties
     craftingState.enrichedHerbs.forEach((herb, idx) => {
       const column = slotArea.children[idx];
       const props = Object.values(herb.properties);
@@ -463,23 +390,27 @@ async function startSlotAnimation(resultDiv, modal) {
       const upBtn = column.querySelector('.adjust-up');
       const downBtn = column.querySelector('.adjust-down');
       upBtn.disabled = false;
+      upBtn.style.opacity = '1';
       downBtn.disabled = false;
+      downBtn.style.opacity = '1';
       
       // Populate property slots
       const propertySlots = column.querySelectorAll('.property-slot');
       propertySlots[0].textContent = props[0];
       propertySlots[1].textContent = props[1];
       propertySlots[2].textContent = props[2];
+      
+      // Add some visual flair to show the bottle is "active"
+      const bottle = column.querySelector('.properties-bottle');
+      bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)';
+      bottle.style.boxShadow = '0 0 10px rgba(139,69,19,0.5)';
     });
-
-    // Simple bottle activation
-    SimpleAnimations.activateBottles();
 
     craftingState.randomizedProperties = craftingState.enrichedHerbs.map(h => Object.values(h.properties));
     craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
     craftingState.currentAdjustedCol = null;
 
-    // Initialize adjustments tracking
+    // Initialize adjustments as { [colIdx]: { up: 0, down: 0 } }
     craftingState.adjustments = {};
     for (let i = 0; i < 3; i++) {
       craftingState.adjustments[i] = { up: 0, down: 0 };
@@ -566,10 +497,6 @@ async function patchAndSendCraftRequest(resultDiv) {
 
     if (json.success) {
       craftingState.result = json.crafted.name;
-      
-      // Add success animation
-      SimpleAnimations.craftingSuccess();
-      
       resultDiv.innerHTML = `
         <span style="color:lime;">✅ You crafted: <strong>${json.crafted.name}</strong>!</span><br/>
         <button id="claim-btn" class="fantasy-button">Claim</button>
@@ -582,10 +509,6 @@ async function patchAndSendCraftRequest(resultDiv) {
       });
     } else {
       craftingState.result = 'Failed';
-      
-      // Add failure animation
-      SimpleAnimations.craftingFailure();
-      
       resultDiv.innerHTML = `
         <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span><br/>
         <button class="fantasy-button" id="craft-again">Craft Again</button>
@@ -632,11 +555,7 @@ function handleAdjustment(colIdx, direction, resultDiv) {
     craftingState.adjustments[colIdx].down++;
   }
 
-  // Update UI immediately
   updateSlotColumn(colIdx);
-  
-  // Simple animation feedback
-  SimpleAnimations.rotateProperties(colIdx);
 
   craftingState.adjustmentCount++;
   updateAdjustmentCounter();
@@ -655,6 +574,12 @@ function updateSlotColumn(colIdx) {
   propertySlots[0].textContent = props[0];
   propertySlots[1].textContent = props[1];
   propertySlots[2].textContent = props[2];
+  
+  // Add a brief animation to show the change
+  const bottle = column.querySelector('.properties-bottle');
+  bottle.style.animation = 'none';
+  bottle.offsetHeight; // Trigger reflow
+  bottle.style.animation = 'bottle-shake 0.3s ease-in-out';
 }
 
 function updateAdjustmentCounter() {
@@ -682,6 +607,23 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+function createParticles() {
+  const particlesContainer = _main.querySelector('.particles');
+  if (!particlesContainer) return;
+
+  particlesContainer.innerHTML = '';
+  const particleCount = 20;
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.top = Math.random() * 100 + '%';
+    particle.style.animationDelay = Math.random() * 6 + 's';
+    particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+    particlesContainer.appendChild(particle);
+  }
 }
 
 function displayMessage(message) {
