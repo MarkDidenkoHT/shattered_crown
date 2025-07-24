@@ -438,7 +438,7 @@ function addCastleStyles() {
             background: linear-gradient(145deg, #1d140c, #2a1f16);
             border: 2px solid #c4975a;
             border-radius: 10px;
-            padding: 2rem;
+            padding: 1rem;
             text-align: center;
             color: #e0d8c9;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
