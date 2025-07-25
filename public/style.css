@@ -508,7 +508,7 @@
         }
 
         .card-info-block {
-            padding: 1.5rem;
+            padding: 1rem;
         }
 
         .card-name {
@@ -816,9 +816,6 @@
             }
             .summary-card h2 {
                 font-size: 1.1rem;
-            }
-            .card-info-block {
-                padding: 0.4rem 0.5rem;
             }
         }
 
