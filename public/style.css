@@ -393,6 +393,12 @@
             width: 100%;
         }
 
+        profession-selection-grid {
+            display: grid;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
         /* --- Condensed selection-card styles --- */
 .selection-card {
     background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
@@ -759,13 +765,6 @@
 
         .slider-dot:hover {
             border-color: #c4975a;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 1024px) {
-            .selection-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
         }
 
         @media (max-width: 768px) {
