@@ -288,7 +288,7 @@ function renderCraftingModal() {
       </div>
       
       <!-- Button row -->
-      <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: center; gap: 0.5rem;">
         <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
         <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Craft</button>
         <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
