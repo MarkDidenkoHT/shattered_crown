@@ -131,34 +131,36 @@ function characterCardHTML(character) {
   const armor = Math.floor(strength * 0.25);
   const resistance = Math.floor(spirit * 0.25);
 
-  // Split stats into two columns (5 in first, 3 in second)
+  // Split stats into two columns of 4 each
   const statsCol1 = [
     { label: 'Strength', value: strength },
     { label: 'Dexterity', value: dexterity },
     { label: 'Vitality', value: vitality },
-    { label: 'Spirit', value: spirit },
-    { label: 'Intellect', value: intellect }
+    { label: 'Spirit', value: spirit }
   ];
   const statsCol2 = [
+    { label: 'Intellect', value: intellect },
     { label: 'HP', value: hp },
     { label: 'Armor', value: armor },
     { label: 'Resistance', value: resistance }
   ];
 
-  // Equipped items, split consumables into two columns (4 and 3)
-  const equippedItems = [
-    { label: 'Weapon', value: character.equipped_weapon || 'None' },
-    { label: 'Armor', value: character.equipped_armor || 'None' },
-    { label: 'Helmet', value: character.equipped_helmet || 'None' },
-    { label: 'Trinket', value: character.equipped_trinket || 'None' },
-    { label: 'Boots', value: character.equipped_boots || 'None' },
-    { label: 'Gloves', value: character.equipped_gloves || 'None' }
+  // Parse equipped items from JSONB column
+  const equippedItems = character.equipped_items || {};
+  const equipmentData = [
+    { label: 'Weapon 1', value: equippedItems.equipped_weapon1 || 'None' },
+    { label: 'Weapon 2', value: equippedItems.equipped_weapon2 || 'None' },
+    { label: 'Armor', value: equippedItems.equipped_armor || 'None' },
+    { label: 'Helmet', value: equippedItems.equipped_helmet || 'None' },
+    { label: 'Trinket', value: equippedItems.equipped_trinket || 'None' },
+    { label: 'Boots', value: equippedItems.equipped_boots || 'None' },
+    { label: 'Gloves', value: equippedItems.equipped_gloves || 'None' },
+    { label: 'Consumable', value: equippedItems.equipped_consumable || 'None' }
   ];
-  const consumables = (character.consumable && character.consumable.length > 0)
-    ? character.consumable
-    : [];
-  const consumablesCol1 = consumables.slice(0, 4);
-  const consumablesCol2 = consumables.slice(4, 7);
+
+  // Split equipment into two columns
+  const equipmentCol1 = equipmentData.slice(0, 4);
+  const equipmentCol2 = equipmentData.slice(4, 8);
 
   const startingAbilities = character.starting_abilities && character.starting_abilities.length > 0
     ? character.starting_abilities.join(', ')
@@ -196,23 +198,10 @@ function characterCardHTML(character) {
           <h4>Equipped Items</h4>
           <div class="items-cols">
             <div>
-              ${equippedItems.slice(0, 3).map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+              ${equipmentCol1.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
             </div>
             <div>
-              ${equippedItems.slice(3, 6).map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
-            </div>
-          </div>
-          <div class="consumables-cols">
-            <div>
-              <p>Consumables:</p>
-              ${consumablesCol1.length > 0
-                ? `<ul>${consumablesCol1.map(c => `<li>${c}</li>`).join('')}</ul>`
-                : '<span>None</span>'}
-            </div>
-            <div>
-              ${consumablesCol2.length > 0
-                ? `<ul>${consumablesCol2.map(c => `<li>${c}</li>`).join('')}</ul>`
-                : ''}
+              ${equipmentCol2.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
             </div>
           </div>
         </div>
