@@ -1,15 +1,19 @@
 let _main;
 let _apiCall;
 let _getCurrentProfile;
+let _getCurrentSession;
 let _profile;
+let _session;
 
-export async function loadModule(main, { apiCall, getCurrentProfile }) {
+export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentSession }) {
   console.log('[CHAR_MGR] --- Starting loadModule for Character Manager ---');
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
+  _getCurrentSession = getCurrentSession;
 
   _profile = _getCurrentProfile();
+  _session = _getCurrentSession();
   if (!_profile) {
     console.error('[CHAR_MGR] No profile found. Redirecting to login.');
     displayMessage('User profile not found. Please log in again.');
@@ -111,6 +115,9 @@ function renderCharacters(characters) {
     });
   });
 
+  // Add equipment click handlers
+  setupEquipmentClickHandlers(section, characters);
+
   // Initialize slider for mobile view
   initializeCharacterSlider(section);
 }
@@ -148,14 +155,14 @@ function characterCardHTML(character) {
   // Parse equipped items from JSONB column
   const equippedItems = character.equipped_items || {};
   const equipmentData = [
-    { label: 'Weapon 1', value: equippedItems.equipped_weapon1 || 'None' },
-    { label: 'Weapon 2', value: equippedItems.equipped_weapon2 || 'None' },
-    { label: 'Armor', value: equippedItems.equipped_armor || 'None' },
-    { label: 'Helmet', value: equippedItems.equipped_helmet || 'None' },
-    { label: 'Trinket', value: equippedItems.equipped_trinket || 'None' },
-    { label: 'Boots', value: equippedItems.equipped_boots || 'None' },
-    { label: 'Gloves', value: equippedItems.equipped_gloves || 'None' },
-    { label: 'Consumable', value: equippedItems.equipped_consumable || 'None' }
+    { label: 'Weapon 1', value: equippedItems.equipped_weapon1 || 'None', slot: 'equipped_weapon1', type: 'weapon' },
+    { label: 'Weapon 2', value: equippedItems.equipped_weapon2 || 'None', slot: 'equipped_weapon2', type: 'weapon' },
+    { label: 'Armor', value: equippedItems.equipped_armor || 'None', slot: 'equipped_armor', type: 'armor' },
+    { label: 'Helmet', value: equippedItems.equipped_helmet || 'None', slot: 'equipped_helmet', type: 'helmet' },
+    { label: 'Trinket', value: equippedItems.equipped_trinket || 'None', slot: 'equipped_trinket', type: 'trinket' },
+    { label: 'Boots', value: equippedItems.equipped_boots || 'None', slot: 'equipped_boots', type: 'boots' },
+    { label: 'Gloves', value: equippedItems.equipped_gloves || 'None', slot: 'equipped_gloves', type: 'gloves' },
+    { label: 'Consumable', value: equippedItems.equipped_consumable || 'None', slot: 'equipped_consumable', type: 'consumable' }
   ];
 
   // Split equipment into two columns
@@ -174,7 +181,7 @@ function characterCardHTML(character) {
   const exp = character.exp || 0;
 
   return `
-    <div class="selection-card">
+    <div class="selection-card" data-character-id="${character.id}">
       <div class="card-art-block">
         <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
           alt="Character Art" 
@@ -198,10 +205,30 @@ function characterCardHTML(character) {
           <h4>Equipped Items</h4>
           <div class="items-cols">
             <div>
-              ${equipmentCol1.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+              ${equipmentCol1.map(item => `
+                <p>${item.label}: 
+                  <span class="equipment-item" 
+                        data-character-id="${character.id}" 
+                        data-slot="${item.slot}" 
+                        data-type="${item.type}"
+                        style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
+                    ${item.value}
+                  </span>
+                </p>
+              `).join('')}
             </div>
             <div>
-              ${equipmentCol2.map(item => `<p>${item.label}: <span>${item.value}</span></p>`).join('')}
+              ${equipmentCol2.map(item => `
+                <p>${item.label}: 
+                  <span class="equipment-item" 
+                        data-character-id="${character.id}" 
+                        data-slot="${item.slot}" 
+                        data-type="${item.type}"
+                        style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
+                    ${item.value}
+                  </span>
+                </p>
+              `).join('')}
             </div>
           </div>
         </div>
@@ -217,6 +244,187 @@ function characterCardHTML(character) {
       </div>
     </div>
   `;
+}
+
+function setupEquipmentClickHandlers(section, characters) {
+  section.querySelectorAll('.equipment-item').forEach(equipmentEl => {
+    equipmentEl.addEventListener('click', async () => {
+      const characterId = equipmentEl.dataset.characterId;
+      const slot = equipmentEl.dataset.slot;
+      const type = equipmentEl.dataset.type;
+      
+      const character = characters.find(c => c.id == characterId);
+      if (!character) return;
+      
+      await showEquipmentModal(character, slot, type);
+    });
+  });
+}
+
+async function showEquipmentModal(character, slot, type) {
+  try {
+    // Fetch available items of this type from bank
+    const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
+    const bankItems = await response.json();
+    
+    console.log('[CHAR_MGR] Available items for type', type, ':', bankItems);
+    
+    // Get current equipped item
+    const currentItem = character.equipped_items?.[slot] || 'None';
+    
+    const modal = document.createElement('div');
+    modal.className = 'custom-message-box';
+    modal.innerHTML = `
+      <div class="message-content" style="width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+        <h2>Equip ${type.charAt(0).toUpperCase() + type.slice(1)}</h2>
+        <p style="margin-bottom: 1rem; color: #ccc;">
+          Character: <strong>${character.name || `Lvl ${character.level} ${character.races?.name} ${character.classes?.name}`}</strong><br>
+          Current: <strong style="color: ${currentItem === 'None' ? '#999' : '#4CAF50'}">${currentItem}</strong>
+        </p>
+        
+        <!-- None option -->
+        <div class="equipment-option ${currentItem === 'None' ? 'selected' : ''}" 
+             data-item="none" 
+             style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${currentItem === 'None' ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: pointer;">
+          <div style="width: 48px; height: 48px; border: 2px dashed #666; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.8rem;">
+            None
+          </div>
+          <div>
+            <strong style="color: #999;">Unequip</strong><br>
+            <span style="color: #666; font-size: 0.9rem;">Remove current equipment</span>
+          </div>
+        </div>
+        
+        <!-- Available items -->
+        ${bankItems.length === 0 
+          ? '<p style="color: #999; font-style: italic; text-align: center; padding: 2rem;">No items of this type available in bank</p>'
+          : bankItems.map(item => `
+            <div class="equipment-option ${item.item === currentItem ? 'selected' : ''}" 
+                 data-item="${item.item}"
+                 style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${item.item === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: pointer;">
+              <img src="assets/art/items/${item.item.toLowerCase().replace(/\s+/g, '_')}.png" 
+                   alt="${item.item}" 
+                   style="width: 48px; height: 48px; border-radius: 4px;"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
+                ${type.toUpperCase()}
+              </div>
+              <div>
+                <strong style="color: #4CAF50;">${item.item}</strong><br>
+                <span style="color: #999; font-size: 0.9rem;">Available: ${item.amount}</span>
+              </div>
+            </div>
+          `).join('')}
+        
+        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem;">
+          <button class="fantasy-button cancel-btn" style="flex: 1; max-width: 120px;">Cancel</button>
+          <button class="fantasy-button equip-btn" disabled style="flex: 1; max-width: 120px;">Equip</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    let selectedItem = null;
+    const equipBtn = modal.querySelector('.equip-btn');
+    const cancelBtn = modal.querySelector('.cancel-btn');
+    
+    // Handle option selection
+    modal.querySelectorAll('.equipment-option').forEach(option => {
+      option.addEventListener('click', () => {
+        // Remove previous selection
+        modal.querySelectorAll('.equipment-option').forEach(opt => {
+          opt.classList.remove('selected');
+          opt.style.border = '2px solid #444';
+        });
+        
+        // Select this option
+        option.classList.add('selected');
+        option.style.border = '2px solid #4CAF50';
+        
+        selectedItem = option.dataset.item;
+        equipBtn.disabled = false;
+        
+        // Update button text
+        if (selectedItem === 'none') {
+          equipBtn.textContent = 'Unequip';
+        } else {
+          equipBtn.textContent = 'Equip';
+        }
+      });
+    });
+    
+    // Handle equip button
+    equipBtn.addEventListener('click', async () => {
+      await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem);
+      modal.remove();
+      // Refresh the character display
+      await fetchAndRenderCharacters();
+    });
+    
+    // Handle cancel button
+    cancelBtn.addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+    
+  } catch (error) {
+    console.error('[CHAR_MGR] Error fetching equipment options:', error);
+    displayMessage('Failed to load equipment options. Please try again.');
+  }
+}
+
+async function equipItem(character, slot, itemName) {
+  try {
+    // Get current equipped items
+    const currentEquippedItems = character.equipped_items || {
+      equipped_weapon1: "none",
+      equipped_weapon2: "none", 
+      equipped_armor: "none",
+      equipped_helmet: "none",
+      equipped_trinket: "none",
+      equipped_boots: "none",
+      equipped_gloves: "none",
+      equipped_consumable: "none"
+    };
+    
+    // Update the specific slot
+    const updatedEquippedItems = {
+      ...currentEquippedItems,
+      [slot]: itemName === 'none' ? 'none' : itemName
+    };
+    
+    console.log('[CHAR_MGR] Updating equipment for character', character.id, ':', updatedEquippedItems);
+    
+    // Update character's equipped_items in database
+    const response = await _apiCall(`/api/supabase/rest/v1/characters?id=eq.${character.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        equipped_items: updatedEquippedItems
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to update equipment: ${response.status}`);
+    }
+    
+    console.log('[CHAR_MGR] Equipment updated successfully');
+    displayMessage(`Equipment updated successfully!`);
+    
+  } catch (error) {
+    console.error('[CHAR_MGR] Error updating equipment:', error);
+    displayMessage('Failed to update equipment. Please try again.');
+  }
 }
 
 function createParticles() {
