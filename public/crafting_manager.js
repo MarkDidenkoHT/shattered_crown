@@ -256,6 +256,11 @@ function renderCraftingModal() {
     <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 99vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
       
+      <!-- Adjustment counter at the top -->
+      <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666; display: none;">
+        Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}
+      </div>
+      
       <!-- Main crafting area -->
       <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 5px;">
         ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
@@ -287,10 +292,7 @@ function renderCraftingModal() {
         <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
       </div>
       
-      <!-- Adjustment counter and result display -->
-      <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
-        Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}
-      </div>
+      <!-- Result display (initially shows selection prompt) -->
       <div id="craft-result" style="margin-top:1rem;font-weight:bold;">Select 3 herbs to start crafting</div>
     </div>
   `;
@@ -300,7 +302,6 @@ function renderCraftingModal() {
   loadRecipesIntoModal(modal);
 }
 
-// Load recipes into the crafting modal
 async function loadRecipesIntoModal(modal) {
   try {
     const recipes = await fetchRecipes(craftingState.professionId);
@@ -312,10 +313,10 @@ async function loadRecipesIntoModal(modal) {
     }
     
     recipesContainer.innerHTML = recipes.map((recipe, idx) => `
-      <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center;">
+      <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
         <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
         <div style="font-size: 0.8rem; margin-top: 4px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
-        <div style="font-size: 0.7rem; color: #999; margin-top: 2px;">Tap for ingredients</div>
+        <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
     `).join('');
     
@@ -323,10 +324,21 @@ async function loadRecipesIntoModal(modal) {
     craftingState.recipes = recipes;
     
     // Add click handlers for recipes
-    recipesContainer.querySelectorAll('.recipe-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const recipeIdx = parseInt(card.dataset.recipe);
+    recipesContainer.querySelectorAll('.info-icon').forEach(icon => {
+      icon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const recipeIdx = parseInt(icon.dataset.recipe);
         showRecipeDetails(recipes[recipeIdx]);
+      });
+    });
+    
+    // Also allow clicking anywhere on the card
+    recipesContainer.querySelectorAll('.recipe-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('info-icon')) {
+          const recipeIdx = parseInt(card.dataset.recipe);
+          showRecipeDetails(recipes[recipeIdx]);
+        }
       });
     });
     
@@ -337,13 +349,11 @@ async function loadRecipesIntoModal(modal) {
   }
 }
 
-// Show recipe details popup
 function showRecipeDetails(recipe) {
   const detailsModal = document.createElement('div');
   detailsModal.className = 'custom-message-box';
-  detailsModal.style.zIndex = '10001'; // Above the main crafting modal
+  detailsModal.style.zIndex = '10001';
   
-  // Parse ingredients - handle both array and object formats
   let ingredientsList = '';
   if (Array.isArray(recipe.ingridients)) {
     ingredientsList = recipe.ingridients.join(', ');
@@ -379,7 +389,6 @@ function showRecipeDetails(recipe) {
     detailsModal.remove();
   });
   
-  // Close when clicking outside
   detailsModal.addEventListener('click', (e) => {
     if (e.target === detailsModal) {
       detailsModal.remove();
@@ -387,14 +396,12 @@ function showRecipeDetails(recipe) {
   });
 }
 
-// Show herb properties popup
 function showHerbProperties(herbIndex) {
   const herb = craftingState.availableHerbs[herbIndex];
   const propsModal = document.createElement('div');
   propsModal.className = 'custom-message-box';
   propsModal.style.zIndex = '10001';
   
-  // Parse properties - handle both array and object formats
   let propertiesDisplay = '';
   if (typeof herb.properties === 'object' && herb.properties !== null) {
     if (Array.isArray(herb.properties)) {
@@ -438,7 +445,6 @@ function showHerbProperties(herbIndex) {
     propsModal.remove();
   });
   
-  // Close when clicking outside
   propsModal.addEventListener('click', (e) => {
     if (e.target === propsModal) {
       propsModal.remove();
@@ -452,19 +458,17 @@ function setupModalEventListeners(modal) {
   const craftBtn = modal.querySelector('#craft-btn');
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
+  const adjustmentCounter = modal.querySelector('#adjustment-counter');
 
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
     craftingState = null;
   });
 
-  // Herb selection listeners
   herbs.forEach(herbEl => {
     herbEl.addEventListener('click', (e) => {
-      // Prevent triggering when clicking the info icon
       if (e.target.classList.contains('info-icon')) return;
-      
-      if (craftingState.isCraftingStarted) return; // Disable selecting herbs after crafting started
+      if (craftingState.isCraftingStarted) return;
       
       const idx = +herbEl.dataset.index;
       const herb = craftingState.availableHerbs[idx];
@@ -474,7 +478,6 @@ function setupModalEventListeners(modal) {
 
       craftingState.selectedHerbs[slotIdx] = herb;
       
-      // Update the herb slot visual
       const column = columns[slotIdx];
       const herbSlot = column.querySelector('.herb-slot');
       herbSlot.innerHTML = `
@@ -483,9 +486,8 @@ function setupModalEventListeners(modal) {
       herbSlot.style.border = '2px solid #4CAF50';
       herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
       
-      // Add click to remove functionality
       herbSlot.addEventListener('click', () => {
-        if (craftingState.isCraftingStarted) return; // Disable deselecting after crafting started
+        if (craftingState.isCraftingStarted) return;
         craftingState.selectedHerbs[slotIdx] = null;
         herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
         herbSlot.style.border = '2px dashed #aaa';
@@ -497,12 +499,13 @@ function setupModalEventListeners(modal) {
     });
   });
 
-  // Info icon listeners for herb properties
   modal.querySelectorAll('.info-icon').forEach(icon => {
     icon.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent herb selection
-      const herbIndex = parseInt(icon.dataset.herb);
-      showHerbProperties(herbIndex);
+      e.stopPropagation();
+      if (icon.dataset.herb) {
+        const herbIndex = parseInt(icon.dataset.herb);
+        showHerbProperties(herbIndex);
+      }
     });
   });
 
@@ -512,8 +515,8 @@ function setupModalEventListeners(modal) {
     craftBtn.style.display = 'none';
     finishBtn.style.display = 'block';
     finishBtn.disabled = false;
+    adjustmentCounter.style.display = 'block';
 
-    // Disable all herb selection
     herbs.forEach(herb => {
       herb.style.opacity = '0.5';
       herb.style.pointerEvents = 'none';
@@ -567,12 +570,10 @@ async function startSlotAnimation(resultDiv, modal) {
 
     craftingState.enrichedHerbs = reserveJson.herbs;
 
-    // Show arrows and populate bottles with properties
     craftingState.enrichedHerbs.forEach((herb, idx) => {
       const column = slotArea.children[idx];
       const props = Object.values(herb.properties);
       
-      // Enable adjustment arrows
       const upBtn = column.querySelector('.adjust-up');
       const downBtn = column.querySelector('.adjust-down');
       upBtn.disabled = false;
@@ -580,13 +581,11 @@ async function startSlotAnimation(resultDiv, modal) {
       downBtn.disabled = false;
       downBtn.style.opacity = '1';
       
-      // Populate property slots
       const propertySlots = column.querySelectorAll('.property-slot');
       propertySlots[0].textContent = props[0];
       propertySlots[1].textContent = props[1];
       propertySlots[2].textContent = props[2];
       
-      // Add some visual flair to show the bottle is "active"
       const bottle = column.querySelector('.properties-bottle');
       bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)';
       bottle.style.boxShadow = '0 0 10px rgba(139,69,19,0.5)';
@@ -596,7 +595,6 @@ async function startSlotAnimation(resultDiv, modal) {
     craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
     craftingState.currentAdjustedCol = null;
 
-    // Initialize adjustments as { [colIdx]: { up: 0, down: 0 } }
     craftingState.adjustments = {};
     for (let i = 0; i < 3; i++) {
       craftingState.adjustments[i] = { up: 0, down: 0 };
@@ -612,7 +610,6 @@ async function startSlotAnimation(resultDiv, modal) {
 
 async function patchAndSendCraftRequest(resultDiv) {
   try {
-    // Build the list of adjustments based on up/down counts
     const adjustments = [];
     for (const [colIdx, adj] of Object.entries(craftingState.adjustments || {})) {
       if (adj.up > 0) {
@@ -623,7 +620,6 @@ async function patchAndSendCraftRequest(resultDiv) {
       }
     }
 
-    // Normalize enriched_herbs properties to {a,b,c} object only
     function normalizeProps(input) {
       if (Array.isArray(input)) {
         const keys = ['a', 'b', 'c'];
@@ -730,16 +726,15 @@ function handleAdjustment(colIdx, direction, resultDiv) {
 
   const props = craftingState.randomizedProperties[colIdx];
 
-  // Ensure adjustments object exists for this colIdx
   if (!craftingState.adjustments[colIdx]) {
     craftingState.adjustments[colIdx] = { up: 0, down: 0 };
   }
 
   if (direction === 'up') {
-    props.push(props.shift()); // rotate up
+    props.push(props.shift());
     craftingState.adjustments[colIdx].up++;
   } else {
-    props.unshift(props.pop()); // rotate down
+    props.unshift(props.pop());
     craftingState.adjustments[colIdx].down++;
   }
 
@@ -763,10 +758,9 @@ function updateSlotColumn(colIdx) {
   propertySlots[1].textContent = props[1];
   propertySlots[2].textContent = props[2];
   
-  // Add a brief animation to show the change
   const bottle = column.querySelector('.properties-bottle');
   bottle.style.animation = 'none';
-  bottle.offsetHeight; // Trigger reflow
+  bottle.offsetHeight;
   bottle.style.animation = 'bottle-shake 0.3s ease-in-out';
 }
 
