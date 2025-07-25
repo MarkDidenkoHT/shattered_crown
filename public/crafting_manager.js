@@ -63,7 +63,7 @@ function renderProfessions(characters) {
       <p class="subtitle">Select a profession to view recipes or start crafting.</p>
     </div>
     <div class="selection-section">
-      <div class="selection-grid">
+      <div class="profession-selection-grid">
         ${characters
           .filter(c => c.professions?.name)
           .map(professionCardHTML)
