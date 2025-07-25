@@ -255,6 +255,9 @@ function renderCraftingModal() {
   modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 99vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${craftingState.professionName}</h2>
+            
+      <!-- Result display (initially shows selection prompt) -->
+      <div id="craft-result" style="margin-top: 4px;font-weight:bold;">Select 3 herbs to start crafting</div>
       
       <!-- Adjustment counter at the top -->
       <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666; display: none;">
@@ -291,9 +294,6 @@ function renderCraftingModal() {
         <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
         <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
       </div>
-      
-      <!-- Result display (initially shows selection prompt) -->
-      <div id="craft-result" style="margin-top:1rem;font-weight:bold;">Select 3 herbs to start crafting</div>
     </div>
   `;
   document.body.appendChild(modal);
