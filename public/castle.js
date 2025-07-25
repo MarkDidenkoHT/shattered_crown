@@ -452,7 +452,7 @@ function addCastleStyles() {
         }
 
         .custom-message-box .message-ok-btn {
-            padding: 0.8rem 1.5rem;
+            padding: 1rem;
             font-size: 1rem;
             cursor: pointer;
         }
