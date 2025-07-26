@@ -5,19 +5,16 @@ let _profile;
 let _playerCharacters = []; // Для хранения персонажей игрока
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
-    console.log('[CASTLE] --- Starting loadModule for Castle Scene ---');
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
 
     _profile = _getCurrentProfile();
     if (!_profile) {
-        console.error('[CASTLE] No profile found. Cannot proceed to castle.');
         displayMessage('User profile not found. Please log in again.');
         window.gameAuth.loadModule('login'); // Redirect to login if no profile
         return;
     }
-    console.log('[CASTLE] Profile loaded:', _profile);
 
     // Ensure the main container is ready for content
     _main.innerHTML = `
@@ -52,32 +49,22 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     await fetchPlayerCharacters(); // Fetch characters to display profession buildings
     renderCastleScene();
     setupInteractions();
-    
-    console.log('[CASTLE] --- loadModule for Castle Scene finished ---');
 }
 
 async function fetchPlayerCharacters() {
-    console.log(`[CASTLE] Fetching characters for player ID: ${_profile.id}...`);
     try {
         const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=id,race_id,class_id,sex,profession_id,professions(name)`);
         _playerCharacters = await response.json();
-        console.log('[CASTLE] Player characters fetched:', _playerCharacters);
     } catch (error) {
-        console.error('[CASTLE] Error fetching player characters:', error);
         displayMessage('Failed to load your champions. Please try again.');
     }
 }
 
 function renderCastleScene() {
-    console.log('[CASTLE] Rendering castle scene with dynamic elements.');
     const buildingOverlay = _main.querySelector('.building-overlay');
 
-    // Clear existing dynamic profession buildings
-    buildingOverlay.querySelectorAll('.profession-hotspot').forEach(el => el.remove());
 
-    // Add profession-specific building hotspots based on player characters
-    // The positions here are illustrative and should be adjusted based on your '132.jpg'
-    // You'll need to map profession names to specific coordinates on the image.
+    buildingOverlay.querySelectorAll('.profession-hotspot').forEach(el => el.remove());
     const professionPositions = {
         'blacksmith': { x: '50%', y: '60%', width: '10%', height: '15%' }, // Example
         'alchemist': { x: '30%', y: '55%', width: '12%', height: '18%' }, // Example
@@ -93,41 +80,25 @@ function renderCastleScene() {
                 professionHotspot.className = `building-hotspot profession-hotspot ${professionName}-hotspot`;
                 professionHotspot.dataset.building = professionName;
                 professionHotspot.dataset.characterId = character.id; // Link to specific character
-                
-                // Set approximate position and size for the hotspot
-                // These values need to be fine-tuned based on your specific '132.jpg'
-                // and where you want each profession building to be interactable.
                 professionHotspot.style.left = pos.x;
                 professionHotspot.style.top = pos.y;
                 professionHotspot.style.width = pos.width;
                 professionHotspot.style.height = pos.height;
-                
                 buildingOverlay.appendChild(professionHotspot);
-                console.log(`[CASTLE] Added hotspot for profession: ${professionName}`);
             }
         }
     });
-
-    // We can also dynamically load an image for the profession building if needed
-    // For now, the image is static background of the .castle-image
 }
 
 function setupInteractions() {
-    console.log('[CASTLE] Setting up interactions...');
-
     // Top Right Buttons
     _main.querySelector('.settings-btn').addEventListener('click', () => {
-        console.log('[CASTLE_INTERACTION] Settings button clicked.');
         displayMessage('Settings functionality coming soon!');
         // window.gameAuth.loadModule('settings'); // Example of loading another module
     });
 
     _main.querySelector('.logout-btn').addEventListener('click', () => {
-        console.log('[CASTLE_INTERACTION] Logout button clicked.');
         displayMessage('Logging out...');
-        // Implement actual logout logic here
-        // window.gameAuth.logout(); // Assuming a logout function exists
-        // window.gameAuth.loadModule('login'); 
     });
 
     // Bottom Navigation Buttons
@@ -188,23 +159,13 @@ function setupInteractions() {
                 }
             }
             displayMessage(message);
-            // Implement specific logic for each building click
-            // if (building === 'inn') {
-            //     window.gameAuth.loadModule('inn');
-            // } else if (building === 'altar') {
-            //     window.gameAuth.loadModule('altar_building_scene');
-            // } else if (building === 'blacksmith') {
-            //     window.gameAuth.loadModule('blacksmith_workshop');
-            // }
         });
     });
 }
 
 function createParticles() {
-    console.log('[PARTICLES] Creating particles for castle...');
     const particlesContainer = _main.querySelector('.particles');
     if (!particlesContainer) {
-        console.warn('[PARTICLES] Particles container not found.');
         return;
     }
 
@@ -221,11 +182,9 @@ function createParticles() {
         particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
         particlesContainer.appendChild(particle);
     }
-    console.log('[PARTICLES] Particles created and appended.');
 }
 
 function displayMessage(message) {
-    console.log(`[MESSAGE] Displaying message: "${message}"`);
     const messageBox = document.createElement('div');
     messageBox.className = 'custom-message-box';
     messageBox.innerHTML = `
@@ -243,10 +202,8 @@ function displayMessage(message) {
 }
 
 function addCastleStyles() {
-    console.log('[STYLES] Adding castle scene styles...');
     const styleId = 'castle-styles';
     if (document.getElementById(styleId)) {
-        console.log('[STYLES] Styles already present, skipping re-addition.');
         return;
     }
 
@@ -507,5 +464,4 @@ function addCastleStyles() {
         }
     `;
     document.head.appendChild(style);
-    console.log('[STYLES] Castle scene styles appended to document head.');
 }
