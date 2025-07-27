@@ -14,8 +14,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentS
   _getCurrentProfile = getCurrentProfile;
   _getCurrentSession = getCurrentSession;
 
-  _profile = _getCurrentProfile();
-  _session = getCurrentSession();
+   _profile = _getCurrentProfile();
+   _session = currentSession || getCurrentSession();
   console.log('[DEBUG] Profile:', _profile);
   console.log('[DEBUG] Session:', _session);
 
@@ -198,12 +198,15 @@ async function startCraftingSession(professionId, professionName) {
     professionName,
     availableHerbs: enriched,
     selectedHerbs: [null, null, null],
-    sessionId: null,
-    adjustmentsRemaining: 3,
-    enrichedHerbs: null,
-    recipes: null,
+    randomizedProperties: [[], [], []],
+    originalProperties: [[], [], []],
+    currentAdjustedCol: null,
     isCraftingStarted: false,
-    result: null
+    result: null,
+    adjustmentCount: 0,
+    maxAdjustments: 3,
+    enrichedHerbs: null,
+    recipes: null
   };
 
   renderCraftingModal();
@@ -277,7 +280,7 @@ function renderCraftingModal() {
       
       <!-- Adjustment counter at the top -->
       <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666; display: none;">
-        Adjustments: 0/3
+        Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}
       </div>
       
       <!-- Main crafting area -->
@@ -287,7 +290,7 @@ function renderCraftingModal() {
       
       <!-- Bank row (horizontal scrollable) -->
       <h3>Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1); scrollbar-width: none;">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5pxrem; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1); scrollbar-width: none;">
         ${craftingState.availableHerbs.map((herb, idx) => `
           <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(255,255,255,0.05);">
             <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
@@ -577,42 +580,41 @@ function animateBottleFill(column, herb) {
   liquid.style.background = `linear-gradient(to bottom, ${liquidColor}60 0%, ${liquidColor}80 100%)`;
   liquid.style.opacity = '1';
   
-  // Animate liquid rising (using vanilla JS instead of GSAP)
-  liquid.style.height = '0';
-  liquid.style.transition = 'height 1.2s ease-out';
-  setTimeout(() => {
-    liquid.style.height = '85%';
-  }, 50);
-  
-  setTimeout(() => {
-    // Show surface shimmer
-    surface.style.opacity = '1';
-    surface.style.transition = 'transform 2s ease-in-out';
-    
-    // Animate shimmer movement
-    function animateShimmer() {
-      surface.style.transform = 'translateX(100%)';
-      setTimeout(() => {
-        surface.style.transform = 'translateX(-100%)';
-      }, 2000);
+  // Animate liquid rising
+  gsap.set(liquid, { height: 0 });
+  gsap.to(liquid, {
+    height: '85%',
+    duration: 1.2,
+    ease: "power2.out",
+    onComplete: () => {
+      // Show surface shimmer
+      gsap.set(surface, { opacity: 1 });
+      gsap.to(surface, {
+        x: '100%',
+        duration: 2,
+        repeat: -1,
+        ease: "sine.inOut"
+      });
     }
-    animateShimmer();
-    setInterval(animateShimmer, 4000);
-  }, 1200);
+  });
   
   // Bottle gentle glow effect
-  bottle.style.transition = 'box-shadow 0.8s ease-out';
-  bottle.style.boxShadow = `0 0 15px ${liquidColor}40`;
+  gsap.to(bottle, {
+    boxShadow: `0 0 15px ${liquidColor}40`,
+    duration: 0.8,
+    ease: "power2.out"
+  });
   
   // Cork slight bounce when liquid fills
   const cork = column.querySelector('.bottle-cork');
-  setTimeout(() => {
-    cork.style.transition = 'transform 0.3s ease-out';
-    cork.style.transform = 'translateY(-2px)';
-    setTimeout(() => {
-      cork.style.transform = 'translateY(0)';
-    }, 300);
-  }, 800);
+  gsap.to(cork, {
+    y: -2,
+    duration: 0.3,
+    ease: "bounce.out",
+    delay: 0.8,
+    yoyo: true,
+    repeat: 1
+  });
 }
 
 // Animate bottle draining
@@ -622,20 +624,25 @@ function animateBottleDrain(column) {
   const bottle = column.querySelector('.properties-bottle');
   
   // Stop surface animation
-  surface.style.opacity = '0';
-  surface.style.transition = 'opacity 0.3s ease-out';
+  gsap.killTweensOf(surface);
+  gsap.set(surface, { opacity: 0 });
   
   // Animate liquid draining
-  liquid.style.transition = 'height 0.8s ease-in';
-  liquid.style.height = '0';
-  
-  setTimeout(() => {
-    liquid.style.opacity = '0';
-  }, 800);
+  gsap.to(liquid, {
+    height: 0,
+    duration: 0.8,
+    ease: "power2.in",
+    onComplete: () => {
+      liquid.style.opacity = '0';
+    }
+  });
   
   // Remove bottle glow
-  bottle.style.transition = 'box-shadow 0.6s ease-out';
-  bottle.style.boxShadow = 'none';
+  gsap.to(bottle, {
+    boxShadow: 'none',
+    duration: 0.6,
+    ease: "power2.out"
+  });
 }
 
 // Create bubbling effect for active bottles
@@ -653,25 +660,31 @@ function createBubblingEffect(column) {
       bottom: 0;
       left: ${Math.random() * 30 + 5}px;
       pointer-events: none;
-      transition: transform ${Math.random() * 2 + 1.5}s ease-out, opacity ${Math.random() * 2 + 1.5}s ease-out;
-      transform: translateY(0);
-      opacity: 1;
     `;
     
     bubbleContainer.appendChild(bubble);
     
     // Animate bubble rising
-    setTimeout(() => {
-      bubble.style.transform = `translateY(-80px) translateX(${Math.random() * 10 - 5}px)`;
-      bubble.style.opacity = '0';
-    }, 50);
-    
-    // Remove bubble after animation
-    setTimeout(() => {
-      if (bubble.parentNode) {
-        bubble.remove();
+    gsap.to(bubble, {
+      y: -80,
+      opacity: 0,
+      duration: Math.random() * 2 + 1.5,
+      ease: "power1.out",
+      onComplete: () => {
+        if (bubble.parentNode) {
+          bubble.remove();
+        }
       }
-    }, (Math.random() * 2 + 1.5) * 1000 + 100);
+    });
+    
+    // Add slight horizontal movement
+    gsap.to(bubble, {
+      x: `+=${Math.random() * 10 - 5}`,
+      duration: Math.random() * 1 + 0.5,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1
+    });
   }
   
   // Create bubbles at intervals
@@ -686,16 +699,15 @@ function createBubblingEffect(column) {
   return bubbleInterval;
 }
 
-// Updated crafting animation with session-based server communication
+// Enhanced slot animation with bubbling
 async function startSlotAnimation(resultDiv, modal) {
   const slotArea = modal.querySelector('#crafting-slots');
-  resultDiv.textContent = 'Preparing herbs for crafting...';
+  resultDiv.textContent = 'Verifying ingridients...';
 
   const selectedHerbNames = craftingState.selectedHerbs.map(h => h.name);
 
   try {
-    // Start crafting session - server randomizes and stores state
-    const startRes = await fetch('/functions/v1/craft_alchemy', {
+    const reserveRes = await fetch('/functions/v1/reserve_ingredients', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -705,25 +717,19 @@ async function startSlotAnimation(resultDiv, modal) {
         player_id: _profile.id,
         profession_id: craftingState.professionId,
         selected_ingredients: selectedHerbNames,
-        action: 'start_craft'
       }),
     });
 
-    const startJson = await startRes.json();
-    
-    if (!startRes.ok) {
-      console.error('[CRAFTING] Session start failed:', startJson);
-      resultDiv.textContent = `Failed to start crafting: ${startJson?.error || 'Unknown error'}`;
+    const reserveJson = await reserveRes.json();
+    if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
+      console.error('[CRAFTING] Reservation failed:', reserveJson);
+      resultDiv.textContent = `Herb verification failed: ${reserveJson?.error || 'Unknown error'}`;
       return;
     }
 
-    // Store the SESSION ID - this is how server tracks our state
-    craftingState.sessionId = startJson.session_id;
-    craftingState.adjustmentsRemaining = startJson.adjustments_remaining;
-    craftingState.enrichedHerbs = startJson.herbs;
+    craftingState.enrichedHerbs = reserveJson.herbs;
 
-    // Display the randomized properties in UI
-    startJson.herbs.forEach((herb, idx) => {
+    craftingState.enrichedHerbs.forEach((herb, idx) => {
       const column = slotArea.children[idx];
       const props = Object.values(herb.properties);
       
@@ -742,133 +748,88 @@ async function startSlotAnimation(resultDiv, modal) {
       const bottle = column.querySelector('.properties-bottle');
       
       // Enhanced bottle activation effect
-      bottle.style.transition = 'background 0.8s ease-out';
-      bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)';
+      gsap.to(bottle, {
+        background: 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)',
+        duration: 0.8,
+        ease: "power2.out"
+      });
       
       // Start bubbling effect
       createBubblingEffect(column);
       
       // Animate property slots appearing
-      propertySlots.forEach((slot, slotIdx) => {
-        slot.style.transform = 'scale(0)';
-        slot.style.opacity = '0';
-        slot.style.transition = `transform 0.6s ease-out, opacity 0.6s ease-out`;
-        
-        setTimeout(() => {
-          slot.style.transform = 'scale(1)';
-          slot.style.opacity = '1';
-        }, 300 + (slotIdx * 100));
-      });
-    });
-
-    // Enable secure adjustment handling
-    enableSecureAdjustment(slotArea, resultDiv);
-    resultDiv.textContent = `Herbs prepared! You have ${craftingState.adjustmentsRemaining} adjustments remaining.`;
-    
-  } catch (err) {
-    console.error('[CRAFTING] Error during herb preparation:', err);
-    resultDiv.textContent = 'Server error while preparing herbs.';
-  }
-}
-
-// Secure adjustment handling - each adjustment is validated server-side
-function enableSecureAdjustment(slotArea, resultDiv) {
-  slotArea.querySelectorAll('.adjust-up').forEach(btn =>
-    btn.addEventListener('click', () => handleSecureAdjustment(+btn.dataset.col, 'up', resultDiv))
-  );
-  slotArea.querySelectorAll('.adjust-down').forEach(btn =>
-    btn.addEventListener('click', () => handleSecureAdjustment(+btn.dataset.col, 'down', resultDiv))
-  );
-}
-
-async function handleSecureAdjustment(colIdx, direction, resultDiv) {
-  if (craftingState.adjustmentsRemaining <= 0) {
-    resultDiv.textContent = 'No adjustments remaining!';
-    return;
-  }
-
-  try {
-    const adjustRes = await fetch('/functions/v1/craft_alchemy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_session.access_token}`,
-      },
-      body: JSON.stringify({
-        player_id: _profile.id,
-        session_id: craftingState.sessionId,
-        action: 'apply_adjustment',
-        adjustment: {
-          bottle: colIdx,
-          direction: direction
+      gsap.fromTo(propertySlots, 
+        { scale: 0, opacity: 0 },
+        { 
+          scale: 1, 
+          opacity: 1, 
+          duration: 0.6, 
+          stagger: 0.1, 
+          ease: "back.out(1.7)",
+          delay: 0.3
         }
-      }),
+      );
     });
 
-    const adjustJson = await adjustRes.json();
+    craftingState.randomizedProperties = craftingState.enrichedHerbs.map(h => Object.values(h.properties));
+    craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
+    craftingState.currentAdjustedCol = null;
 
-    if (!adjustRes.ok) {
-      console.error('[CRAFTING] Adjustment failed:', adjustJson);
-      resultDiv.textContent = `Adjustment failed: ${adjustJson?.error || 'Unknown error'}`;
-      return;
+    craftingState.adjustments = {};
+    for (let i = 0; i < 3; i++) {
+      craftingState.adjustments[i] = { up: 0, down: 0 };
     }
 
-    // Update UI with SERVER'S response (not local calculation!)
-    const { updated_herb, adjustments_remaining } = adjustJson;
-    craftingState.adjustmentsRemaining = adjustments_remaining;
-
-    // Update the specific bottle that was adjusted
-    const column = document.querySelector('#crafting-slots').children[updated_herb.bottle_index];
-    const propertySlots = column.querySelectorAll('.property-slot');
-    const props = Object.values(updated_herb.properties);
-    
-    // Animate property changes
-    propertySlots.forEach((slot, idx) => {
-      slot.style.transition = 'transform 0.2s ease-out';
-      slot.style.transform = 'scale(1.1)';
-      
-      setTimeout(() => {
-        slot.textContent = props[idx];
-        slot.style.transform = 'scale(1)';
-      }, 100);
-    });
-
-    // Update adjustment counter
-    updateAdjustmentCounter();
-
-    if (craftingState.adjustmentsRemaining <= 0) {
-      disableAdjustmentButtons();
-      resultDiv.textContent = 'All adjustments used. Ready to finish crafting!';
-    } else {
-      resultDiv.textContent = `Adjustment applied! ${craftingState.adjustmentsRemaining} remaining.`;
-    }
-
-    // Enhanced bottle effects
-    const bottle = column.querySelector('.properties-bottle');
-    bottle.style.transition = 'transform 0.1s ease-in-out';
-    let shakeCount = 0;
-    const shakeInterval = setInterval(() => {
-      bottle.style.transform = shakeCount % 2 === 0 ? 'translateX(2px)' : 'translateX(-2px)';
-      shakeCount++;
-      if (shakeCount >= 6) {
-        clearInterval(shakeInterval);
-        bottle.style.transform = 'translateX(0)';
-      }
-    }, 100);
-
+    enableAdjustment(slotArea, resultDiv);
+    resultDiv.textContent = 'You may now apply adjustments.';
   } catch (err) {
-    console.error('[CRAFTING] Adjustment error:', err);
-    resultDiv.textContent = 'Failed to apply adjustment. Try again.';
+    console.error('[CRAFTING] Error during reservation:', err);
+    resultDiv.textContent = 'Server error while verifying ingridients.';
   }
 }
 
-// Updated finish crafting function with session-based completion
 async function patchAndSendCraftRequest(resultDiv) {
   try {
-    if (!craftingState.sessionId) {
-      resultDiv.textContent = 'Invalid crafting session!';
-      return;
+    const adjustments = [];
+    for (const [colIdx, adj] of Object.entries(craftingState.adjustments || {})) {
+      if (adj.up > 0) {
+        adjustments.push({ bottle: Number(colIdx), direction: 'up', count: adj.up });
+      }
+      if (adj.down > 0) {
+        adjustments.push({ bottle: Number(colIdx), direction: 'down', count: adj.down });
+      }
     }
+
+    function normalizeProps(input) {
+      if (Array.isArray(input)) {
+        const keys = ['a', 'b', 'c'];
+        const result = {};
+        for (let i = 0; i < keys.length; i++) {
+          result[keys[i]] = input[i] ?? 0;
+        }
+        return result;
+      }
+      return {
+        a: input.a ?? 0,
+        b: input.b ?? 0,
+        c: input.c ?? 0
+      };
+    }
+
+    const normalizedHerbs = (craftingState.enrichedHerbs || []).map(h => ({
+      ...h,
+      properties: normalizeProps(h.properties)
+    }));
+
+    const payload = {
+      player_id: _profile.id,
+      profession_id: craftingState.professionId,
+      selected_ingredients: craftingState.selectedHerbs.map(h => h.name),
+      adjustments,
+      enriched_herbs: normalizedHerbs
+    };
+
+    console.log('[CRAFTING] Sending craft request payload:', payload);
 
     const res = await fetch('/functions/v1/craft_alchemy', {
       method: 'POST',
@@ -876,11 +837,7 @@ async function patchAndSendCraftRequest(resultDiv) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${_session.access_token}`
       },
-      body: JSON.stringify({
-        player_id: _profile.id,
-        session_id: craftingState.sessionId,
-        action: 'finish_craft'
-      })
+      body: JSON.stringify(payload)
     });
 
     const json = await res.json();
@@ -889,6 +846,7 @@ async function patchAndSendCraftRequest(resultDiv) {
     const claimBtn = document.querySelector('#claim-btn');
     const finishBtn = document.querySelector('#finish-btn');
     const craftBtn = document.querySelector('#craft-btn');
+    const closeBtn = document.querySelector('.message-ok-btn');
 
     if (json.success) {
       craftingState.result = json.crafted.name;
@@ -902,11 +860,12 @@ async function patchAndSendCraftRequest(resultDiv) {
         claimBtn.style.display = 'block';
         claimBtn.disabled = false;
         
+        // Remove any existing event listeners and add new one
         const newClaimBtn = claimBtn.cloneNode(true);
         claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
         
         newClaimBtn.addEventListener('click', () => {
-          displayMessage(`${json.crafted.name} has been added to your bank!`);
+          displayMessage(`${json.crafted.name} added to your bank (server-side)`);
           document.querySelector('.custom-message-box')?.remove();
           craftingState = null;
         });
@@ -914,18 +873,20 @@ async function patchAndSendCraftRequest(resultDiv) {
     } else {
       craftingState.result = 'Failed';
       resultDiv.innerHTML = `
-        <span style="color:red;">❌ Failed Mixture — ingredients were consumed.</span>
+        <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span>
       `;
 
       // Hide finish and claim buttons, show craft again option
       if (finishBtn) finishBtn.style.display = 'none';
       if (claimBtn) claimBtn.style.display = 'none';
       
+      // Transform craft button into "Craft Again" button
       if (craftBtn) {
         craftBtn.style.display = 'block';
         craftBtn.textContent = 'Craft Again';
         craftBtn.disabled = false;
         
+        // Remove any existing event listeners and add new one
         const newCraftBtn = craftBtn.cloneNode(true);
         craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
         
@@ -937,6 +898,8 @@ async function patchAndSendCraftRequest(resultDiv) {
     }
   } catch (err) {
     console.error('[CRAFTING] Server error:', err);
+    
+    // On error, show error message and enable craft again
     resultDiv.innerHTML = '<span style="color:red;">❌ Crafting failed. Try again later.</span>';
     
     const finishBtn = document.querySelector('#finish-btn');
@@ -951,6 +914,7 @@ async function patchAndSendCraftRequest(resultDiv) {
       craftBtn.textContent = 'Try Again';
       craftBtn.disabled = false;
       
+      // Remove any existing event listeners and add new one
       const newCraftBtn = craftBtn.cloneNode(true);
       craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
       
@@ -962,12 +926,127 @@ async function patchAndSendCraftRequest(resultDiv) {
   }
 }
 
+function enableAdjustment(slotArea, resultDiv) {
+  slotArea.querySelectorAll('.adjust-up').forEach(btn =>
+    btn.addEventListener('click', () => handleAdjustment(+btn.dataset.col, 'up', resultDiv))
+  );
+  slotArea.querySelectorAll('.adjust-down').forEach(btn =>
+    btn.addEventListener('click', () => handleAdjustment(+btn.dataset.col, 'down', resultDiv))
+  );
+}
+
+function handleAdjustment(colIdx, direction, resultDiv) {
+  if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
+    resultDiv.textContent = `No more adjustments available (${craftingState.maxAdjustments}/${craftingState.maxAdjustments}).`;
+    return;
+  }
+
+  const props = craftingState.randomizedProperties[colIdx];
+
+  if (!craftingState.adjustments[colIdx]) {
+    craftingState.adjustments[colIdx] = { up: 0, down: 0 };
+  }
+
+  if (direction === 'up') {
+    props.push(props.shift());
+    craftingState.adjustments[colIdx].up++;
+  } else {
+    props.unshift(props.pop());
+    craftingState.adjustments[colIdx].down++;
+  }
+
+  updateSlotColumn(colIdx);
+
+  craftingState.adjustmentCount++;
+  updateAdjustmentCounter();
+
+  if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
+    disableAdjustmentButtons();
+  }
+}
+
+// Enhanced adjustment animation
+function updateSlotColumn(colIdx) {
+  const props = craftingState.randomizedProperties[colIdx];
+  const slotArea = document.querySelector('#crafting-slots');
+  const column = slotArea.children[colIdx];
+  const propertySlots = column.querySelectorAll('.property-slot');
+  
+  // Animate property changes
+  gsap.to(propertySlots, {
+    scale: 1.1,
+    duration: 0.2,
+    ease: "power2.out",
+    yoyo: true,
+    repeat: 1,
+    onComplete: () => {
+      propertySlots[0].textContent = props[0];
+      propertySlots[1].textContent = props[1];
+      propertySlots[2].textContent = props[2];
+    }
+  });
+  
+  // Bottle shake effect
+  const bottle = column.querySelector('.properties-bottle');
+  gsap.to(bottle, {
+    x: '+=2',
+    duration: 0.1,
+    ease: "power2.inOut",
+    yoyo: true,
+    repeat: 5
+  });
+  
+  // Cork bounce during adjustment
+  const cork = column.querySelector('.bottle-cork');
+  gsap.to(cork, {
+    y: -3,
+    duration: 0.2,
+    ease: "bounce.out",
+    yoyo: true,
+    repeat: 1
+  });
+  
+  // Intensify bubbling temporarily
+  const bubbleContainer = column.querySelector('.bubble-container');
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => createSingleBubble(bubbleContainer), i * 100);
+  }
+}
+
+// Helper function to create a single bubble
+function createSingleBubble(container) {
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `
+    position: absolute;
+    width: ${Math.random() * 5 + 3}px;
+    height: ${Math.random() * 5 + 3}px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    bottom: 0;
+    left: ${Math.random() * 30 + 5}px;
+    pointer-events: none;
+  `;
+  
+  container.appendChild(bubble);
+  
+  gsap.to(bubble, {
+    y: -90,
+    opacity: 0,
+    duration: Math.random() * 1.5 + 1,
+    ease: "power1.out",
+    onComplete: () => {
+      if (bubble.parentNode) {
+        bubble.remove();
+      }
+    }
+  });
+}
+
 function updateAdjustmentCounter() {
   const counter = document.querySelector('#adjustment-counter');
   if (counter) {
-    const used = 3 - craftingState.adjustmentsRemaining;
-    counter.textContent = `Adjustments: ${used}/3`;
-    if (craftingState.adjustmentsRemaining <= 0) {
+    counter.textContent = `Adjustments: ${craftingState.adjustmentCount}/${craftingState.maxAdjustments}`;
+    if (craftingState.adjustmentCount >= craftingState.maxAdjustments) {
       counter.style.color = '#ff6b6b';
     }
   }
@@ -1005,6 +1084,14 @@ function getHerbColor(herbName) {
   );
   
   return herbKey ? colors[herbKey] : colors.default;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function createParticles() {
@@ -1061,14 +1148,6 @@ function injectBottleAnimationsCSS() {
 
     .liquid-surface {
       will-change: transform;
-    }
-    
-    .property-slot {
-      transition: transform 0.2s ease-out, opacity 0.6s ease-out;
-    }
-    
-    .adjust-up, .adjust-down {
-      transition: opacity 0.3s ease-out;
     }
   `;
 
