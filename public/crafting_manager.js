@@ -35,6 +35,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentS
 
   createParticles();
   await fetchAndRenderProfessions();
+  injectBottleAnimationsCSS();
   console.log('[CRAFTING] --- loadModule for Crafting Manager finished ---');
 }
 
@@ -211,6 +212,7 @@ async function startCraftingSession(professionId, professionName) {
   renderCraftingModal();
 }
 
+// Enhanced bottle HTML with liquid and bubble elements
 function createCraftingSlotHTML(slotIndex) {
   return `
     <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
@@ -224,19 +226,36 @@ function createCraftingSlotHTML(slotIndex) {
         <button class="fantasy-button adjust-up" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>↑</button>
       </div>
       
-      <!-- Properties Bottle -->
-      <div class="properties-bottle" style="width: 60px; height: 120px; border: 2px solid #8B4513; border-radius: 10px 10px 20px 20px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative;">
-        <!-- Bottle Cork/Top -->
-        <div style="position: absolute; top: -8px; width: 20px; height: 16px; background: #8B4513; border-radius: 4px 4px 0 0;"></div>
+      <!-- Enhanced Properties Bottle -->
+      <div class="properties-bottle" style="width: 60px; height: 120px; border: 2px solid #8B4513; border-radius: 10px 10px 20px 20px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative; overflow: hidden;">
+        
+        <!-- Enhanced Bottle Cork/Top -->
+        <div class="bottle-cork" style="position: absolute; top: -12px; width: 24px; height: 20px; background: linear-gradient(135deg, #D2691E 0%, #8B4513 50%, #654321 100%); border-radius: 6px 6px 2px 2px; border: 1px solid #654321; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 10;">
+          <!-- Cork texture lines -->
+          <div style="position: absolute; top: 3px; left: 50%; transform: translateX(-50%); width: 16px; height: 1px; background: rgba(0,0,0,0.2);"></div>
+          <div style="position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 12px; height: 1px; background: rgba(0,0,0,0.2);"></div>
+          <div style="position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 14px; height: 1px; background: rgba(0,0,0,0.2);"></div>
+        </div>
+        
+        <!-- Liquid Container -->
+        <div class="bottle-liquid" style="position: absolute; bottom: 0; left: 2px; right: 2px; height: 0; background: linear-gradient(to bottom, rgba(76,175,80,0.6) 0%, rgba(76,175,80,0.8) 100%); border-radius: 0 0 16px 16px; transition: none; opacity: 0;">
+          <!-- Liquid surface shimmer -->
+          <div class="liquid-surface" style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%); opacity: 0;"></div>
+        </div>
+        
+        <!-- Bubble Container -->
+        <div class="bubble-container" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 80px; pointer-events: none; overflow: hidden;">
+          <!-- Bubbles will be dynamically created here -->
+        </div>
         
         <!-- Property Slots -->
-        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a;">
+        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a; z-index: 5; position: relative;">
           -
         </div>
-        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a;">
+        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a; z-index: 5; position: relative;">
           -
         </div>
-        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a;">
+        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a; z-index: 5; position: relative;">
           -
         </div>
       </div>
@@ -452,6 +471,7 @@ function showHerbProperties(herbIndex) {
   });
 }
 
+// Enhanced herb placement with liquid animation
 function setupModalEventListeners(modal) {
   const columns = modal.querySelectorAll('.crafting-column');
   const herbs = modal.querySelectorAll('.herb');
@@ -486,12 +506,18 @@ function setupModalEventListeners(modal) {
       herbSlot.style.border = '2px solid #4CAF50';
       herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
       
+      // Animate liquid filling the bottle
+      animateBottleFill(column, herb);
+      
       herbSlot.addEventListener('click', () => {
         if (craftingState.isCraftingStarted) return;
         craftingState.selectedHerbs[slotIdx] = null;
         herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
         herbSlot.style.border = '2px dashed #aaa';
         herbSlot.style.background = 'rgba(0,0,0,0.2)';
+        
+        // Animate liquid draining
+        animateBottleDrain(column);
         updateCraftButtonState();
       });
       
@@ -541,6 +567,139 @@ function setupModalEventListeners(modal) {
   }
 }
 
+// Animate bottle filling with liquid
+function animateBottleFill(column, herb) {
+  const liquid = column.querySelector('.bottle-liquid');
+  const surface = column.querySelector('.liquid-surface');
+  const bottle = column.querySelector('.properties-bottle');
+  
+  // Get herb color based on name or use default
+  const liquidColor = getHerbColor(herb.name);
+  
+  // Set liquid color
+  liquid.style.background = `linear-gradient(to bottom, ${liquidColor}60 0%, ${liquidColor}80 100%)`;
+  liquid.style.opacity = '1';
+  
+  // Animate liquid rising
+  gsap.set(liquid, { height: 0 });
+  gsap.to(liquid, {
+    height: '85%',
+    duration: 1.2,
+    ease: "power2.out",
+    onComplete: () => {
+      // Show surface shimmer
+      gsap.set(surface, { opacity: 1 });
+      gsap.to(surface, {
+        x: '100%',
+        duration: 2,
+        repeat: -1,
+        ease: "sine.inOut"
+      });
+    }
+  });
+  
+  // Bottle gentle glow effect
+  gsap.to(bottle, {
+    boxShadow: `0 0 15px ${liquidColor}40`,
+    duration: 0.8,
+    ease: "power2.out"
+  });
+  
+  // Cork slight bounce when liquid fills
+  const cork = column.querySelector('.bottle-cork');
+  gsap.to(cork, {
+    y: -2,
+    duration: 0.3,
+    ease: "bounce.out",
+    delay: 0.8,
+    yoyo: true,
+    repeat: 1
+  });
+}
+
+// Animate bottle draining
+function animateBottleDrain(column) {
+  const liquid = column.querySelector('.bottle-liquid');
+  const surface = column.querySelector('.liquid-surface');
+  const bottle = column.querySelector('.properties-bottle');
+  
+  // Stop surface animation
+  gsap.killTweensOf(surface);
+  gsap.set(surface, { opacity: 0 });
+  
+  // Animate liquid draining
+  gsap.to(liquid, {
+    height: 0,
+    duration: 0.8,
+    ease: "power2.in",
+    onComplete: () => {
+      liquid.style.opacity = '0';
+    }
+  });
+  
+  // Remove bottle glow
+  gsap.to(bottle, {
+    boxShadow: 'none',
+    duration: 0.6,
+    ease: "power2.out"
+  });
+}
+
+// Create bubbling effect for active bottles
+function createBubblingEffect(column) {
+  const bubbleContainer = column.querySelector('.bubble-container');
+  
+  function createBubble() {
+    const bubble = document.createElement('div');
+    bubble.style.cssText = `
+      position: absolute;
+      width: ${Math.random() * 4 + 2}px;
+      height: ${Math.random() * 4 + 2}px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 50%;
+      bottom: 0;
+      left: ${Math.random() * 30 + 5}px;
+      pointer-events: none;
+    `;
+    
+    bubbleContainer.appendChild(bubble);
+    
+    // Animate bubble rising
+    gsap.to(bubble, {
+      y: -80,
+      opacity: 0,
+      duration: Math.random() * 2 + 1.5,
+      ease: "power1.out",
+      onComplete: () => {
+        if (bubble.parentNode) {
+          bubble.remove();
+        }
+      }
+    });
+    
+    // Add slight horizontal movement
+    gsap.to(bubble, {
+      x: `+=${Math.random() * 10 - 5}`,
+      duration: Math.random() * 1 + 0.5,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1
+    });
+  }
+  
+  // Create bubbles at intervals
+  const bubbleInterval = setInterval(() => {
+    if (document.contains(column)) {
+      createBubble();
+    } else {
+      clearInterval(bubbleInterval);
+    }
+  }, Math.random() * 800 + 400);
+  
+  return bubbleInterval;
+}
+
+// Enhanced slot animation with bubbling
 async function startSlotAnimation(resultDiv, modal) {
   const slotArea = modal.querySelector('#crafting-slots');
   resultDiv.textContent = 'Verifying ingridients...';
@@ -587,8 +746,29 @@ async function startSlotAnimation(resultDiv, modal) {
       propertySlots[2].textContent = props[2];
       
       const bottle = column.querySelector('.properties-bottle');
-      bottle.style.background = 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)';
-      bottle.style.boxShadow = '0 0 10px rgba(139,69,19,0.5)';
+      
+      // Enhanced bottle activation effect
+      gsap.to(bottle, {
+        background: 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)',
+        duration: 0.8,
+        ease: "power2.out"
+      });
+      
+      // Start bubbling effect
+      createBubblingEffect(column);
+      
+      // Animate property slots appearing
+      gsap.fromTo(propertySlots, 
+        { scale: 0, opacity: 0 },
+        { 
+          scale: 1, 
+          opacity: 1, 
+          duration: 0.6, 
+          stagger: 0.1, 
+          ease: "back.out(1.7)",
+          delay: 0.3
+        }
+      );
     });
 
     craftingState.randomizedProperties = craftingState.enrichedHerbs.map(h => Object.values(h.properties));
@@ -748,20 +928,81 @@ function handleAdjustment(colIdx, direction, resultDiv) {
   }
 }
 
+// Enhanced adjustment animation
 function updateSlotColumn(colIdx) {
   const props = craftingState.randomizedProperties[colIdx];
   const slotArea = document.querySelector('#crafting-slots');
   const column = slotArea.children[colIdx];
   const propertySlots = column.querySelectorAll('.property-slot');
   
-  propertySlots[0].textContent = props[0];
-  propertySlots[1].textContent = props[1];
-  propertySlots[2].textContent = props[2];
+  // Animate property changes
+  gsap.to(propertySlots, {
+    scale: 1.1,
+    duration: 0.2,
+    ease: "power2.out",
+    yoyo: true,
+    repeat: 1,
+    onComplete: () => {
+      propertySlots[0].textContent = props[0];
+      propertySlots[1].textContent = props[1];
+      propertySlots[2].textContent = props[2];
+    }
+  });
   
+  // Bottle shake effect
   const bottle = column.querySelector('.properties-bottle');
-  bottle.style.animation = 'none';
-  bottle.offsetHeight;
-  bottle.style.animation = 'bottle-shake 0.3s ease-in-out';
+  gsap.to(bottle, {
+    x: '+=2',
+    duration: 0.1,
+    ease: "power2.inOut",
+    yoyo: true,
+    repeat: 5
+  });
+  
+  // Cork bounce during adjustment
+  const cork = column.querySelector('.bottle-cork');
+  gsap.to(cork, {
+    y: -3,
+    duration: 0.2,
+    ease: "bounce.out",
+    yoyo: true,
+    repeat: 1
+  });
+  
+  // Intensify bubbling temporarily
+  const bubbleContainer = column.querySelector('.bubble-container');
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => createSingleBubble(bubbleContainer), i * 100);
+  }
+}
+
+// Helper function to create a single bubble
+function createSingleBubble(container) {
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `
+    position: absolute;
+    width: ${Math.random() * 5 + 3}px;
+    height: ${Math.random() * 5 + 3}px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    bottom: 0;
+    left: ${Math.random() * 30 + 5}px;
+    pointer-events: none;
+  `;
+  
+  container.appendChild(bubble);
+  
+  gsap.to(bubble, {
+    y: -90,
+    opacity: 0,
+    duration: Math.random() * 1.5 + 1,
+    ease: "power1.out",
+    onComplete: () => {
+      if (bubble.parentNode) {
+        bubble.remove();
+      }
+    }
+  });
 }
 
 function updateAdjustmentCounter() {
@@ -781,6 +1022,31 @@ function disableAdjustmentButtons() {
     btn.style.opacity = '0.5';
     btn.style.cursor = 'not-allowed';
   });
+}
+
+// Get herb-specific colors
+function getHerbColor(herbName) {
+  const colors = {
+    'mint': 'rgba(76, 175, 80',
+    'lavender': 'rgba(156, 39, 176',
+    'sage': 'rgba(139, 195, 74',
+    'rosemary': 'rgba(76, 175, 80',
+    'thyme': 'rgba(205, 220, 57',
+    'basil': 'rgba(76, 175, 80',
+    'oregano': 'rgba(139, 195, 74',
+    'chamomile': 'rgba(255, 235, 59',
+    'echinacea': 'rgba(233, 30, 99',
+    'ginseng': 'rgba(255, 193, 7',
+    'turmeric': 'rgba(255, 152, 0',
+    'ginger': 'rgba(255, 87, 34',
+    'default': 'rgba(76, 175, 80'
+  };
+  
+  const herbKey = Object.keys(colors).find(key => 
+    herbName.toLowerCase().includes(key)
+  );
+  
+  return herbKey ? colors[herbKey] : colors.default;
 }
 
 function shuffle(arr) {
@@ -822,4 +1088,34 @@ function displayMessage(message) {
   messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
     messageBox.remove();
   });
+}
+
+// Inject CSS for bottle animations
+function injectBottleAnimationsCSS() {
+  if (document.getElementById('bottle-animations-css')) return;
+  
+  const additionalCSS = `
+    @keyframes bottle-shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-1px); }
+      75% { transform: translateX(1px); }
+    }
+
+    .properties-bottle {
+      transition: box-shadow 0.3s ease;
+    }
+
+    .bottle-liquid {
+      will-change: height;
+    }
+
+    .liquid-surface {
+      will-change: transform;
+    }
+  `;
+
+  const style = document.createElement('style');
+  style.id = 'bottle-animations-css';
+  style.textContent = additionalCSS;
+  document.head.appendChild(style);
 }
