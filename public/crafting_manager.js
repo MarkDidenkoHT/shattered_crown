@@ -306,7 +306,7 @@ function renderCraftingModal() {
         <!-- Will be populated by loadRecipesIntoModal() -->
       </div>
       
-      <!-- Button row -->
+      <!-- Button row - all buttons stay here -->
       <div style="display: flex; justify-content: center; gap: 0.5rem;">
         <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
         <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Craft</button>
@@ -842,7 +842,11 @@ async function patchAndSendCraftRequest(resultDiv) {
 
     const json = await res.json();
 
+    // Get button references
     const claimBtn = document.querySelector('#claim-btn');
+    const finishBtn = document.querySelector('#finish-btn');
+    const craftBtn = document.querySelector('#craft-btn');
+    const closeBtn = document.querySelector('.message-ok-btn');
 
     if (json.success) {
       craftingState.result = json.crafted.name;
@@ -850,10 +854,17 @@ async function patchAndSendCraftRequest(resultDiv) {
         <span style="color:lime;">✅ You crafted: <strong>${json.crafted.name}</strong>!</span>
       `;
 
+      // Hide finish button, show claim button
+      if (finishBtn) finishBtn.style.display = 'none';
       if (claimBtn) {
         claimBtn.style.display = 'block';
         claimBtn.disabled = false;
-        claimBtn.addEventListener('click', () => {
+        
+        // Remove any existing event listeners and add new one
+        const newClaimBtn = claimBtn.cloneNode(true);
+        claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
+        
+        newClaimBtn.addEventListener('click', () => {
           displayMessage(`${json.crafted.name} added to your bank (server-side)`);
           document.querySelector('.custom-message-box')?.remove();
           craftingState = null;
@@ -862,30 +873,56 @@ async function patchAndSendCraftRequest(resultDiv) {
     } else {
       craftingState.result = 'Failed';
       resultDiv.innerHTML = `
-        <span style="color:red; display:block; margin-bottom: 0.5rem;">❌ Failed Mixture — ingredients wasted.</span>
-        <div style="display: flex; justify-content: center; gap: 0.5rem;">
-          <button class="fantasy-button" id="craft-again" style="flex: 1; max-width: 120px;">Craft Again</button>
-          <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 120px;">Close</button>
-        </div>
+        <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span>
       `;
 
-      if (claimBtn) {
-        claimBtn.style.display = 'none';
+      // Hide finish and claim buttons, show craft again option
+      if (finishBtn) finishBtn.style.display = 'none';
+      if (claimBtn) claimBtn.style.display = 'none';
+      
+      // Transform craft button into "Craft Again" button
+      if (craftBtn) {
+        craftBtn.style.display = 'block';
+        craftBtn.textContent = 'Craft Again';
+        craftBtn.disabled = false;
+        
+        // Remove any existing event listeners and add new one
+        const newCraftBtn = craftBtn.cloneNode(true);
+        craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+        
+        newCraftBtn.addEventListener('click', () => {
+          document.querySelector('.custom-message-box')?.remove();
+          startCraftingSession(craftingState.professionId, craftingState.professionName);
+        });
       }
-
-      document.querySelector('#craft-again').addEventListener('click', () => {
-        document.querySelector('.custom-message-box')?.remove();
-        startCraftingSession(craftingState.professionId, craftingState.professionName);
-      });
-
-      document.querySelector('.message-ok-btn').addEventListener('click', () => {
-        document.querySelector('.custom-message-box')?.remove();
-        craftingState = null;
-      });
     }
   } catch (err) {
     console.error('[CRAFTING] Server error:', err);
-    resultDiv.textContent = 'Crafting failed. Try again later.';
+    
+    // On error, show error message and enable craft again
+    resultDiv.innerHTML = '<span style="color:red;">❌ Crafting failed. Try again later.</span>';
+    
+    const finishBtn = document.querySelector('#finish-btn');
+    const claimBtn = document.querySelector('#claim-btn');
+    const craftBtn = document.querySelector('#craft-btn');
+    
+    if (finishBtn) finishBtn.style.display = 'none';
+    if (claimBtn) claimBtn.style.display = 'none';
+    
+    if (craftBtn) {
+      craftBtn.style.display = 'block';
+      craftBtn.textContent = 'Try Again';
+      craftBtn.disabled = false;
+      
+      // Remove any existing event listeners and add new one
+      const newCraftBtn = craftBtn.cloneNode(true);
+      craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+      
+      newCraftBtn.addEventListener('click', () => {
+        document.querySelector('.custom-message-box')?.remove();
+        startCraftingSession(craftingState.professionId, craftingState.professionName);
+      });
+    }
   }
 }
 
