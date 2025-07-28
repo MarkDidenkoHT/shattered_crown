@@ -748,7 +748,7 @@ async function startSlotAnimation(resultDiv, modal) {
 
     craftingState.enrichedHerbs.forEach((herb, idx) => {
       const column = slotArea.children[idx];
-      const props = Object.values(herb.properties);
+      const props = herb.properties;
       
       const upBtn = column.querySelector('.adjust-up');
       const downBtn = column.querySelector('.adjust-down');
