@@ -713,6 +713,7 @@ function createBubblingEffect(column) {
 }
 
 // Enhanced slot animation with bubbling
+// Enhanced startSlotAnimation with liquid reduction
 async function startSlotAnimation(resultDiv, modal) {
   const slotArea = modal.querySelector('#crafting-slots');
   resultDiv.textContent = 'Verifying ingridients...';
@@ -784,6 +785,12 @@ async function startSlotAnimation(resultDiv, modal) {
       );
     });
 
+    // NEW: Reduce liquid to bottom third after properties are shown
+    setTimeout(() => {
+      reduceLiquidToBottomThird(slotArea);
+      resultDiv.textContent = 'Recipe matching uses the bottom property only. You may now apply adjustments.';
+    }, 1500); // Wait for animations to complete
+
     craftingState.randomizedProperties = craftingState.enrichedHerbs.map(h => Object.values(h.properties));
     craftingState.originalProperties = craftingState.randomizedProperties.map(p => [...p]);
     craftingState.currentAdjustedCol = null;
@@ -794,10 +801,99 @@ async function startSlotAnimation(resultDiv, modal) {
     }
 
     enableAdjustment(slotArea, resultDiv);
-    resultDiv.textContent = 'You may now apply adjustments.';
   } catch (err) {
     console.error('[CRAFTING] Error during reservation:', err);
     resultDiv.textContent = 'Server error while verifying ingridients.';
+  }
+}
+
+// New function to reduce liquid to bottom third
+function reduceLiquidToBottomThird(slotArea) {
+  const columns = slotArea.querySelectorAll('.crafting-column');
+  
+  columns.forEach((column, idx) => {
+    const liquid = column.querySelector('.bottle-liquid');
+    const surface = column.querySelector('.liquid-surface');
+    const bottle = column.querySelector('.properties-bottle');
+    const bottomSlot = column.querySelector('.prop-bottom');
+    
+    if (!liquid) return;
+    
+    console.log(`[DEBUG] Reducing liquid for column ${idx}`);
+    
+    // Animate liquid reducing to bottom third (about 30% height)
+    gsap.to(liquid, {
+      height: '30%',
+      duration: 1.0,
+      ease: "power2.inOut",
+      onStart: () => {
+        // Add visual emphasis to bottom property slot
+        gsap.to(bottomSlot, {
+          backgroundColor: 'rgba(255, 215, 0, 0.3)', // Gold highlight
+          borderColor: '#FFD700',
+          borderWidth: '2px',
+          duration: 0.5,
+          ease: "power2.out"
+        });
+        
+        // Subtle glow on the bottle to indicate the important area
+        gsap.to(bottle, {
+          boxShadow: '0 8px 15px rgba(255, 215, 0, 0.4), inset 0 -20px 10px rgba(255, 215, 0, 0.1)',
+          duration: 1.0,
+          ease: "power2.out"
+        });
+      },
+      onComplete: () => {
+        // Adjust surface position for the new liquid level
+        gsap.set(surface, { 
+          top: '70%', // Move surface to match new liquid level
+          opacity: 1 
+        });
+        
+        console.log(`[DEBUG] Liquid reduction complete for column ${idx}`);
+      }
+    });
+    
+    // Optional: Add a brief "draining" particle effect
+    createDrainingEffect(column);
+  });
+}
+
+// Optional: Visual effect for liquid draining
+function createDrainingEffect(column) {
+  const bottle = column.querySelector('.properties-bottle');
+  
+  // Create small "draining" particles
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const droplet = document.createElement('div');
+      droplet.style.cssText = `
+        position: absolute;
+        width: 3px;
+        height: 6px;
+        background: rgba(255,255,255,0.6);
+        border-radius: 50%;
+        top: 50%;
+        left: ${Math.random() * 30 + 15}px;
+        pointer-events: none;
+        z-index: 15;
+      `;
+      
+      bottle.appendChild(droplet);
+      
+      // Animate droplet falling and fading
+      gsap.to(droplet, {
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        ease: "power2.in",
+        onComplete: () => {
+          if (droplet.parentNode) {
+            droplet.remove();
+          }
+        }
+      });
+    }, i * 100);
   }
 }
 
