@@ -1074,7 +1074,7 @@ function getHerbColor(herbName) {
   };
 
   const herbKey = Object.keys(colors).find(key =>
-    herbName.toLowerCase().includes(key)
+    herbName.toLowerCase().includes(key.toLowerCase())  // Convert both to lowercase
   );
 
   return herbKey ? colors[herbKey] : colors.default;
