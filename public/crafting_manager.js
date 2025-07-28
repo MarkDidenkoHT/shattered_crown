@@ -1064,25 +1064,19 @@ function disableAdjustmentButtons() {
 // Get herb-specific colors
 function getHerbColor(herbName) {
   const colors = {
-    'mint': 'rgba(76, 175, 80',
-    'lavender': 'rgba(156, 39, 176',
-    'sage': 'rgba(139, 195, 74',
-    'rosemary': 'rgba(76, 175, 80',
-    'thyme': 'rgba(205, 220, 57',
-    'basil': 'rgba(76, 175, 80',
-    'oregano': 'rgba(139, 195, 74',
-    'chamomile': 'rgba(255, 235, 59',
-    'echinacea': 'rgba(233, 30, 99',
-    'ginseng': 'rgba(255, 193, 7',
-    'turmeric': 'rgba(255, 152, 0',
-    'ginger': 'rgba(255, 87, 34',
-    'default': 'rgba(76, 175, 80'
+    'Bloodthistle': 'rgba(146, 24, 22, 1)',      // Cornflower Blue
+    'Fangflower': 'rgba(210, 180, 140, 1)',     // Tan
+    'Moonrose': 'rgba(173, 216, 230, 1)',   // Light Blue
+    'Sunbloom': 'rgba(255, 255, 102, 1)', // Light Yellow
+    'Redcap': 'rgba(255, 99, 71, 1)',   // Tomato
+    'Earthroot': 'rgba(255, 140, 0, 1)',    // Dark Orange
+    'default': 'rgba(169, 169, 169, 1)'    // Dark Gray
   };
-  
-  const herbKey = Object.keys(colors).find(key => 
+
+  const herbKey = Object.keys(colors).find(key =>
     herbName.toLowerCase().includes(key)
   );
-  
+
   return herbKey ? colors[herbKey] : colors.default;
 }
 
