@@ -205,6 +205,151 @@ async function loadRecipesIntoModal(modal) {
   }
 }
 
+// Helper function to find herbs that have a specific property
+function findHerbsWithProperty(targetProperty) {
+  if (!alchemyState || !alchemyState.availableHerbs) {
+    return [];
+  }
+
+  const matchingHerbs = [];
+  
+  alchemyState.availableHerbs.forEach(herb => {
+    if (!herb.properties) return;
+    
+    let herbProperties = [];
+    
+    // Handle different property formats
+    if (Array.isArray(herb.properties)) {
+      herbProperties = herb.properties;
+    } else if (typeof herb.properties === 'object') {
+      herbProperties = Object.values(herb.properties);
+    } else if (typeof herb.properties === 'string') {
+      // Try to parse if it's a stringified array or comma-separated
+      try {
+        const parsed = JSON.parse(herb.properties);
+        if (Array.isArray(parsed)) {
+          herbProperties = parsed;
+        }
+      } catch (e) {
+        herbProperties = herb.properties.split(',').map(p => p.trim());
+      }
+    }
+    
+    // Check if any of the herb's properties match the target property
+    const hasProperty = herbProperties.some(prop => {
+      return prop && prop.toString().toLowerCase().trim() === targetProperty.toLowerCase().trim();
+    });
+    
+    if (hasProperty && herb.amount > 0) {
+      matchingHerbs.push({
+        name: herb.name,
+        sprite: herb.sprite,
+        amount: herb.amount,
+        properties: herbProperties
+      });
+    }
+  });
+
+  // Sort by availability (highest amount first)
+  matchingHerbs.sort((a, b) => b.amount - a.amount);
+  
+  return matchingHerbs;
+}
+
+// New function to generate ingredient matching display
+function generateIngredientMatching(recipe) {
+  if (!alchemyState || !alchemyState.availableHerbs || !recipe.ingridients) {
+    return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">Ingredient matching unavailable</div>';
+  }
+
+  // Parse required properties from recipe
+  let requiredProperties = [];
+  if (Array.isArray(recipe.ingridients)) {
+    requiredProperties = recipe.ingridients;
+  } else if (typeof recipe.ingridients === 'object') {
+    requiredProperties = Object.values(recipe.ingridients);
+  } else if (typeof recipe.ingridients === 'string') {
+    // Try to parse comma-separated values
+    requiredProperties = recipe.ingridients.split(',').map(prop => prop.trim());
+  }
+
+  if (requiredProperties.length === 0) {
+    return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">No properties specified for this recipe</div>';
+  }
+
+  // Find matching herbs for each required property
+  const matchingResults = requiredProperties.map((requiredProp, index) => {
+    const matchingHerbs = findHerbsWithProperty(requiredProp);
+    return {
+      property: requiredProp,
+      position: index + 1,
+      matchingHerbs: matchingHerbs
+    };
+  });
+
+  // Generate HTML for matching results
+  let matchingHTML = `
+    <div style="background: rgba(76,175,80,0.1); border: 1px solid #4CAF50; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
+      <h4 style="color: #4CAF50; margin-bottom: 0.8rem; text-align: center;">Ingredient Matching Guide</h4>
+      <div style="font-size: 0.85rem; color: #ccc; text-align: center; margin-bottom: 1rem; font-style: italic;">
+        Find herbs with these properties (bottom slot matters for recipe matching):
+      </div>
+  `;
+
+  matchingResults.forEach((result, index) => {
+    const hasMatches = result.matchingHerbs.length > 0;
+    const borderColor = hasMatches ? '#4CAF50' : '#ff6b6b';
+    const bgColor = hasMatches ? 'rgba(76,175,80,0.1)' : 'rgba(255,107,107,0.1)';
+    
+    matchingHTML += `
+      <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem;">
+        <div style="color: #c4975a; font-weight: bold; margin-bottom: 0.5rem;">
+          Property ${result.position}: "${result.property}"
+        </div>
+    `;
+
+    if (hasMatches) {
+      matchingHTML += `
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+          <span style="color: #4CAF50; font-size: 0.8rem; margin-right: 0.5rem;">Available herbs:</span>
+      `;
+      
+      result.matchingHerbs.forEach((herb, herbIndex) => {
+        matchingHTML += `
+          <div style="display: flex; align-items: center; background: rgba(255,255,255,0.1); border-radius: 4px; padding: 0.3rem 0.5rem; gap: 0.3rem;">
+            <img src="assets/art/ingridients/${herb.sprite}.png" style="width: 20px; height: 20px;" title="${herb.name}">
+            <span style="font-size: 0.75rem; color: #fff;">${herb.name}</span>
+            <span style="font-size: 0.7rem; color: #999;">(${herb.amount})</span>
+          </div>
+        `;
+      });
+      
+      matchingHTML += '</div>';
+    } else {
+      matchingHTML += `
+        <div style="color: #ff6b6b; font-size: 0.8rem; font-style: italic;">
+          ❌ No available herbs have this property
+        </div>
+      `;
+    }
+
+    matchingHTML += '</div>';
+  });
+
+  // Add crafting tip
+  matchingHTML += `
+    <div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 6px; padding: 0.6rem; margin-top: 1rem;">
+      <div style="color: #FFC107; font-size: 0.8rem; text-align: center;">
+        💡 <strong>Tip:</strong> Remember that only the <strong>bottom property</strong> of each herb (after adjustments) is used for recipe matching!
+      </div>
+    </div>
+  `;
+
+  matchingHTML += '</div>';
+
+  return matchingHTML;
+}
+
 function showRecipeDetails(recipe) {
   const detailsModal = document.createElement('div');
   detailsModal.className = 'custom-message-box';
@@ -219,15 +364,20 @@ function showRecipeDetails(recipe) {
     ingredientsList = recipe.ingridients || 'Unknown ingredients';
   }
   
+  // Generate ingredient matching section
+  const ingredientMatchingHTML = generateIngredientMatching(recipe);
+  
   detailsModal.innerHTML = `
-    <div class="message-content" style="max-width: 400px; text-align: center;">
+    <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto;">
       <h3 style="color: #c4975a; margin-bottom: 1rem;">${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
       
       <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: #c4975a; margin-bottom: 0.5rem;">Required Ingredients:</h4>
+        <h4 style="color: #c4975a; margin-bottom: 0.5rem;">Required Properties:</h4>
         <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${ingredientsList}</div>
       </div>
+      
+      ${ingredientMatchingHTML}
       
       ${recipe.description ? `
         <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem; font-style: italic; color: #ccc; font-size: 0.85rem;">
