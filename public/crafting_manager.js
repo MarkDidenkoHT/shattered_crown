@@ -206,7 +206,8 @@ async function startCraftingSession(professionId, professionName) {
     adjustmentCount: 0,
     maxAdjustments: 3,
     enrichedHerbs: null,
-    recipes: null
+    recipes: null,
+    sessionId: null
   };
 
   renderCraftingModal();
@@ -716,7 +717,7 @@ function createBubblingEffect(column) {
 // Enhanced startSlotAnimation with liquid reduction
 async function startSlotAnimation(resultDiv, modal) {
   const slotArea = modal.querySelector('#crafting-slots');
-  resultDiv.textContent = 'Verifying ingridients...';
+  resultDiv.textContent = 'Verifying ingredients...';
 
   const selectedHerbNames = craftingState.selectedHerbs.map(h => h.name);
 
@@ -741,6 +742,8 @@ async function startSlotAnimation(resultDiv, modal) {
       return;
     }
 
+    // Store the session ID and enriched herbs
+    craftingState.sessionId = reserveJson.session_id;
     craftingState.enrichedHerbs = reserveJson.herbs;
 
     craftingState.enrichedHerbs.forEach((herb, idx) => {
@@ -803,7 +806,7 @@ async function startSlotAnimation(resultDiv, modal) {
     enableAdjustment(slotArea, resultDiv);
   } catch (err) {
     console.error('[CRAFTING] Error during reservation:', err);
-    resultDiv.textContent = 'Server error while verifying ingridients.';
+    resultDiv.textContent = 'Server error while verifying ingredients.';
   }
 }
 
@@ -899,6 +902,7 @@ function createDrainingEffect(column) {
 
 async function patchAndSendCraftRequest(resultDiv) {
   try {
+    // Convert adjustment counts to the expected format
     const adjustments = [];
     for (const [colIdx, adj] of Object.entries(craftingState.adjustments || {})) {
       if (adj.up > 0) {
@@ -909,33 +913,11 @@ async function patchAndSendCraftRequest(resultDiv) {
       }
     }
 
-    function normalizeProps(input) {
-      if (Array.isArray(input)) {
-        const keys = ['a', 'b', 'c'];
-        const result = {};
-        for (let i = 0; i < keys.length; i++) {
-          result[keys[i]] = input[i] ?? 0;
-        }
-        return result;
-      }
-      return {
-        a: input.a ?? 0,
-        b: input.b ?? 0,
-        c: input.c ?? 0
-      };
-    }
-
-    const normalizedHerbs = (craftingState.enrichedHerbs || []).map(h => ({
-      ...h,
-      properties: normalizeProps(h.properties)
-    }));
-
     const payload = {
       player_id: _profile.id,
       profession_id: craftingState.professionId,
-      selected_ingredients: craftingState.selectedHerbs.map(h => h.name),
-      adjustments,
-      enriched_herbs: normalizedHerbs
+      session_id: craftingState.sessionId,  // Use the session ID from server
+      adjustments
     };
 
     console.log('[CRAFTING] Sending craft request payload:', payload);
@@ -974,7 +956,7 @@ async function patchAndSendCraftRequest(resultDiv) {
         claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
         
         newClaimBtn.addEventListener('click', () => {
-          displayMessage(`${json.crafted.name} added to your bank (server-side)`);
+          displayMessage(`${json.crafted.name} added to your bank!`);
           document.querySelector('.custom-message-box')?.remove();
           craftingState = null;
         });
@@ -983,6 +965,7 @@ async function patchAndSendCraftRequest(resultDiv) {
       craftingState.result = 'Failed';
       resultDiv.innerHTML = `
         <span style="color:red;">❌ Failed Mixture — ingredients wasted.</span>
+        <br><small style="color:#999;">${json.message || 'No matching recipe found'}</small>
       `;
 
       // Hide finish and claim buttons, show craft again option
@@ -1032,6 +1015,23 @@ async function patchAndSendCraftRequest(resultDiv) {
         startCraftingSession(craftingState.professionId, craftingState.professionName);
       });
     }
+  }
+}
+
+async function cleanupExpiredSessions() {
+  try {
+    await _apiCall('/api/supabase/rest/v1/craft_sessions', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        created_at: `lt.${new Date(Date.now() - 30 * 60 * 1000).toISOString()}` // 30 minutes ago
+      })
+    });
+  } catch (error) {
+    console.warn('[CRAFTING] Failed to cleanup expired sessions:', error);
   }
 }
 
