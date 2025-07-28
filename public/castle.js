@@ -114,8 +114,7 @@ function setupInteractions() {
                 displayMessage('Trade functionality coming soon!');
                 // window.gameAuth.loadModule('marketplace');
             } else if (action === 'bank') {
-                displayMessage('Bank functionality coming soon!');
-                // window.gameAuth.loadModule('bank');
+              window.gameAuth.loadModule('bank');
             } else if (action === 'embark') {
                 window.gameAuth.loadModule('embark');
             } else if (action === 'crafting') {
