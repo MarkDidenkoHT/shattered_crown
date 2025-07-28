@@ -568,6 +568,7 @@ function setupModalEventListeners(modal) {
 }
 
 // Animate bottle filling with liquid
+// Fixed animateBottleFill function
 function animateBottleFill(column, herb) {
   const liquid = column.querySelector('.bottle-liquid');
   const surface = column.querySelector('.liquid-surface');
@@ -575,9 +576,18 @@ function animateBottleFill(column, herb) {
   
   // Get herb color based on name or use default
   const liquidColor = getHerbColor(herb.name);
+  console.log('[DEBUG] liquidColor from getHerbColor:', liquidColor);
+  
+  // Convert rgba to rgb for adding custom alpha
+  const rgbColor = liquidColor.replace('rgba(', 'rgb(').replace(/, 1\)$/, ')');
+  console.log('[DEBUG] converted rgbColor:', rgbColor);
+  
+  // Create gradient with proper alpha values
+  const gradient = `linear-gradient(to bottom, ${rgbColor.replace('rgb(', 'rgba(').replace(')', ', 0.6)')} 0%, ${rgbColor.replace('rgb(', 'rgba(').replace(')', ', 0.8)')} 100%)`;
+  console.log('[DEBUG] final gradient:', gradient);
   
   // Set liquid color
-  liquid.style.background = `linear-gradient(to bottom, ${liquidColor}60 0%, ${liquidColor}80 100%)`;
+  liquid.style.background = gradient;
   liquid.style.opacity = '1';
   
   // Animate liquid rising
@@ -598,9 +608,12 @@ function animateBottleFill(column, herb) {
     }
   });
   
-  // Bottle gentle glow effect
+  // Bottle gentle glow effect - also needs proper color
+  const glowColor = rgbColor.replace('rgb(', 'rgba(').replace(')', ', 0.4)');
+  console.log('[DEBUG] glow color:', glowColor);
+  
   gsap.to(bottle, {
-    boxShadow: `0 0 15px ${liquidColor}40`,
+    boxShadow: `0 0 15px ${glowColor}`,
     duration: 0.8,
     ease: "power2.out"
   });
