@@ -1063,6 +1063,10 @@ function disableAdjustmentButtons() {
 
 // Get herb-specific colors
 function getHerbColor(herbName) {
+  console.log('[DEBUG] getHerbColor called with herbName:', herbName);
+  console.log('[DEBUG] herbName type:', typeof herbName);
+  console.log('[DEBUG] herbName.toLowerCase():', herbName.toLowerCase());
+  
   const colors = {
     'Bloodthistle': 'rgba(146, 24, 22, 1)',      // Cornflower Blue
     'Fangflower': 'rgba(210, 180, 140, 1)',     // Tan
@@ -1073,9 +1077,20 @@ function getHerbColor(herbName) {
     'default': 'rgba(169, 169, 169, 1)'    // Dark Gray
   };
 
-  const herbKey = Object.keys(colors).find(key =>
-    herbName.toLowerCase().includes(key.toLowerCase())  // Convert both to lowercase
-  );
+  console.log('[DEBUG] Available color keys:', Object.keys(colors));
+  
+  const herbKey = Object.keys(colors).find(key => {
+    const keyLower = key.toLowerCase();
+    const herbLower = herbName.toLowerCase();
+    const matches = herbLower.includes(keyLower);
+    
+    console.log(`[DEBUG] Checking key: "${key}" (${keyLower}) against herb: "${herbName}" (${herbLower}) - matches: ${matches}`);
+    
+    return matches;
+  });
+
+  console.log('[DEBUG] Found herbKey:', herbKey);
+  console.log('[DEBUG] Returning color:', herbKey ? colors[herbKey] : colors.default);
 
   return herbKey ? colors[herbKey] : colors.default;
 }
