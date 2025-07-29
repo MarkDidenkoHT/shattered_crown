@@ -6,47 +6,103 @@ export async function startCraftingSession(ctx) {
   console.log('[ALCHEMY] Starting alchemy crafting session...');
   context = ctx;
   
-  // Fetch available ingredients for alchemy
-  const response = await context.apiCall(
-    `/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`
-  );
-  const bankItems = await response.json();
-
-  const enriched = [];
-  for (const item of bankItems) {
-    const res = await context.apiCall(
-      `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
+  // Extract loading utilities from context
+  const { loadingModal, loadingStartTime, updateLoadingProgress, finishLoading } = context;
+  
+  try {
+    // Step 1: Update loading to show we're fetching bank items
+    updateLoadingProgress(loadingModal, "Accessing your ingredient vault...", "Checking available materials in your alchemical storage...");
+    
+    // Fetch available ingredients for alchemy
+    const response = await context.apiCall(
+      `/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`
     );
-    const [ingridient] = await res.json();
-    if (ingridient) {
-      enriched.push({
-        name: item.item,
-        amount: item.amount,
-        properties: ingridient.properties,
-        sprite: ingridient.sprite,
-      });
+    const bankItems = await response.json();
+    
+    // Step 2: Update loading for ingredient enrichment
+    updateLoadingProgress(loadingModal, "Analyzing ingredient properties...", "Examining mystical properties of your herbs and reagents...");
+    
+    const enriched = [];
+    const totalItems = bankItems.length;
+    
+    for (let i = 0; i < bankItems.length; i++) {
+      const item = bankItems[i];
+      
+      // Show progress for each item being processed
+      if (i % 3 === 0 || i === totalItems - 1) { // Update every 3 items or on last item
+        const progress = Math.round((i / totalItems) * 100);
+        updateLoadingProgress(
+          loadingModal, 
+          `Processing ingredients... (${i + 1}/${totalItems})`, 
+          `Analyzing the mystical essence of ${item.item}...`
+        );
+      }
+      
+      const res = await context.apiCall(
+        `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
+      );
+      const [ingridient] = await res.json();
+      if (ingridient) {
+        enriched.push({
+          name: item.item,
+          amount: item.amount,
+          properties: ingridient.properties,
+          sprite: ingridient.sprite,
+        });
+      }
+      
+      // Small delay to make the loading feel more natural
+      if (totalItems > 5) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
+    
+    // Step 3: Update loading for state preparation
+    updateLoadingProgress(loadingModal, "Preparing alchemy laboratory...", "Setting up cauldrons, burners, and mystical apparatus...");
+    
+    alchemyState = {
+      professionId: context.professionId,
+      professionName: context.professionName,
+      availableHerbs: enriched,
+      selectedHerbs: [null, null, null],
+      randomizedProperties: [[], [], []],
+      originalProperties: [[], [], []],
+      currentAdjustedCol: null,
+      isCraftingStarted: false,
+      result: null,
+      adjustmentCount: 0,
+      maxAdjustments: 3,
+      enrichedHerbs: null,
+      recipes: null,
+      sessionId: null
+    };
+    
+    // Step 4: Update loading for interface setup
+    updateLoadingProgress(loadingModal, "Initializing crafting interface...", "Preparing your alchemical workbench...");
+    
+    // Small delay to show this step
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Step 5: Finish loading with minimum time (3 seconds total)
+    await finishLoading(loadingModal, loadingStartTime, 3000);
+    
+    // Step 6: Now render the interface
+    renderCraftingModal();
+    injectBottleAnimationsCSS();
+    
+    console.log('[ALCHEMY] Alchemy crafting session loaded successfully!');
+    
+  } catch (error) {
+    console.error('[ALCHEMY] Error starting alchemy session:', error);
+    
+    // If we have the loading modal utilities, clean up properly
+    if (finishLoading && loadingModal) {
+      await finishLoading(loadingModal, loadingStartTime, 500); // Quick cleanup
+    }
+    
+    // Re-throw the error so the calling function can handle it
+    throw error;
   }
-
-  alchemyState = {
-    professionId: context.professionId,
-    professionName: context.professionName,
-    availableHerbs: enriched,
-    selectedHerbs: [null, null, null],
-    randomizedProperties: [[], [], []],
-    originalProperties: [[], [], []],
-    currentAdjustedCol: null,
-    isCraftingStarted: false,
-    result: null,
-    adjustmentCount: 0,
-    maxAdjustments: 3,
-    enrichedHerbs: null,
-    recipes: null,
-    sessionId: null
-  };
-
-  renderCraftingModal();
-  injectBottleAnimationsCSS();
 }
 
 // Enhanced bottle HTML with liquid and bubble elements

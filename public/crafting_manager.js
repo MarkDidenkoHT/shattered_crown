@@ -352,6 +352,35 @@ function recipeHTML(recipe) {
   `;
 }
 
+// Helper function for profession modules to control loading
+function updateLoadingProgress(loadingModal, step, message) {
+  if (!loadingModal || !loadingModal.parentNode) return;
+  
+  const progressStep = loadingModal.querySelector('.progress-step');
+  const loadingMessage = loadingModal.querySelector('.loading-message');
+  
+  if (progressStep) progressStep.textContent = step;
+  if (loadingMessage) loadingMessage.textContent = message;
+}
+
+// Helper function for profession modules to finish loading
+function finishLoading(loadingModal, loadingStartTime, minimumTime = 3000) {
+  if (!loadingModal || !loadingModal.parentNode) return Promise.resolve();
+  
+  return new Promise(resolve => {
+    const elapsedTime = Date.now() - loadingStartTime;
+    const remainingTime = Math.max(0, minimumTime - elapsedTime);
+    
+    // Update to final step
+    updateLoadingProgress(loadingModal, "Crafting interface ready!", "Welcome to your workshop!");
+    
+    setTimeout(() => {
+      removeLoadingModal(loadingModal);
+      resolve();
+    }, Math.max(remainingTime, 500)); // At least 500ms to show final message
+  });
+}
+
 // Enhanced profession module loading with advanced loading animation
 async function loadProfessionModuleWithLoading(professionName, professionId) {
   console.log(`[CRAFTING] Loading ${professionName} module with loading animation...`);
@@ -374,14 +403,10 @@ async function loadProfessionModuleWithLoading(professionName, professionId) {
     // Dynamically import the profession module
     const professionModule = await import(`./professions/${moduleFileName}.js`);
     
-    // Ensure minimum loading time for smooth UX
-    const elapsedTime = Date.now() - loadingStartTime;
-    const minimumLoadingTime = 2000; // 2 seconds minimum for advanced loading
-    if (elapsedTime < minimumLoadingTime) {
-      await new Promise(resolve => setTimeout(resolve, minimumLoadingTime - elapsedTime));
-    }
+    // Update loading message for the next phase
+    loadingMessage.textContent = `Starting ${professionName} crafting session...`;
     
-    // Pass the necessary context to the profession module
+    // Pass the necessary context to the profession module INCLUDING the loading modal
     const context = {
       main: _main,
       apiCall: _apiCall,
@@ -390,19 +415,30 @@ async function loadProfessionModuleWithLoading(professionName, professionId) {
       professionId,
       professionName,
       craftingState: craftingState,
+      // Pass the loading modal so the profession module can control it
+      loadingModal: loadingModal,
+      loadingStartTime: loadingStartTime,
       // Utility functions that profession modules might need
       displayMessage,
       fetchRecipes,
       createParticles,
       createSpinnerModal,
-      removeLoadingModal
+      removeLoadingModal,
+      updateLoadingProgress,
+      finishLoading
     };
     
-    // Remove loading modal with fade out
-    removeLoadingModal(loadingModal);
-    
+    // DON'T remove loading modal here - let the profession module handle it
     // Start the profession-specific crafting session
     await professionModule.startCraftingSession(context);
+    
+    // Fallback: if profession module doesn't handle loading modal removal
+    setTimeout(() => {
+      if (loadingModal.parentNode) {
+        console.log('[CRAFTING] Fallback: removing loading modal after timeout');
+        removeLoadingModal(loadingModal);
+      }
+    }, 8000); // 8 second fallback timeout
     
   } catch (error) {
     console.error(`[CRAFTING] Failed to load ${professionName} module:`, error);
