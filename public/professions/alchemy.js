@@ -905,7 +905,7 @@ async function startSlotAnimation(resultDiv, modal) {
     // NEW: Reduce liquid to bottom third after properties are shown
     setTimeout(() => {
       reduceLiquidToBottomThird(slotArea);
-      resultDiv.textContent = 'Recipe matching uses the bottom property only. You may now apply adjustments.';
+      resultDiv.textContent = 'You may now apply adjustments.';
     }, 1500); // Wait for animations to complete
 
     alchemyState.randomizedProperties = alchemyState.enrichedHerbs.map(h => Object.values(h.properties));
