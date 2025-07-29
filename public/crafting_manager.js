@@ -223,24 +223,11 @@ function renderProfessions(characters) {
       const profName = card.dataset.profession;
       const profId = card.dataset.professionId;
 
-      // Show loading state on the card
-      const originalContent = card.innerHTML;
-      card.classList.add('loading-state');
-      card.innerHTML = `
-        <div class="card-loading">
-          <div class="mini-spinner"></div>
-          <span>Loading ${profName}...</span>
-        </div>
-      `;
-
       try {
         await loadProfessionModuleWithLoading(profName, profId);
       } catch (err) {
         console.error('[CRAFTING] Failed to start crafting session:', err);
         displayMessage(`Failed to start crafting for ${profName}`);
-        // Restore card content on error
-        card.classList.remove('loading-state');
-        card.innerHTML = originalContent;
       }
     });
   });
@@ -657,11 +644,6 @@ function injectLoadingStyles() {
         0 8px 24px rgba(0, 0, 0, 0.6),
         0 0 20px rgba(196, 151, 90, 0.2);
       border-color: #e6b573;
-    }
-
-    .profession-card.loading-state {
-      pointer-events: none;
-      opacity: 0.7;
     }
 
     .card-icon {
