@@ -198,7 +198,7 @@ function renderProfessions(characters) {
   section.innerHTML = `
     <div class="art-header">
       <h1>Your Crafting Professions</h1>
-      <p class="subtitle">Select a profession to view recipes or start crafting.</p>
+      <p class="subtitle">Select a profession to start crafting.</p>
     </div>
     <div class="selection-section">
       <div class="profession-selection-grid">
@@ -217,54 +217,19 @@ function renderProfessions(characters) {
     window.gameAuth.loadModule('castle');
   });
 
-  // Enhanced recipes button with loading
-  section.querySelectorAll('.recipes-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const profName = btn.dataset.profession;
-      const profId = btn.dataset.professionId;
+  // Add click handlers to profession cards
+  section.querySelectorAll('.profession-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      const profName = card.dataset.profession;
+      const profId = card.dataset.professionId;
 
-      // Show loading immediately
-      const loadingModal = createSpinnerModal(`Loading ${profName} recipes...`);
-      
-      // Disable button and show loading state
-      const originalContent = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `
-        <div class="button-loading">
+      // Show loading state on the card
+      const originalContent = card.innerHTML;
+      card.classList.add('loading-state');
+      card.innerHTML = `
+        <div class="card-loading">
           <div class="mini-spinner"></div>
-          <span>Loading...</span>
-        </div>
-      `;
-
-      try {
-        const recipes = await fetchRecipes(profId);
-        removeLoadingModal(loadingModal);
-        showRecipesModal(recipes, profName);
-      } catch (err) {
-        console.error('[CRAFTING] Failed to load recipes:', err);
-        removeLoadingModal(loadingModal);
-        displayMessage(`Failed to load recipes for ${profName}`);
-      } finally {
-        // Restore button state
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
-      }
-    });
-  });
-
-  // Enhanced craft button with advanced loading
-  section.querySelectorAll('.craft-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const profName = btn.dataset.profession;
-      const profId = btn.dataset.professionId;
-
-      // Disable button and show loading state
-      const originalContent = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `
-        <div class="button-loading">
-          <div class="mini-spinner"></div>
-          <span>Loading...</span>
+          <span>Loading ${profName}...</span>
         </div>
       `;
 
@@ -273,10 +238,9 @@ function renderProfessions(characters) {
       } catch (err) {
         console.error('[CRAFTING] Failed to start crafting session:', err);
         displayMessage(`Failed to start crafting for ${profName}`);
-      } finally {
-        // Restore button state
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
+        // Restore card content on error
+        card.classList.remove('loading-state');
+        card.innerHTML = originalContent;
       }
     });
   });
@@ -286,22 +250,16 @@ function professionCardHTML(character) {
   const profName = character.professions?.name || 'Unknown';
   const profId = character.professions?.id || 0;
   return `
-    <div class="selection-card">
-      <div class="card-info-block">
+    <div class="profession-card" data-profession="${profName}" data-profession-id="${profId}">
+      <div class="card-icon">
         <img src="assets/art/professions/${profName.toLowerCase().replace(/\s+/g, '_')}.png" 
              alt="${profName}" 
-             style="width:64px;height:64px;"
              onerror="this.src='assets/art/placeholder.png';">
+      </div>
+      <div class="card-info">
         <h3 class="card-name">${profName}</h3>
         <p class="card-description">Character: ${character.name || `Lvl ${character.level || 1} ${character.races?.name || 'Unknown'}`}</p>
-        <div class="confirm-return-buttons">
-          <button class="fantasy-button recipes-btn" data-profession="${profName}" data-profession-id="${profId}">
-            Recipes
-          </button>
-          <button class="fantasy-button craft-btn" data-profession="${profName}" data-profession-id="${profId}">
-            Craft
-          </button>
-        </div>
+        <p class="card-hint">Click to start crafting</p>
       </div>
     </div>
   `;
@@ -312,44 +270,6 @@ async function fetchRecipes(professionId) {
     `/api/supabase/rest/v1/recipes?profession_id=eq.${professionId}&select=name,ingridients,sprite`
   );
   return await response.json();
-}
-
-function showRecipesModal(recipes, professionName) {
-  const modal = document.createElement('div');
-  modal.className = 'custom-message-box';
-  modal.innerHTML = `
-    <div class="message-content scrollable-modal">
-      <h2>${professionName} Recipes</h2>
-      ${recipes.length === 0
-        ? '<p>No recipes found.</p>'
-        : recipes.map(recipeHTML).join('')}
-      <button class="fantasy-button message-ok-btn">Close</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  modal.querySelector('.message-ok-btn').addEventListener('click', () => {
-    modal.remove();
-  });
-
-  // Add fade in animation
-  modal.style.animation = 'fadeIn 0.3s ease';
-}
-
-function recipeHTML(recipe) {
-  const ingridients = Array.isArray(recipe.ingridients)
-    ? recipe.ingridients.join(', ')
-    : JSON.stringify(recipe.ingridients);
-  return `
-    <div style="margin-bottom: 1.5rem; text-align: left;">
-      <strong>${recipe.name}</strong><br/>
-      <img src="assets/art/recipes/${recipe.sprite}.png" 
-           alt="${recipe.name}" 
-           style="width: 64px; height: 64px;"
-           onerror="this.src='assets/art/placeholder.png';"><br/>
-      <span><strong>Ingredients:</strong> ${ingridients}</span>
-    </div>
-  `;
 }
 
 // Helper function for profession modules to control loading
@@ -712,12 +632,95 @@ function injectLoadingStyles() {
       box-shadow: 0 0 10px rgba(196, 151, 90, 0.3);
     }
 
-    /* Button Loading States */
-    .button-loading {
+    /* Profession Card Styles - Horizontal Layout */
+    .profession-card {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
+      border: 2px solid #c4975a;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 
+        inset 0 1px 0 rgba(196, 151, 90, 0.2),
+        0 4px 16px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(5px);
+      min-height: 80px;
+    }
+
+    .profession-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        inset 0 1px 0 rgba(196, 151, 90, 0.3),
+        0 8px 24px rgba(0, 0, 0, 0.6),
+        0 0 20px rgba(196, 151, 90, 0.2);
+      border-color: #e6b573;
+    }
+
+    .profession-card.loading-state {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .card-icon {
+      flex-shrink: 0;
+      width: 64px;
+      height: 64px;
+      margin-right: 1rem;
+      display: flex;
+      align-items: center;
       justify-content: center;
+      background: rgba(61, 41, 20, 0.5);
+      border-radius: 8px;
+      border: 1px solid #3d2914;
+    }
+
+    .card-icon img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+
+    .card-info {
+      flex: 1;
+      text-align: left;
+    }
+
+    .card-name {
+      font-family: 'Cinzel', serif;
+      color: #c4975a;
+      font-size: 1.2rem;
+      margin: 0 0 0.25rem 0;
+      text-shadow: 1px 1px 0 #3d2914;
+      letter-spacing: 0.5px;
+    }
+
+    .card-description {
+      color: #b8b3a8;
+      font-size: 0.9rem;
+      margin: 0 0 0.25rem 0;
+      opacity: 0.8;
+    }
+
+    .card-hint {
+      color: #c4975a;
+      font-size: 0.8rem;
+      font-style: italic;
+      margin: 0;
+      opacity: 0.6;
+    }
+
+    /* Card Loading State */
+    .card-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      color: #c4975a;
+      font-style: italic;
     }
 
     .mini-spinner {
@@ -793,6 +796,34 @@ function injectLoadingStyles() {
       
       .progress-text {
         font-size: 0.8rem;
+      }
+
+      .profession-card {
+        padding: 0.75rem;
+        min-height: 70px;
+      }
+
+      .card-icon {
+        width: 56px;
+        height: 56px;
+        margin-right: 0.75rem;
+      }
+
+      .card-icon img {
+        width: 40px;
+        height: 40px;
+      }
+
+      .card-name {
+        font-size: 1.1rem;
+      }
+
+      .card-description {
+        font-size: 0.85rem;
+      }
+
+      .card-hint {
+        font-size: 0.75rem;
       }
     }
   `;
