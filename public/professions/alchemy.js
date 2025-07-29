@@ -615,7 +615,7 @@ function setupModalEventListeners(modal) {
     patchAndSendCraftRequest(resultDiv);
   });
 
-  // Use event delegation for adjustment buttons
+  // Use event delegation for adjustment buttons - THIS IS THE ONLY PLACE THEY SHOULD BE HANDLED
   const slotsContainer = modal.querySelector('#crafting-slots');
   slotsContainer.addEventListener('click', (e) => {
     const adjustBtn = e.target.closest('.adjust-up, .adjust-down');
@@ -917,7 +917,6 @@ async function startSlotAnimation(resultDiv, modal) {
       alchemyState.adjustments[i] = { up: 0, down: 0 };
     }
 
-    enableAdjustment(slotArea, resultDiv);
   } catch (err) {
     console.error('[ALCHEMY] Error during reservation:', err);
     resultDiv.textContent = 'Server error while verifying ingredients.';
@@ -1132,16 +1131,14 @@ async function patchAndSendCraftRequest(resultDiv) {
   }
 }
 
-function enableAdjustment(slotArea, resultDiv) {
-  slotArea.querySelectorAll('.adjust-up').forEach(btn =>
-    btn.addEventListener('click', () => handleAdjustment(+btn.dataset.col, 'up', resultDiv))
-  );
-  slotArea.querySelectorAll('.adjust-down').forEach(btn =>
-    btn.addEventListener('click', () => handleAdjustment(+btn.dataset.col, 'down', resultDiv))
-  );
-}
-
 function handleAdjustment(colIdx, direction, resultDiv) {
+  console.log('[DEBUG] handleAdjustment called:', { 
+    colIdx, 
+    direction, 
+    currentCount: alchemyState.adjustmentCount,
+    maxAdjustments: alchemyState.maxAdjustments 
+  });
+
   if (alchemyState.adjustmentCount >= alchemyState.maxAdjustments) {
     resultDiv.textContent = `No more adjustments available (${alchemyState.maxAdjustments}/${alchemyState.maxAdjustments}).`;
     return;
@@ -1164,6 +1161,8 @@ function handleAdjustment(colIdx, direction, resultDiv) {
   updateSlotColumn(colIdx);
 
   alchemyState.adjustmentCount++;
+  console.log('[DEBUG] Adjustment count incremented to:', alchemyState.adjustmentCount);
+  
   updateAdjustmentCounter();
 
   if (alchemyState.adjustmentCount >= alchemyState.maxAdjustments) {
