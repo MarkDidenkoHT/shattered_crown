@@ -198,7 +198,7 @@ function renderProfessions(characters) {
   section.innerHTML = `
     <div class="art-header">
       <h1>Your Crafting Professions</h1>
-      <p class="subtitle">Select a profession to view recipes or start crafting.</p>
+      <p class="subtitle">Click on a profession to start crafting</p>
     </div>
     <div class="selection-section">
       <div class="profession-selection-grid">
@@ -209,7 +209,7 @@ function renderProfessions(characters) {
       </div>
     </div>
     <div class="confirm-return-buttons">
-      <button class="fantasy-button return-btn">Return</button>
+      <button class="fantasy-button return-btn">Return to Castle</button>
     </div>
   `;
 
@@ -217,54 +217,25 @@ function renderProfessions(characters) {
     window.gameAuth.loadModule('castle');
   });
 
-  // Enhanced recipes button with loading
-  section.querySelectorAll('.recipes-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const profName = btn.dataset.profession;
-      const profId = btn.dataset.professionId;
-
-      // Show loading immediately
-      const loadingModal = createSpinnerModal(`Loading ${profName} recipes...`);
+  // Add click handlers to profession cards
+  section.querySelectorAll('.profession-card').forEach(card => {
+    card.addEventListener('click', async (e) => {
+      // Prevent multiple clicks during loading
+      if (card.classList.contains('loading')) return;
       
-      // Disable button and show loading state
-      const originalContent = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `
-        <div class="button-loading">
-          <div class="mini-spinner"></div>
-          <span>Loading...</span>
-        </div>
-      `;
+      const profName = card.dataset.profession;
+      const profId = card.dataset.professionId;
 
-      try {
-        const recipes = await fetchRecipes(profId);
-        removeLoadingModal(loadingModal);
-        showRecipesModal(recipes, profName);
-      } catch (err) {
-        console.error('[CRAFTING] Failed to load recipes:', err);
-        removeLoadingModal(loadingModal);
-        displayMessage(`Failed to load recipes for ${profName}`);
-      } finally {
-        // Restore button state
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
-      }
-    });
-  });
-
-  // Enhanced craft button with advanced loading
-  section.querySelectorAll('.craft-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const profName = btn.dataset.profession;
-      const profId = btn.dataset.professionId;
-
-      // Disable button and show loading state
-      const originalContent = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `
-        <div class="button-loading">
-          <div class="mini-spinner"></div>
-          <span>Loading...</span>
+      // Add loading state to the card
+      card.classList.add('loading');
+      const originalContent = card.innerHTML;
+      
+      // Add loading overlay to the clicked card
+      card.innerHTML = `
+        ${originalContent}
+        <div class="card-loading-overlay">
+          <div class="card-spinner"></div>
+          <span>Loading ${profName}...</span>
         </div>
       `;
 
@@ -273,11 +244,22 @@ function renderProfessions(characters) {
       } catch (err) {
         console.error('[CRAFTING] Failed to start crafting session:', err);
         displayMessage(`Failed to start crafting for ${profName}`);
-      } finally {
-        // Restore button state
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
+        
+        // Restore card state on error
+        card.classList.remove('loading');
+        card.innerHTML = originalContent;
       }
+    });
+
+    // Add hover effects
+    card.addEventListener('mouseenter', () => {
+      if (!card.classList.contains('loading')) {
+        card.classList.add('hovered');
+      }
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.classList.remove('hovered');
     });
   });
 }
@@ -286,21 +268,24 @@ function professionCardHTML(character) {
   const profName = character.professions?.name || 'Unknown';
   const profId = character.professions?.id || 0;
   return `
-    <div class="selection-card">
+    <div class="profession-card selection-card" 
+         data-profession="${profName}" 
+         data-profession-id="${profId}">
       <div class="card-info-block">
-        <img src="assets/art/professions/${profName.toLowerCase().replace(/\s+/g, '_')}.png" 
-             alt="${profName}" 
-             style="width:64px;height:64px;"
-             onerror="this.src='assets/art/placeholder.png';">
-        <h3 class="card-name">${profName}</h3>
-        <p class="card-description">Character: ${character.name || `Lvl ${character.level || 1} ${character.races?.name || 'Unknown'}`}</p>
-        <div class="confirm-return-buttons">
-          <button class="fantasy-button recipes-btn" data-profession="${profName}" data-profession-id="${profId}">
-            Recipes
-          </button>
-          <button class="fantasy-button craft-btn" data-profession="${profName}" data-profession-id="${profId}">
-            Craft
-          </button>
+        <div class="profession-icon">
+          <img src="assets/art/professions/${profName.toLowerCase().replace(/\s+/g, '_')}.png" 
+               alt="${profName}" 
+               onerror="this.src='assets/art/placeholder.png';">
+        </div>
+        <div class="profession-details">
+          <h3 class="profession-name">${profName}</h3>
+          <p class="character-info">${character.name || `Lvl ${character.level || 1} ${character.races?.name || 'Unknown'}`}</p>
+          <div class="profession-hint">
+            <span class="click-hint">Click to start crafting</span>
+          </div>
+        </div>
+        <div class="profession-arrow">
+          <span>⚒</span>
         </div>
       </div>
     </div>
@@ -712,21 +697,211 @@ function injectLoadingStyles() {
       box-shadow: 0 0 10px rgba(196, 151, 90, 0.3);
     }
 
-    /* Button Loading States */
-    .button-loading {
+    /* Enhanced Profession Card Styles */
+    .profession-selection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    .profession-card {
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+      background: linear-gradient(145deg, rgba(42, 31, 22, 0.9), rgba(29, 20, 12, 0.9));
+      border: 2px solid #3d2914;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .profession-card:hover:not(.loading) {
+      transform: translateY(-5px);
+      border-color: #c4975a;
+      box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(196, 151, 90, 0.2);
+    }
+
+    .profession-card.hovered:not(.loading) .profession-arrow span {
+      transform: scale(1.2) rotate(15deg);
+      color: #c4975a;
+    }
+
+    .profession-card.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .card-info-block {
+      display: flex;
+      align-items: center;
+      padding: 1.5rem;
+      gap: 1.5rem;
+      min-height: 120px;
+    }
+
+    .profession-icon {
+      flex-shrink: 0;
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, rgba(196, 151, 90, 0.1), transparent);
+      border-radius: 50%;
+      border: 2px solid #3d2914;
+    }
+
+    .profession-icon img {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .profession-details {
+      flex-grow: 1;
+      text-align: left;
+    }
+
+    .profession-name {
+      font-family: 'Cinzel', serif;
+      color: #c4975a;
+      font-size: 1.4rem;
+      margin: 0 0 0.5rem 0;
+      text-shadow: 1px 1px 0 #3d2914;
+      letter-spacing: 0.5px;
+    }
+
+    .character-info {
+      color: #b8b3a8;
+      font-size: 1rem;
+      margin: 0 0 1rem 0;
+      opacity: 0.9;
+    }
+
+    .profession-hint {
+      opacity: 0.7;
+      transition: opacity 0.3s ease;
+    }
+
+    .profession-card:hover:not(.loading) .profession-hint {
+      opacity: 1;
+    }
+
+    .click-hint {
+      color: #c4975a;
+      font-size: 0.9rem;
+      font-style: italic;
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      justify-content: center;
     }
 
-    .mini-spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid #3d2914;
-      border-top: 2px solid #c4975a;
+    .click-hint::before {
+      content: "⚡";
+      font-size: 1rem;
+    }
+
+    .profession-arrow {
+      flex-shrink: 0;
+      width: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .profession-arrow span {
+      font-size: 1.8rem;
+      color: #3d2914;
+      transition: all 0.3s ease;
+      display: block;
+    }
+
+    /* Card Loading Overlay */
+    .card-loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      color: #c4975a;
+      font-size: 1rem;
+      backdrop-filter: blur(2px);
+    }
+
+    .card-spinner {
+      width: 30px;
+      height: 30px;
+      border: 3px solid #3d2914;
+      border-top: 3px solid #c4975a;
       border-radius: 50%;
       animation: spin 1s linear infinite;
+    }
+
+    /* Responsive Design for Three Professions */
+    @media (min-width: 1200px) {
+      .profession-selection-grid {
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 1100px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .profession-selection-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      .card-info-block {
+        padding: 1rem;
+        gap: 1rem;
+        min-height: 100px;
+      }
+      
+      .profession-icon {
+        width: 60px;
+        height: 60px;
+      }
+      
+      .profession-icon img {
+        width: 48px;
+        height: 48px;
+      }
+      
+      .profession-name {
+        font-size: 1.2rem;
+      }
+      
+      .character-info {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .card-info-block {
+        flex-direction: column;
+        text-align: center;
+        padding: 1rem 0.5rem;
+      }
+      
+      .profession-details {
+        text-align: center;
+      }
+      
+      .profession-arrow {
+        width: 100%;
+        margin-top: 0.5rem;
+      }
     }
 
     /* Animations */
@@ -771,8 +946,80 @@ function injectLoadingStyles() {
       to { transform: rotate(360deg); }
     }
 
-    /* Mobile Responsiveness */
-    @media (max-width: 480px) {
+    /* Ensure proper viewport height usage */
+    .main-app-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .character-creation-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2rem 0;
+    }
+
+    .art-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .art-header h1 {
+      font-family: 'Cinzel', serif;
+      color: #c4975a;
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 2px 2px 0 #3d2914;
+      letter-spacing: 2px;
+    }
+
+    .art-header .subtitle {
+      color: #b8b3a8;
+      font-size: 1.1rem;
+      font-style: italic;
+      opacity: 0.9;
+      margin: 0;
+    }
+
+    .selection-section {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem 0;
+    }
+
+    .confirm-return-buttons {
+      text-align: center;
+      margin-top: 2rem;
+      padding: 0 1rem;
+    }
+
+    .return-btn {
+      background: linear-gradient(145deg, #3d2914, #2a1d0e);
+      border: 2px solid #c4975a;
+      color: #c4975a;
+      padding: 0.8rem 2rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Cinzel', serif;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .return-btn:hover {
+      background: linear-gradient(145deg, #c4975a, #b8874a);
+      color: #2a1d0e;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Loading states for mobile */
+    @media (max-width: 768px) {
       .loading-content {
         padding: 1.5rem;
         margin: 1rem;
@@ -793,6 +1040,14 @@ function injectLoadingStyles() {
       
       .progress-text {
         font-size: 0.8rem;
+      }
+      
+      .art-header h1 {
+        font-size: 2rem;
+      }
+      
+      .art-header .subtitle {
+        font-size: 1rem;
       }
     }
   `;
