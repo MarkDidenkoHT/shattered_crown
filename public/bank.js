@@ -27,25 +27,16 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <div class="bank-header">
                 <div class="header-content">
                     <button class="fantasy-button back-btn">← Back to Castle</button>
-                    <h1 class="bank-title">Royal Bank</h1>
-                    <div class="bank-actions">
-                        <button class="fantasy-button sort-btn">Sort A-Z</button>
-                        <button class="fantasy-button refresh-btn">Refresh</button>
-                    </div>
+                    <h1 class="bank-title">Bank</h1>
                 </div>
                 
-                <!-- Filter Tabs -->
-                <div class="filter-tabs">
-                    <button class="filter-tab active" data-filter="all">All Items</button>
-                    <button class="filter-tab" data-filter="weapon">Weapons</button>
-                    <button class="filter-tab" data-filter="armor">Armor</button>
-                    <button class="filter-tab" data-filter="consumable">Consumables</button>
-                    <button class="filter-tab" data-filter="material">Materials</button>
-                    <button class="filter-tab" data-filter="misc">Misc</button>
+                <!-- Filter Tabs - will be populated dynamically -->
+                <div class="filter-tabs" id="filterTabs">
+                    <!-- Dynamic filter tabs will be inserted here -->
                 </div>
             </div>
 
-            <!-- Main Bank Content (75% height) -->
+            <!-- Main Bank Content -->
             <div class="bank-content">
                 <div class="bank-items-container">
                     <div class="bank-items-list" id="bankItemsList">
@@ -59,10 +50,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
                 <div class="bank-stats">
                     <span class="items-count">Items: <span id="itemsCount">0</span></span>
                     <span class="total-value">Total Value: <span id="totalValue">0</span> Gold</span>
-                </div>
-                <div class="footer-actions">
-                    <button class="fantasy-button bulk-sell-btn">Bulk Sell</button>
-                    <button class="fantasy-button bulk-discard-btn">Bulk Discard</button>
                 </div>
             </div>
         </div>
@@ -81,15 +68,33 @@ async function fetchBankItems() {
         const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=*,professions(name)`);
         _bankItems = await response.json();
         _filteredItems = [..._bankItems];
+        createDynamicFilters();
         renderBankItems();
-        closeMessageBox(); // Close loading message
+        closeMessageBox();
     } catch (error) {
         console.error('Failed to fetch bank items:', error);
         displayMessage('Failed to load bank items. Please try again.');
         _bankItems = [];
         _filteredItems = [];
+        createDynamicFilters();
         renderBankItems();
     }
+}
+
+function createDynamicFilters() {
+    const filterTabs = document.getElementById('filterTabs');
+    
+    // Get unique types from player's items
+    const uniqueTypes = [...new Set(_bankItems.map(item => item.type).filter(type => type))];
+    
+    // Always include "All Items" first
+    const filters = ['all', ...uniqueTypes.sort()];
+    
+    filterTabs.innerHTML = filters.map(filter => `
+        <button class="filter-tab ${filter === 'all' ? 'active' : ''}" data-filter="${filter}">
+            ${filter === 'all' ? 'All Items' : formatItemType(filter)}
+        </button>
+    `).join('');
 }
 
 function renderBankItems() {
@@ -140,7 +145,6 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    // Map item types to icon paths
     const iconMap = {
         'weapon': 'assets/icons/weapons/',
         'armor': 'assets/icons/armor/',
@@ -160,7 +164,6 @@ function formatItemType(type) {
 }
 
 function calculateItemValue(item) {
-    // Basic value calculation - you can make this more sophisticated
     const baseValues = {
         'weapon': 50,
         'armor': 40,
@@ -179,30 +182,9 @@ function setupBankInteractions() {
         window.gameAuth.loadModule('castle');
     });
 
-    // Sort button
-    _main.querySelector('.sort-btn').addEventListener('click', () => {
-        const btn = _main.querySelector('.sort-btn');
-        const isAscending = btn.textContent.includes('A-Z');
-        
-        _filteredItems.sort((a, b) => {
-            const nameA = a.item.toLowerCase();
-            const nameB = b.item.toLowerCase();
-            return isAscending ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        });
-        
-        btn.textContent = isAscending ? 'Sort Z-A' : 'Sort A-Z';
-        renderBankItems();
-    });
-
-    // Refresh button
-    _main.querySelector('.refresh-btn').addEventListener('click', async () => {
-        await fetchBankItems();
-        updateBankStats();
-    });
-
-    // Filter tabs
-    _main.querySelectorAll('.filter-tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
+    // Filter tabs (using event delegation)
+    _main.querySelector('#filterTabs').addEventListener('click', (e) => {
+        if (e.target.classList.contains('filter-tab')) {
             // Update active tab
             _main.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
             e.target.classList.add('active');
@@ -217,7 +199,7 @@ function setupBankInteractions() {
             
             renderBankItems();
             updateBankStats();
-        });
+        }
     });
 
     // Item action buttons (using event delegation)
@@ -231,15 +213,6 @@ function setupBankInteractions() {
             const itemId = btn.dataset.itemId;
             await handleDiscardItem(itemId);
         }
-    });
-
-    // Bulk actions
-    _main.querySelector('.bulk-sell-btn').addEventListener('click', () => {
-        displayMessage('Bulk sell functionality coming soon!');
-    });
-
-    _main.querySelector('.bulk-discard-btn').addEventListener('click', () => {
-        displayMessage('Bulk discard functionality coming soon!');
     });
 }
 
@@ -255,9 +228,6 @@ async function handleSellItem(itemId) {
 
     if (confirmed) {
         try {
-            // Here you would typically:
-            // 1. Delete the item from bank
-            // 2. Add gold to player's account
             await _apiCall(`/api/supabase/rest/v1/bank?id=eq.${itemId}`, {
                 method: 'DELETE'
             });
@@ -352,7 +322,6 @@ function createParticles() {
 }
 
 function displayMessage(message) {
-    // Remove existing message if any
     const existing = document.querySelector('.custom-message-box');
     if (existing) existing.remove();
 
@@ -419,21 +388,20 @@ function addBankStyles() {
             flex: 1;
         }
 
-        .bank-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .bank-actions .fantasy-button {
-            padding: 0.5rem 1rem;
-            font-size: 0.8rem;
-        }
-
-        /* Filter Tabs */
+        /* Filter Tabs - Horizontal Scrollable */
         .filter-tabs {
             display: flex;
             gap: 0.5rem;
-            flex-wrap: wrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.25rem 0;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .filter-tabs::-webkit-scrollbar {
+            display: none;
         }
 
         .filter-tab {
@@ -446,6 +414,9 @@ function addBankStyles() {
             font-family: 'Cinzel', serif;
             font-size: 0.9rem;
             transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: fit-content;
         }
 
         .filter-tab:hover {
@@ -460,10 +431,9 @@ function addBankStyles() {
             font-weight: 600;
         }
 
-        /* Main Content (75% height) */
+        /* Main Content */
         .bank-content {
             flex: 1;
-            height: 75vh;
             overflow: hidden;
             padding: 1rem;
         }
@@ -654,7 +624,7 @@ function addBankStyles() {
             border-top: 2px solid #3d2914;
             padding: 1rem;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             box-shadow: 0 -2px 8px rgba(0,0,0,0.3);
         }
@@ -664,16 +634,6 @@ function addBankStyles() {
             gap: 2rem;
             font-family: 'Cinzel', serif;
             color: #c4975a;
-        }
-
-        .footer-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .footer-actions .fantasy-button {
-            padding: 0.6rem 1.2rem;
-            font-size: 0.9rem;
         }
 
         /* Confirm Dialog */
@@ -708,15 +668,7 @@ function addBankStyles() {
             .header-content {
                 flex-direction: column;
                 gap: 0.5rem;
-            }
-
-            .bank-actions {
-                order: -1;
-                align-self: flex-start;
-            }
-
-            .filter-tabs {
-                justify-content: center;
+                align-items: stretch;
             }
 
             .filter-tab {
@@ -737,11 +689,6 @@ function addBankStyles() {
             .action-btn {
                 padding: 0.3rem 0.6rem;
                 font-size: 0.7rem;
-            }
-
-            .bank-footer {
-                flex-direction: column;
-                gap: 1rem;
             }
 
             .bank-stats {
