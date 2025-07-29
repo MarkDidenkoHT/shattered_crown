@@ -1,64 +1,37 @@
-// Alchemy profession module
+// Optimized Alchemy profession module
 let context = null;
 let alchemyState = null;
+let ingredientCache = new Map(); // Cache ingredient data
 
 export async function startCraftingSession(ctx) {
   console.log('[ALCHEMY] Starting alchemy crafting session...');
   context = ctx;
   
-  // Extract loading utilities from context
   const { loadingModal, loadingStartTime, updateLoadingProgress, finishLoading } = context;
   
   try {
-    // Step 1: Update loading to show we're fetching bank items
-    updateLoadingProgress(loadingModal, "Accessing your ingredient vault...", "Checking available materials in your alchemical storage...");
+    // Step 1: Parallel data fetching - start both requests simultaneously
+    updateLoadingProgress(loadingModal, "Accessing your ingredient vault...", "Loading bank items and recipes...");
     
-    // Fetch available ingredients for alchemy
-    const response = await context.apiCall(
-      `/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`
-    );
-    const bankItems = await response.json();
+    const [bankResponse, recipesPromise] = await Promise.all([
+      context.apiCall(
+        `/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`
+      ),
+      context.fetchRecipes(context.professionId) // Start recipe loading in parallel
+    ]);
     
-    // Step 2: Update loading for ingredient enrichment
-    updateLoadingProgress(loadingModal, "Analyzing ingredient properties...", "Examining mystical properties of your herbs and reagents...");
+    const bankItems = await bankResponse.json();
     
-    const enriched = [];
-    const totalItems = bankItems.length;
+    // Step 2: Batch ingredient enrichment
+    updateLoadingProgress(loadingModal, "Analyzing ingredient properties...", "Processing ingredient data...");
     
-    for (let i = 0; i < bankItems.length; i++) {
-      const item = bankItems[i];
-      
-      // Show progress for each item being processed
-      if (i % 3 === 0 || i === totalItems - 1) { // Update every 3 items or on last item
-        const progress = Math.round((i / totalItems) * 100);
-        updateLoadingProgress(
-          loadingModal, 
-          `Processing ingredients... (${i + 1}/${totalItems})`, 
-          `Analyzing the mystical essence of ${item.item}...`
-        );
-      }
-      
-      const res = await context.apiCall(
-        `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
-      );
-      const [ingridient] = await res.json();
-      if (ingridient) {
-        enriched.push({
-          name: item.item,
-          amount: item.amount,
-          properties: ingridient.properties,
-          sprite: ingridient.sprite,
-        });
-      }
-      
-      // Small delay to make the loading feel more natural
-      if (totalItems > 5) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
+    const enriched = await batchEnrichIngredients(bankItems);
     
-    // Step 3: Update loading for state preparation
-    updateLoadingProgress(loadingModal, "Preparing alchemy laboratory...", "Setting up cauldrons, burners, and mystical apparatus...");
+    // Step 3: Wait for recipes to complete (likely already done)
+    const recipes = await recipesPromise;
+    
+    // Step 4: Initialize state
+    updateLoadingProgress(loadingModal, "Preparing alchemy laboratory...", "Setting up interface...");
     
     alchemyState = {
       professionId: context.professionId,
@@ -73,20 +46,13 @@ export async function startCraftingSession(ctx) {
       adjustmentCount: 0,
       maxAdjustments: 3,
       enrichedHerbs: null,
-      recipes: null,
+      recipes: recipes, // Store recipes immediately
       sessionId: null
     };
     
-    // Step 4: Update loading for interface setup
-    updateLoadingProgress(loadingModal, "Initializing crafting interface...", "Preparing your alchemical workbench...");
+    // Step 5: Minimum loading time and render
+    await finishLoading(loadingModal, loadingStartTime, 2000); // Reduced from 3000ms
     
-    // Small delay to show this step
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Step 5: Finish loading with minimum time (3 seconds total)
-    await finishLoading(loadingModal, loadingStartTime, 3000);
-    
-    // Step 6: Now render the interface
     renderCraftingModal();
     injectBottleAnimationsCSS();
     
@@ -94,15 +60,102 @@ export async function startCraftingSession(ctx) {
     
   } catch (error) {
     console.error('[ALCHEMY] Error starting alchemy session:', error);
-    
-    // If we have the loading modal utilities, clean up properly
     if (finishLoading && loadingModal) {
-      await finishLoading(loadingModal, loadingStartTime, 500); // Quick cleanup
+      await finishLoading(loadingModal, loadingStartTime, 500);
     }
-    
-    // Re-throw the error so the calling function can handle it
     throw error;
   }
+}
+
+// Optimized batch ingredient enrichment
+async function batchEnrichIngredients(bankItems) {
+  if (!bankItems.length) return [];
+  
+  // Create a single API call for all ingredients
+  const ingredientNames = bankItems.map(item => item.item);
+  const uniqueNames = [...new Set(ingredientNames)]; // Remove duplicates
+  
+  // Check cache first
+  const uncachedNames = uniqueNames.filter(name => !ingredientCache.has(name));
+  
+  if (uncachedNames.length > 0) {
+    // Build query for multiple ingredients using 'in' operator
+    const namesQuery = uncachedNames.map(name => encodeURIComponent(name)).join(',');
+    
+    try {
+      const response = await context.apiCall(
+        `/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`
+      );
+      const ingredients = await response.json();
+      
+      // Cache the results
+      ingredients.forEach(ingredient => {
+        ingredientCache.set(ingredient.name, ingredient);
+      });
+      
+    } catch (error) {
+      console.warn('[ALCHEMY] Batch ingredient fetch failed, falling back to individual requests:', error);
+      // Fallback to individual requests if batch fails
+      return await fallbackEnrichIngredients(bankItems);
+    }
+  }
+  
+  // Build enriched array from cache
+  const enriched = [];
+  for (const item of bankItems) {
+    const cachedIngredient = ingredientCache.get(item.item);
+    if (cachedIngredient) {
+      enriched.push({
+        name: item.item,
+        amount: item.amount,
+        properties: cachedIngredient.properties,
+        sprite: cachedIngredient.sprite,
+      });
+    }
+  }
+  
+  return enriched;
+}
+
+// Fallback method for individual ingredient requests (with concurrency control)
+async function fallbackEnrichIngredients(bankItems) {
+  const enriched = [];
+  const BATCH_SIZE = 5; // Process 5 ingredients at a time
+  
+  for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
+    const batch = bankItems.slice(i, i + BATCH_SIZE);
+    
+    const batchPromises = batch.map(async (item) => {
+      try {
+        const res = await context.apiCall(
+          `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
+        );
+        const [ingredient] = await res.json();
+        
+        if (ingredient) {
+          return {
+            name: item.item,
+            amount: item.amount,
+            properties: ingredient.properties,
+            sprite: ingredient.sprite,
+          };
+        }
+      } catch (error) {
+        console.warn(`[ALCHEMY] Failed to fetch ingredient ${item.item}:`, error);
+      }
+      return null;
+    });
+    
+    const batchResults = await Promise.all(batchPromises);
+    enriched.push(...batchResults.filter(Boolean));
+    
+    // Small delay between batches to avoid overwhelming the API
+    if (i + BATCH_SIZE < bankItems.length) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+  
+  return enriched;
 }
 
 // Enhanced bottle HTML with liquid and bubble elements
@@ -161,6 +214,7 @@ function createCraftingSlotHTML(slotIndex) {
   `;
 }
 
+// Optimized modal rendering with pre-rendered content
 function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
@@ -183,20 +237,14 @@ function renderCraftingModal() {
       
       <!-- Bank row (horizontal scrollable) -->
       <h3>Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5pxrem; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1); scrollbar-width: none;">
-        ${alchemyState.availableHerbs.map((herb, idx) => `
-          <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(255,255,255,0.05);">
-            <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
-            <div style="font-size:0.8rem;">x${herb.amount}</div>
-            <div class="info-icon" data-herb="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
-          </div>
-        `).join('')}
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1); scrollbar-width: none;">
+        ${renderHerbsHTML()}
       </div>
       
       <!-- Recipes row (horizontal scrollable) -->
       <h3>Recipes</h3>
       <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none;">
-        <!-- Will be populated by loadRecipesIntoModal() -->
+        ${renderRecipesHTML()}
       </div>
       
       <!-- Button row - all buttons stay here -->
@@ -211,54 +259,32 @@ function renderCraftingModal() {
   document.body.appendChild(modal);
 
   setupModalEventListeners(modal);
-  loadRecipesIntoModal(modal);
 }
 
-async function loadRecipesIntoModal(modal) {
-  try {
-    const recipes = await context.fetchRecipes(alchemyState.professionId);
-    const recipesContainer = modal.querySelector('#available-recipes');
-    
-    if (recipes.length === 0) {
-      recipesContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes available</div>';
-      return;
-    }
-    
-    recipesContainer.innerHTML = recipes.map((recipe, idx) => `
-      <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
-        <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
-        <div style="font-size: 0.8rem; margin-top: 4px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
-        <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
-      </div>
-    `).join('');
-    
-    // Store recipes in alchemyState for reference
-    alchemyState.recipes = recipes;
-    
-    // Add click handlers for recipes
-    recipesContainer.querySelectorAll('.info-icon').forEach(icon => {
-      icon.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const recipeIdx = parseInt(icon.dataset.recipe);
-        showRecipeDetails(recipes[recipeIdx]);
-      });
-    });
-    
-    // Also allow clicking anywhere on the card
-    recipesContainer.querySelectorAll('.recipe-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('info-icon')) {
-          const recipeIdx = parseInt(card.dataset.recipe);
-          showRecipeDetails(recipes[recipeIdx]);
-        }
-      });
-    });
-    
-  } catch (error) {
-    console.error('[ALCHEMY] Failed to load recipes:', error);
-    const recipesContainer = modal.querySelector('#available-recipes');
-    recipesContainer.innerHTML = '<div style="color: #ff6b6b; padding: 1rem;">Failed to load recipes</div>';
+// Pre-render herbs HTML to avoid DOM manipulation during render
+function renderHerbsHTML() {
+  return alchemyState.availableHerbs.map((herb, idx) => `
+    <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(255,255,255,0.05);">
+      <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
+      <div style="font-size:0.8rem;">x${herb.amount}</div>
+      <div class="info-icon" data-herb="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    </div>
+  `).join('');
+}
+
+// Pre-render recipes HTML
+function renderRecipesHTML() {
+  if (!alchemyState.recipes || alchemyState.recipes.length === 0) {
+    return '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes available</div>';
   }
+  
+  return alchemyState.recipes.map((recipe, idx) => `
+    <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
+      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
+      <div style="font-size: 0.8rem; margin-top: 4px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
+      <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    </div>
+  `).join('');
 }
 
 // Helper function to find herbs that have a specific property
@@ -514,70 +540,60 @@ function showHerbProperties(herbIndex) {
   });
 }
 
-// Enhanced herb placement with liquid animation
+// Optimized event listeners setup with event delegation
 function setupModalEventListeners(modal) {
-  const columns = modal.querySelectorAll('.crafting-column');
-  const herbs = modal.querySelectorAll('.herb');
   const craftBtn = modal.querySelector('#craft-btn');
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
   const adjustmentCounter = modal.querySelector('#adjustment-counter');
 
+  // Close button
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
     alchemyState = null;
+    ingredientCache.clear(); // Clear cache when closing
   });
 
-  herbs.forEach(herbEl => {
-    herbEl.addEventListener('click', (e) => {
-      if (e.target.classList.contains('info-icon')) return;
-      if (alchemyState.isCraftingStarted) return;
-      
-      const idx = +herbEl.dataset.index;
-      const herb = alchemyState.availableHerbs[idx];
-
-      const slotIdx = alchemyState.selectedHerbs.findIndex(s => s === null);
-      if (slotIdx === -1) return;
-
-      alchemyState.selectedHerbs[slotIdx] = herb;
-      
-      const column = columns[slotIdx];
-      const herbSlot = column.querySelector('.herb-slot');
-      herbSlot.innerHTML = `
-        <img src="assets/art/ingridients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove ${herb.name}">
-      `;
-      herbSlot.style.border = '2px solid #4CAF50';
-      herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
-      
-      // Animate liquid filling the bottle
-      animateBottleFill(column, herb);
-      
-      herbSlot.addEventListener('click', () => {
-        if (alchemyState.isCraftingStarted) return;
-        alchemyState.selectedHerbs[slotIdx] = null;
-        herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
-        herbSlot.style.border = '2px dashed #aaa';
-        herbSlot.style.background = 'rgba(0,0,0,0.2)';
-        
-        // Animate liquid draining
-        animateBottleDrain(column);
-        updateCraftButtonState();
-      });
-      
-      updateCraftButtonState();
-    });
-  });
-
-  modal.querySelectorAll('.info-icon').forEach(icon => {
-    icon.addEventListener('click', (e) => {
+  // Use event delegation for herbs and info icons
+  const herbsContainer = modal.querySelector('#available-herbs');
+  herbsContainer.addEventListener('click', (e) => {
+    const herbEl = e.target.closest('.herb');
+    const infoIcon = e.target.closest('.info-icon');
+    
+    if (infoIcon && infoIcon.dataset.herb) {
       e.stopPropagation();
-      if (icon.dataset.herb) {
-        const herbIndex = parseInt(icon.dataset.herb);
-        showHerbProperties(herbIndex);
-      }
-    });
+      const herbIndex = parseInt(infoIcon.dataset.herb);
+      showHerbProperties(herbIndex);
+      return;
+    }
+    
+    if (herbEl && !alchemyState.isCraftingStarted) {
+      const idx = parseInt(herbEl.dataset.index);
+      const herb = alchemyState.availableHerbs[idx];
+      handleHerbSelection(herb, modal);
+    }
   });
 
+  // Use event delegation for recipes
+  const recipesContainer = modal.querySelector('#available-recipes');
+  recipesContainer.addEventListener('click', (e) => {
+    const recipeCard = e.target.closest('.recipe-card');
+    const infoIcon = e.target.closest('.info-icon');
+    
+    if (infoIcon && infoIcon.dataset.recipe) {
+      e.stopPropagation();
+      const recipeIdx = parseInt(infoIcon.dataset.recipe);
+      showRecipeDetails(alchemyState.recipes[recipeIdx]);
+      return;
+    }
+    
+    if (recipeCard) {
+      const recipeIdx = parseInt(recipeCard.dataset.recipe);
+      showRecipeDetails(alchemyState.recipes[recipeIdx]);
+    }
+  });
+
+  // Craft button
   craftBtn.addEventListener('click', () => {
     alchemyState.isCraftingStarted = true;
     resultDiv.textContent = 'Crafting...';
@@ -586,27 +602,85 @@ function setupModalEventListeners(modal) {
     finishBtn.disabled = false;
     adjustmentCounter.style.display = 'block';
 
-    herbs.forEach(herb => {
-      herb.style.opacity = '0.5';
-      herb.style.pointerEvents = 'none';
-    });
+    // Disable herb interactions
+    herbsContainer.style.opacity = '0.5';
+    herbsContainer.style.pointerEvents = 'none';
 
     startSlotAnimation(resultDiv, modal);
   });
 
+  // Finish button
   finishBtn.addEventListener('click', () => {
     finishBtn.disabled = true;
     patchAndSendCraftRequest(resultDiv);
   });
 
-  function updateCraftButtonState() {
-    if (alchemyState.selectedHerbs.every(h => h !== null)) {
-      craftBtn.disabled = false;
-      resultDiv.textContent = 'Ready to craft!';
-    } else {
-      craftBtn.disabled = true;
-      resultDiv.textContent = 'Select 3 herbs to start crafting';
+  // Use event delegation for adjustment buttons
+  const slotsContainer = modal.querySelector('#crafting-slots');
+  slotsContainer.addEventListener('click', (e) => {
+    const adjustBtn = e.target.closest('.adjust-up, .adjust-down');
+    if (adjustBtn && !adjustBtn.disabled) {
+      const colIdx = parseInt(adjustBtn.dataset.col);
+      const direction = adjustBtn.classList.contains('adjust-up') ? 'up' : 'down';
+      handleAdjustment(colIdx, direction, resultDiv);
     }
+    
+    // Handle herb slot clicks for removal
+    const herbSlot = e.target.closest('.herb-slot img');
+    if (herbSlot && !alchemyState.isCraftingStarted) {
+      const column = herbSlot.closest('.crafting-column');
+      const slotIdx = parseInt(column.dataset.slot);
+      removeHerbFromSlot(slotIdx, modal);
+    }
+  });
+}
+
+// Optimized herb selection handler
+function handleHerbSelection(herb, modal) {
+  const slotIdx = alchemyState.selectedHerbs.findIndex(s => s === null);
+  if (slotIdx === -1) return;
+
+  alchemyState.selectedHerbs[slotIdx] = herb;
+  
+  const column = modal.querySelector(`[data-slot="${slotIdx}"]`);
+  const herbSlot = column.querySelector('.herb-slot');
+  
+  herbSlot.innerHTML = `
+    <img src="assets/art/ingridients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove ${herb.name}">
+  `;
+  herbSlot.style.border = '2px solid #4CAF50';
+  herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
+  
+  animateBottleFill(column, herb);
+  updateCraftButtonState(modal);
+}
+
+// Helper function to remove herb from slot
+function removeHerbFromSlot(slotIdx, modal) {
+  alchemyState.selectedHerbs[slotIdx] = null;
+  
+  const column = modal.querySelector(`[data-slot="${slotIdx}"]`);
+  const herbSlot = column.querySelector('.herb-slot');
+  
+  herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
+  herbSlot.style.border = '2px dashed #aaa';
+  herbSlot.style.background = 'rgba(0,0,0,0.2)';
+  
+  animateBottleDrain(column);
+  updateCraftButtonState(modal);
+}
+
+// Optimized craft button state update
+function updateCraftButtonState(modal) {
+  const craftBtn = modal.querySelector('#craft-btn');
+  const resultDiv = modal.querySelector('#craft-result');
+  
+  if (alchemyState.selectedHerbs.every(h => h !== null)) {
+    craftBtn.disabled = false;
+    resultDiv.textContent = 'Ready to craft!';
+  } else {
+    craftBtn.disabled = true;
+    resultDiv.textContent = 'Select 3 herbs to start crafting';
   }
 }
 
@@ -1255,4 +1329,14 @@ function injectBottleAnimationsCSS() {
   style.id = 'bottle-animations-css';
   style.textContent = additionalCSS;
   document.head.appendChild(style);
+}
+
+// Cache management functions
+export function clearIngredientCache() {
+  ingredientCache.clear();
+}
+
+export function preloadIngredients(ingredientNames) {
+  // Optional: Preload specific ingredients if needed
+  return batchEnrichIngredients(ingredientNames.map(name => ({ item: name, amount: 1 })));
 }
