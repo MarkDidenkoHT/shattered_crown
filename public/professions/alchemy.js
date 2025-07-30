@@ -44,7 +44,7 @@ export async function startCraftingSession(ctx) {
       isCraftingStarted: false,
       result: null,
       adjustmentCount: 0,
-      maxAdjustments: 3,
+      maxAdjustments: 2,
       enrichedHerbs: null,
       recipes: recipes, // Store recipes immediately
       sessionId: null
