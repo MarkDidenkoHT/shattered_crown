@@ -363,7 +363,7 @@ async function attemptMoveCharacter(character, targetX, targetY) {
 
 
     try {
-        const response = await _apiCall('/api/move-character', {
+        const response = await _apiCall('/functions/v1/move-character', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
