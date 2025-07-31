@@ -1115,18 +1115,26 @@ function handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus) {
   }
 
   const props = miningState.randomizedProperties[rowIdx];
+  
+  console.log('[DEBUG] Properties before adjustment:', [...props]);
 
   if (!miningState.adjustments[rowIdx]) {
     miningState.adjustments[rowIdx] = { left: 0, right: 0 };
   }
 
   if (direction === 'left') {
-    props.unshift(props.pop()); // Move last element to front
+    // Left arrow = shift left/down by one position
+    // [1,2,3] -> [2,3,1] (first element moves to end)
+    props.push(props.shift());
     miningState.adjustments[rowIdx].left++;
-  } else {
-    props.push(props.shift()); // Move first element to end
+  } else if (direction === 'right') {
+    // Right arrow = shift right/up by one position  
+    // [1,2,3] -> [3,1,2] (last element moves to front)
+    props.unshift(props.pop());
     miningState.adjustments[rowIdx].right++;
   }
+  
+  console.log('[DEBUG] Properties after adjustment:', [...props]);
 
   updateMiningRow(rowIdx);
 
