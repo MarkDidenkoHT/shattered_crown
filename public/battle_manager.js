@@ -266,21 +266,28 @@ function highlightWalkableTiles(character) {
     const [charX, charY] = character.position;
     const container = _main.querySelector('.battle-grid-container');
 
-    // Only highlight immediate neighbors (1 tile away)
-    const potentialMoves = [
-        { x: charX, y: charY - 1 }, // Up
-        { x: charX, y: charY + 1 }, // Down
-        { x: charX - 1, y: charY }, // Left
-        { x: charX + 1, y: charY }  // Right
+    // Define 8-directional offsets for Chebyshev distance (1 tile away)
+    const offsets = [
+        { dx: 0, dy: -1 }, // Up
+        { dx: 0, dy: 1 },  // Down
+        { dx: -1, dy: 0 }, // Left
+        { dx: 1, dy: 0 },  // Right
+        { dx: -1, dy: -1 },// Up-Left
+        { dx: 1, dy: -1 }, // Up-Right
+        { dx: -1, dy: 1 }, // Down-Left
+        { dx: 1, dy: 1 }   // Down-Right
     ];
 
-    potentialMoves.forEach(pos => {
-        // Ensure coordinates are within grid bounds (0-6 for a 7x7 grid)
-        if (pos.x >= 0 && pos.x < 7 && pos.y >= 0 && pos.y < 7) {
-            const tileEl = container.querySelector(`td[data-x="${pos.x}"][data-y="${pos.y}"]`);
+    offsets.forEach(offset => {
+        const newX = charX + offset.dx;
+        const newY = charY + offset.dy;
+
+        // Ensure new coordinates are within grid bounds (assuming 7x7 grid for now)
+        if (newX >= 0 && newX < 7 && newY >= 0 && newY < 7) {
+            const tileEl = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
             if (tileEl && tileEl.dataset.walkable === 'true') {
                 // Check if another character already occupies this tile
-                const isOccupied = _characters.some(c => Array.isArray(c.position) && c.position[0] === pos.x && c.position[1] === pos.y);
+                const isOccupied = _characters.some(c => Array.isArray(c.position) && c.position[0] === newX && c.position[1] === newY);
                 if (!isOccupied) {
                     tileEl.classList.add('highlight-walkable');
                     highlightedTiles.push(tileEl); // Add to our tracking array
