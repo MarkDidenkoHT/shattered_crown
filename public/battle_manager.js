@@ -336,23 +336,29 @@ async function attemptMoveCharacter(character, targetX, targetY) {
     const startX = character.position[0];
     const startY = character.position[1];
 
-    // Client-side validation for immediate neighbors (already done in highlightWalkableTiles, but good to double check)
+    // Client-side validation for immediate neighbors (Chebyshev distance)
     const distanceX = Math.abs(targetX - startX);
     const distanceY = Math.abs(targetY - startY);
+    const chebyshevDistance = Math.max(distanceX, distanceY);
 
-    if (!((distanceX === 1 && distanceY === 0) || (distanceX === 0 && distanceY === 1))) {
-        displayMessage('Characters can only move 1 tile at a time to an adjacent square.');
+    // Ensure it's exactly 1 tile away (8-directional) AND not the same tile
+    if (chebyshevDistance !== 1 || (distanceX === 0 && distanceY === 0)) { // <-- THIS IS THE CRUCIAL CHANGE
+        displayMessage('Characters can only move 1 tile at a time to an adjacent square (including diagonals).');
         unhighlightAllTiles(); // Clear highlights if the move is invalid
         return;
     }
 
     // Check if the target tile is walkable (based on _tileMap data)
-    const targetTileData = _tileMap[
-        _main.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`)
-            .className.split(' ')
-            .find(cls => cls.startsWith('tile-'))
-            .replace('tile-', '')
-    ];
+    const targetTileEl = _main.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
+    if (!targetTileEl) {
+        displayMessage('Invalid target tile.');
+        unhighlightAllTiles();
+        return;
+    }
+
+    const tileClassName = targetTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
+    const tileName = tileClassName ? tileClassName.replace('tile-', '') : 'plain'; // Default to 'plain' if not found
+    const targetTileData = _tileMap[tileName];
 
     if (!targetTileData || !targetTileData.walkable) {
         displayMessage('Cannot move to an unwalkable tile.');
@@ -367,7 +373,6 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         unhighlightAllTiles(); // Clear highlights
         return;
     }
-
 
     try {
         const response = await _apiCall('/functions/v1/move-character', {
@@ -413,7 +418,6 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         unhighlightAllTiles(); // Clear highlights on network error
     }
 }
-
 
 function renderBottomUI() {
     const ui = _main.querySelector('.battle-bottom-ui');
