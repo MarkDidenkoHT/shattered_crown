@@ -44,7 +44,7 @@ export async function startCraftingSession(ctx) {
       isCraftingStarted: false,
       result: null,
       adjustmentCount: 0,
-      maxAdjustments: 4, // More adjustments for horizontal alignment
+      maxAdjustments: 2,
       enrichedOres: null,
       recipes: recipes,
       sessionId: null
@@ -942,14 +942,23 @@ async function patchAndSendCraftRequest(resultDiv) {
     // Convert adjustment counts to the expected format
     // Map visual 'left'/'right' to server's expected 'up'/'down'
     const adjustments = [];
+    
+    console.log('[MINING] Raw adjustments state:', miningState.adjustments);
+    
     for (const [rowIdx, adj] of Object.entries(miningState.adjustments || {})) {
+      console.log(`[MINING] Processing row ${rowIdx}:`, adj);
+      
       if (adj.left > 0) {
         // Visual 'left' movement maps to server's 'up' direction
-        adjustments.push({ bottle: Number(rowIdx), direction: 'up', count: adj.left });
+        const adjustment = { bottle: Number(rowIdx), direction: 'up', count: adj.left };
+        console.log('[MINING] Adding left->up adjustment:', adjustment);
+        adjustments.push(adjustment);
       }
       if (adj.right > 0) {
         // Visual 'right' movement maps to server's 'down' direction
-        adjustments.push({ bottle: Number(rowIdx), direction: 'down', count: adj.right });
+        const adjustment = { bottle: Number(rowIdx), direction: 'down', count: adj.right };
+        console.log('[MINING] Adding right->down adjustment:', adjustment);
+        adjustments.push(adjustment);
       }
     }
 
@@ -960,6 +969,7 @@ async function patchAndSendCraftRequest(resultDiv) {
       adjustments
     };
 
+    console.log('[MINING] Final adjustments array:', adjustments);
     console.log('[MINING] Sending craft request payload:', payload);
 
     const res = await fetch('/functions/v1/craft_alchemy', {
@@ -972,6 +982,10 @@ async function patchAndSendCraftRequest(resultDiv) {
     });
 
     const json = await res.json();
+    
+    if (!res.ok) {
+      console.error('[MINING] Server returned error:', res.status, json);
+    }
 
     // Get button references
     const claimBtn = document.querySelector('#claim-btn');
