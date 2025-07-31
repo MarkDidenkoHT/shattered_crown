@@ -948,6 +948,7 @@ async function patchAndSendCraftRequest(resultDiv) {
     for (const [rowIdx, adj] of Object.entries(miningState.adjustments || {})) {
       console.log(`[MINING] Processing row ${rowIdx}:`, adj);
       
+      // Only add adjustments with positive counts
       if (adj.left > 0) {
         // Visual 'left' movement maps to server's 'up' direction
         const adjustment = { bottle: Number(rowIdx), direction: 'up', count: adj.left };
@@ -970,6 +971,20 @@ async function patchAndSendCraftRequest(resultDiv) {
     };
 
     console.log('[MINING] Final adjustments array:', adjustments);
+    
+    // Validate all adjustments before sending
+    for (const adj of adjustments) {
+      if (typeof adj.bottle !== 'number' || adj.bottle < 0 || adj.bottle > 2) {
+        console.error('[MINING] Invalid bottle index:', adj);
+      }
+      if (!['up', 'down'].includes(adj.direction)) {
+        console.error('[MINING] Invalid direction:', adj);
+      }
+      if (typeof adj.count !== 'number' || adj.count < 1) {
+        console.error('[MINING] Invalid count:', adj);
+      }
+    }
+    
     console.log('[MINING] Sending craft request payload:', payload);
 
     const res = await fetch('/functions/v1/craft_alchemy', {
