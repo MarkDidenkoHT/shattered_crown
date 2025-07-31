@@ -146,11 +146,11 @@ function renderBankItems() {
 
 function getItemIcon(item) {
     const iconMap = {
-        'weapon': 'assets/icons/weapons/',
-        'armor': 'assets/icons/armor/',
-        'consumable': 'assets/icons/consumables/',
-        'material': 'assets/icons/materials/',
-        'misc': 'assets/icons/misc/'
+        'weapon': 'assets/art/recipes/',
+        'armor': 'assets/art/recipes/',
+        'consumable': 'assets/art/recipes/',
+        'material': 'assets/art/ingridients/',
+        'misc': 'assets/art/misc/'
     };
     
     const basePath = iconMap[item.type] || iconMap['misc'];
