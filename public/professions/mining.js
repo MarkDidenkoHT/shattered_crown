@@ -999,7 +999,21 @@ async function patchAndSendCraftRequest(resultDiv) {
     const json = await res.json();
     
     if (!res.ok) {
-      console.error('[MINING] Server returned error:', res.status, json);
+      console.error('[MINING] Server returned error:', res.status, res.statusText);
+      console.error('[MINING] Server error response:', json);
+      
+      // Show the server error to the user
+      resultDiv.innerHTML = `
+        <span style="color:red;">💥 Server Error (${res.status})</span>
+        <br><small style="color:#999;">${json.error || json.message || 'Unknown server error'}</small>
+      `;
+      
+      const finishBtn = document.querySelector('#finish-btn');
+      if (finishBtn) {
+        finishBtn.disabled = false; // Re-enable so user can try again
+      }
+      
+      return; // Exit early on server error
     }
 
     // Get button references
