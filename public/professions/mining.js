@@ -940,13 +940,16 @@ function checkAlignment(alignmentStatus) {
 async function patchAndSendCraftRequest(resultDiv) {
   try {
     // Convert adjustment counts to the expected format
+    // Map visual 'left'/'right' to server's expected 'up'/'down'
     const adjustments = [];
     for (const [rowIdx, adj] of Object.entries(miningState.adjustments || {})) {
       if (adj.left > 0) {
-        adjustments.push({ bottle: Number(rowIdx), direction: 'left', count: adj.left });
+        // Visual 'left' movement maps to server's 'up' direction
+        adjustments.push({ bottle: Number(rowIdx), direction: 'up', count: adj.left });
       }
       if (adj.right > 0) {
-        adjustments.push({ bottle: Number(rowIdx), direction: 'right', count: adj.right });
+        // Visual 'right' movement maps to server's 'down' direction
+        adjustments.push({ bottle: Number(rowIdx), direction: 'down', count: adj.right });
       }
     }
 
