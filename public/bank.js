@@ -49,7 +49,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <div class="bank-footer">
                 <div class="bank-stats">
                     <span class="items-count">Items: <span id="itemsCount">0</span></span>
-                    <span class="total-value">Total Value: <span id="totalValue">0</span> Gold</span>
+                    <span class="auction-note">Trading via Player Auction (Coming Soon)</span>
                 </div>
             </div>
         </div>
@@ -112,9 +112,9 @@ function renderBankItems() {
     }
 
     itemsList.innerHTML = _filteredItems.map(item => `
-        <div class="bank-item" data-item-id="${item.id}" data-type="${item.type || 'misc'}">
+        <div class="bank-item" data-item-id="${item.id}" data-type="${item.type || 'recipe'}">
             <div class="item-icon">
-                <img src="${getItemIcon(item)}" alt="${item.item}" onerror="this.src='assets/icons/default_item.png'">
+                <img src="${getItemIcon(item)}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
                 ${item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
             </div>
             
@@ -126,14 +126,10 @@ function renderBankItems() {
                 </div>
             </div>
             
-            <div class="item-value">
-                <span class="gold-value">${calculateItemValue(item)} Gold</span>
-            </div>
-            
             <div class="item-actions">
-                <button class="action-btn sell-btn" data-action="sell" data-item-id="${item.id}">
-                    <span class="btn-icon">💰</span>
-                    Sell
+                <button class="action-btn auction-btn" data-action="auction" data-item-id="${item.id}">
+                    <span class="btn-icon">🏛️</span>
+                    Auction
                 </button>
                 <button class="action-btn discard-btn" data-action="discard" data-item-id="${item.id}">
                     <span class="btn-icon">🗑️</span>
@@ -145,35 +141,29 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    const iconMap = {
-        'weapon': 'assets/art/recipes/',
-        'armor': 'assets/art/recipes/',
-        'consumable': 'assets/art/recipes/',
-        'material': 'assets/art/ingridients/',
-        'misc': 'assets/art/misc/'
-    };
+    // All items are either ingredients or recipes
+    // If type is 'ingredient', use ingredients folder, otherwise use recipes folder
+    const isIngredient = item.type === 'ingredient';
+    const basePath = isIngredient ? 'assets/art/ingredients/' : 'assets/art/recipes/';
     
-    const basePath = iconMap[item.type] || iconMap['misc'];
+    // Convert item name to filename format
     const itemName = item.item.toLowerCase().replace(/\s+/g, '_');
     return `${basePath}${itemName}.png`;
 }
 
 function formatItemType(type) {
-    if (!type) return 'Misc';
-    return type.charAt(0).toUpperCase() + type.slice(1);
-}
-
-function calculateItemValue(item) {
-    const baseValues = {
-        'weapon': 50,
-        'armor': 40,
-        'consumable': 10,
-        'material': 5,
-        'misc': 1
+    if (!type) return 'Recipe';
+    
+    // Handle specific type formatting
+    const typeMap = {
+        'ingredient': 'Ingredient',
+        'consumable': 'Consumable',
+        'weapon': 'Weapon',
+        'armor': 'Armor',
+        'tool': 'Tool'
     };
     
-    const baseValue = baseValues[item.type] || baseValues['misc'];
-    return baseValue * (item.amount || 1);
+    return typeMap[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function setupBankInteractions() {
@@ -204,10 +194,10 @@ function setupBankInteractions() {
 
     // Item action buttons (using event delegation)
     _main.querySelector('#bankItemsList').addEventListener('click', async (e) => {
-        if (e.target.classList.contains('sell-btn') || e.target.closest('.sell-btn')) {
-            const btn = e.target.classList.contains('sell-btn') ? e.target : e.target.closest('.sell-btn');
+        if (e.target.classList.contains('auction-btn') || e.target.closest('.auction-btn')) {
+            const btn = e.target.classList.contains('auction-btn') ? e.target : e.target.closest('.auction-btn');
             const itemId = btn.dataset.itemId;
-            await handleSellItem(itemId);
+            await handleAuctionItem(itemId);
         } else if (e.target.classList.contains('discard-btn') || e.target.closest('.discard-btn')) {
             const btn = e.target.classList.contains('discard-btn') ? e.target : e.target.closest('.discard-btn');
             const itemId = btn.dataset.itemId;
@@ -216,30 +206,12 @@ function setupBankInteractions() {
     });
 }
 
-async function handleSellItem(itemId) {
+async function handleAuctionItem(itemId) {
     const item = _bankItems.find(i => i.id == itemId);
     if (!item) return;
 
-    const value = calculateItemValue(item);
-    const confirmed = await showConfirmDialog(
-        `Sell ${item.item}?`,
-        `You will receive ${value} gold for this item.`
-    );
-
-    if (confirmed) {
-        try {
-            await _apiCall(`/api/supabase/rest/v1/bank?id=eq.${itemId}`, {
-                method: 'DELETE'
-            });
-
-            displayMessage(`Sold ${item.item} for ${value} gold!`);
-            await fetchBankItems();
-            updateBankStats();
-        } catch (error) {
-            console.error('Failed to sell item:', error);
-            displayMessage('Failed to sell item. Please try again.');
-        }
-    }
+    // Placeholder for auction functionality
+    displayMessage(`Auction system coming soon! ${item.item} will be available for player trading.`);
 }
 
 async function handleDiscardItem(itemId) {
@@ -269,10 +241,7 @@ async function handleDiscardItem(itemId) {
 
 function updateBankStats() {
     const itemsCount = _filteredItems.length;
-    const totalValue = _filteredItems.reduce((sum, item) => sum + calculateItemValue(item), 0);
-    
     document.getElementById('itemsCount').textContent = itemsCount;
-    document.getElementById('totalValue').textContent = totalValue;
 }
 
 function showConfirmDialog(title, message) {
@@ -547,18 +516,6 @@ function addBankStyles() {
             color: #9a8566;
         }
 
-        .item-value {
-            text-align: right;
-            margin-right: 1rem;
-        }
-
-        .gold-value {
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #c4975a;
-            font-size: 0.9rem;
-        }
-
         .item-actions {
             display: flex;
             gap: 0.5rem;
@@ -579,10 +536,10 @@ function addBankStyles() {
             gap: 0.3rem;
         }
 
-        .sell-btn:hover {
-            border-color: #28a745;
-            color: #28a745;
-            background: linear-gradient(145deg, #1e5b2e, #1d4a28);
+        .auction-btn:hover {
+            border-color: #6f42c1;
+            color: #6f42c1;
+            background: linear-gradient(145deg, #3a2a4a, #2a1e3a);
         }
 
         .discard-btn:hover {
@@ -634,6 +591,13 @@ function addBankStyles() {
             gap: 2rem;
             font-family: 'Cinzel', serif;
             color: #c4975a;
+            align-items: center;
+        }
+
+        .auction-note {
+            color: #8b7355;
+            font-style: italic;
+            font-size: 0.9rem;
         }
 
         /* Confirm Dialog */
@@ -694,10 +658,8 @@ function addBankStyles() {
             .bank-stats {
                 gap: 1rem;
                 font-size: 0.9rem;
-            }
-
-            .item-value {
-                display: none;
+                flex-direction: column;
+                text-align: center;
             }
         }
     `;
