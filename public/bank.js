@@ -65,7 +65,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 async function fetchBankItems() {
     try {
         displayMessage('Loading bank items...');
-        const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=*,professions(name)`);
+        const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=*,professions(name),ingridients(sprite),recipes(sprite)`);
         _bankItems = await response.json();
         _filteredItems = [..._bankItems];
         createDynamicFilters();
@@ -141,14 +141,28 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    // All items are either ingredients or recipes
-    // If type is 'ingredient', use ingredients folder, otherwise use recipes folder
+    // Get sprite name from the related table data
+    let spriteName = null;
+    
+    if (item.type === 'ingredient' && item.ingridients && item.ingridients.sprite) {
+        spriteName = item.ingridients.sprite;
+    } else if (item.type !== 'ingredient' && item.recipes && item.recipes.sprite) {
+        spriteName = item.recipes.sprite;
+    }
+    
+    // If no sprite found, fallback to item name
+    if (!spriteName) {
+        spriteName = item.item.toLowerCase().replace(/\s+/g, '_');
+    }
+    
+    // Determine folder based on type
     const isIngredient = item.type === 'ingredient';
     const basePath = isIngredient ? 'assets/art/ingridients/' : 'assets/art/recipes/';
     
-    // Convert item name to filename format
-    const itemName = item.item.toLowerCase().replace(/\s+/g, '_');
-    return `${basePath}${itemName}.png`;
+    // Add .png extension if not already present
+    const fileName = spriteName.endsWith('.png') ? spriteName : `${spriteName}.png`;
+    
+    return `${basePath}${fileName}`;
 }
 
 function formatItemType(type) {
