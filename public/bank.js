@@ -65,8 +65,43 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 async function fetchBankItems() {
     try {
         displayMessage('Loading bank items...');
-        const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=*,professions(name),ingridients(sprite),recipes(sprite)`);
-        _bankItems = await response.json();
+        
+        // First get the bank items
+        const bankResponse = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=*,professions(name)`);
+        const bankItems = await bankResponse.json();
+        
+        // Get all unique ingredient and recipe names to fetch sprites
+        const ingredientNames = bankItems.filter(item => item.type === 'ingredient').map(item => item.item);
+        const recipeNames = bankItems.filter(item => item.type !== 'ingredient').map(item => item.item);
+        
+        // Fetch sprite data for ingredients and recipes
+        let ingredientSprites = {};
+        let recipeSprites = {};
+        
+        if (ingredientNames.length > 0) {
+            const ingredientsResponse = await _apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${ingredientNames.map(name => `"${name}"`).join(',')})&select=name,sprite`);
+            const ingredients = await ingredientsResponse.json();
+            ingredientSprites = ingredients.reduce((acc, ing) => {
+                acc[ing.name] = ing.sprite;
+                return acc;
+            }, {});
+        }
+        
+        if (recipeNames.length > 0) {
+            const recipesResponse = await _apiCall(`/api/supabase/rest/v1/recipes?name=in.(${recipeNames.map(name => `"${name}"`).join(',')})&select=name,sprite`);
+            const recipes = await recipesResponse.json();
+            recipeSprites = recipes.reduce((acc, rec) => {
+                acc[rec.name] = rec.sprite;
+                return acc;
+            }, {});
+        }
+        
+        // Merge sprite data into bank items
+        _bankItems = bankItems.map(item => ({
+            ...item,
+            sprite: item.type === 'ingredient' ? ingredientSprites[item.item] : recipeSprites[item.item]
+        }));
+        
         _filteredItems = [..._bankItems];
         createDynamicFilters();
         renderBankItems();
@@ -141,19 +176,8 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    // Get sprite name from the related table data
-    let spriteName = null;
-    
-    if (item.type === 'ingredient' && item.ingridients && item.ingridients.sprite) {
-        spriteName = item.ingridients.sprite;
-    } else if (item.type !== 'ingredient' && item.recipes && item.recipes.sprite) {
-        spriteName = item.recipes.sprite;
-    }
-    
-    // If no sprite found, fallback to item name
-    if (!spriteName) {
-        spriteName = item.item.toLowerCase().replace(/\s+/g, '_');
-    }
+    // Use the sprite name if available, otherwise fallback to item name
+    let spriteName = item.sprite || item.item.toLowerCase().replace(/\s+/g, '_');
     
     // Determine folder based on type
     const isIngredient = item.type === 'ingredient';
