@@ -144,7 +144,7 @@ function getItemIcon(item) {
     // All items are either ingredients or recipes
     // If type is 'ingredient', use ingredients folder, otherwise use recipes folder
     const isIngredient = item.type === 'ingredient';
-    const basePath = isIngredient ? 'assets/art/ingredients/' : 'assets/art/recipes/';
+    const basePath = isIngredient ? 'assets/art/ingridients/' : 'assets/art/recipes/';
     
     // Convert item name to filename format
     const itemName = item.item.toLowerCase().replace(/\s+/g, '_');
