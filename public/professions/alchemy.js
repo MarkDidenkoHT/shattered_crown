@@ -1265,3 +1265,77 @@ function disableAdjustmentButtons() {
     btn.style.cursor = 'not-allowed';
   });
 }
+
+// Get herb-specific colors
+function getHerbColor(herbName) {
+  console.log('[DEBUG] getHerbColor called with herbName:', herbName);
+  console.log('[DEBUG] herbName type:', typeof herbName);
+  console.log('[DEBUG] herbName.toLowerCase():', herbName.toLowerCase());
+  
+  const colors = {
+    'Bloodthistle': 'rgba(146, 24, 22, 1)',      // Dark Red
+    'Fangflower': 'rgba(210, 180, 140, 1)',     // Tan
+    'Moonrose': 'rgba(173, 216, 230, 1)',       // Light Blue
+    'Sunbloom': 'rgba(255, 255, 102, 1)',       // Light Yellow
+    'Redcap': 'rgba(255, 99, 71, 1)',           // Tomato
+    'Earthroot': 'rgba(255, 140, 0, 1)',        // Dark Orange
+    'default': 'rgba(169, 169, 169, 1)'         // Dark Gray
+  };
+
+  console.log('[DEBUG] Available color keys:', Object.keys(colors));
+  
+  const herbKey = Object.keys(colors).find(key => {
+    const keyLower = key.toLowerCase();
+    const herbLower = herbName.toLowerCase();
+    const matches = herbLower.includes(keyLower);
+    
+    console.log(`[DEBUG] Checking key: "${key}" (${keyLower}) against herb: "${herbName}" (${herbLower}) - matches: ${matches}`);
+    
+    return matches;
+  });
+
+  console.log('[DEBUG] Found herbKey:', herbKey);
+  console.log('[DEBUG] Returning color:', herbKey ? colors[herbKey] : colors.default);
+
+  return herbKey ? colors[herbKey] : colors.default;
+}
+
+// Inject CSS for bottle animations
+function injectBottleAnimationsCSS() {
+  if (document.getElementById('bottle-animations-css')) return;
+  
+  const additionalCSS = `
+    @keyframes bottle-shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-1px); }
+      75% { transform: translateX(1px); }
+    }
+
+    .properties-bottle {
+      transition: box-shadow 0.3s ease;
+    }
+
+    .bottle-liquid {
+      will-change: height;
+    }
+
+    .liquid-surface {
+      will-change: transform;
+    }
+  `;
+
+  const style = document.createElement('style');
+  style.id = 'bottle-animations-css';
+  style.textContent = additionalCSS;
+  document.head.appendChild(style);
+}
+
+// Cache management functions
+export function clearIngredientCache() {
+  ingredientCache.clear();
+}
+
+export function preloadIngredients(ingredientNames) {
+  // Optional: Preload specific ingredients if needed
+  return batchEnrichIngredients(ingredientNames.map(name => ({ item: name, amount: 1 })));
+}
