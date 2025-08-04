@@ -158,101 +158,101 @@ async function fallbackEnrichIngredients(bankItems) {
   return enriched;
 }
 
-// Enhanced bottle HTML with liquid and bubble elements
+// Enhanced bottle HTML with liquid and bubble elements - MADE SMALLER
 function createCraftingSlotHTML(slotIndex) {
   return `
-    <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+    <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
       <!-- Herb Slot -->
-      <div class="herb-slot" style="width: 80px; height: 80px; border: 2px dashed #aaa; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
-        <span style="color: #666; font-size: 0.8rem;">Drop Herb</span>
+      <div class="herb-slot" style="width: 60px; height: 60px; border: 2px dashed #aaa; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+        <span style="color: #666; font-size: 0.7rem;">Drop Herb</span>
       </div>
       
       <!-- Up Arrow -->
       <div class="arrow-up">
-        <button class="fantasy-button adjust-up" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>↑</button>
+        <button class="fantasy-button adjust-up" data-col="${slotIndex}" style="padding: 0.1rem 0.4rem; font-size: 1rem; opacity: 0.3;" disabled>↑</button>
       </div>
       
-      <!-- Enhanced Properties Bottle -->
-      <div class="properties-bottle" style="width: 60px; height: 120px; border: 2px solid #8B4513; border-radius: 10px 10px 20px 20px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative; overflow: hidden;">
+      <!-- Enhanced Properties Bottle - MADE SMALLER -->
+      <div class="properties-bottle" style="width: 50px; height: 90px; border: 2px solid #8B4513; border-radius: 8px 8px 16px 16px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative; overflow: hidden;">
         
-        <!-- Enhanced Bottle Cork/Top -->
-        <div class="bottle-cork" style="position: absolute; top: -12px; width: 24px; height: 20px; background: linear-gradient(135deg, #D2691E 0%, #8B4513 50%, #654321 100%); border-radius: 6px 6px 2px 2px; border: 1px solid #654321; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 10;">
+        <!-- Enhanced Bottle Cork/Top - SMALLER -->
+        <div class="bottle-cork" style="position: absolute; top: -10px; width: 20px; height: 16px; background: linear-gradient(135deg, #D2691E 0%, #8B4513 50%, #654321 100%); border-radius: 5px 5px 2px 2px; border: 1px solid #654321; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 10;">
           <!-- Cork texture lines -->
-          <div style="position: absolute; top: 3px; left: 50%; transform: translateX(-50%); width: 16px; height: 1px; background: rgba(0,0,0,0.2);"></div>
-          <div style="position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 12px; height: 1px; background: rgba(0,0,0,0.2);"></div>
-          <div style="position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 14px; height: 1px; background: rgba(0,0,0,0.2);"></div>
+          <div style="position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 12px; height: 1px; background: rgba(0,0,0,0.2);"></div>
+          <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%); width: 8px; height: 1px; background: rgba(0,0,0,0.2);"></div>
+          <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 10px; height: 1px; background: rgba(0,0,0,0.2);"></div>
         </div>
         
         <!-- Liquid Container -->
-        <div class="bottle-liquid" style="position: absolute; bottom: 0; left: 2px; right: 2px; height: 0; background: linear-gradient(to bottom, rgba(76,175,80,0.6) 0%, rgba(76,175,80,0.8) 100%); border-radius: 0 0 16px 16px; transition: none; opacity: 0;">
+        <div class="bottle-liquid" style="position: absolute; bottom: 0; left: 2px; right: 2px; height: 0; background: linear-gradient(to bottom, rgba(76,175,80,0.6) 0%, rgba(76,175,80,0.8) 100%); border-radius: 0 0 12px 12px; transition: none; opacity: 0;">
           <!-- Liquid surface shimmer -->
-          <div class="liquid-surface" style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%); opacity: 0;"></div>
+          <div class="liquid-surface" style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%); opacity: 0;"></div>
         </div>
         
-        <!-- Bubble Container -->
-        <div class="bubble-container" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 80px; pointer-events: none; overflow: hidden;">
+        <!-- Bubble Container - SMALLER -->
+        <div class="bubble-container" style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 30px; height: 60px; pointer-events: none; overflow: hidden;">
           <!-- Bubbles will be dynamically created here -->
         </div>
         
-        <!-- Property Slots -->
-        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a; z-index: 5; position: relative;">
+        <!-- Property Slots - SMALLER -->
+        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #c4975a; z-index: 5; position: relative;">
           -
         </div>
-        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a; z-index: 5; position: relative;">
+        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #c4975a; z-index: 5; position: relative;">
           -
         </div>
-        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 40px; height: 25px; border: 1px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #c4975a; z-index: 5; position: relative;">
+        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #c4975a; z-index: 5; position: relative;">
           -
         </div>
       </div>
       
       <!-- Down Arrow -->
       <div class="arrow-down">
-        <button class="fantasy-button adjust-down" data-col="${slotIndex}" style="padding: 0.2rem 0.5rem; font-size: 1.2rem; opacity: 0.3;" disabled>↓</button>
+        <button class="fantasy-button adjust-down" data-col="${slotIndex}" style="padding: 0.1rem 0.4rem; font-size: 1rem; opacity: 0.3;" disabled>↓</button>
       </div>
     </div>
   `;
 }
 
-// Optimized modal rendering with pre-rendered content
+// Optimized modal rendering with pre-rendered content - MADE MORE COMPACT
 function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1400px; max-height: 99vh; overflow-y: auto; text-align: center;">
-      <h2>Crafting: ${alchemyState.professionName}</h2>
+    <div class="message-content" style="width: 95%; max-width: 1200px; max-height: 95vh; overflow-y: auto; text-align: center;">
+      <h2 style="margin: 0.5rem 0;">Crafting: ${alchemyState.professionName}</h2>
             
-      <!-- Result display (initially shows selection prompt) -->
-      <div id="craft-result" style="margin-top: 4px;font-weight:bold;">Select 3 herbs to start crafting</div>
+      <!-- Result display with reserved space to prevent CLS -->
+      <div id="craft-result" style="margin: 0.5rem 0; font-weight: bold; min-height: 20px;">Select 3 herbs to start crafting</div>
       
-      <!-- Adjustment counter at the top -->
-      <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666; display: none;">
+      <!-- Adjustment counter with reserved space to prevent CLS -->
+      <div id="adjustment-counter" style="margin: 0.3rem 0; font-size: 0.85rem; color: #666; min-height: 16px; visibility: hidden;">
         Adjustments: ${alchemyState.adjustmentCount}/${alchemyState.maxAdjustments}
       </div>
       
-      <!-- Main crafting area -->
-      <div id="crafting-slots" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 5px;">
+      <!-- Main crafting area - MADE MORE COMPACT -->
+      <div id="crafting-slots" style="display: flex; justify-content: center; gap: 0.8rem; margin: 0.5rem 0;">
         ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
       </div>
       
-      <!-- Bank row (horizontal scrollable) -->
-      <h3>Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(0,0,0,0.1); scrollbar-width: none;">
+      <!-- Bank row (horizontal scrollable) - MADE SMALLER -->
+      <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem;">Available Herbs</h3>
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.5rem; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 70px;">
         ${renderHerbsHTML()}
       </div>
       
-      <!-- Recipes row (horizontal scrollable) -->
-      <h3>Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none;">
+      <!-- Recipes row (horizontal scrollable) - MADE SMALLER -->
+      <h3 style="margin: 0.3rem 0; font-size: 1rem;">Recipes</h3>
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 80px;">
         ${renderRecipesHTML()}
       </div>
       
       <!-- Button row - all buttons stay here -->
-      <div style="display: flex; justify-content: center; gap: 0.5rem;">
-        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
-        <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Craft</button>
-        <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
-        <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
+      <div style="display: flex; justify-content: center; gap: 0.4rem;">
+        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 80px; padding: 0.4rem;">Close</button>
+        <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.4rem;">Craft</button>
+        <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.4rem; display: none;">Finish</button>
+        <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 80px; padding: 0.4rem; display: none;">Claim</button>
       </div>
     </div>
   `;
@@ -261,28 +261,28 @@ function renderCraftingModal() {
   setupModalEventListeners(modal);
 }
 
-// Pre-render herbs HTML to avoid DOM manipulation during render
+// Pre-render herbs HTML to avoid DOM manipulation during render - MADE SMALLER
 function renderHerbsHTML() {
   return alchemyState.availableHerbs.map((herb, idx) => `
-    <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(255,255,255,0.05);">
-      <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
-      <div style="font-size:0.8rem;">x${herb.amount}</div>
-      <div class="info-icon" data-herb="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 3px; background: rgba(255,255,255,0.05);">
+      <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:40px;height:40px;">
+      <div style="font-size:0.7rem;">x${herb.amount}</div>
+      <div class="info-icon" data-herb="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #4CAF50; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
 }
 
-// Pre-render recipes HTML
+// Pre-render recipes HTML - MADE SMALLER
 function renderRecipesHTML() {
   if (!alchemyState.recipes || alchemyState.recipes.length === 0) {
-    return '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes available</div>';
+    return '<div style="color: #666; font-style: italic; padding: 0.8rem; font-size: 0.85rem;">No recipes available</div>';
   }
   
   return alchemyState.recipes.map((recipe, idx) => `
-    <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
-      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
-      <div style="font-size: 0.8rem; margin-top: 4px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
-      <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #4CAF50; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 6px; padding: 6px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 70px; text-align: center; position: relative;">
+      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 40px; height: 40px; border-radius: 3px;">
+      <div style="font-size: 0.7rem; margin-top: 3px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
+      <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #4CAF50; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
 }
@@ -600,7 +600,7 @@ function setupModalEventListeners(modal) {
     craftBtn.style.display = 'none';
     finishBtn.style.display = 'block';
     finishBtn.disabled = false;
-    adjustmentCounter.style.display = 'block';
+    adjustmentCounter.style.visibility = 'visible'; // Use visibility instead of display
 
     // Disable herb interactions
     herbsContainer.style.opacity = '0.5';
@@ -646,7 +646,7 @@ function handleHerbSelection(herb, modal) {
   const herbSlot = column.querySelector('.herb-slot');
   
   herbSlot.innerHTML = `
-    <img src="assets/art/ingridients/${herb.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove ${herb.name}">
+    <img src="assets/art/ingridients/${herb.sprite}.png" style="width:48px;height:48px;cursor:pointer;" title="Click to remove ${herb.name}">
   `;
   herbSlot.style.border = '2px solid #4CAF50';
   herbSlot.style.background = 'rgba(76, 175, 80, 0.1)';
@@ -662,7 +662,7 @@ function removeHerbFromSlot(slotIdx, modal) {
   const column = modal.querySelector(`[data-slot="${slotIdx}"]`);
   const herbSlot = column.querySelector('.herb-slot');
   
-  herbSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Herb</span>';
+  herbSlot.innerHTML = '<span style="color: #666; font-size: 0.7rem;">Drop Herb</span>';
   herbSlot.style.border = '2px dashed #aaa';
   herbSlot.style.background = 'rgba(0,0,0,0.2)';
   
@@ -684,7 +684,7 @@ function updateCraftButtonState(modal) {
   }
 }
 
-// Animate bottle filling with liquid
+// Animate bottle filling with liquid - ADJUSTED FOR SMALLER BOTTLES
 function animateBottleFill(column, herb) {
   const liquid = column.querySelector('.bottle-liquid');
   const surface = column.querySelector('.liquid-surface');
@@ -729,7 +729,7 @@ function animateBottleFill(column, herb) {
   console.log('[DEBUG] glow color:', glowColor);
   
   gsap.to(bottle, {
-    boxShadow: `0 0 15px ${glowColor}`,
+    boxShadow: `0 0 12px ${glowColor}`, // Reduced glow for smaller bottles
     duration: 0.8,
     ease: "power2.out"
   });
@@ -774,7 +774,7 @@ function animateBottleDrain(column) {
   });
 }
 
-// Create bubbling effect for active bottles
+// Create bubbling effect for active bottles - ADJUSTED FOR SMALLER BOTTLES
 function createBubblingEffect(column) {
   const bubbleContainer = column.querySelector('.bubble-container');
   
@@ -782,12 +782,12 @@ function createBubblingEffect(column) {
     const bubble = document.createElement('div');
     bubble.style.cssText = `
       position: absolute;
-      width: ${Math.random() * 4 + 2}px;
-      height: ${Math.random() * 4 + 2}px;
+      width: ${Math.random() * 3 + 1.5}px;
+      height: ${Math.random() * 3 + 1.5}px;
       background: rgba(255,255,255,0.6);
       border-radius: 50%;
       bottom: 0;
-      left: ${Math.random() * 30 + 5}px;
+      left: ${Math.random() * 20 + 5}px;
       pointer-events: none;
     `;
     
@@ -795,7 +795,7 @@ function createBubblingEffect(column) {
     
     // Animate bubble rising
     gsap.to(bubble, {
-      y: -80,
+      y: -60, // Reduced for smaller bottles
       opacity: 0,
       duration: Math.random() * 2 + 1.5,
       ease: "power1.out",
@@ -808,7 +808,7 @@ function createBubblingEffect(column) {
     
     // Add slight horizontal movement
     gsap.to(bubble, {
-      x: `+=${Math.random() * 10 - 5}`,
+      x: `+=${Math.random() * 8 - 4}`, // Reduced movement
       duration: Math.random() * 1 + 0.5,
       ease: "sine.inOut",
       yoyo: true,
@@ -954,7 +954,7 @@ function reduceLiquidToBottomThird(slotArea) {
         
         // Subtle glow on the bottle to indicate the important area
         gsap.to(bottle, {
-          boxShadow: '0 8px 15px rgba(255, 215, 0, 0.4), inset 0 -20px 10px rgba(255, 215, 0, 0.1)',
+          boxShadow: '0 6px 12px rgba(255, 215, 0, 0.4), inset 0 -15px 8px rgba(255, 215, 0, 0.1)', // Reduced for smaller bottle
           duration: 1.0,
           ease: "power2.out"
         });
@@ -975,22 +975,22 @@ function reduceLiquidToBottomThird(slotArea) {
   });
 }
 
-// Optional: Visual effect for liquid draining
+// Optional: Visual effect for liquid draining - ADJUSTED FOR SMALLER BOTTLES
 function createDrainingEffect(column) {
   const bottle = column.querySelector('.properties-bottle');
   
   // Create small "draining" particles
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) { // Reduced from 5 to 4
     setTimeout(() => {
       const droplet = document.createElement('div');
       droplet.style.cssText = `
         position: absolute;
-        width: 3px;
-        height: 6px;
+        width: 2px;
+        height: 4px;
         background: rgba(255,255,255,0.6);
         border-radius: 50%;
-        top: 50%;
-        left: ${Math.random() * 30 + 15}px;
+        top: 40%;
+        left: ${Math.random() * 20 + 15}px;
         pointer-events: none;
         z-index: 15;
       `;
@@ -999,7 +999,7 @@ function createDrainingEffect(column) {
       
       // Animate droplet falling and fading
       gsap.to(droplet, {
-        y: 40,
+        y: 30, // Reduced for smaller bottle
         opacity: 0,
         duration: 0.8,
         ease: "power2.in",
@@ -1264,78 +1264,4 @@ function disableAdjustmentButtons() {
     btn.style.opacity = '0.5';
     btn.style.cursor = 'not-allowed';
   });
-}
-
-// Get herb-specific colors
-function getHerbColor(herbName) {
-  console.log('[DEBUG] getHerbColor called with herbName:', herbName);
-  console.log('[DEBUG] herbName type:', typeof herbName);
-  console.log('[DEBUG] herbName.toLowerCase():', herbName.toLowerCase());
-  
-  const colors = {
-    'Bloodthistle': 'rgba(146, 24, 22, 1)',      // Dark Red
-    'Fangflower': 'rgba(210, 180, 140, 1)',     // Tan
-    'Moonrose': 'rgba(173, 216, 230, 1)',       // Light Blue
-    'Sunbloom': 'rgba(255, 255, 102, 1)',       // Light Yellow
-    'Redcap': 'rgba(255, 99, 71, 1)',           // Tomato
-    'Earthroot': 'rgba(255, 140, 0, 1)',        // Dark Orange
-    'default': 'rgba(169, 169, 169, 1)'         // Dark Gray
-  };
-
-  console.log('[DEBUG] Available color keys:', Object.keys(colors));
-  
-  const herbKey = Object.keys(colors).find(key => {
-    const keyLower = key.toLowerCase();
-    const herbLower = herbName.toLowerCase();
-    const matches = herbLower.includes(keyLower);
-    
-    console.log(`[DEBUG] Checking key: "${key}" (${keyLower}) against herb: "${herbName}" (${herbLower}) - matches: ${matches}`);
-    
-    return matches;
-  });
-
-  console.log('[DEBUG] Found herbKey:', herbKey);
-  console.log('[DEBUG] Returning color:', herbKey ? colors[herbKey] : colors.default);
-
-  return herbKey ? colors[herbKey] : colors.default;
-}
-
-// Inject CSS for bottle animations
-function injectBottleAnimationsCSS() {
-  if (document.getElementById('bottle-animations-css')) return;
-  
-  const additionalCSS = `
-    @keyframes bottle-shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-1px); }
-      75% { transform: translateX(1px); }
-    }
-
-    .properties-bottle {
-      transition: box-shadow 0.3s ease;
-    }
-
-    .bottle-liquid {
-      will-change: height;
-    }
-
-    .liquid-surface {
-      will-change: transform;
-    }
-  `;
-
-  const style = document.createElement('style');
-  style.id = 'bottle-animations-css';
-  style.textContent = additionalCSS;
-  document.head.appendChild(style);
-}
-
-// Cache management functions
-export function clearIngredientCache() {
-  ingredientCache.clear();
-}
-
-export function preloadIngredients(ingredientNames) {
-  // Optional: Preload specific ingredients if needed
-  return batchEnrichIngredients(ingredientNames.map(name => ({ item: name, amount: 1 })));
 }
