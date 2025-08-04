@@ -69,16 +69,13 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     }
 
     try {
-        // --- CORRECTED LOGIC ---
-        // 1. Initialize the Supabase client using the config passed from main.js.
         const supabase = getSupabaseClient(supabaseConfig);
         
-        // 2. Now that the client is guaranteed to exist, we can safely remove the old channel.
         if (_unsubscribeFromBattle) {
             await supabase.removeChannel(_unsubscribeFromBattle);
         }
-
-        // 3. Call a new server function to create the battle state.
+        
+        console.log('[BATTLE] Attempting to start battle via Edge Function...');
         const startBattleRes = await _apiCall('/functions/v1/start-battle', 'POST', {
             profileId: _profile.id,
             selectedMode: selectedMode,
@@ -97,7 +94,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
         console.log(`[BATTLE] Battle started with ID: ${_battleId}`);
 
-        // 4. Subscribe to Realtime changes on the new battle state record.
         _unsubscribeFromBattle = supabase
             .channel(`battle_state:${_battleId}`)
             .on(
@@ -118,6 +114,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     } catch (err) {
         console.error('Error during battle initialization:', err);
+        // This log will now catch the "Unexpected token '<'" error if it occurs.
         displayMessage('Failed to start battle. Returning to embark.');
         window.gameAuth.loadModule('embark');
         return;
@@ -393,11 +390,12 @@ async function attemptMoveCharacter(character, targetX, targetY) {
     }
 
     try {
-        const result = await _apiCall('/functions/v1/move-character', 'POST', {
+        const resultRes = await _apiCall('/functions/v1/move-character', 'POST', {
             battleId: _battleId,
             characterId,
             targetPosition: [targetX, targetY],
         });
+        const result = await resultRes.json();
 
         if (result.success) {
             console.log('Move successful:', result.message);
@@ -449,9 +447,10 @@ async function handleEndTurn() {
     }
 
     try {
-        const result = await _apiCall('/functions/v1/end-turn', 'POST', {
+        const resultRes = await _apiCall('/functions/v1/end-turn', 'POST', {
             battleId: _battleId
         });
+        const result = await resultRes.json();
 
         if (result.success) {
             console.log('Turn ended:', result.message);
@@ -545,7 +544,6 @@ function displayMessage(msg) {
 
 export function cleanup() {
     if (_unsubscribeFromBattle) {
-        // We can safely assume _supabaseClient exists here since we've been in a battle
         _supabaseClient.removeChannel(_unsubscribeFromBattle);
         _unsubscribeFromBattle = null;
     }
