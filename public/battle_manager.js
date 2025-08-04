@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.0';
+
 let _main;
 let _apiCall;
 let _getCurrentProfile;
@@ -8,15 +10,13 @@ let _selectedCharacterEl = null;
 let _selectedPlayerCharacter = null;
 let highlightedTiles = [];
 
-// NEW: Supabase and Battle state management
-let _supabaseClient = null; // The single Supabase client instance
+let _supabaseClient = null;
 let _battleState = null;
 let _battleId = null;
 let _unsubscribeFromBattle = null;
 
 import { initCharacterData } from './character_data.js';
 
-// NEW: Helper function to get the Supabase client
 async function getSupabaseClient() {
     if (_supabaseClient) {
         return _supabaseClient;
@@ -75,15 +75,17 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         console.warn('[TILES] Could not load tile data:', err);
     }
 
-    // Unsubscribe from any previous battle to prevent multiple subscriptions
-    if (_unsubscribeFromBattle) {
-        await _supabaseClient.removeChannel(_unsubscribeFromBattle);
-        _unsubscribeFromBattle = null;
-    }
-
-    // --- NEW LOGIC: START THE BATTLE AND LISTEN FOR REALTIME UPDATES ---
     try {
-        // 1. Call a new server function to create the battle state.
+        // --- CORRECTED LOGIC ---
+        // 1. Initialize the Supabase client FIRST.
+        const supabase = await getSupabaseClient();
+        
+        // 2. Now that the client is guaranteed to exist, we can safely remove the old channel.
+        if (_unsubscribeFromBattle) {
+            await supabase.removeChannel(_unsubscribeFromBattle);
+        }
+
+        // 3. Call a new server function to create the battle state.
         const startBattleResponse = await _apiCall('/functions/v1/start-battle', 'POST', {
             profileId: _profile.id,
             selectedMode: selectedMode,
@@ -100,9 +102,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
         console.log(`[BATTLE] Battle started with ID: ${_battleId}`);
 
-        // 2. Set up the Realtime subscription
-        const supabase = await getSupabaseClient();
-        
+        // 4. Subscribe to Realtime changes on the new battle state record.
         _unsubscribeFromBattle = supabase
             .channel(`battle_state:${_battleId}`)
             .on(
@@ -550,6 +550,7 @@ function displayMessage(msg) {
 
 export function cleanup() {
     if (_unsubscribeFromBattle) {
+        // We can safely assume _supabaseClient exists here since we've been in a battle
         _supabaseClient.removeChannel(_unsubscribeFromBattle);
         _unsubscribeFromBattle = null;
     }
