@@ -10,6 +10,11 @@ let _selectedCharacterEl = null; // This is the HTML element of the selected cha
 let _selectedPlayerCharacter = null; // Stores the character object itself (player-controlled)
 let highlightedTiles = []; // To keep track of highlighted tiles for easy unhighlighting
 
+// NEW: Battle state management variables
+let _battleState = null; // New variable to hold the battle state from the server
+let _battleId = null; // New variable to store the current battle ID
+let _unsubscribeFromBattle = null; // New variable for our Realtime subscription handle
+
 import {
     loadPlayerCharacters,
     loadEnemiesByNames,
@@ -21,6 +26,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
 
+    // We no longer need to manually load characters here, the server will do it.
+    // However, we still need to load tile data for client-side rendering and validation.
     _profile = _getCurrentProfile();
     if (!_profile) {
         displayMessage('User profile not found. Please log in again.');
@@ -50,33 +57,117 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         console.warn('[TILES] Could not load tile data:', err);
     }
 
-    let layoutData;
+    // --- NEW LOGIC: START THE BATTLE AND LISTEN FOR REALTIME UPDATES ---
     try {
-        const layoutName = selectedMode === 'pvp' ? 'pvp' : selectedMode;
-        const res = await _apiCall(`/api/supabase/rest/v1/layouts?name=eq.${layoutName}&level=eq.${areaLevel}&select=*`);
-        const layouts = await res.json();
-        layoutData = layouts[0];
-        if (!layoutData) throw new Error('No layout found');
+        // 1. Call a new server function to create the battle state.
+        // This function will handle loading characters, creating the turn order, and saving to the DB.
+        const startBattleResponse = await _apiCall('/functions/v1/start-battle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                profileId: _profile.id,
+                selectedMode: selectedMode,
+                areaLevel: areaLevel
+            })
+        });
+
+        if (!startBattleResponse.ok) {
+            throw new Error(`Failed to start battle: ${await startBattleResponse.text()}`);
+        }
+        
+        const battleData = await startBattleResponse.json();
+        _battleId = battleData.battleId;
+        _battleState = battleData.initialState; // The server sends us the initial state
+
+        // 2. Set up the Realtime subscription
+        const { supabase } = await import('./supabase_client.js'); // Assuming you have a Supabase client module
+        
+        // This is a placeholder for a future PVP Realtime listener.
+        // For now, we'll only listen to our own battle state.
+        _unsubscribeFromBattle = supabase
+            .channel(`battle_state:${_battleId}`)
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'battle_state', filter: `id=eq.${_battleId}` },
+                (payload) => {
+                    console.log('Realtime update received:', payload.new);
+                    _battleState = payload.new;
+                    // Call a new function to update the game state and UI
+                    updateGameStateFromRealtime();
+                }
+            )
+            .subscribe();
+
     } catch (err) {
-        displayMessage('Failed to load battlefield layout. Returning...');
+        console.error('Error during battle initialization:', err);
+        displayMessage('Failed to start battle. Returning to embark.');
         window.gameAuth.loadModule('embark');
         return;
     }
 
-    const playerPos = layoutData.player_pos?.playerSpawnPositions || [];
-    const enemyNames = layoutData.enemy_pos?.enemyNamesToSpawn || [];
-    const enemyPos = layoutData.enemy_pos?.enemySpawnPositions || [];
+    // Now, render the game based on the server's initial state
+    renderBattleScreen(selectedMode, areaLevel, _battleState.layout_data);
+    // Call the function to set up the initial game state
+    updateGameStateFromRealtime();
 
-    const players = await loadPlayerCharacters(_profile.id, playerPos);
-    const enemies = await loadEnemiesByNames(enemyNames, enemyPos);
-    
-    // Ensure characters have an 'isPlayerControlled' property for our logic
-    _characters = [
-        ...players.map(p => ({ ...p, isPlayerControlled: true })),
-        ...enemies.map(e => ({ ...e, isPlayerControlled: false }))
-    ];
+    // --- END OF NEW LOGIC ---
+}
 
-    renderBattleScreen(selectedMode, areaLevel, layoutData);
+// NEW: A function to process Realtime updates and redraw the UI
+function updateGameStateFromRealtime() {
+    if (!_battleState) return;
+
+    // Update the local _characters array based on the server's state
+    _characters = Object.values(_battleState.characters_state).map(charState => {
+        // Find the original character data (e.g., from character_data.js) to get stats, sprite, etc.
+        // For now, we can just use the state directly.
+        return {
+            id: charState.id,
+            name: charState.name,
+            type: charState.type, // 'player' or 'enemy'
+            isPlayerControlled: charState.isPlayerControlled,
+            position: charState.current_position,
+            // ... (other character data like stats, sprite name, etc.)
+            stats: charState.stats,
+            spriteName: charState.sprite_name,
+            has_moved: charState.has_moved,
+            has_acted: charState.has_acted
+        };
+    });
+
+    // Re-render characters to their new positions
+    renderCharacters();
+
+    // TODO: Add logic to update UI based on whose turn it is
+    // For example, enable/disable the "End Turn" button, highlight the active character, etc.
+    const currentCharacterId = _battleState.turn_order[_battleState.current_turn_index];
+    const activeCharacter = _characters.find(c => c.id === currentCharacterId);
+
+    // Call a function to handle the turn
+    handleActiveCharacterTurn(activeCharacter);
+}
+
+// NEW: This function will be called on every turn change
+function handleActiveCharacterTurn(character) {
+    if (!character) return;
+
+    // Display whose turn it is
+    const turnStatusEl = document.getElementById('turnStatus');
+    if (turnStatusEl) {
+        turnStatusEl.textContent = `Turn: ${character.name}`;
+    }
+
+    if (character.isPlayerControlled) {
+        // Enable player input
+        // TODO: Enable player to select a character
+        // We might need to select the active character automatically or add a visual cue.
+    } else {
+        // Disable player input
+        // Handle AI turn logic here (for now, a simple skip)
+        // Send a request to the server to handle the AI turn
+        // await _apiCall('/functions/v1/process-ai-turn', { ... });
+        // After the server processes it, Realtime will push the update back to us.
+    }
 }
 
 function renderBattleScreen(mode, level, layoutData) {
@@ -84,6 +175,7 @@ function renderBattleScreen(mode, level, layoutData) {
         <div class="main-app-container">
             <div class="battle-top-bar">
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
+                <p id="turnStatus">Turn: —</p>
             </div>
             <div class="battle-grid-container"></div>
             <div class="battle-top-buttons" id="entityInfoPanel">
@@ -171,6 +263,9 @@ function renderBattleGrid(layoutJson) {
 function renderCharacters() {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
+
+    // First, clear all existing character tokens
+    container.querySelectorAll('.character-token').forEach(token => token.remove());
 
     _characters.forEach(char => {
         if (!char.position || !Array.isArray(char.position)) return;
@@ -384,8 +479,7 @@ async function attemptMoveCharacter(character, targetX, targetY) {
                 characterId,
                 currentPosition: [startX, startY],
                 targetPosition: [targetX, targetY],
-                // You might need to send the current battle_state ID here later
-                // battleId: 'YOUR_CURRENT_BATTLE_ID'
+                battleId: _battleId // Now we send the battle ID
             })
         });
 
@@ -393,7 +487,8 @@ async function attemptMoveCharacter(character, targetX, targetY) {
             const result = await response.json();
             if (result.success) {
                 console.log('Move successful:', result.message);
-                moveCharacterSprite(characterId, targetX, targetY); // Move the sprite visually
+                // Don't move the sprite manually - let the realtime update handle it
+                // moveCharacterSprite(characterId, targetX, targetY); // Commented out
                 // Optionally, update the selected character's position and clear selection/highlights
                 if (_selectedCharacterEl) {
                     _selectedCharacterEl.classList.remove('character-selected');
@@ -444,10 +539,38 @@ function renderBottomUI() {
     }
 }
 
-// NEW: Placeholder for end turn logic
-function handleEndTurn() {
-    displayMessage('End Turn button clicked! (Logic to be implemented)');
-    // In a real scenario, this would send a request to the server to advance the turn.
+// NEW: End turn handler - now communicates with server
+async function handleEndTurn() {
+    if (!_battleId) {
+        displayMessage('No active battle found.');
+        return;
+    }
+
+    try {
+        const response = await _apiCall('/functions/v1/end-turn', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                battleId: _battleId
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Turn ended:', result.message);
+            // The realtime update will handle UI changes
+        } else {
+            const errorText = await response.text();
+            displayMessage(`Failed to end turn: ${errorText}`);
+        }
+    } catch (error) {
+        console.error('Error ending turn:', error);
+        displayMessage('Network error ending turn. Please try again.');
+    }
+
+    // Clear any current selections
     unhighlightAllTiles();
     if (_selectedCharacterEl) {
         _selectedCharacterEl.classList.remove('character-selected');
@@ -455,7 +578,6 @@ function handleEndTurn() {
     }
     _selectedPlayerCharacter = null;
 }
-
 
 function showEntityInfo(entity) {
     const portrait = document.getElementById('infoPortrait');
@@ -528,4 +650,18 @@ function displayMessage(msg) {
     `;
     document.body.appendChild(box);
     box.querySelector('.message-ok-btn').addEventListener('click', () => box.remove());
+}
+
+// NEW: Cleanup function to unsubscribe from realtime when leaving the battle
+export function cleanup() {
+    if (_unsubscribeFromBattle) {
+        _unsubscribeFromBattle();
+        _unsubscribeFromBattle = null;
+    }
+    _battleState = null;
+    _battleId = null;
+    _characters = [];
+    _selectedCharacterEl = null;
+    _selectedPlayerCharacter = null;
+    unhighlightAllTiles();
 }
