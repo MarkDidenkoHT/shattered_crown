@@ -17,31 +17,24 @@ let _unsubscribeFromBattle = null;
 
 import { initCharacterData } from './character_data.js';
 
-async function getSupabaseClient() {
+function getSupabaseClient(config) {
     if (_supabaseClient) {
         return _supabaseClient;
     }
 
-    try {
-        const config = await _apiCall('/api/config');
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = config;
-
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            throw new Error('Supabase configuration not found on server.');
-        }
-
-        _supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: { flowType: 'pkce' }
-        });
-
-        return _supabaseClient;
-    } catch (error) {
-        console.error('[SUPABASE] Failed to initialize client:', error);
-        throw error;
+    if (!config || !config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
+        console.error('[SUPABASE] Supabase configuration missing from main.js');
+        throw new Error('Supabase configuration not found.');
     }
+
+    _supabaseClient = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
+        auth: { flowType: 'pkce' }
+    });
+
+    return _supabaseClient;
 }
 
-export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode }) {
+export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig }) {
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
@@ -77,8 +70,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     try {
         // --- CORRECTED LOGIC ---
-        // 1. Initialize the Supabase client FIRST.
-        const supabase = await getSupabaseClient();
+        // 1. Initialize the Supabase client using the config passed from main.js.
+        const supabase = getSupabaseClient(supabaseConfig);
         
         // 2. Now that the client is guaranteed to exist, we can safely remove the old channel.
         if (_unsubscribeFromBattle) {
