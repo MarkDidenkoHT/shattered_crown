@@ -79,11 +79,13 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         }
 
         // 3. Call a new server function to create the battle state.
-        const startBattleResponse = await _apiCall('/functions/v1/start-battle', 'POST', {
+        const startBattleRes = await _apiCall('/functions/v1/start-battle', 'POST', {
             profileId: _profile.id,
             selectedMode: selectedMode,
             areaLevel: areaLevel,
         });
+
+        const startBattleResponse = await startBattleRes.json();
 
         if (!startBattleResponse.success) {
             throw new Error(startBattleResponse.error || 'Failed to start battle.');
