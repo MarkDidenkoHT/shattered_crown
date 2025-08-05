@@ -1,3 +1,4 @@
+// Corrected server.js
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -7,7 +8,7 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security middleware
+// ✅ CORRECTED Security middleware with updated CSP
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -16,7 +17,8 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https:"],
+            // 👇 UPDATED LINE
+            connectSrc: ["'self'", "https:", "wss:", "wss://lzdlfcapkfcobutadffa.supabase.co"],
         },
     },
 }));
