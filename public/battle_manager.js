@@ -114,7 +114,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     } catch (err) {
         console.error('Error during battle initialization:', err);
-        // This log will now catch the "Unexpected token '<'" error if it occurs.
         displayMessage('Failed to start battle. Returning to embark.');
         window.gameAuth.loadModule('embark');
         return;
@@ -124,9 +123,15 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     updateGameStateFromRealtime();
 }
 
+/**
+ * Updates the game state from the latest data received from Supabase.
+ * This is the main function that processes server-side changes.
+ */
 function updateGameStateFromRealtime() {
     if (!_battleState) return;
 
+    // ✅ UPDATED: Map the characters_state object to an array and include
+    // the new current_hp and max_hp fields.
     _characters = Object.values(_battleState.characters_state).map(charState => {
         return {
             id: charState.id,
@@ -137,7 +142,9 @@ function updateGameStateFromRealtime() {
             stats: charState.stats,
             spriteName: charState.sprite_name,
             has_moved: charState.has_moved,
-            has_acted: charState.has_acted
+            has_acted: charState.has_acted,
+            current_hp: charState.current_hp,
+            max_hp: charState.max_hp,
         };
     });
 
@@ -249,6 +256,9 @@ function renderBattleGrid(layoutJson) {
     container.appendChild(table);
 }
 
+/**
+ * Renders the character tokens on the grid, now including an HP bar.
+ */
 function renderCharacters() {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -283,6 +293,24 @@ function renderCharacters() {
         img.style.left = '0';
 
         charEl.appendChild(img);
+
+        // ✅ ADDED: Render a simple HP bar
+        if (char.current_hp !== undefined && char.max_hp !== undefined) {
+            const hpBar = document.createElement('div');
+            hpBar.className = 'character-hp-bar';
+            const hpPercentage = Math.round((char.current_hp / char.max_hp) * 100);
+            hpBar.style.width = '90%';
+            hpBar.style.height = '5px';
+            hpBar.style.backgroundColor = '#ccc';
+            hpBar.style.border = '1px solid black';
+            hpBar.style.position = 'absolute';
+            hpBar.style.bottom = '2px';
+            hpBar.style.left = '5%';
+            hpBar.style.zIndex = '20';
+            hpBar.innerHTML = `<div style="width: ${hpPercentage}%; height: 100%; background-color: #4CAF50;"></div>`;
+            charEl.appendChild(hpBar);
+        }
+
         cell.appendChild(charEl);
     });
 }
@@ -469,6 +497,10 @@ async function handleEndTurn() {
     _selectedPlayerCharacter = null;
 }
 
+/**
+ * Displays an entity's info in the panel.
+ * ✅ UPDATED: Now uses `current_hp` and `max_hp` properties.
+ */
 function showEntityInfo(entity) {
     const portrait = document.getElementById('infoPortrait');
     const nameEl = document.getElementById('infoName');
@@ -488,14 +520,14 @@ function showEntityInfo(entity) {
     nameEl.textContent = entity.name || 'Unnamed';
 
     if (entity.type === 'player' || entity.type === 'enemy') {
-        const hp = entity.stats?.hp || 0;
-        const maxHp = entity.stats?.maxHp || hp;
-        hpEl.textContent = `HP: ${hp} / ${maxHp}`;
+        // ✅ UPDATED: Read HP directly from the new `current_hp` and `max_hp` properties.
+        hpEl.innerHTML = `<strong>HP:</strong> ${entity.current_hp} / ${entity.max_hp}`;
 
-        statsEl.innerHTML = Object.entries(entity.stats || {})
-            .filter(([k]) => !['hp', 'maxHp'].includes(k))
-            .map(([k, v]) => `${k}: ${v}`)
-            .join('<br>');
+        statsEl.innerHTML = `
+            <strong>Vitality:</strong> ${entity.stats.vitality}<br>
+            <strong>Attack:</strong> ${entity.stats.attack}<br>
+            <strong>Defense:</strong> ${entity.stats.defense}
+        `;
 
         abilitiesEl.innerHTML = '';
         (entity.abilities || []).forEach(a => {
