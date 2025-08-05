@@ -523,10 +523,6 @@ async function handleEndTurn() {
     _selectedPlayerCharacter = null;
 }
 
-/**
- * Displays an entity's info in the panel.
- * ✅ UPDATED: Now properly handles the normalized stats and HP display
- */
 function showEntityInfo(entity) {
     const portrait = document.getElementById('infoPortrait');
     const nameEl = document.getElementById('infoName');
@@ -539,14 +535,14 @@ function showEntityInfo(entity) {
         hpEl.textContent = '';
         statsEl.innerHTML = '';
         abilitiesEl.innerHTML = '';
-        portrait.src = 'assets/art/sprites/placeholder.png';
+        portrait.src = 'assets/art/placeholder.png';
         return;
     }
 
     nameEl.textContent = entity.name || 'Unnamed';
 
     if (entity.type === 'player' || entity.type === 'enemy') {
-        // ✅ UPDATED: Display HP with proper formatting and color coding
+        // ✅ UPDATED: Display current HP status
         const currentHp = entity.current_hp || 0;
         const maxHp = entity.max_hp || 0;
         const hpPercentage = maxHp > 0 ? Math.round((currentHp / maxHp) * 100) : 0;
@@ -556,18 +552,43 @@ function showEntityInfo(entity) {
         else if (hpPercentage <= 50) hpColor = '#FF9800'; // Orange
         else if (hpPercentage <= 75) hpColor = '#FFC107'; // Yellow
         
-        hpEl.innerHTML = `<strong>HP:</strong> <span style="color: ${hpColor}">${currentHp} / ${maxHp}</span> (${hpPercentage}%)`;
+        hpEl.innerHTML = `<strong>Current HP:</strong> <span style="color: ${hpColor}">${currentHp} / ${maxHp}</span> (${hpPercentage}%)`;
 
-        // ✅ UPDATED: Display normalized stats
+        // ✅ UPDATED: Extract stats and create two-column layout
         const stats = entity.stats || {};
+        const strength = stats.strength || 0;
+        const dexterity = stats.dexterity || 0;
+        const vitality = stats.vitality || 0;
+        const spirit = stats.spirit || 0;
+        const intellect = stats.intellect || 0;
+        const hp = maxHp; // Total HP based on vitality
+        const armor = stats.defense || 0; // Using defense as armor
+        const resistance = stats.spirit || 0; // Using spirit as resistance
+
+        // Split stats into two columns of 4 each
+        const statsCol1 = [
+            { label: 'Strength', value: strength },
+            { label: 'Dexterity', value: dexterity },
+            { label: 'Vitality', value: vitality },
+            { label: 'Spirit', value: spirit }
+        ];
+        const statsCol2 = [
+            { label: 'Intellect', value: intellect },
+            { label: 'HP', value: hp },
+            { label: 'Armor', value: armor },
+            { label: 'Resistance', value: resistance }
+        ];
+
+        // Create two-column stats display
         statsEl.innerHTML = `
-            <strong>Strength:</strong> ${stats.strength || 0}<br>
-            <strong>Vitality:</strong> ${stats.vitality || 0}<br>
-            <strong>Spirit:</strong> ${stats.spirit || 0}<br>
-            <strong>Dexterity:</strong> ${stats.dexterity || 0}<br>
-            <strong>Intellect:</strong> ${stats.intellect || 0}<br>
-            <strong>Attack:</strong> ${stats.attack || 0}<br>
-            <strong>Defense:</strong> ${stats.defense || 0}
+            <div style="display: flex; gap: 15px; font-size: 12px;">
+                <div style="flex: 1;">
+                    ${statsCol1.map(stat => `<div><strong>${stat.label}:</strong> ${stat.value}</div>`).join('')}
+                </div>
+                <div style="flex: 1;">
+                    ${statsCol2.map(stat => `<div><strong>${stat.label}:</strong> ${stat.value}</div>`).join('')}
+                </div>
+            </div>
         `;
 
         abilitiesEl.innerHTML = '';
@@ -577,12 +598,29 @@ function showEntityInfo(entity) {
             abilitiesEl.appendChild(li);
         });
 
-        portrait.src = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
+        // Set portrait with fallback to placeholder
+        const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
+        portrait.src = spritePath;
+        portrait.onerror = () => {
+            portrait.src = 'assets/art/placeholder.png';
+        };
     } else if (entity.tile) {
         hpEl.textContent = '';
-        statsEl.innerHTML = `Tile: ${entity.tile.name}<br>Walkable: ${entity.tile.walkable}<br>Blocks Vision: ${entity.tile.vision_block}`;
+        statsEl.innerHTML = `
+            <div style="font-size: 12px;">
+                <div><strong>Tile:</strong> ${entity.tile.name}</div>
+                <div><strong>Walkable:</strong> ${entity.tile.walkable}</div>
+                <div><strong>Blocks Vision:</strong> ${entity.tile.vision_block}</div>
+            </div>
+        `;
         abilitiesEl.innerHTML = '';
-        portrait.src = `assets/art/tiles/${entity.tile.art || 'placeholder'}.png`;
+        
+        // Set tile art with fallback to placeholder
+        const tilePath = `assets/art/tiles/${entity.tile.art || 'placeholder'}.png`;
+        portrait.src = tilePath;
+        portrait.onerror = () => {
+            portrait.src = 'assets/art/placeholder.png';
+        };
     }
 }
 
