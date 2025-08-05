@@ -130,24 +130,42 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 function updateGameStateFromRealtime() {
     if (!_battleState) return;
 
-    // ✅ UPDATED: Map the characters_state object to an array and include
-    // the new current_hp and max_hp fields.
+    // ✅ UPDATED: Properly map the characters_state object to an array with correct HP handling
     _characters = Object.values(_battleState.characters_state).map(charState => {
+        // Normalize stats object to handle case variations
+        const stats = charState.stats || {};
+        const normalizedStats = {};
+        for (const [key, value] of Object.entries(stats)) {
+            normalizedStats[key.toLowerCase()] = value;
+        }
+
+        // Get vitality for HP calculation
+        const vitality = normalizedStats.vitality || 0;
+        
         return {
             id: charState.id,
             name: charState.name,
             type: charState.type,
             isPlayerControlled: charState.isPlayerControlled,
             position: charState.current_position,
-            stats: charState.stats,
+            stats: {
+                strength: normalizedStats.strength || 0,
+                vitality: vitality,
+                spirit: normalizedStats.spirit || 0,
+                dexterity: normalizedStats.dexterity || 0,
+                intellect: normalizedStats.intellect || 0,
+                attack: normalizedStats.attack || normalizedStats.strength || 0,
+                defense: normalizedStats.defense || Math.floor((normalizedStats.strength || 0) * 0.25)
+            },
             spriteName: charState.sprite_name,
             has_moved: charState.has_moved,
             has_acted: charState.has_acted,
-            current_hp: charState.current_hp,
-            max_hp: charState.max_hp,
+            current_hp: charState.current_hp || (vitality * 10),
+            max_hp: charState.max_hp || (vitality * 10),
         };
     });
 
+    console.log('[BATTLE] Updated characters:', _characters);
     renderCharacters();
     const currentCharacterId = _battleState.turn_order[_battleState.current_turn_index];
     const activeCharacter = _characters.find(c => c.id === currentCharacterId);
@@ -294,20 +312,28 @@ function renderCharacters() {
 
         charEl.appendChild(img);
 
-        // ✅ ADDED: Render a simple HP bar
-        if (char.current_hp !== undefined && char.max_hp !== undefined) {
+        // ✅ UPDATED: Render HP bar with proper validation
+        if (char.current_hp !== undefined && char.max_hp !== undefined && char.max_hp > 0) {
             const hpBar = document.createElement('div');
             hpBar.className = 'character-hp-bar';
-            const hpPercentage = Math.round((char.current_hp / char.max_hp) * 100);
+            const hpPercentage = Math.max(0, Math.min(100, Math.round((char.current_hp / char.max_hp) * 100)));
+            
+            // Color based on HP percentage
+            let hpColor = '#4CAF50'; // Green
+            if (hpPercentage <= 25) hpColor = '#F44336'; // Red
+            else if (hpPercentage <= 50) hpColor = '#FF9800'; // Orange
+            else if (hpPercentage <= 75) hpColor = '#FFC107'; // Yellow
+            
             hpBar.style.width = '90%';
-            hpBar.style.height = '5px';
-            hpBar.style.backgroundColor = '#ccc';
-            hpBar.style.border = '1px solid black';
+            hpBar.style.height = '6px';
+            hpBar.style.backgroundColor = '#333';
+            hpBar.style.border = '1px solid #666';
+            hpBar.style.borderRadius = '2px';
             hpBar.style.position = 'absolute';
             hpBar.style.bottom = '2px';
             hpBar.style.left = '5%';
             hpBar.style.zIndex = '20';
-            hpBar.innerHTML = `<div style="width: ${hpPercentage}%; height: 100%; background-color: #4CAF50;"></div>`;
+            hpBar.innerHTML = `<div style="width: ${hpPercentage}%; height: 100%; background-color: ${hpColor}; border-radius: 1px; transition: width 0.3s ease, background-color 0.3s ease;"></div>`;
             charEl.appendChild(hpBar);
         }
 
@@ -499,7 +525,7 @@ async function handleEndTurn() {
 
 /**
  * Displays an entity's info in the panel.
- * ✅ UPDATED: Now uses `current_hp` and `max_hp` properties.
+ * ✅ UPDATED: Now properly handles the normalized stats and HP display
  */
 function showEntityInfo(entity) {
     const portrait = document.getElementById('infoPortrait');
@@ -520,13 +546,28 @@ function showEntityInfo(entity) {
     nameEl.textContent = entity.name || 'Unnamed';
 
     if (entity.type === 'player' || entity.type === 'enemy') {
-        // ✅ UPDATED: Read HP directly from the new `current_hp` and `max_hp` properties.
-        hpEl.innerHTML = `<strong>HP:</strong> ${entity.current_hp} / ${entity.max_hp}`;
+        // ✅ UPDATED: Display HP with proper formatting and color coding
+        const currentHp = entity.current_hp || 0;
+        const maxHp = entity.max_hp || 0;
+        const hpPercentage = maxHp > 0 ? Math.round((currentHp / maxHp) * 100) : 0;
+        
+        let hpColor = '#4CAF50'; // Green
+        if (hpPercentage <= 25) hpColor = '#F44336'; // Red
+        else if (hpPercentage <= 50) hpColor = '#FF9800'; // Orange
+        else if (hpPercentage <= 75) hpColor = '#FFC107'; // Yellow
+        
+        hpEl.innerHTML = `<strong>HP:</strong> <span style="color: ${hpColor}">${currentHp} / ${maxHp}</span> (${hpPercentage}%)`;
 
+        // ✅ UPDATED: Display normalized stats
+        const stats = entity.stats || {};
         statsEl.innerHTML = `
-            <strong>Vitality:</strong> ${entity.stats.vitality}<br>
-            <strong>Attack:</strong> ${entity.stats.attack}<br>
-            <strong>Defense:</strong> ${entity.stats.defense}
+            <strong>Strength:</strong> ${stats.strength || 0}<br>
+            <strong>Vitality:</strong> ${stats.vitality || 0}<br>
+            <strong>Spirit:</strong> ${stats.spirit || 0}<br>
+            <strong>Dexterity:</strong> ${stats.dexterity || 0}<br>
+            <strong>Intellect:</strong> ${stats.intellect || 0}<br>
+            <strong>Attack:</strong> ${stats.attack || 0}<br>
+            <strong>Defense:</strong> ${stats.defense || 0}
         `;
 
         abilitiesEl.innerHTML = '';
