@@ -447,6 +447,7 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         const resultRes = await _apiCall('/functions/v1/move-character', 'POST', {
             battleId: _battleId,
             characterId,
+            currentPosition: [startX, startY], // ✅ ADD THIS LINE
             targetPosition: [targetX, targetY],
         });
         const result = await resultRes.json();
