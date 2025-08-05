@@ -14,6 +14,7 @@ let _supabaseClient = null;
 let _battleState = null;
 let _battleId = null;
 let _unsubscribeFromBattle = null;
+let _isProcessingAITurn = false;
 
 import { initCharacterData } from './character_data.js';
 
@@ -94,6 +95,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
         console.log(`[BATTLE] Battle started with ID: ${_battleId}`);
 
+        // Subscribe to real-time updates
         _unsubscribeFromBattle = supabase
             .channel(`battle_state:${_battleId}`)
             .on(
@@ -105,7 +107,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
                     filter: `id=eq.${_battleId}`
                 },
                 (payload) => {
-                    console.log('Realtime update received:', payload.new);
+                    console.log('[REALTIME] Battle state update received:', payload.new);
                     _battleState = payload.new;
                     updateGameStateFromRealtime();
                 }
@@ -130,7 +132,9 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 function updateGameStateFromRealtime() {
     if (!_battleState) return;
 
-    // ✅ UPDATED: Properly map the characters_state object to an array with correct HP handling
+    console.log('[BATTLE] Processing realtime update:', _battleState);
+
+    // Map the characters_state object to an array with proper HP and stats handling
     _characters = Object.values(_battleState.characters_state).map(charState => {
         // Normalize stats object to handle case variations
         const stats = charState.stats || {};
@@ -162,27 +166,127 @@ function updateGameStateFromRealtime() {
             has_acted: charState.has_acted,
             current_hp: charState.current_hp || (vitality * 10),
             max_hp: charState.max_hp || (vitality * 10),
+            priority: charState.priority || 999
         };
     });
 
     console.log('[BATTLE] Updated characters:', _characters);
     renderCharacters();
-    const currentCharacterId = _battleState.turn_order[_battleState.current_turn_index];
-    const activeCharacter = _characters.find(c => c.id === currentCharacterId);
-    handleActiveCharacterTurn(activeCharacter);
+    
+    // Handle turn management
+    const currentTurn = _battleState.current_turn;
+    const currentTurnIndex = _battleState.current_turn_index || 0;
+    const turnOrder = _battleState.turn_order || [];
+    
+    console.log(`[BATTLE] Current turn: ${currentTurn}, Turn index: ${currentTurnIndex}, Round: ${_battleState.round_number}`);
+    
+    // Update UI to show current turn
+    updateTurnDisplay(currentTurn, _battleState.round_number);
+    
+    // Handle AI turn automatically if it's AI's turn
+    if (currentTurn === 'AI' && !_isProcessingAITurn) {
+        handleAITurn();
+    }
+    
+    // Update character selection based on current turn
+    updateCharacterAvailability(currentTurn);
 }
 
-function handleActiveCharacterTurn(character) {
-    if (!character) return;
+/**
+ * Updates the turn display in the UI
+ */
+function updateTurnDisplay(currentTurn, roundNumber) {
     const turnStatusEl = document.getElementById('turnStatus');
     if (turnStatusEl) {
-        turnStatusEl.textContent = `Turn: ${character.name}`;
+        if (currentTurn === 'AI') {
+            turnStatusEl.textContent = `AI Turn - Round ${roundNumber}`;
+            turnStatusEl.style.color = '#ff6b6b';
+        } else {
+            // It's a player turn
+            const playerCharacters = _characters.filter(c => c.isPlayerControlled);
+            if (playerCharacters.length > 0) {
+                const activePlayerChar = playerCharacters.find(c => !c.has_moved || !c.has_acted);
+                const displayName = activePlayerChar ? activePlayerChar.name : 'Player';
+                turnStatusEl.textContent = `${displayName}'s Turn - Round ${roundNumber}`;
+                turnStatusEl.style.color = '#4ecdc4';
+            } else {
+                turnStatusEl.textContent = `Player Turn - Round ${roundNumber}`;
+                turnStatusEl.style.color = '#4ecdc4';
+            }
+        }
     }
+}
 
-    if (character.isPlayerControlled) {
-        // Player turn logic
-    } else {
-        // AI turn logic
+/**
+ * Updates which characters can be selected based on current turn
+ */
+function updateCharacterAvailability(currentTurn) {
+    const container = _main.querySelector('.battle-grid-container');
+    if (!container) return;
+
+    // Remove previous turn indicators
+    container.querySelectorAll('.character-token').forEach(token => {
+        token.classList.remove('current-turn', 'cannot-act');
+    });
+
+    _characters.forEach(char => {
+        const charEl = container.querySelector(`.character-token[data-id="${char.id}"]`);
+        if (!charEl) return;
+
+        if (currentTurn === 'AI') {
+            // During AI turn, highlight AI characters that can still act
+            if (!char.isPlayerControlled && (!char.has_moved || !char.has_acted)) {
+                charEl.classList.add('current-turn');
+            } else {
+                charEl.classList.add('cannot-act');
+            }
+        } else {
+            // During player turn, highlight player characters that can still act
+            if (char.isPlayerControlled && (!char.has_moved || !char.has_acted)) {
+                charEl.classList.add('current-turn');
+            } else {
+                charEl.classList.add('cannot-act');
+            }
+        }
+    });
+}
+
+/**
+ * Handles automatic AI turn processing
+ */
+async function handleAITurn() {
+    if (_isProcessingAITurn) return;
+    
+    _isProcessingAITurn = true;
+    console.log('[AI] Processing AI turn...');
+    
+    try {
+        // Add a small delay to make AI actions visible
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const aiTurnRes = await _apiCall('/functions/v1/ai-turn', 'POST', {
+            battleId: _battleId
+        });
+        
+        const result = await aiTurnRes.json();
+        
+        if (result.success) {
+            console.log('[AI] AI turn completed:', result.message);
+            
+            if (result.skipTurn) {
+                console.log('[AI] All AI characters completed, ending AI turn');
+                // Automatically end turn if all AI characters are done
+                setTimeout(() => handleEndTurn(), 500);
+            }
+        } else {
+            console.error('[AI] AI turn failed:', result.message);
+            displayMessage(`AI turn failed: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('[AI] Error during AI turn:', error);
+        displayMessage('Error during AI turn. Please try ending the turn manually.');
+    } finally {
+        _isProcessingAITurn = false;
     }
 }
 
@@ -192,6 +296,10 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-top-bar">
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
                 <p id="turnStatus">Turn: —</p>
+                <div class="battle-controls">
+                    <button id="endTurnButton" class="fantasy-button small-btn">End Turn</button>
+                    <button id="refreshButton" class="fantasy-button small-btn">Refresh</button>
+                </div>
             </div>
             <div class="battle-grid-container"></div>
             <div class="battle-top-buttons" id="entityInfoPanel">
@@ -211,6 +319,18 @@ function renderBattleScreen(mode, level, layoutData) {
     renderCharacters();
     renderBottomUI();
     createParticles();
+    
+    // Add event listeners for new buttons
+    const endTurnBtn = document.getElementById('endTurnButton');
+    const refreshBtn = document.getElementById('refreshButton');
+    
+    if (endTurnBtn) {
+        endTurnBtn.addEventListener('click', handleEndTurn);
+    }
+    
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', handleRefresh);
+    }
 }
 
 function renderBattleGrid(layoutJson) {
@@ -275,11 +395,13 @@ function renderBattleGrid(layoutJson) {
 }
 
 /**
- * Renders the character tokens on the grid, now including an HP bar.
+ * Renders the character tokens on the grid, including HP bars and turn indicators.
  */
 function renderCharacters() {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
+    
+    // Remove existing character tokens
     container.querySelectorAll('.character-token').forEach(token => token.remove());
 
     _characters.forEach(char => {
@@ -293,8 +415,9 @@ function renderCharacters() {
         const charEl = document.createElement('div');
         charEl.className = `character-token ${char.type}`;
         charEl.dataset.id = char.id;
-        charEl.title = char.name;
+        charEl.title = `${char.name} (${char.current_hp}/${char.max_hp} HP)`;
 
+        // Character sprite
         const sprite = char.spriteName || 'placeholder';
         const img = document.createElement('img');
         img.src = `assets/art/sprites/${sprite}.png`;
@@ -312,7 +435,7 @@ function renderCharacters() {
 
         charEl.appendChild(img);
 
-        // ✅ UPDATED: Render HP bar with proper validation
+        // HP bar
         if (char.current_hp !== undefined && char.max_hp !== undefined && char.max_hp > 0) {
             const hpBar = document.createElement('div');
             hpBar.className = 'character-hp-bar';
@@ -337,6 +460,22 @@ function renderCharacters() {
             charEl.appendChild(hpBar);
         }
 
+        // Turn status indicator
+        if (char.has_moved && char.has_acted) {
+            const doneIndicator = document.createElement('div');
+            doneIndicator.className = 'turn-done-indicator';
+            doneIndicator.style.position = 'absolute';
+            doneIndicator.style.top = '2px';
+            doneIndicator.style.right = '2px';
+            doneIndicator.style.width = '8px';
+            doneIndicator.style.height = '8px';
+            doneIndicator.style.backgroundColor = '#666';
+            doneIndicator.style.borderRadius = '50%';
+            doneIndicator.style.zIndex = '25';
+            doneIndicator.title = 'Turn completed';
+            charEl.appendChild(doneIndicator);
+        }
+
         cell.appendChild(charEl);
     });
 }
@@ -347,12 +486,20 @@ function handleTileClick(event) {
     const targetY = parseInt(clickedTileEl.dataset.y);
     const charInCell = _characters.find(c => Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY);
 
+    // Don't allow interactions during AI turn
+    if (_battleState?.current_turn === 'AI') {
+        displayMessage('Please wait for AI turn to complete.');
+        return;
+    }
+
     if (charInCell) {
         unhighlightAllTiles();
         if (_selectedCharacterEl) {
             _selectedCharacterEl.classList.remove('character-selected');
         }
-        if (charInCell.isPlayerControlled) {
+        
+        // Only allow selection of player characters that can still act
+        if (charInCell.isPlayerControlled && (!charInCell.has_moved || !charInCell.has_acted)) {
             const el = clickedTileEl.querySelector('.character-token');
             if (el) {
                 el.classList.add('character-selected');
@@ -367,16 +514,23 @@ function handleTileClick(event) {
         }
         showEntityInfo(charInCell);
     } else {
+        // Handle movement attempt
         if (_selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
             attemptMoveCharacter(_selectedPlayerCharacter, targetX, targetY);
         } else {
+            // Deselect and show tile info
             unhighlightAllTiles();
             if (_selectedCharacterEl) {
                 _selectedCharacterEl.classList.remove('character-selected');
                 _selectedCharacterEl = null;
             }
             _selectedPlayerCharacter = null;
-            showEntityInfo({ tile: _tileMap[clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-')).replace('tile-', '')] });
+            
+            // Show tile information
+            const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
+            const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
+            const tileData = _tileMap[tileKey];
+            showEntityInfo({ tile: tileData || { name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' } });
         }
     }
 }
@@ -387,6 +541,8 @@ function highlightWalkableTiles(character) {
 
     const [charX, charY] = character.position;
     const container = _main.querySelector('.battle-grid-container');
+    
+    // 8-directional movement offsets (Chebyshev distance = 1)
     const offsets = [
         { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
         { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
@@ -395,10 +551,15 @@ function highlightWalkableTiles(character) {
     offsets.forEach(offset => {
         const newX = charX + offset.dx;
         const newY = charY + offset.dy;
+        
+        // Check bounds
         if (newX >= 0 && newX < 7 && newY >= 0 && newY < 7) {
             const tileEl = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
             if (tileEl && tileEl.dataset.walkable === 'true') {
-                const isOccupied = _characters.some(c => Array.isArray(c.position) && c.position[0] === newX && c.position[1] === newY);
+                // Check if tile is occupied
+                const isOccupied = _characters.some(c => 
+                    Array.isArray(c.position) && c.position[0] === newX && c.position[1] === newY
+                );
                 if (!isOccupied) {
                     tileEl.classList.add('highlight-walkable');
                     highlightedTiles.push(tileEl);
@@ -420,15 +581,18 @@ async function attemptMoveCharacter(character, targetX, targetY) {
     const startX = character.position[0];
     const startY = character.position[1];
 
+    // Validate movement distance (Chebyshev distance = 1)
     const distanceX = Math.abs(targetX - startX);
     const distanceY = Math.abs(targetY - startY);
     const chebyshevDistance = Math.max(distanceX, distanceY);
+    
     if (chebyshevDistance !== 1 || (distanceX === 0 && distanceY === 0)) {
         displayMessage('Characters can only move 1 tile at a time to an adjacent square.');
         unhighlightAllTiles();
         return;
     }
 
+    // Validate target tile
     const targetTileEl = _main.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
     if (!targetTileEl || targetTileEl.dataset.walkable !== 'true') {
         displayMessage('Cannot move to an unwalkable tile.');
@@ -436,7 +600,10 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         return;
     }
 
-    const isOccupied = _characters.some(c => Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY);
+    // Check for occupancy
+    const isOccupied = _characters.some(c => 
+        Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY
+    );
     if (isOccupied) {
         displayMessage('That tile is already occupied by another character.');
         unhighlightAllTiles();
@@ -444,28 +611,36 @@ async function attemptMoveCharacter(character, targetX, targetY) {
     }
 
     try {
+        console.log(`[MOVE] Attempting to move character ${characterId} from [${startX},${startY}] to [${targetX},${targetY}]`);
+        
         const resultRes = await _apiCall('/functions/v1/move-character', 'POST', {
             battleId: _battleId,
             characterId,
-            currentPosition: [startX, startY], // ✅ ADD THIS LINE
+            currentPosition: [startX, startY],
             targetPosition: [targetX, targetY],
         });
+        
         const result = await resultRes.json();
 
         if (result.success) {
-            console.log('Move successful:', result.message);
+            console.log('[MOVE] Move successful:', result.message);
+            
+            // Clear selection
             if (_selectedCharacterEl) {
                 _selectedCharacterEl.classList.remove('character-selected');
             }
             _selectedPlayerCharacter = null;
             _selectedCharacterEl = null;
             unhighlightAllTiles();
+            
+            displayMessage(`${character.name} moved successfully!`);
         } else {
+            console.error('[MOVE] Move failed:', result.message);
             displayMessage(`Move failed: ${result.message}`);
             unhighlightAllTiles();
         }
     } catch (error) {
-        console.error('Error attempting to move character:', error);
+        console.error('[MOVE] Error attempting to move character:', error);
         displayMessage('Network error during move. Please check your connection.');
         unhighlightAllTiles();
     }
@@ -475,23 +650,44 @@ function renderBottomUI() {
     const ui = _main.querySelector('.battle-bottom-ui');
     ui.innerHTML = '';
 
+    // Create action buttons
+    const actionButtons = [
+        { text: 'Attack', id: 'attackButton', disabled: true },
+        { text: 'Cast', id: 'castButton', disabled: true },
+        { text: 'Item', id: 'itemButton', disabled: true },
+        { text: 'Wait', id: 'waitButton', disabled: false },
+        { text: 'End Turn', id: 'endTurnButtonBottom', disabled: false }
+    ];
+
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
+        
         for (let i = 0; i < 5; i++) {
+            const btnIndex = row * 5 + i;
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
-            btn.textContent = `Btn ${row * 5 + i + 1}`;
+            
+            if (btnIndex < actionButtons.length) {
+                const buttonData = actionButtons[btnIndex];
+                btn.textContent = buttonData.text;
+                btn.id = buttonData.id;
+                btn.disabled = buttonData.disabled;
+                
+                // Add event listeners
+                if (buttonData.id === 'endTurnButtonBottom') {
+                    btn.addEventListener('click', handleEndTurn);
+                } else if (buttonData.id === 'waitButton') {
+                    btn.addEventListener('click', handleWait);
+                }
+            } else {
+                btn.textContent = `Btn ${btnIndex + 1}`;
+                btn.disabled = true;
+            }
+            
             rowDiv.appendChild(btn);
         }
         ui.appendChild(rowDiv);
-    }
-
-    const endTurnButton = ui.querySelectorAll('.battle-ui-row')[1].children[4];
-    if (endTurnButton) {
-        endTurnButton.textContent = 'End Turn';
-        endTurnButton.id = 'endTurnButton';
-        endTurnButton.addEventListener('click', handleEndTurn);
     }
 }
 
@@ -501,27 +697,75 @@ async function handleEndTurn() {
         return;
     }
 
+    // Don't allow ending turn during AI processing
+    if (_isProcessingAITurn) {
+        displayMessage('Please wait for AI turn to complete.');
+        return;
+    }
+
     try {
+        console.log('[TURN] Attempting to end turn...');
+        
         const resultRes = await _apiCall('/functions/v1/end-turn', 'POST', {
             battleId: _battleId
         });
+        
         const result = await resultRes.json();
 
         if (result.success) {
-            console.log('Turn ended:', result.message);
+            console.log('[TURN] Turn ended successfully:', result.message);
+            
+            // Clear any selections
+            unhighlightAllTiles();
+            if (_selectedCharacterEl) {
+                _selectedCharacterEl.classList.remove('character-selected');
+                _selectedCharacterEl = null;
+            }
+            _selectedPlayerCharacter = null;
+            
         } else {
+            console.error('[TURN] Failed to end turn:', result.message);
             displayMessage(`Failed to end turn: ${result.message}`);
         }
     } catch (error) {
-        console.error('Error ending turn:', error);
+        console.error('[TURN] Error ending turn:', error);
         displayMessage('Network error ending turn. Please try again.');
     }
-    unhighlightAllTiles();
-    if (_selectedCharacterEl) {
-        _selectedCharacterEl.classList.remove('character-selected');
-        _selectedCharacterEl = null;
+}
+
+async function handleWait() {
+    if (_selectedPlayerCharacter) {
+        // Mark character as having acted (but not moved if they haven't)
+        displayMessage(`${_selectedPlayerCharacter.name} is waiting.`);
+        // This would need a separate endpoint to mark a character as having acted without moving
+    } else {
+        displayMessage('Select a character first.');
     }
-    _selectedPlayerCharacter = null;
+}
+
+async function handleRefresh() {
+    try {
+        console.log('[REFRESH] Refreshing battle state...');
+        
+        const supabase = getSupabaseClient(_main.supabaseConfig);
+        const { data: battleState, error } = await supabase
+            .from('battle_state')
+            .select('*')
+            .eq('id', _battleId)
+            .single();
+            
+        if (error) {
+            throw error;
+        }
+        
+        _battleState = battleState;
+        updateGameStateFromRealtime();
+        
+        displayMessage('Battle state refreshed successfully.');
+    } catch (error) {
+        console.error('[REFRESH] Error refreshing battle state:', error);
+        displayMessage('Failed to refresh battle state.');
+    }
 }
 
 function showEntityInfo(entity) {
@@ -536,14 +780,14 @@ function showEntityInfo(entity) {
         hpEl.textContent = '';
         statsEl.innerHTML = '';
         abilitiesEl.innerHTML = '';
-        portrait.src = 'assets/art/placeholder.png';
+        portrait.src = 'assets/art/sprites/placeholder.png';
         return;
     }
 
     nameEl.textContent = entity.name || 'Unnamed';
 
     if (entity.type === 'player' || entity.type === 'enemy') {
-        // ✅ UPDATED: Display current HP status
+        // Display current HP status with visual indicators
         const currentHp = entity.current_hp || 0;
         const maxHp = entity.max_hp || 0;
         const hpPercentage = maxHp > 0 ? Math.round((currentHp / maxHp) * 100) : 0;
@@ -553,74 +797,121 @@ function showEntityInfo(entity) {
         else if (hpPercentage <= 50) hpColor = '#FF9800'; // Orange
         else if (hpPercentage <= 75) hpColor = '#FFC107'; // Yellow
         
-        hpEl.innerHTML = `<strong>Current HP:</strong> <span style="color: ${hpColor}">${currentHp} / ${maxHp}</span> (${hpPercentage}%)`;
+        // Add turn status to HP display
+        let turnStatus = '';
+        if (entity.has_moved && entity.has_acted) {
+            turnStatus = ' <span style="color: #888; font-size: 11px;">(Turn Complete)</span>';
+        } else if (entity.has_moved) {
+            turnStatus = ' <span style="color: #FFB74D; font-size: 11px;">(Moved)</span>';
+        } else if (entity.has_acted) {
+            turnStatus = ' <span style="color: #81C784; font-size: 11px;">(Acted)</span>';
+        }
+        
+        hpEl.innerHTML = `<strong>HP:</strong> <span style="color: ${hpColor}">${currentHp} / ${maxHp}</span> (${hpPercentage}%)${turnStatus}`;
 
-        // ✅ UPDATED: Extract stats and create two-column layout
+        // Extract and display stats in a clean layout
         const stats = entity.stats || {};
         const strength = stats.strength || 0;
         const dexterity = stats.dexterity || 0;
         const vitality = stats.vitality || 0;
         const spirit = stats.spirit || 0;
         const intellect = stats.intellect || 0;
-        const hp = maxHp; // Total HP based on vitality
-        const armor = stats.defense || 0; // Using defense as armor
-        const resistance = stats.spirit || 0; // Using spirit as resistance
-
-        // Split stats into two columns of 4 each
-        const statsCol1 = [
-            { label: 'Strength', value: strength },
-            { label: 'Dexterity', value: dexterity },
-            { label: 'Vitality', value: vitality },
-            { label: 'Spirit', value: spirit }
-        ];
-        const statsCol2 = [
-            { label: 'Intellect', value: intellect },
-            { label: 'HP', value: hp },
-            { label: 'Armor', value: armor },
-            { label: 'Resistance', value: resistance }
-        ];
+        const attack = stats.attack || strength;
+        const defense = stats.defense || Math.floor(strength * 0.25);
 
         // Create two-column stats display
+        const statsCol1 = [
+            { label: 'STR', value: strength, color: '#FF6B6B' },
+            { label: 'DEX', value: dexterity, color: '#4ECDC4' },
+            { label: 'VIT', value: vitality, color: '#45B7D1' },
+            { label: 'SPR', value: spirit, color: '#96CEB4' }
+        ];
+        const statsCol2 = [
+            { label: 'INT', value: intellect, color: '#FECA57' },
+            { label: 'ATK', value: attack, color: '#FF9FF3' },
+            { label: 'DEF', value: defense, color: '#54A0FF' },
+            { label: 'PRI', value: entity.priority || 999, color: '#5F27CD' }
+        ];
+
         statsEl.innerHTML = `
-            <div style="display: flex; gap: 15px; font-size: 12px;">
+            <div style="display: flex; gap: 15px; font-size: 11px; margin-top: 8px;">
                 <div style="flex: 1;">
-                    ${statsCol1.map(stat => `<div><strong>${stat.label}:</strong> ${stat.value}</div>`).join('')}
+                    ${statsCol1.map(stat => `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                            <span style="color: ${stat.color}; font-weight: bold;">${stat.label}:</span>
+                            <span>${stat.value}</span>
+                        </div>
+                    `).join('')}
                 </div>
                 <div style="flex: 1;">
-                    ${statsCol2.map(stat => `<div><strong>${stat.label}:</strong> ${stat.value}</div>`).join('')}
+                    ${statsCol2.map(stat => `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                            <span style="color: ${stat.color}; font-weight: bold;">${stat.label}:</span>
+                            <span>${stat.value}</span>
+                        </div>
+                    `).join('')}
                 </div>
             </div>
         `;
 
+        // Display abilities if any
         abilitiesEl.innerHTML = '';
-        (entity.abilities || []).forEach(a => {
+        const abilities = entity.abilities || [];
+        if (abilities.length > 0) {
+            abilities.forEach(ability => {
+                const li = document.createElement('li');
+                li.textContent = ability;
+                li.style.fontSize = '11px';
+                li.style.color = '#ddd';
+                abilitiesEl.appendChild(li);
+            });
+        } else {
             const li = document.createElement('li');
-            li.textContent = a;
+            li.textContent = 'No special abilities';
+            li.style.fontSize = '11px';
+            li.style.color = '#888';
+            li.style.fontStyle = 'italic';
             abilitiesEl.appendChild(li);
-        });
+        }
 
-        // Set portrait with fallback to placeholder
+        // Set character portrait
         const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
         portrait.src = spritePath;
         portrait.onerror = () => {
-            portrait.src = 'assets/art/placeholder.png';
+            portrait.src = 'assets/art/sprites/placeholder.png';
         };
+
     } else if (entity.tile) {
+        // Display tile information
         hpEl.textContent = '';
+        
+        const tile = entity.tile;
+        const walkableText = tile.walkable ? 'Yes' : 'No';
+        const visionBlockText = tile.vision_block ? 'Yes' : 'No';
+        
         statsEl.innerHTML = `
-            <div style="font-size: 12px;">
-                <div><strong>Tile:</strong> ${entity.tile.name}</div>
-                <div><strong>Walkable:</strong> ${entity.tile.walkable}</div>
-                <div><strong>Blocks Vision:</strong> ${entity.tile.vision_block}</div>
+            <div style="font-size: 12px; margin-top: 8px;">
+                <div style="margin-bottom: 4px;">
+                    <strong style="color: #4ECDC4;">Type:</strong> ${tile.name || 'Unknown'}
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <strong style="color: #45B7D1;">Walkable:</strong> 
+                    <span style="color: ${tile.walkable ? '#4CAF50' : '#F44336'}">${walkableText}</span>
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <strong style="color: #FF6B6B;">Blocks Vision:</strong> 
+                    <span style="color: ${tile.vision_block ? '#F44336' : '#4CAF50'}">${visionBlockText}</span>
+                </div>
             </div>
         `;
+        
         abilitiesEl.innerHTML = '';
         
-        // Set tile art with fallback to placeholder
-        const tilePath = `assets/art/tiles/${entity.tile.art || 'placeholder'}.png`;
+        // Set tile art
+        const tilePath = `assets/art/tiles/${tile.art || 'placeholder'}.png`;
         portrait.src = tilePath;
         portrait.onerror = () => {
-            portrait.src = 'assets/art/placeholder.png';
+            portrait.src = 'assets/art/tiles/placeholder.png';
         };
     }
 }
@@ -628,41 +919,171 @@ function showEntityInfo(entity) {
 function createParticles() {
     const container = document.createElement('div');
     container.className = 'particles';
+    container.style.position = 'absolute';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '1';
+    
+    _main.style.position = 'relative';
     _main.appendChild(container);
 
-    for (let i = 0; i < 20; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.style.left = Math.random() * 100 + '%';
-        p.style.top = Math.random() * 100 + '%';
-        p.style.animationDelay = Math.random() * 6 + 's';
-        p.style.animationDuration = (Math.random() * 3 + 4) + 's';
-        container.appendChild(p);
+    for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.position = 'absolute';
+        particle.style.width = '2px';
+        particle.style.height = '2px';
+        particle.style.backgroundColor = '#4ECDC4';
+        particle.style.borderRadius = '50%';
+        particle.style.opacity = '0.6';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.animation = `float ${(Math.random() * 3 + 4)}s ease-in-out infinite`;
+        particle.style.animationDelay = Math.random() * 6 + 's';
+        container.appendChild(particle);
     }
 }
 
-function displayMessage(msg) {
+function displayMessage(msg, type = 'info') {
+    // Remove any existing message
+    const existingMessage = document.querySelector('.custom-message-box');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+
     const box = document.createElement('div');
     box.className = 'custom-message-box';
+    
+    let bgColor = '#2C3E50';
+    let borderColor = '#4ECDC4';
+    
+    if (type === 'error') {
+        bgColor = '#E74C3C';
+        borderColor = '#C0392B';
+    } else if (type === 'success') {
+        bgColor = '#27AE60';
+        borderColor = '#229954';
+    } else if (type === 'warning') {
+        bgColor = '#F39C12';
+        borderColor = '#E67E22';
+    }
+    
+    box.style.position = 'fixed';
+    box.style.top = '0';
+    box.style.left = '0';
+    box.style.width = '100%';
+    box.style.height = '100%';
+    box.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    box.style.display = 'flex';
+    box.style.alignItems = 'center';
+    box.style.justifyContent = 'center';
+    box.style.zIndex = '1000';
+    
     box.innerHTML = `
-        <div class="message-content">
-            <p>${msg}</p>
-            <button class="fantasy-button message-ok-btn">OK</button>
+        <div class="message-content" style="
+            background: ${bgColor};
+            border: 2px solid ${borderColor};
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 400px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        ">
+            <p style="margin: 0 0 15px 0; font-size: 14px; line-height: 1.4;">${msg}</p>
+            <button class="fantasy-button message-ok-btn" style="
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                padding: 8px 20px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                transition: background 0.3s ease;
+            ">OK</button>
         </div>
     `;
+    
     document.body.appendChild(box);
-    box.querySelector('.message-ok-btn').addEventListener('click', () => box.remove());
+    
+    const okBtn = box.querySelector('.message-ok-btn');
+    okBtn.addEventListener('click', () => box.remove());
+    okBtn.addEventListener('mouseover', () => {
+        okBtn.style.background = 'rgba(255, 255, 255, 0.3)';
+    });
+    okBtn.addEventListener('mouseout', () => {
+        okBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+    });
+    
+    // Auto-remove after 5 seconds for non-error messages
+    if (type !== 'error') {
+        setTimeout(() => {
+            if (box.parentNode) {
+                box.remove();
+            }
+        }, 5000);
+    }
 }
 
+/**
+ * Checks if the battle has ended (victory/defeat conditions)
+ */
+function checkBattleEnd() {
+    if (!_characters || _characters.length === 0) return false;
+    
+    const playerCharacters = _characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
+    const enemyCharacters = _characters.filter(c => !c.isPlayerControlled && c.current_hp > 0);
+    
+    if (playerCharacters.length === 0) {
+        // Player defeat
+        displayMessage('Defeat! All your characters have fallen.', 'error');
+        setTimeout(() => {
+            window.gameAuth.loadModule('embark');
+        }, 3000);
+        return true;
+    } else if (enemyCharacters.length === 0) {
+        // Player victory
+        displayMessage('Victory! All enemies have been defeated!', 'success');
+        setTimeout(() => {
+            window.gameAuth.loadModule('embark');
+        }, 3000);
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Clean up function called when module is unloaded
+ */
 export function cleanup() {
-    if (_unsubscribeFromBattle) {
+    console.log('[BATTLE] Cleaning up battle manager...');
+    
+    // Unsubscribe from real-time updates
+    if (_unsubscribeFromBattle && _supabaseClient) {
         _supabaseClient.removeChannel(_unsubscribeFromBattle);
         _unsubscribeFromBattle = null;
     }
+    
+    // Reset all state variables
     _battleState = null;
     _battleId = null;
     _characters = [];
     _selectedCharacterEl = null;
     _selectedPlayerCharacter = null;
+    _isProcessingAITurn = false;
+    
+    // Clear highlights
     unhighlightAllTiles();
+    
+    // Remove any existing messages
+    const existingMessage = document.querySelector('.custom-message-box');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    console.log('[BATTLE] Cleanup completed.');
 }
