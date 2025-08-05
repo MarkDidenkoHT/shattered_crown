@@ -209,7 +209,6 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-**// THIS BLOCK WAS MOVED TO THE CORRECT LOCATION**
 // ✅ Proxy Supabase edge functions
 app.all('/functions/v1/*', async (req, res) => {
     const supabasePath = req.params[0];
