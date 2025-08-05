@@ -21,35 +21,12 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
   _main.innerHTML = `
     <div class="main-app-container">
       <div class="particles"></div>
-      
-      <!-- Fixed Return Button -->
-      <div class="fixed-return-button">
-        <button class="fantasy-button return-btn">
-          <span class="return-icon">←</span>
-          Return to Castle
-        </button>
-      </div>
-      
-      <!-- Loading Overlay -->
-      <div class="loading-overlay" style="display: none;">
-        <div class="loading-content">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">Preparing your adventure...</div>
-          <div class="loading-subtext">Gathering champions and scouting the area</div>
-        </div>
-      </div>
-      
       <div class="character-creation-section"></div>
     </div>
   `;
 
   createParticles();
   renderEmbarkScreen();
-
-  // Add return button handler
-  _main.querySelector('.return-btn').addEventListener('click', () => {
-    window.gameAuth.loadModule('castle');
-  });
 
   console.log('[EMBARK] --- loadModule for Embark finished ---');
 }
@@ -60,108 +37,49 @@ function renderEmbarkScreen() {
   section.innerHTML = `
     <div class="art-header">
       <h1>Choose Your Adventure</h1>
-      <p class="subtitle">Select where you'd like to embark with your champions</p>
+      <p class="subtitle">Select where you'd like to embark with your champions.</p>
     </div>
-    
-    <div class="embark-locations-container">
-      <div class="locations-grid">
-        ${createLocationCard('Forest', 'Forest', 'assets/art/embark/forest.png', 'Dense woodlands filled with ancient magic and mysterious creatures')}
-        ${createLocationCard('Mountain', 'Mountain', 'assets/art/embark/mountain.png', 'Treacherous peaks hiding valuable treasures and fierce guardians')}
-        ${createLocationCard('Dungeon', 'Dungeon', 'assets/art/embark/dungeon.png', 'Dark underground chambers echoing with danger and opportunity')}
-        ${createLocationCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.png', 'Face other champions in glorious combat for honor and rewards')}
+    <div class="selection-section">
+      <div class="selection-grid">
+        ${createEmbarkCard('Forest', 'Forest', 'assets/art/embark/forest.png')}
+        ${createEmbarkCard('Mountain', 'Mountain', 'assets/art/embark/mountain.png')}
+        ${createEmbarkCard('Dungeon', 'Dungeon', 'assets/art/embark/dungeon.png')}
+        ${createEmbarkCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.png')}
       </div>
+    </div>
+    <div class="confirm-return-buttons">
+      <button class="fantasy-button return-btn">Return</button>
     </div>
   `;
 
-  // Add click handlers to location cards
-  section.querySelectorAll('.location-card').forEach(card => {
-    card.addEventListener('click', (e) => {
+  // Return button handler
+  section.querySelector('.return-btn').addEventListener('click', () => {
+    window.gameAuth.loadModule('castle');
+  });
+
+  // Embark buttons handler
+  section.querySelectorAll('.embark-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
       const mode = e.currentTarget.dataset.mode;
-      handleLocationSelection(mode, e.currentTarget);
+      console.log(`[EMBARK] Selected mode: ${mode}`);
+      // Pass selectedMode to battle_manager when loading
+      window.gameAuth.loadModule('battle_manager', { selectedMode: mode });
     });
   });
 }
 
-function createLocationCard(title, mode, imgSrc, description) {
+function createEmbarkCard(title, mode, imgSrc) {
   return `
-    <div class="location-card" data-mode="${mode}">
-      <div class="location-card-inner">
-        <div class="location-image-container">
-          <img src="${imgSrc}" alt="${title}" class="location-image" onerror="this.src='assets/art/placeholder.png'">
-          <div class="location-overlay">
-            <div class="location-title">${title}</div>
-          </div>
-        </div>
-        <div class="location-info">
-          <h3 class="location-name">${title}</h3>
-          <p class="location-description">${description}</p>
-          <div class="embark-indicator">
-            <span class="embark-text">Click to Embark</span>
-            <div class="embark-arrow">→</div>
-          </div>
-        </div>
+    <div class="selection-card">
+      <div class="card-art-block">
+        <img src="${imgSrc}" alt="${title}" class="card-art" onerror="this.src='assets/art/placeholder.png'">
+      </div>
+      <div class="card-info-block">
+        <h3 class="card-name">${title}</h3>
+        <button class="fantasy-button embark-btn" data-mode="${mode}">Embark</button>
       </div>
     </div>
   `;
-}
-
-function handleLocationSelection(mode, cardElement) {
-  console.log(`[EMBARK] Selected mode: ${mode}`);
-  
-  // Add selection feedback
-  cardElement.classList.add('location-selected');
-  
-  // Show loading overlay with animation
-  showLoadingAnimation(mode);
-  
-  // Small delay for visual feedback, then proceed
-  setTimeout(() => {
-    window.gameAuth.loadModule('battle_manager', { selectedMode: mode });
-  }, 1500);
-}
-
-function showLoadingAnimation(mode) {
-  const loadingOverlay = _main.querySelector('.loading-overlay');
-  const loadingText = loadingOverlay.querySelector('.loading-text');
-  const loadingSubtext = loadingOverlay.querySelector('.loading-subtext');
-  
-  // Customize loading text based on mode
-  const loadingMessages = {
-    'Forest': {
-      main: 'Entering the Ancient Forest...',
-      sub: 'Your champions ready their weapons as birds scatter from the canopy'
-    },
-    'Mountain': {
-      main: 'Ascending the Treacherous Peaks...',
-      sub: 'The mountain winds howl as your party begins the climb'
-    },
-    'Dungeon': {
-      main: 'Descending into the Dark Depths...',
-      sub: 'Torches flicker as ancient stones echo with your footsteps'
-    },
-    'PvP': {
-      main: 'Entering the Arena...',
-      sub: 'The crowd roars as champions prepare for glorious combat'
-    }
-  };
-  
-  const messages = loadingMessages[mode] || {
-    main: 'Preparing your adventure...',
-    sub: 'Gathering champions and scouting the area'
-  };
-  
-  loadingText.textContent = messages.main;
-  loadingSubtext.textContent = messages.sub;
-  
-  // Show loading overlay with fade in
-  loadingOverlay.style.display = 'flex';
-  loadingOverlay.style.opacity = '0';
-  
-  // Animate in
-  requestAnimationFrame(() => {
-    loadingOverlay.style.transition = 'opacity 0.3s ease-in-out';
-    loadingOverlay.style.opacity = '1';
-  });
 }
 
 function createParticles() {
@@ -170,7 +88,7 @@ function createParticles() {
   if (!particlesContainer) return;
 
   particlesContainer.innerHTML = '';
-  const particleCount = 25;
+  const particleCount = 20;
   for (let i = 0; i < particleCount; i++) {
     const particle = document.createElement('div');
     particle.className = 'particle';
