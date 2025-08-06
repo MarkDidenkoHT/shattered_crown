@@ -158,8 +158,8 @@ function updateGameStateFromRealtime() {
                 spirit: normalizedStats.spirit || 0,
                 dexterity: normalizedStats.dexterity || 0,
                 intellect: normalizedStats.intellect || 0,
-                attack: normalizedStats.attack || normalizedStats.strength || 0,
-                defense: normalizedStats.defense || Math.floor((normalizedStats.strength || 0) * 0.25)
+                armor: normalizedStats.armor || 0,
+                resistance: normalizedStats.resistance || 0
             },
             spriteName: charState.sprite_name,
             has_moved: charState.has_moved,
@@ -200,7 +200,7 @@ function updateTurnDisplay(currentTurn, roundNumber) {
     if (turnStatusEl) {
         if (currentTurn === 'AI') {
             turnStatusEl.textContent = `AI Turn - Round ${roundNumber}`;
-            turnStatusEl.style.color = '#ff6b6b';
+            turnStatusEl.style.color = '#8B4513';
         } else {
             // It's a player turn
             const playerCharacters = _characters.filter(c => c.isPlayerControlled);
@@ -208,10 +208,10 @@ function updateTurnDisplay(currentTurn, roundNumber) {
                 const activePlayerChar = playerCharacters.find(c => !c.has_moved || !c.has_acted);
                 const displayName = activePlayerChar ? activePlayerChar.name : 'Player';
                 turnStatusEl.textContent = `${displayName}'s Turn - Round ${roundNumber}`;
-                turnStatusEl.style.color = '#4ecdc4';
+                turnStatusEl.style.color = '#B8860B';
             } else {
                 turnStatusEl.textContent = `Player Turn - Round ${roundNumber}`;
-                turnStatusEl.style.color = '#4ecdc4';
+                turnStatusEl.style.color = '#B8860B';
             }
         }
     }
@@ -302,22 +302,19 @@ function renderBattleScreen(mode, level, layoutData) {
                 </div>
             </div>
             <div class="battle-grid-container"></div>
-            <div class="battle-top-buttons" id="entityInfoPanel">
+            <div class="battle-info-panel" id="entityInfoPanel">
                 <img id="infoPortrait" src="assets/art/sprites/placeholder.png" />
                 <div class="info-text">
                     <h3 id="infoName">—</h3>
                     <div id="infoHP"></div>
                     <div id="infoStats"></div>
-                    <ul id="infoAbilities"></ul>
                 </div>
             </div>
-            <div class="battle-bottom-ui"></div>
         </div>
     `;
 
     renderBattleGrid(layoutData.layout);
     renderCharacters();
-    renderBottomUI();
     createParticles();
     
     // Add event listeners for new buttons
@@ -383,6 +380,7 @@ function renderBattleGrid(layoutJson) {
             td.style.padding = '0';
             td.style.margin = '0';
             td.style.position = 'relative';
+            td.style.boxSizing = 'border-box';
 
             td.addEventListener('click', handleTileClick);
 
@@ -416,6 +414,13 @@ function renderCharacters() {
         charEl.className = `character-token ${char.type}`;
         charEl.dataset.id = char.id;
         charEl.title = `${char.name} (${char.current_hp}/${char.max_hp} HP)`;
+        charEl.style.position = 'absolute';
+        charEl.style.top = '0';
+        charEl.style.left = '0';
+        charEl.style.width = '100%';
+        charEl.style.height = '100%';
+        charEl.style.zIndex = '5';
+        charEl.style.boxSizing = 'border-box';
 
         // Character sprite
         const sprite = char.spriteName || 'placeholder';
@@ -646,51 +651,6 @@ async function attemptMoveCharacter(character, targetX, targetY) {
     }
 }
 
-function renderBottomUI() {
-    const ui = _main.querySelector('.battle-bottom-ui');
-    ui.innerHTML = '';
-
-    // Create action buttons
-    const actionButtons = [
-        { text: 'Attack', id: 'attackButton', disabled: true },
-        { text: 'Cast', id: 'castButton', disabled: true },
-        { text: 'Item', id: 'itemButton', disabled: true },
-        { text: 'Wait', id: 'waitButton', disabled: false },
-        { text: 'End Turn', id: 'endTurnButtonBottom', disabled: false }
-    ];
-
-    for (let row = 0; row < 2; row++) {
-        const rowDiv = document.createElement('div');
-        rowDiv.className = 'battle-ui-row';
-        
-        for (let i = 0; i < 5; i++) {
-            const btnIndex = row * 5 + i;
-            const btn = document.createElement('button');
-            btn.className = 'fantasy-button ui-btn';
-            
-            if (btnIndex < actionButtons.length) {
-                const buttonData = actionButtons[btnIndex];
-                btn.textContent = buttonData.text;
-                btn.id = buttonData.id;
-                btn.disabled = buttonData.disabled;
-                
-                // Add event listeners
-                if (buttonData.id === 'endTurnButtonBottom') {
-                    btn.addEventListener('click', handleEndTurn);
-                } else if (buttonData.id === 'waitButton') {
-                    btn.addEventListener('click', handleWait);
-                }
-            } else {
-                btn.textContent = `Btn ${btnIndex + 1}`;
-                btn.disabled = true;
-            }
-            
-            rowDiv.appendChild(btn);
-        }
-        ui.appendChild(rowDiv);
-    }
-}
-
 async function handleEndTurn() {
     if (!_battleId) {
         displayMessage('No active battle found.');
@@ -733,16 +693,6 @@ async function handleEndTurn() {
     }
 }
 
-async function handleWait() {
-    if (_selectedPlayerCharacter) {
-        // Mark character as having acted (but not moved if they haven't)
-        displayMessage(`${_selectedPlayerCharacter.name} is waiting.`);
-        // This would need a separate endpoint to mark a character as having acted without moving
-    } else {
-        displayMessage('Select a character first.');
-    }
-}
-
 async function handleRefresh() {
     try {
         console.log('[REFRESH] Refreshing battle state...');
@@ -773,13 +723,11 @@ function showEntityInfo(entity) {
     const nameEl = document.getElementById('infoName');
     const hpEl = document.getElementById('infoHP');
     const statsEl = document.getElementById('infoStats');
-    const abilitiesEl = document.getElementById('infoAbilities');
 
     if (!entity) {
         nameEl.textContent = '—';
         hpEl.textContent = '';
         statsEl.innerHTML = '';
-        abilitiesEl.innerHTML = '';
         portrait.src = 'assets/art/sprites/placeholder.png';
         return;
     }
@@ -816,21 +764,21 @@ function showEntityInfo(entity) {
         const vitality = stats.vitality || 0;
         const spirit = stats.spirit || 0;
         const intellect = stats.intellect || 0;
-        const attack = stats.attack || strength;
-        const defense = stats.defense || Math.floor(strength * 0.25);
+        const armor = stats.armor || 0;
+        const resistance = stats.resistance || 0;
 
         // Create two-column stats display
         const statsCol1 = [
-            { label: 'STR', value: strength, color: '#FF6B6B' },
-            { label: 'DEX', value: dexterity, color: '#4ECDC4' },
-            { label: 'VIT', value: vitality, color: '#45B7D1' },
-            { label: 'SPR', value: spirit, color: '#96CEB4' }
+            { label: 'STR', value: strength, color: '#D4AF37' },
+            { label: 'DEX', value: dexterity, color: '#B8860B' },
+            { label: 'VIT', value: vitality, color: '#CD853F' },
+            { label: 'SPR', value: spirit, color: '#DAA520' }
         ];
         const statsCol2 = [
-            { label: 'INT', value: intellect, color: '#FECA57' },
-            { label: 'ATK', value: attack, color: '#FF9FF3' },
-            { label: 'DEF', value: defense, color: '#54A0FF' },
-            { label: 'PRI', value: entity.priority || 999, color: '#5F27CD' }
+            { label: 'INT', value: intellect, color: '#F4A460' },
+            { label: 'ARM', value: armor, color: '#8B7355' },
+            { label: 'RES', value: resistance, color: '#A0522D' },
+            { label: 'PRI', value: entity.priority || 999, color: '#8B4513' }
         ];
 
         statsEl.innerHTML = `
@@ -854,25 +802,8 @@ function showEntityInfo(entity) {
             </div>
         `;
 
-        // Display abilities if any
-        abilitiesEl.innerHTML = '';
-        const abilities = entity.abilities || [];
-        if (abilities.length > 0) {
-            abilities.forEach(ability => {
-                const li = document.createElement('li');
-                li.textContent = ability;
-                li.style.fontSize = '11px';
-                li.style.color = '#ddd';
-                abilitiesEl.appendChild(li);
-            });
-        } else {
-            const li = document.createElement('li');
-            li.textContent = 'No special abilities';
-            li.style.fontSize = '11px';
-            li.style.color = '#888';
-            li.style.fontStyle = 'italic';
-            abilitiesEl.appendChild(li);
-        }
+        // Placeholder for abilities from characters table
+        // TODO: Load abilities from database
 
         // Set character portrait
         const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
@@ -892,20 +823,18 @@ function showEntityInfo(entity) {
         statsEl.innerHTML = `
             <div style="font-size: 12px; margin-top: 8px;">
                 <div style="margin-bottom: 4px;">
-                    <strong style="color: #4ECDC4;">Type:</strong> ${tile.name || 'Unknown'}
+                    <strong style="color: #B8860B;">Type:</strong> ${tile.name || 'Unknown'}
                 </div>
                 <div style="margin-bottom: 4px;">
-                    <strong style="color: #45B7D1;">Walkable:</strong> 
+                    <strong style="color: #CD853F;">Walkable:</strong> 
                     <span style="color: ${tile.walkable ? '#4CAF50' : '#F44336'}">${walkableText}</span>
                 </div>
                 <div style="margin-bottom: 4px;">
-                    <strong style="color: #FF6B6B;">Blocks Vision:</strong> 
+                    <strong style="color: #D4AF37;">Blocks Vision:</strong> 
                     <span style="color: ${tile.vision_block ? '#F44336' : '#4CAF50'}">${visionBlockText}</span>
                 </div>
             </div>
         `;
-        
-        abilitiesEl.innerHTML = '';
         
         // Set tile art
         const tilePath = `assets/art/tiles/${tile.art || 'placeholder'}.png`;
@@ -936,7 +865,7 @@ function createParticles() {
         particle.style.position = 'absolute';
         particle.style.width = '2px';
         particle.style.height = '2px';
-        particle.style.backgroundColor = '#4ECDC4';
+        particle.style.backgroundColor = '#B8860B';
         particle.style.borderRadius = '50%';
         particle.style.opacity = '0.6';
         particle.style.left = Math.random() * 100 + '%';
@@ -957,18 +886,18 @@ function displayMessage(msg, type = 'info') {
     const box = document.createElement('div');
     box.className = 'custom-message-box';
     
-    let bgColor = '#2C3E50';
-    let borderColor = '#4ECDC4';
+    let bgColor = '#8B4513';
+    let borderColor = '#D4AF37';
     
     if (type === 'error') {
-        bgColor = '#E74C3C';
-        borderColor = '#C0392B';
+        bgColor = '#8B2635';
+        borderColor = '#CD5C5C';
     } else if (type === 'success') {
-        bgColor = '#27AE60';
-        borderColor = '#229954';
+        bgColor = '#556B2F';
+        borderColor = '#9ACD32';
     } else if (type === 'warning') {
-        bgColor = '#F39C12';
-        borderColor = '#E67E22';
+        bgColor = '#B8860B';
+        borderColor = '#FFD700';
     }
     
     box.style.position = 'fixed';
