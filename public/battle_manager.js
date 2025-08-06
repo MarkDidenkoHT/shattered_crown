@@ -310,11 +310,13 @@ function renderBattleScreen(mode, level, layoutData) {
                     <div id="infoStats"></div>
                 </div>
             </div>
+            <div class="battle-bottom-ui"></div>
         </div>
     `;
 
     renderBattleGrid(layoutData.layout);
     renderCharacters();
+    renderBottomUI();
     createParticles();
     
     // Add event listeners for new buttons
@@ -648,6 +650,40 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         console.error('[MOVE] Error attempting to move character:', error);
         displayMessage('Network error during move. Please check your connection.');
         unhighlightAllTiles();
+    }
+}
+
+function renderBottomUI() {
+    const ui = _main.querySelector('.battle-bottom-ui');
+    ui.innerHTML = '';
+
+    // Create 10 buttons total: 9 placeholders + 1 End Turn
+    for (let row = 0; row < 2; row++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'battle-ui-row';
+        
+        for (let i = 0; i < 5; i++) {
+            const btnIndex = row * 5 + i;
+            const btn = document.createElement('button');
+            btn.className = 'fantasy-button ui-btn';
+            
+            if (btnIndex === 9) {
+                // Last button is End Turn
+                btn.textContent = 'End Turn';
+                btn.id = 'endTurnButtonBottom';
+                btn.disabled = false;
+                btn.addEventListener('click', handleEndTurn);
+            } else {
+                // Placeholder buttons
+                btn.textContent = `Btn ${btnIndex + 1}`;
+                btn.disabled = true;
+                // Placeholder for future button functionality
+                // TODO: Implement button actions
+            }
+            
+            rowDiv.appendChild(btn);
+        }
+        ui.appendChild(rowDiv);
     }
 }
 
