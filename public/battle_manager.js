@@ -303,11 +303,15 @@ function renderBattleScreen(mode, level, layoutData) {
             </div>
             <div class="battle-grid-container"></div>
             <div class="battle-info-panel" id="entityInfoPanel">
-                <img id="infoPortrait" src="assets/art/sprites/placeholder.png" />
-                <div class="info-text">
-                    <h3 id="infoName">—</h3>
-                    <div id="infoHP"></div>
-                    <div id="infoStats"></div>
+                <div style="display: flex; width: 100%; height: 100%;">
+                    <div style="width: 50%; display: flex; align-items: center; justify-content: center;">
+                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+                    </div>
+                    <div class="info-text" style="width: 50%; padding-left: 10px; display: flex; flex-direction: column; justify-content: center;">
+                        <h3 id="infoName">—</h3>
+                        <div id="infoHP"></div>
+                        <div id="infoStats"></div>
+                    </div>
                 </div>
             </div>
             <div class="battle-bottom-ui"></div>
@@ -383,6 +387,8 @@ function renderBattleGrid(layoutJson) {
             td.style.margin = '0';
             td.style.position = 'relative';
             td.style.boxSizing = 'border-box';
+            // Add default grey border to all tiles
+            td.style.border = '1px solid #666';
 
             td.addEventListener('click', handleTileClick);
 
@@ -569,6 +575,8 @@ function highlightWalkableTiles(character) {
                 );
                 if (!isOccupied) {
                     tileEl.classList.add('highlight-walkable');
+                    // Change border color to green instead of adding new border
+                    tileEl.style.borderColor = '#4CAF50';
                     highlightedTiles.push(tileEl);
                 }
             }
@@ -579,6 +587,8 @@ function highlightWalkableTiles(character) {
 function unhighlightAllTiles() {
     highlightedTiles.forEach(tileEl => {
         tileEl.classList.remove('highlight-walkable');
+        // Reset border color back to grey
+        tileEl.style.borderColor = '#666';
     });
     highlightedTiles = [];
 }
