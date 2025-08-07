@@ -8,6 +8,7 @@ let _tileMap = {};
 let _characters = [];
 let _selectedCharacterEl = null;
 let _selectedPlayerCharacter = null;
+let _currentTurnCharacter = null; // Track the active character for this turn
 let highlightedTiles = [];
 
 let _supabaseClient = null;
@@ -152,6 +153,7 @@ function updateGameStateFromRealtime() {
             type: charState.type,
             isPlayerControlled: charState.isPlayerControlled,
             position: charState.current_position,
+            originalPosition: charState.current_position, // Store original position for turn tracking
             stats: {
                 strength: normalizedStats.strength || 0,
                 vitality: vitality,
@@ -166,7 +168,8 @@ function updateGameStateFromRealtime() {
             has_acted: charState.has_acted,
             current_hp: charState.current_hp || (vitality * 10),
             max_hp: charState.max_hp || (vitality * 10),
-            priority: charState.priority || 999
+            priority: charState.priority || 999,
+            pendingAction: null // Track actions for this turn
         };
     });
 
@@ -182,6 +185,16 @@ function updateGameStateFromRealtime() {
     
     // Update UI to show current turn
     updateTurnDisplay(currentTurn, _battleState.round_number);
+    
+    // Set the current turn character for player turns
+    if (currentTurn !== 'AI') {
+        const availablePlayerChars = _characters.filter(c => 
+            c.isPlayerControlled && (!c.has_moved || !c.has_acted)
+        );
+        _currentTurnCharacter = availablePlayerChars[0] || null;
+    } else {
+        _currentTurnCharacter = null;
+    }
     
     // Handle AI turn automatically if it's AI's turn
     if (currentTurn === 'AI' && !_isProcessingAITurn) {
@@ -275,8 +288,7 @@ async function handleAITurn() {
             
             if (result.skipTurn) {
                 console.log('[AI] All AI characters completed, ending AI turn');
-                // Automatically end turn if all AI characters are done
-                setTimeout(() => handleEndTurn(), 500);
+                // The server will automatically handle turn progression
             }
         } else {
             console.error('[AI] AI turn failed:', result.message);
@@ -297,7 +309,6 @@ function renderBattleScreen(mode, level, layoutData) {
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
                 <p id="turnStatus">Turn: —</p>
                 <div class="battle-controls">
-                    <button id="endTurnButton" class="fantasy-button small-btn">End Turn</button>
                     <button id="refreshButton" class="fantasy-button small-btn">Refresh</button>
                 </div>
             </div>
@@ -305,7 +316,7 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%;">
                     <div style="width: 50%; display: flex; align-items: center; justify-content: center;">
-                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
                     </div>
                     <div class="info-text" style="width: 50%; padding-left: 10px; display: flex; flex-direction: column; justify-content: center;">
                         <h3 id="infoName">—</h3>
@@ -323,13 +334,8 @@ function renderBattleScreen(mode, level, layoutData) {
     renderBottomUI();
     createParticles();
     
-    // Add event listeners for new buttons
-    const endTurnBtn = document.getElementById('endTurnButton');
+    // Add event listeners for buttons
     const refreshBtn = document.getElementById('refreshButton');
-    
-    if (endTurnBtn) {
-        endTurnBtn.addEventListener('click', handleEndTurn);
-    }
     
     if (refreshBtn) {
         refreshBtn.addEventListener('click', handleRefresh);
@@ -430,7 +436,7 @@ function renderCharacters() {
         charEl.style.zIndex = '5';
         charEl.style.boxSizing = 'border-box';
 
-        // Character sprite
+        // Character sprite with fixed size
         const sprite = char.spriteName || 'placeholder';
         const img = document.createElement('img');
         img.src = `assets/art/sprites/${sprite}.png`;
@@ -438,13 +444,16 @@ function renderCharacters() {
         img.addEventListener('error', () => {
             img.src = 'assets/art/sprites/placeholder.png';
         });
-        img.style.width = '100%';
-        img.style.height = '100%';
+        img.style.width = '100px';
+        img.style.height = '100px';
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100%';
         img.style.objectFit = 'contain';
         img.style.zIndex = '10';
         img.style.position = 'absolute';
-        img.style.top = '0';
-        img.style.left = '0';
+        img.style.top = '50%';
+        img.style.left = '50%';
+        img.style.transform = 'translate(-50%, -50%)';
 
         charEl.appendChild(img);
 
@@ -518,6 +527,7 @@ function handleTileClick(event) {
                 el.classList.add('character-selected');
                 _selectedCharacterEl = el;
                 _selectedPlayerCharacter = charInCell;
+                _currentTurnCharacter = charInCell;
                 highlightWalkableTiles(_selectedPlayerCharacter);
             }
         } else {
@@ -623,7 +633,7 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         return;
     }
 
-    // Only update character position locally
+    // Update character position locally (visual update only)
     character.position = [targetX, targetY];
     renderCharacters();
     unhighlightAllTiles();
@@ -633,6 +643,8 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         _selectedCharacterEl = null;
     }
     _selectedPlayerCharacter = null;
+
+    displayMessage('Move queued. Press "End Turn" to confirm.', 'info');
 }
 
 function renderBottomUI() {
@@ -673,61 +685,66 @@ function renderBottomUI() {
 }
 
 async function handleEndTurn() {
-  const activeCharacter = _currentTurnCharacter;
-  if (!activeCharacter) {
-    console.warn('[TURN] No active character for this turn.');
-    return;
-  }
-
-  if (!_battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
-    console.error('[TURN] Missing required battle or character data.');
-    return;
-  }
-
-  const characterId = activeCharacter.id;
-  const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
-  const targetPosition = activeCharacter.position;
-
-  // Collect any action taken this turn
-  const action = activeCharacter.pendingAction || null;
-
-  console.log('[TURN] Ending turn for:', characterId, {
-    from: currentPosition,
-    to: targetPosition,
-    action
-  });
-
-  try {
-    const res = await _apiCall('/functions/v1/combined-action-end', 'POST', {
-      battleId: _battleId,
-      characterId,
-      currentPosition,
-      targetPosition,
-      action
-    });
-
-    const result = await res.json();
-
-    if (!result.success) {
-      console.error('[TURN] Failed to complete action:', result.message);
-      displayMessage(`Ошибка: ${result.message}`);
-      return;
+    const activeCharacter = _currentTurnCharacter;
+    if (!activeCharacter) {
+        console.warn('[TURN] No active character for this turn.');
+        displayMessage('No character is currently active for this turn.');
+        return;
     }
 
-    console.log('[TURN] Action completed:', result.message);
-    displayMessage('Ход завершён');
+    if (!_battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
+        console.error('[TURN] Missing required battle or character data.');
+        displayMessage('Missing battle or character data.');
+        return;
+    }
 
-  } catch (err) {
-    console.error('[TURN] Error ending turn:', err);
-    displayMessage('Ошибка при завершении хода');
-  }
+    const characterId = activeCharacter.id;
+    const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
+    const targetPosition = activeCharacter.position;
+
+    // Collect any action taken this turn (placeholder for now)
+    const action = activeCharacter.pendingAction || null;
+
+    console.log('[TURN] Ending turn for:', characterId, {
+        from: currentPosition,
+        to: targetPosition,
+        action
+    });
+
+    try {
+        const res = await _apiCall('/functions/v1/combined-action-end', 'POST', {
+            battleId: _battleId,
+            characterId,
+            currentPosition,
+            targetPosition,
+            action
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            console.error('[TURN] Failed to complete action:', result.message);
+            displayMessage(`Error: ${result.message}`, 'error');
+            return;
+        }
+
+        console.log('[TURN] Action completed:', result.message);
+        displayMessage('Turn completed successfully!', 'success');
+
+        // Clear the current turn character
+        _currentTurnCharacter = null;
+
+    } catch (err) {
+        console.error('[TURN] Error ending turn:', err);
+        displayMessage('Error completing turn. Please try again.', 'error');
+    }
 }
 
 async function handleRefresh() {
     try {
         console.log('[REFRESH] Refreshing battle state...');
         
-        const supabase = getSupabaseClient(_main.supabaseConfig);
+        const supabase = getSupabaseClient({ SUPABASE_URL: _main.supabaseConfig?.SUPABASE_URL, SUPABASE_ANON_KEY: _main.supabaseConfig?.SUPABASE_ANON_KEY });
         const { data: battleState, error } = await supabase
             .from('battle_state')
             .select('*')
@@ -741,10 +758,10 @@ async function handleRefresh() {
         _battleState = battleState;
         updateGameStateFromRealtime();
         
-        displayMessage('Battle state refreshed successfully.');
+        displayMessage('Battle state refreshed successfully.', 'success');
     } catch (error) {
         console.error('[REFRESH] Error refreshing battle state:', error);
-        displayMessage('Failed to refresh battle state.');
+        displayMessage('Failed to refresh battle state.', 'error');
     }
 }
 
@@ -832,12 +849,11 @@ function showEntityInfo(entity) {
             </div>
         `;
 
-        // Placeholder for abilities from characters table
-        // TODO: Load abilities from database
-
-        // Set character portrait
+        // Set character portrait with fixed size
         const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
         portrait.src = spritePath;
+        portrait.style.maxWidth = '100px';
+        portrait.style.maxHeight = '100px';
         portrait.onerror = () => {
             portrait.src = 'assets/art/sprites/placeholder.png';
         };
@@ -866,9 +882,11 @@ function showEntityInfo(entity) {
             </div>
         `;
         
-        // Set tile art
+        // Set tile art with fixed size
         const tilePath = `assets/art/tiles/${tile.art || 'placeholder'}.png`;
         portrait.src = tilePath;
+        portrait.style.maxWidth = '100px';
+        portrait.style.maxHeight = '100px';
         portrait.onerror = () => {
             portrait.src = 'assets/art/tiles/placeholder.png';
         };
@@ -1033,6 +1051,7 @@ export function cleanup() {
     _characters = [];
     _selectedCharacterEl = null;
     _selectedPlayerCharacter = null;
+    _currentTurnCharacter = null;
     _isProcessingAITurn = false;
     
     // Clear highlights
