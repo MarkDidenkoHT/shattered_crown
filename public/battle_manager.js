@@ -594,22 +594,19 @@ function unhighlightAllTiles() {
 }
 
 async function attemptMoveCharacter(character, targetX, targetY) {
-    const characterId = character.id;
     const startX = character.position[0];
     const startY = character.position[1];
 
-    // Validate movement distance (Chebyshev distance = 1)
     const distanceX = Math.abs(targetX - startX);
     const distanceY = Math.abs(targetY - startY);
     const chebyshevDistance = Math.max(distanceX, distanceY);
-    
+
     if (chebyshevDistance !== 1 || (distanceX === 0 && distanceY === 0)) {
         displayMessage('Characters can only move 1 tile at a time to an adjacent square.');
         unhighlightAllTiles();
         return;
     }
 
-    // Validate target tile
     const targetTileEl = _main.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
     if (!targetTileEl || targetTileEl.dataset.walkable !== 'true') {
         displayMessage('Cannot move to an unwalkable tile.');
@@ -617,7 +614,6 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         return;
     }
 
-    // Check for occupancy
     const isOccupied = _characters.some(c => 
         Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY
     );
@@ -627,73 +623,52 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         return;
     }
 
-    try {
-        console.log(`[MOVE] Attempting to move character ${characterId} from [${startX},${startY}] to [${targetX},${targetY}]`);
-        
-        const resultRes = await _apiCall('/functions/v1/move-character', 'POST', {
-            battleId: _battleId,
-            characterId,
-            currentPosition: [startX, startY],
-            targetPosition: [targetX, targetY],
-        });
-        
-        const result = await resultRes.json();
+    // Only update character position locally
+    character.position = [targetX, targetY];
+    renderCharacters();
+    unhighlightAllTiles();
 
-        if (result.success) {
-            console.log('[MOVE] Move successful:', result.message);
-            
-            // Clear selection
-            if (_selectedCharacterEl) {
-                _selectedCharacterEl.classList.remove('character-selected');
-            }
-            _selectedPlayerCharacter = null;
-            _selectedCharacterEl = null;
-            unhighlightAllTiles();
-            
-            displayMessage(`${character.name} moved successfully!`);
-        } else {
-            console.error('[MOVE] Move failed:', result.message);
-            displayMessage(`Move failed: ${result.message}`);
-            unhighlightAllTiles();
-        }
-    } catch (error) {
-        console.error('[MOVE] Error attempting to move character:', error);
-        displayMessage('Network error during move. Please check your connection.');
-        unhighlightAllTiles();
+    if (_selectedCharacterEl) {
+        _selectedCharacterEl.classList.remove('character-selected');
+        _selectedCharacterEl = null;
     }
+    _selectedPlayerCharacter = null;
 }
 
 function renderBottomUI() {
     const ui = _main.querySelector('.battle-bottom-ui');
     ui.innerHTML = '';
 
-    // Create 10 buttons total: 9 placeholders + 1 End Turn
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
-        
+
         for (let i = 0; i < 5; i++) {
             const btnIndex = row * 5 + i;
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
-            
+
             if (btnIndex === 9) {
                 // Last button is End Turn
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
-                btn.addEventListener('click', handleEndTurn);
             } else {
                 // Placeholder buttons
                 btn.textContent = `Btn ${btnIndex + 1}`;
                 btn.disabled = true;
-                // Placeholder for future button functionality
-                // TODO: Implement button actions
             }
-            
+
             rowDiv.appendChild(btn);
         }
+
         ui.appendChild(rowDiv);
+    }
+
+    // Add handler after all buttons are rendered
+    const endTurnBtnBottom = document.getElementById('endTurnButtonBottom');
+    if (endTurnBtnBottom) {
+        endTurnBtnBottom.addEventListener('click', handleEndTurn);
     }
 }
 
@@ -703,32 +678,44 @@ async function handleEndTurn() {
         return;
     }
 
-    // Don't allow ending turn during AI processing
     if (_isProcessingAITurn) {
         displayMessage('Please wait for AI turn to complete.');
         return;
     }
 
     try {
-        console.log('[TURN] Attempting to end turn...');
-        
+        console.log('[TURN] Sending move + action update to server');
+
+        const playerCharacters = _characters.filter(c => c.isPlayerControlled && (!c.has_moved || !c.has_acted));
+
+        for (const char of playerCharacters) {
+            const resultRes = await _apiCall('/functions/v1/move-character', 'POST', {
+                battleId: _battleId,
+                characterId: char.id,
+                currentPosition: char.position,
+                targetPosition: char.position
+            });
+
+            const result = await resultRes.json();
+            if (!result.success) {
+                console.error('[TURN] Failed to move + act:', result.message);
+                displayMessage(`Failed to end turn: ${result.message}`);
+                return;
+            }
+        }
+
+        // Finally trigger turn end
         const resultRes = await _apiCall('/functions/v1/end-turn', 'POST', {
             battleId: _battleId
         });
-        
-        const result = await resultRes.json();
 
+        const result = await resultRes.json();
         if (result.success) {
             console.log('[TURN] Turn ended successfully:', result.message);
-            
-            // Clear any selections
             unhighlightAllTiles();
-            if (_selectedCharacterEl) {
-                _selectedCharacterEl.classList.remove('character-selected');
-                _selectedCharacterEl = null;
-            }
+            if (_selectedCharacterEl) _selectedCharacterEl.classList.remove('character-selected');
+            _selectedCharacterEl = null;
             _selectedPlayerCharacter = null;
-            
         } else {
             console.error('[TURN] Failed to end turn:', result.message);
             displayMessage(`Failed to end turn: ${result.message}`);
