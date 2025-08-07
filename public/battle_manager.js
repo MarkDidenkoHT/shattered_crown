@@ -673,57 +673,54 @@ function renderBottomUI() {
 }
 
 async function handleEndTurn() {
-    if (!_battleId) {
-        displayMessage('No active battle found.');
-        return;
+  const activeCharacter = _currentTurnCharacter;
+  if (!activeCharacter) {
+    console.warn('[TURN] No active character for this turn.');
+    return;
+  }
+
+  if (!_battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
+    console.error('[TURN] Missing required battle or character data.');
+    return;
+  }
+
+  const characterId = activeCharacter.id;
+  const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
+  const targetPosition = activeCharacter.position;
+
+  // Collect any action taken this turn
+  const action = activeCharacter.pendingAction || null;
+
+  console.log('[TURN] Ending turn for:', characterId, {
+    from: currentPosition,
+    to: targetPosition,
+    action
+  });
+
+  try {
+    const res = await _apiCall('/functions/v1/combined-action-end', 'POST', {
+      battleId: _battleId,
+      characterId,
+      currentPosition,
+      targetPosition,
+      action
+    });
+
+    const result = await res.json();
+
+    if (!result.success) {
+      console.error('[TURN] Failed to complete action:', result.message);
+      displayMessage(`Ошибка: ${result.message}`);
+      return;
     }
 
-    if (_isProcessingAITurn) {
-        displayMessage('Please wait for AI turn to complete.');
-        return;
-    }
+    console.log('[TURN] Action completed:', result.message);
+    displayMessage('Ход завершён');
 
-    try {
-        console.log('[TURN] Sending move + action update to server');
-
-        const playerCharacters = _characters.filter(c => c.isPlayerControlled && (!c.has_moved || !c.has_acted));
-
-        for (const char of playerCharacters) {
-            const resultRes = await _apiCall('/functions/v1/move-character', 'POST', {
-                battleId: _battleId,
-                characterId: char.id,
-                currentPosition: char.position,
-                targetPosition: char.position
-            });
-
-            const result = await resultRes.json();
-            if (!result.success) {
-                console.error('[TURN] Failed to move + act:', result.message);
-                displayMessage(`Failed to end turn: ${result.message}`);
-                return;
-            }
-        }
-
-        // Finally trigger turn end
-        const resultRes = await _apiCall('/functions/v1/end-turn', 'POST', {
-            battleId: _battleId
-        });
-
-        const result = await resultRes.json();
-        if (result.success) {
-            console.log('[TURN] Turn ended successfully:', result.message);
-            unhighlightAllTiles();
-            if (_selectedCharacterEl) _selectedCharacterEl.classList.remove('character-selected');
-            _selectedCharacterEl = null;
-            _selectedPlayerCharacter = null;
-        } else {
-            console.error('[TURN] Failed to end turn:', result.message);
-            displayMessage(`Failed to end turn: ${result.message}`);
-        }
-    } catch (error) {
-        console.error('[TURN] Error ending turn:', error);
-        displayMessage('Network error ending turn. Please try again.');
-    }
+  } catch (err) {
+    console.error('[TURN] Error ending turn:', err);
+    displayMessage('Ошибка при завершении хода');
+  }
 }
 
 async function handleRefresh() {
