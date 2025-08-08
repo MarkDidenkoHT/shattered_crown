@@ -10,7 +10,6 @@ export async function startCraftingSession(ctx) {
   const { loadingModal, loadingStartTime, updateLoadingProgress, finishLoading } = context;
   
   try {
-    // Step 1: Parallel data fetching - start both requests simultaneously
     updateLoadingProgress(loadingModal, "Accessing your ore vault...", "Loading bank items and recipes...");
     
     const [bankResponse, recipesPromise] = await Promise.all([
@@ -21,16 +20,10 @@ export async function startCraftingSession(ctx) {
     ]);
     
     const bankItems = await bankResponse.json();
-    
-    // Step 2: Batch ore enrichment
     updateLoadingProgress(loadingModal, "Analyzing mineral properties...", "Processing ore data...");
     
     const enriched = await batchEnrichOres(bankItems);
-    
-    // Step 3: Wait for recipes to complete (likely already done)
     const recipes = await recipesPromise;
-    
-    // Step 4: Initialize state
     updateLoadingProgress(loadingModal, "Setting up mining equipment...", "Preparing interface...");
     
     miningState = {
@@ -50,7 +43,6 @@ export async function startCraftingSession(ctx) {
       sessionId: null
     };
     
-    // Step 5: Minimum loading time and render
     await finishLoading(loadingModal, loadingStartTime, 2000);
     
     renderCraftingModal();
@@ -67,15 +59,11 @@ export async function startCraftingSession(ctx) {
   }
 }
 
-// Optimized batch ore enrichment
 async function batchEnrichOres(bankItems) {
   if (!bankItems.length) return [];
   
-  // Create a single API call for all ores
   const oreNames = bankItems.map(item => item.item);
   const uniqueNames = [...new Set(oreNames)]; // Remove duplicates
-  
-  // Check cache first
   const uncachedNames = uniqueNames.filter(name => !oreCache.has(name));
   
   if (uncachedNames.length > 0) {
