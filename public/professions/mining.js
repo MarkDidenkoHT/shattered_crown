@@ -1,4 +1,4 @@
-// Optimized Mining profession module
+// Optimized Mining profession module with compact 3-row layout
 let context = null;
 let miningState = null;
 let oreCache = new Map(); // Cache ore data
@@ -145,45 +145,37 @@ async function fallbackEnrichOres(bankItems) {
   return enriched;
 }
 
-// Enhanced mining row HTML with rock formation and pick target
+// Enhanced compact mining row HTML with center ore input
 function createMiningRowHTML(rowIndex) {
   return `
-    <div class="mining-row" data-row="${rowIndex}" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; justify-content: center;">
+    <div class="mining-row" data-row="${rowIndex}" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; justify-content: center; position: relative;">
       
       <!-- Left Arrow -->
       <div class="arrow-left">
         <button class="fantasy-button adjust-left" data-row="${rowIndex}" style="padding: 0.3rem 0.6rem; font-size: 1.2rem; opacity: 0.3;" disabled>←</button>
       </div>
       
-      <!-- Ore Slot -->
-      <div class="ore-slot" style="width: 80px; height: 80px; border: 2px dashed #aaa; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(139,69,19,0.2);">
-        <span style="color: #666; font-size: 0.8rem;">Drop Ore</span>
-      </div>
-      
-      <!-- Rock Formation with Properties -->
-      <div class="rock-formation" style="width: 320px; height: 80px; background: linear-gradient(135deg, #8B7355 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%); border: 3px solid #654321; border-radius: 15px; display: flex; align-items: center; position: relative; box-shadow: inset 0 4px 8px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);">
+      <!-- Rock Formation with integrated ore input (compact design) -->
+      <div class="rock-formation" style="width: 380px; height: 80px; background: linear-gradient(135deg, #8B7355 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%); border: 3px solid #654321; border-radius: 15px; display: flex; align-items: center; position: relative; box-shadow: inset 0 4px 8px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);">
         
         <!-- Rock texture overlay -->
         <div class="rock-texture" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px); border-radius: 12px; pointer-events: none;"></div>
         
-        <!-- Mining target in center -->
-        <div class="mining-target" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border: 3px dashed #FFD700; border-radius: 8px; background: rgba(255,215,0,0.1); display: flex; align-items: center; justify-content: center; z-index: 10;">
-          <div class="target-crosshair" style="width: 20px; height: 20px; border: 2px solid #FFD700; position: relative;">
-            <div style="position: absolute; top: 50%; left: -10px; right: -10px; height: 2px; background: #FFD700; transform: translateY(-50%);"></div>
-            <div style="position: absolute; left: 50%; top: -10px; bottom: -10px; width: 2px; background: #FFD700; transform: translateX(-50%);"></div>
-          </div>
+        <!-- Ore input slot (transforms into center property after mining starts) -->
+        <div class="ore-input-slot" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px dashed #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,215,0,0.15); z-index: 15; transition: all 0.5s ease;">
+          <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore</span>
         </div>
         
-        <!-- Property slots arranged horizontally -->
-        <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-left: 20px; z-index: 5; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
+        <!-- Property slots (initially hidden for left and right, center starts as ore input) -->
+        <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-left: 20px; z-index: 5; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8);">
           -
         </div>
         
-        <div class="property-slot prop-center" data-row="${rowIndex}" data-position="1" style="width: 60px; height: 50px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; margin: 0 40px; z-index: 15; position: relative; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2);">
+        <div class="property-slot prop-center" data-row="${rowIndex}" data-position="1" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 50px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; z-index: 10; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8) translate(-50%, -50%);">
           -
         </div>
         
-        <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-right: 20px; z-index: 5; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
+        <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-right: 20px; z-index: 5; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8);">
           -
         </div>
       </div>
@@ -196,12 +188,12 @@ function createMiningRowHTML(rowIndex) {
   `;
 }
 
-// Optimized modal rendering with pre-rendered content
+// Optimized modal rendering with compact layout
 function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1200px; max-height: 99vh; overflow-y: auto; text-align: center;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${miningState.professionName}</h2>
       
       <!-- Mining pick visualization -->
@@ -225,7 +217,7 @@ function renderCraftingModal() {
         <span id="alignment-text">Align center column for successful extraction!</span>
       </div>
       
-      <!-- Main mining area -->
+      <!-- Compact mining area (3 rows) -->
       <div id="mining-rows" style="margin: 1.5rem 0;">
         ${[0,1,2].map(i => createMiningRowHTML(i)).join('')}
       </div>
@@ -610,7 +602,7 @@ function setupModalEventListeners(modal) {
     patchAndSendCraftRequest(resultDiv);
   });
 
-  // Use event delegation for adjustment buttons
+  // Use event delegation for adjustment buttons and ore removal
   const rowsContainer = modal.querySelector('#mining-rows');
   rowsContainer.addEventListener('click', (e) => {
     const adjustBtn = e.target.closest('.adjust-left, .adjust-right');
@@ -620,17 +612,22 @@ function setupModalEventListeners(modal) {
       handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus);
     }
     
-    // Handle ore slot clicks for removal
-    const oreSlot = e.target.closest('.ore-slot img');
-    if (oreSlot && !miningState.isCraftingStarted) {
-      const row = oreSlot.closest('.mining-row');
+    // Handle ore input slot clicks for ore placement/removal
+    const oreInputSlot = e.target.closest('.ore-input-slot');
+    if (oreInputSlot && !miningState.isCraftingStarted) {
+      const row = oreInputSlot.closest('.mining-row');
       const rowIdx = parseInt(row.dataset.row);
-      removeOreFromSlot(rowIdx, modal);
+      
+      // If there's an ore image, remove it; otherwise this is handled by ore selection
+      const oreImg = oreInputSlot.querySelector('img');
+      if (oreImg) {
+        removeOreFromSlot(rowIdx, modal);
+      }
     }
   });
 }
 
-// Optimized ore selection handler
+// Enhanced ore selection handler for compact layout
 function handleOreSelection(ore, modal) {
   const slotIdx = miningState.selectedOres.findIndex(s => s === null);
   if (slotIdx === -1) return;
@@ -638,28 +635,30 @@ function handleOreSelection(ore, modal) {
   miningState.selectedOres[slotIdx] = ore;
   
   const row = modal.querySelector(`[data-row="${slotIdx}"]`);
-  const oreSlot = row.querySelector('.ore-slot');
+  const oreInputSlot = row.querySelector('.ore-input-slot');
   
-  oreSlot.innerHTML = `
-    <img src="assets/art/ingridients/${ore.sprite}.png" style="width:64px;height:64px;cursor:pointer;" title="Click to remove ${ore.name}">
+  // Transform ore input slot to show selected ore
+  oreInputSlot.innerHTML = `
+    <img src="assets/art/ingridients/${ore.sprite}.png" style="width:60px;height:60px;cursor:pointer;" title="Click to remove ${ore.name}">
   `;
-  oreSlot.style.border = '2px solid #8B4513';
-  oreSlot.style.background = 'rgba(139,69,19,0.3)';
+  oreInputSlot.style.border = '2px solid #8B4513';
+  oreInputSlot.style.background = 'rgba(139,69,19,0.4)';
   
-  animateRockFormation(row, ore);
+  animateOreIntegration(row, ore);
   updateCraftButtonState(modal);
 }
 
-// Helper function to remove ore from slot
+// Helper function to remove ore from slot (compact layout)
 function removeOreFromSlot(slotIdx, modal) {
   miningState.selectedOres[slotIdx] = null;
   
   const row = modal.querySelector(`[data-row="${slotIdx}"]`);
-  const oreSlot = row.querySelector('.ore-slot');
+  const oreInputSlot = row.querySelector('.ore-input-slot');
   
-  oreSlot.innerHTML = '<span style="color: #666; font-size: 0.8rem;">Drop Ore</span>';
-  oreSlot.style.border = '2px dashed #aaa';
-  oreSlot.style.background = 'rgba(139,69,19,0.2)';
+  // Reset ore input slot to default state
+  oreInputSlot.innerHTML = '<span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore</span>';
+  oreInputSlot.style.border = '2px dashed #FFD700';
+  oreInputSlot.style.background = 'rgba(255,215,0,0.15)';
   
   animateRockClear(row);
   updateCraftButtonState(modal);
@@ -679,10 +678,10 @@ function updateCraftButtonState(modal) {
   }
 }
 
-// Animate rock formation with ore-specific effects
-function animateRockFormation(row, ore) {
+// Animate ore integration into rock formation (compact layout)
+function animateOreIntegration(row, ore) {
   const rockFormation = row.querySelector('.rock-formation');
-  const miningTarget = row.querySelector('.mining-target');
+  const oreInputSlot = row.querySelector('.ore-input-slot');
   
   // Get ore color based on name or use default
   const oreColor = getOreColor(ore.name);
@@ -694,8 +693,8 @@ function animateRockFormation(row, ore) {
     ease: "power2.out"
   });
   
-  // Mining target glow effect
-  gsap.to(miningTarget, {
+  // Ore slot integration glow effect
+  gsap.to(oreInputSlot, {
     boxShadow: '0 0 20px rgba(255,215,0,0.8), inset 0 0 10px rgba(255,215,0,0.3)',
     duration: 0.8,
     ease: "power2.out"
@@ -709,10 +708,10 @@ function animateRockFormation(row, ore) {
   );
 }
 
-// Animate rock clearing
+// Animate rock clearing (compact layout)
 function animateRockClear(row) {
   const rockFormation = row.querySelector('.rock-formation');
-  const miningTarget = row.querySelector('.mining-target');
+  const oreInputSlot = row.querySelector('.ore-input-slot');
   const rockTexture = row.querySelector('.rock-texture');
   
   // Reset rock formation to default appearance
@@ -722,8 +721,8 @@ function animateRockClear(row) {
     ease: "power2.out"
   });
   
-  // Remove mining target glow
-  gsap.to(miningTarget, {
+  // Remove ore input slot glow
+  gsap.to(oreInputSlot, {
     boxShadow: 'none',
     duration: 0.6,
     ease: "power2.out"
@@ -737,7 +736,7 @@ function animateRockClear(row) {
   });
 }
 
-// Enhanced startMiningAnimation
+// Enhanced startMiningAnimation with ore breaking effect
 async function startMiningAnimation(resultDiv, modal) {
   const rowsArea = modal.querySelector('#mining-rows');
   resultDiv.textContent = 'Analyzing ore composition...';
@@ -769,53 +768,19 @@ async function startMiningAnimation(resultDiv, modal) {
     miningState.sessionId = reserveJson.session_id;
     miningState.enrichedOres = reserveJson.herbs; // Server still calls them herbs
 
-    miningState.enrichedOres.forEach((ore, idx) => {
+    // Animate ore breaking and property revelation for each row
+    for (let idx = 0; idx < miningState.enrichedOres.length; idx++) {
+      const ore = miningState.enrichedOres[idx];
       const row = rowsArea.children[idx];
       const props = ore.properties;
       
-      const leftBtn = row.querySelector('.adjust-left');
-      const rightBtn = row.querySelector('.adjust-right');
-      leftBtn.disabled = false;
-      leftBtn.style.opacity = '1';
-      rightBtn.disabled = false;
-      rightBtn.style.opacity = '1';
-      
-      const propertySlots = row.querySelectorAll('.property-slot');
-      propertySlots[0].textContent = props[0];
-      propertySlots[1].textContent = props[1];
-      propertySlots[2].textContent = props[2];
-      
-      const rockFormation = row.querySelector('.rock-formation');
-      
-      // Enhanced rock activation effect
-      gsap.to(rockFormation, {
-        boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.4), 0 4px 12px rgba(255,215,0,0.3)',
-        duration: 0.8,
-        ease: "power2.out"
-      });
-      
-      // Start rock dust effect
-      createRockDustEffect(row);
-      
-      // Animate property slots appearing with stagger
-      gsap.fromTo(propertySlots, 
-        { scale: 0, opacity: 0, rotationY: 90 },
-        { 
-          scale: 1, 
-          opacity: 1, 
-          rotationY: 0,
-          duration: 0.8, 
-          stagger: 0.15, 
-          ease: "back.out(1.4)",
-          delay: 0.3
-        }
-      );
-    });
+      await animateOreBreaking(row, props, idx);
+    }
 
     setTimeout(() => {
       resultDiv.textContent = 'Use adjustments to align center properties for extraction.';
       checkAlignment(modal.querySelector('#alignment-status'));
-    }, 1500);
+    }, 1000);
 
     miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
     miningState.originalProperties = miningState.randomizedProperties.map(p => [...p]);
@@ -832,6 +797,126 @@ async function startMiningAnimation(resultDiv, modal) {
   }
 }
 
+// Animate ore breaking into property slots
+async function animateOreBreaking(row, properties, rowIndex) {
+  const oreInputSlot = row.querySelector('.ore-input-slot');
+  const propertySlots = row.querySelectorAll('.property-slot');
+  const leftBtn = row.querySelector('.adjust-left');
+  const rightBtn = row.querySelector('.adjust-right');
+  const rockFormation = row.querySelector('.rock-formation');
+  
+  // Create breaking effect
+  createOreBreakingEffect(oreInputSlot);
+  
+  // Wait a moment for breaking effect
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  // Fade out ore input slot and transform it into center property
+  gsap.to(oreInputSlot, {
+    scale: 0.8,
+    opacity: 0,
+    duration: 0.5,
+    ease: "power2.in",
+    onComplete: () => {
+      // Hide the ore input slot
+      oreInputSlot.style.display = 'none';
+    }
+  });
+  
+  // Animate property slots appearing with stagger effect
+  gsap.to(propertySlots, {
+    opacity: 1,
+    scale: 1,
+    duration: 0.8,
+    stagger: 0.15,
+    ease: "back.out(1.4)",
+    delay: 0.3,
+    onStart: () => {
+      // Set property values
+      propertySlots[0].textContent = properties[0];
+      propertySlots[1].textContent = properties[1];
+      propertySlots[2].textContent = properties[2];
+    }
+  });
+  
+  // Enable adjustment buttons with fade-in
+  gsap.to([leftBtn, rightBtn], {
+    opacity: 1,
+    duration: 0.6,
+    delay: 0.8,
+    onStart: () => {
+      leftBtn.disabled = false;
+      rightBtn.disabled = false;
+    }
+  });
+  
+  // Enhanced rock activation effect
+  gsap.to(rockFormation, {
+    boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.4), 0 4px 12px rgba(255,215,0,0.3)',
+    duration: 0.8,
+    ease: "power2.out",
+    delay: 0.5
+  });
+  
+  // Start rock dust effect
+  createRockDustEffect(row);
+}
+
+// Create ore breaking particle effect
+function createOreBreakingEffect(oreInputSlot) {
+  const rect = oreInputSlot.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  // Create multiple breaking particles
+  for (let i = 0; i < 12; i++) {
+    const particle = document.createElement('div');
+    particle.style.cssText = `
+      position: fixed;
+      width: ${Math.random() * 6 + 3}px;
+      height: ${Math.random() * 6 + 3}px;
+      background: rgba(139,115,85,0.9);
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+      left: ${centerX}px;
+      top: ${centerY}px;
+      pointer-events: none;
+      z-index: 1000;
+      transform-origin: center;
+    `;
+    
+    document.body.appendChild(particle);
+    
+    const angle = (i / 12) * Math.PI * 2;
+    const distance = Math.random() * 60 + 30;
+    const finalX = centerX + Math.cos(angle) * distance;
+    const finalY = centerY + Math.sin(angle) * distance;
+    
+    gsap.to(particle, {
+      x: finalX - centerX,
+      y: finalY - centerY,
+      rotation: Math.random() * 360,
+      opacity: 0,
+      scale: Math.random() * 0.5 + 0.5,
+      duration: Math.random() * 1.2 + 0.8,
+      ease: "power2.out",
+      onComplete: () => {
+        if (particle.parentNode) {
+          particle.remove();
+        }
+      }
+    });
+  }
+  
+  // Flash effect on the ore input slot
+  gsap.to(oreInputSlot, {
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    duration: 0.1,
+    ease: "power2.out",
+    yoyo: true,
+    repeat: 3
+  });
+}
+
 // Create rock dust particle effect
 function createRockDustEffect(row) {
   const rockFormation = row.querySelector('.rock-formation');
@@ -845,7 +930,7 @@ function createRockDustEffect(row) {
       background: rgba(139,115,85,0.7);
       border-radius: 50%;
       top: ${Math.random() * 80}px;
-      left: ${Math.random() * 320}px;
+      left: ${Math.random() * 380}px;
       pointer-events: none;
       z-index: 20;
     `;
@@ -1137,7 +1222,7 @@ function handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus) {
   }
 }
 
-// Enhanced adjustment animation for mining
+// Enhanced adjustment animation for mining (compact layout)
 function updateMiningRow(rowIdx) {
   const props = miningState.randomizedProperties[rowIdx];
   const rowsArea = document.querySelector('#mining-rows');
@@ -1171,9 +1256,8 @@ function updateMiningRow(rowIdx) {
   // Create impact particles
   createImpactParticles(row);
   
-  // Mining target flash
-  const miningTarget = row.querySelector('.mining-target');
-  gsap.to(miningTarget, {
+  // Property slots flash
+  gsap.to(propertySlots[1], { // Center slot highlight
     backgroundColor: 'rgba(255,215,0,0.5)',
     duration: 0.2,
     ease: "power2.out",
@@ -1182,7 +1266,7 @@ function updateMiningRow(rowIdx) {
   });
 }
 
-// Create impact particles for mining adjustments
+// Create impact particles for mining adjustments (compact layout)
 function createImpactParticles(row) {
   const rockFormation = row.querySelector('.rock-formation');
   
@@ -1196,7 +1280,7 @@ function createImpactParticles(row) {
         background: rgba(255,215,0,0.8);
         border-radius: 50%;
         top: 40px;
-        left: ${Math.random() * 100 + 110}px;
+        left: ${Math.random() * 120 + 130}px;
         pointer-events: none;
         z-index: 25;
       `;
@@ -1304,7 +1388,7 @@ function createDebrisParticles(rockFormation) {
       background: #8B7355;
       border-radius: ${Math.random() * 2}px;
       top: ${Math.random() * 80}px;
-      left: ${Math.random() * 320}px;
+      left: ${Math.random() * 380}px;
       pointer-events: none;
       z-index: 25;
     `;
@@ -1365,7 +1449,7 @@ function getOreColor(oreName) {
   return oreKey ? colors[oreKey] : colors.default;
 }
 
-// Inject CSS for mining animations
+// Inject CSS for mining animations (compact layout optimized)
 function injectMiningAnimationsCSS() {
   if (document.getElementById('mining-animations-css')) return;
   
@@ -1387,6 +1471,12 @@ function injectMiningAnimationsCSS() {
       100% { opacity: 0; transform: scale(0) rotate(360deg); }
     }
 
+    @keyframes ore-breaking {
+      0% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(5deg); }
+      100% { transform: scale(0.8) rotate(-5deg); }
+    }
+
     .rock-formation {
       transition: all 0.3s ease;
       will-change: transform, box-shadow;
@@ -1396,12 +1486,17 @@ function injectMiningAnimationsCSS() {
       animation: rock-pulse 2s infinite ease-in-out;
     }
 
-    .mining-target {
-      transition: all 0.2s ease;
+    .ore-input-slot {
+      will-change: transform, opacity, scale;
+      transition: all 0.5s ease;
+    }
+
+    .ore-input-slot.breaking {
+      animation: ore-breaking 0.6s ease-in-out;
     }
 
     .property-slot {
-      will-change: transform, box-shadow;
+      will-change: transform, box-shadow, opacity;
       transition: all 0.3s ease;
     }
 
@@ -1461,6 +1556,52 @@ function injectMiningAnimationsCSS() {
       border-color: #FFD700;
     }
 
+    /* Compact layout responsive adjustments */
+    @media (max-width: 768px) {
+      .rock-formation {
+        width: 320px;
+        height: 70px;
+      }
+      
+      .ore-input-slot {
+        width: 60px;
+        height: 60px;
+      }
+      
+      .property-slot {
+        width: 50px;
+        height: 45px;
+        font-size: 0.7rem;
+      }
+      
+      .mining-row {
+        gap: 0.3rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .rock-formation {
+        width: 280px;
+        height: 60px;
+      }
+      
+      .ore-input-slot {
+        width: 50px;
+        height: 50px;
+      }
+      
+      .property-slot {
+        width: 40px;
+        height: 35px;
+        font-size: 0.6rem;
+      }
+      
+      .adjust-left, .adjust-right {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 1rem !important;
+      }
+    }
+
     /* Scrollbar styling for ore and recipe containers */
     #available-ores::-webkit-scrollbar,
     #available-recipes::-webkit-scrollbar {
@@ -1500,14 +1641,60 @@ function injectMiningAnimationsCSS() {
       opacity: 0.3;
     }
 
-    /* Mining target crosshair animation */
-    .target-crosshair {
-      animation: crosshair-pulse 1.5s ease-in-out infinite alternate;
+    /* Ore integration effects */
+    .ore-input-slot img {
+      transition: all 0.3s ease;
     }
 
-    @keyframes crosshair-pulse {
-      0% { opacity: 0.6; transform: scale(1); }
-      100% { opacity: 1; transform: scale(1.1); }
+    .ore-input-slot:hover img {
+      transform: scale(1.05);
+      filter: brightness(1.1);
+    }
+
+    /* Property slot entrance animations */
+    .property-slot {
+      transform-origin: center;
+    }
+
+    .prop-left {
+      transform-origin: left center;
+    }
+
+    .prop-right {
+      transform-origin: right center;
+    }
+
+    /* Enhanced breaking effect */
+    .ore-breaking-particle {
+      position: absolute;
+      pointer-events: none;
+      border-radius: 50%;
+      will-change: transform, opacity;
+    }
+
+    /* Dust particle effects */
+    .rock-dust-particle {
+      position: absolute;
+      pointer-events: none;
+      border-radius: 50%;
+      background: rgba(139,115,85,0.7);
+      will-change: transform, opacity;
+    }
+
+    /* Success alignment glow */
+    .aligned-center {
+      box-shadow: 0 0 20px rgba(76,175,80,0.8), inset 0 0 10px rgba(76,175,80,0.3) !important;
+      border-color: #4CAF50 !important;
+    }
+
+    /* Adjustment button improvements */
+    .adjust-left, .adjust-right {
+      will-change: transform, background-color;
+      transition: all 0.2s ease;
+    }
+
+    .adjust-left:active, .adjust-right:active {
+      transform: scale(0.95);
     }
   `;
 
