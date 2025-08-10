@@ -15,7 +15,7 @@ let _supabaseClient = null;
 let _battleState = null;
 let _battleId = null;
 let _realtimeChannel = null;
-let _isProcessingAITurn = false;
+let _isProcessingTurn = false; // Generic turn processing flag
 
 import { initCharacterData } from './character_data.js';
 
@@ -117,9 +117,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     updateGameStateFromRealtime();
 }
 
-/**
- * Sets up the realtime subscription with proper error handling and reconnection
- */
 async function setupRealtimeSubscription(supabase) {
     const channelName = `battle_state:${_battleId}`;
     console.log(`[REALTIME] Setting up subscription for channel: ${channelName}`);
@@ -142,21 +139,24 @@ async function setupRealtimeSubscription(supabase) {
         )
         .on('system', {}, (status, err) => {
             console.log(`[REALTIME] System status: ${status}`);
+            updateConnectionStatus(status);
             if (err) {
                 console.error('[REALTIME] System error:', err);
             }
         })
-        .subscribe((status, err) => {
+        .subscribe(async (status, err) => {
+            updateConnectionStatus(status);
             if (status === 'SUBSCRIBED') {
                 console.log('[REALTIME] Successfully subscribed to battle updates');
             } else if (status === 'CHANNEL_ERROR') {
                 console.error('[REALTIME] Channel error:', err);
                 displayMessage('Lost connection to battle. Attempting to reconnect...', 'warning');
                 // Attempt to resubscribe after a short delay
-                setTimeout(() => {
+                setTimeout(async () => {
                     if (_battleId && _realtimeChannel) {
                         console.log('[REALTIME] Attempting to resubscribe...');
-                        _realtimeChannel.subscribe();
+                        await supabase.removeChannel(_realtimeChannel);
+                        await setupRealtimeSubscription(supabase);
                     }
                 }, 2000);
             } else if (status === 'TIMED_OUT') {
@@ -168,14 +168,16 @@ async function setupRealtimeSubscription(supabase) {
         });
 }
 
-/**
- * Updates the game state from the latest data received from Supabase.
- * This is the main function that processes server-side changes.
- */
 function updateGameStateFromRealtime() {
     if (!_battleState) return;
 
     console.log('[BATTLE] Processing realtime update:', _battleState);
+
+    // Check if battle has ended
+    if (_battleState.battle_ended) {
+        handleBattleEnd(_battleState.battle_result);
+        return;
+    }
 
     // Map the characters_state object to an array with proper HP and stats handling
     _characters = Object.values(_battleState.characters_state).map(charState => {
@@ -186,7 +188,6 @@ function updateGameStateFromRealtime() {
             normalizedStats[key.toLowerCase()] = value;
         }
 
-        // Get vitality for HP calculation
         const vitality = normalizedStats.vitality || 0;
         
         return {
@@ -195,7 +196,7 @@ function updateGameStateFromRealtime() {
             type: charState.type,
             isPlayerControlled: charState.isPlayerControlled,
             position: charState.current_position,
-            originalPosition: charState.current_position, // Store original position for turn tracking
+            originalPosition: charState.current_position,
             stats: {
                 strength: normalizedStats.strength || 0,
                 vitality: vitality,
@@ -211,7 +212,7 @@ function updateGameStateFromRealtime() {
             current_hp: charState.current_hp || (vitality * 10),
             max_hp: charState.max_hp || (vitality * 10),
             priority: charState.priority || 999,
-            pendingAction: null // Track actions for this turn
+            pendingAction: null
         };
     });
 
@@ -221,38 +222,84 @@ function updateGameStateFromRealtime() {
     // Handle turn management
     const currentTurn = _battleState.current_turn;
     const currentTurnIndex = _battleState.current_turn_index || 0;
-    const turnOrder = _battleState.turn_order || [];
+    const roundNumber = _battleState.round_number || 1;
     
-    console.log(`[BATTLE] Current turn: ${currentTurn}, Turn index: ${currentTurnIndex}, Round: ${_battleState.round_number}`);
+    console.log(`[BATTLE] Current turn: ${currentTurn}, Turn index: ${currentTurnIndex}, Round: ${roundNumber}`);
     
     // Update UI to show current turn
-    updateTurnDisplay(currentTurn, _battleState.round_number);
+    updateTurnDisplay(currentTurn, roundNumber);
     
     // Set the current turn character for player turns
     if (currentTurn !== 'AI') {
         const availablePlayerChars = _characters.filter(c => 
-            c.isPlayerControlled && (!c.has_moved || !c.has_acted)
+            c.isPlayerControlled && (!c.has_moved || !c.has_acted) && c.current_hp > 0
         );
         _currentTurnCharacter = availablePlayerChars[0] || null;
+        
+        // Auto-select the first available character
+        if (_currentTurnCharacter && !_selectedPlayerCharacter) {
+            selectCharacter(_currentTurnCharacter);
+        }
     } else {
         _currentTurnCharacter = null;
+        // Clear any player selections during AI turn
+        clearCharacterSelection();
+        
+        // Trigger AI turn processing if not already processing
+        if (!_isProcessingTurn) {
+            triggerAITurn();
+        }
     }
     
-    // Handle AI turn automatically if it's AI's turn
-    if (currentTurn === 'AI' && !_isProcessingAITurn) {
-        handleAITurn();
-    }
-    
-    // Update character selection based on current turn
+    // Update character availability based on current turn
     updateCharacterAvailability(currentTurn);
     
     // Check for battle end conditions
-    checkBattleEnd();
+    if (!_battleState.battle_ended) {
+        checkBattleEnd();
+    }
+
+    // Reset processing flag when it's no longer AI turn
+    if (currentTurn !== 'AI') {
+        _isProcessingTurn = false;
+    }
 }
 
-/**
- * Updates the turn display in the UI
- */
+function selectCharacter(character) {
+    clearCharacterSelection();
+    
+    if (character && character.isPlayerControlled && (!character.has_moved || !character.has_acted) && character.current_hp > 0) {
+        _selectedPlayerCharacter = character;
+        _currentTurnCharacter = character;
+        
+        // Find and highlight the character element
+        const container = _main.querySelector('.battle-grid-container');
+        if (container && character.position) {
+            const [x, y] = character.position;
+            const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
+            if (cell) {
+                const charEl = cell.querySelector('.character-token');
+                if (charEl) {
+                    charEl.classList.add('character-selected');
+                    _selectedCharacterEl = charEl;
+                }
+            }
+        }
+        
+        highlightWalkableTiles(character);
+        showEntityInfo(character);
+    }
+}
+
+function clearCharacterSelection() {
+    if (_selectedCharacterEl) {
+        _selectedCharacterEl.classList.remove('character-selected');
+        _selectedCharacterEl = null;
+    }
+    _selectedPlayerCharacter = null;
+    unhighlightAllTiles();
+}
+
 function updateTurnDisplay(currentTurn, roundNumber) {
     const turnStatusEl = document.getElementById('turnStatus');
     if (turnStatusEl) {
@@ -275,9 +322,6 @@ function updateTurnDisplay(currentTurn, roundNumber) {
     }
 }
 
-/**
- * Updates which characters can be selected based on current turn
- */
 function updateCharacterAvailability(currentTurn) {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -309,41 +353,58 @@ function updateCharacterAvailability(currentTurn) {
     });
 }
 
-/**
- * Handles automatic AI turn processing
- */
-async function handleAITurn() {
-    if (_isProcessingAITurn) return;
+async function triggerAITurn() {
+    if (_isProcessingTurn) return;
     
-    _isProcessingAITurn = true;
-    console.log('[AI] Processing AI turn...');
+    _isProcessingTurn = true;
+    console.log('[AI] Triggering AI turn processing...');
     
     try {
-        // Add a small delay to make AI actions visible
+        // Add a small delay to make the turn transition visible
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const aiTurnRes = await _apiCall('/functions/v1/ai-turn', 'POST', {
-            battleId: _battleId
+        // Get the first AI character that hasn't completed their turn
+        const aiCharacters = _characters.filter(c => 
+            !c.isPlayerControlled && (!c.has_moved || !c.has_acted) && c.current_hp > 0
+        );
+        
+        if (aiCharacters.length === 0) {
+            console.log('[AI] No AI characters available to act');
+            return;
+        }
+        
+        // Sort by priority and take the first one
+        aiCharacters.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+        const aiCharacter = aiCharacters[0];
+        
+        console.log(`[AI] Processing turn for AI character: ${aiCharacter.name} (${aiCharacter.id})`);
+        
+        // For now, AI characters just stay in place and complete their turn
+        // You can enhance this with actual AI logic later
+        const aiTurnRes = await _apiCall('/functions/v1/combined-action-end', 'POST', {
+            battleId: _battleId,
+            characterId: aiCharacter.id,
+            currentPosition: aiCharacter.position,
+            targetPosition: aiCharacter.position, // Stay in place for now
+            action: null // No action for now
         });
         
         const result = await aiTurnRes.json();
         
         if (result.success) {
-            console.log('[AI] AI turn completed:', result.message);
-            
-            if (result.skipTurn) {
-                console.log('[AI] All AI characters completed, ending AI turn');
-                // The server will automatically handle turn progression
-            }
+            console.log('[AI] AI character turn completed:', result.message);
         } else {
             console.error('[AI] AI turn failed:', result.message);
-            displayMessage(`AI turn failed: ${result.message}`);
+            displayMessage(`AI turn failed: ${result.message}`, 'error');
         }
     } catch (error) {
         console.error('[AI] Error during AI turn:', error);
-        displayMessage('Error during AI turn. Please try ending the turn manually.');
+        displayMessage('Error during AI turn. The game will continue.', 'warning');
     } finally {
-        _isProcessingAITurn = false;
+        // Reset processing flag after a delay to prevent rapid retries
+        setTimeout(() => {
+            _isProcessingTurn = false;
+        }, 1000);
     }
 }
 
@@ -423,9 +484,6 @@ function renderBattleScreen(mode, level, layoutData) {
     createParticles();
 }
 
-/**
- * Updates the connection status indicator
- */
 function updateConnectionStatus(status) {
     const statusDot = document.querySelector('.status-dot');
     const statusText = document.querySelector('.status-text');
@@ -533,9 +591,6 @@ function renderBattleGrid(layoutJson) {
     container.appendChild(table);
 }
 
-/**
- * Renders the character tokens on the grid, including HP bars and turn indicators.
- */
 function renderCharacters() {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -661,46 +716,27 @@ function handleTileClick(event) {
     const targetY = parseInt(clickedTileEl.dataset.y);
     const charInCell = _characters.find(c => Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY);
 
-    // Don't allow interactions during AI turn
-    if (_battleState?.current_turn === 'AI') {
+    // Don't allow interactions during AI turn or when processing turns
+    if (_battleState?.current_turn === 'AI' || _isProcessingTurn) {
         displayMessage('Please wait for AI turn to complete.');
         return;
     }
 
     if (charInCell) {
-        unhighlightAllTiles();
-        if (_selectedCharacterEl) {
-            _selectedCharacterEl.classList.remove('character-selected');
-        }
-        
         // Only allow selection of player characters that can still act
         if (charInCell.isPlayerControlled && (!charInCell.has_moved || !charInCell.has_acted)) {
-            const el = clickedTileEl.querySelector('.character-token');
-            if (el) {
-                el.classList.add('character-selected');
-                _selectedCharacterEl = el;
-                _selectedPlayerCharacter = charInCell;
-                _currentTurnCharacter = charInCell;
-                highlightWalkableTiles(_selectedPlayerCharacter);
-            }
+            selectCharacter(charInCell);
         } else {
-            _selectedPlayerCharacter = null;
-            _selectedCharacterEl = null;
-            unhighlightAllTiles();
+            clearCharacterSelection();
+            showEntityInfo(charInCell);
         }
-        showEntityInfo(charInCell);
     } else {
         // Handle movement attempt
         if (_selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
             attemptMoveCharacter(_selectedPlayerCharacter, targetX, targetY);
         } else {
             // Deselect and show tile info
-            unhighlightAllTiles();
-            if (_selectedCharacterEl) {
-                _selectedCharacterEl.classList.remove('character-selected');
-                _selectedCharacterEl = null;
-            }
-            _selectedPlayerCharacter = null;
+            clearCharacterSelection();
             
             // Show tile information
             const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
@@ -790,12 +826,7 @@ async function attemptMoveCharacter(character, targetX, targetY) {
     character.position = [targetX, targetY];
     renderCharacters();
     unhighlightAllTiles();
-
-    if (_selectedCharacterEl) {
-        _selectedCharacterEl.classList.remove('character-selected');
-        _selectedCharacterEl = null;
-    }
-    _selectedPlayerCharacter = null;
+    clearCharacterSelection();
 
     displayMessage('Move queued. Press "End Turn" to confirm.', 'info');
 }
@@ -845,17 +876,23 @@ async function handleEndTurn() {
         return;
     }
 
+    // Prevent multiple simultaneous turn endings
+    const endTurnBtn = document.getElementById('endTurnButtonBottom');
+    if (endTurnBtn) {
+        endTurnBtn.disabled = true;
+        endTurnBtn.textContent = 'Processing...';
+    }
+
     if (!_battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
         console.error('[TURN] Missing required battle or character data.');
         displayMessage('Missing battle or character data.');
+        resetEndTurnButton();
         return;
     }
 
     const characterId = activeCharacter.id;
     const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
     const targetPosition = activeCharacter.position;
-
-    // Collect any action taken this turn (placeholder for now)
     const action = activeCharacter.pendingAction || null;
 
     console.log('[TURN] Ending turn for:', characterId, {
@@ -878,19 +915,61 @@ async function handleEndTurn() {
         if (!result.success) {
             console.error('[TURN] Failed to complete action:', result.message);
             displayMessage(`Error: ${result.message}`, 'error');
+            resetEndTurnButton();
             return;
         }
 
         console.log('[TURN] Action completed:', result.message);
-        displayMessage('Turn completed successfully!', 'success');
+        
+        // Check if battle ended
+        if (result.battleEnded) {
+            handleBattleEnd(result.battleResult);
+            return;
+        }
 
-        // Clear the current turn character
+        // Clear the current turn character and selection
         _currentTurnCharacter = null;
+        clearCharacterSelection();
+        
+        // Show success message
+        displayMessage('Turn completed successfully!', 'success');
 
     } catch (err) {
         console.error('[TURN] Error ending turn:', err);
         displayMessage('Error completing turn. Please try again.', 'error');
+        resetEndTurnButton();
     }
+}
+
+function resetEndTurnButton() {
+    const endTurnBtn = document.getElementById('endTurnButtonBottom');
+    if (endTurnBtn) {
+        endTurnBtn.disabled = false;
+        endTurnBtn.textContent = 'End Turn';
+    }
+}
+
+function handleBattleEnd(result) {
+    console.log(`[BATTLE] Battle ended with result: ${result}`);
+    
+    // Clear any existing subscriptions
+    if (_realtimeChannel && _supabaseClient) {
+        _supabaseClient.removeChannel(_realtimeChannel);
+        _realtimeChannel = null;
+    }
+    
+    if (result === 'victory') {
+        displayMessage('Victory! All enemies have been defeated!', 'success');
+    } else if (result === 'defeat') {
+        displayMessage('Defeat! All your characters have fallen.', 'error');
+    } else {
+        displayMessage('Battle ended.', 'info');
+    }
+    
+    // Return to embark after a delay
+    setTimeout(() => {
+        window.gameAuth.loadModule('embark');
+    }, 3000);
 }
 
 function showEntityInfo(entity) {
@@ -1163,9 +1242,6 @@ function displayMessage(msg, type = 'info') {
     }
 }
 
-/**
- * Checks if the battle has ended (victory/defeat conditions)
- */
 function checkBattleEnd() {
     if (!_characters || _characters.length === 0) return false;
     
@@ -1174,26 +1250,17 @@ function checkBattleEnd() {
     
     if (playerCharacters.length === 0) {
         // Player defeat
-        displayMessage('Defeat! All your characters have fallen.', 'error');
-        setTimeout(() => {
-            window.gameAuth.loadModule('embark');
-        }, 3000);
+        handleBattleEnd('defeat');
         return true;
     } else if (enemyCharacters.length === 0) {
         // Player victory
-        displayMessage('Victory! All enemies have been defeated!', 'success');
-        setTimeout(() => {
-            window.gameAuth.loadModule('embark');
-        }, 3000);
+        handleBattleEnd('victory');
         return true;
     }
     
     return false;
 }
 
-/**
- * Clean up function called when module is unloaded
- */
 export function cleanup() {
     console.log('[BATTLE] Cleaning up battle manager...');
     
@@ -1210,7 +1277,7 @@ export function cleanup() {
     _selectedCharacterEl = null;
     _selectedPlayerCharacter = null;
     _currentTurnCharacter = null;
-    _isProcessingAITurn = false;
+    _isProcessingTurn = false;
     
     // Clear highlights
     unhighlightAllTiles();
