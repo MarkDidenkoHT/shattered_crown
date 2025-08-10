@@ -195,13 +195,13 @@ function createCraftingSlotHTML(slotIndex) {
         </div>
         
         <!-- Property Slots - SMALLER -->
-        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #c4975a; z-index: 5; position: relative;">
+        <div class="property-slot prop-top" data-slot="${slotIndex}" data-position="0" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color:rgb(0, 0, 0); z-index: 5; position: relative;">
           -
         </div>
-        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #c4975a; z-index: 5; position: relative;">
+        <div class="property-slot prop-middle" data-slot="${slotIndex}" data-position="1" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color:rgb(0, 0, 0); z-index: 5; position: relative;">
           -
         </div>
-        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #c4975a; z-index: 5; position: relative;">
+        <div class="property-slot prop-bottom" data-slot="${slotIndex}" data-position="2" style="width: 36px; height: 20px; border: 1px solid #666; border-radius: 3px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color:rgb(0, 0, 0); z-index: 5; position: relative;">
           -
         </div>
       </div>
@@ -392,7 +392,7 @@ function generateIngredientMatching(recipe) {
 
     if (hasMatches) {
       matchingHTML += `
-        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; flex-direction: column;">
           <span style="color: #4CAF50; font-size: 0.8rem; margin-right: 0.5rem;">Available herbs:</span>
       `;
       
