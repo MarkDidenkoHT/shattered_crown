@@ -315,8 +315,8 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-grid-container"></div>
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%;">
-                    <div style="width: 50%; display: flex; align-items: center; justify-content: center;">
-                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
+                    <div style="width: 50%; min-width: 100px; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="width: 100px; height: 100px; object-fit: contain; display: block;" />
                     </div>
                     <div class="info-text" style="width: 50%; padding-left: 10px; display: flex; flex-direction: column; justify-content: center;">
                         <h3 id="infoName">—</h3>
@@ -385,19 +385,34 @@ function renderBattleGrid(layoutJson) {
             td.title = tileName;
             td.dataset.walkable = tileData?.walkable ? 'true' : 'false';
 
-            td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
-            td.style.backgroundSize = 'cover';
-            td.style.backgroundPosition = 'center';
+            // CRITICAL: Set minimum size to prevent shrinking and add placeholder
+            td.style.minWidth = '50px';
+            td.style.minHeight = '50px';
             td.style.width = `${100 / colCount}%`;
+            td.style.height = `${100 / rowCount}%`;
             td.style.padding = '0';
             td.style.margin = '0';
             td.style.position = 'relative';
             td.style.boxSizing = 'border-box';
-            // Add default grey border to all tiles
             td.style.border = '1px solid #666';
+            
+            // Add placeholder background before image loads
+            td.style.backgroundColor = 'rgba(139, 69, 19, 0.1)';
+            td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
+            td.style.backgroundSize = 'cover';
+            td.style.backgroundPosition = 'center';
+            
+            // Preload the tile image to reduce CLS
+            const preloadImg = new Image();
+            preloadImg.onload = () => {
+                td.style.backgroundColor = 'transparent';
+            };
+            preloadImg.onerror = () => {
+                td.style.backgroundImage = `url(assets/art/tiles/placeholder.png)`;
+            };
+            preloadImg.src = `assets/art/tiles/${art}.png`;
 
             td.addEventListener('click', handleTileClick);
-
             tr.appendChild(td);
         }
         table.appendChild(tr);
@@ -436,38 +451,64 @@ function renderCharacters() {
         charEl.style.zIndex = '5';
         charEl.style.boxSizing = 'border-box';
 
-        // Character sprite with fixed size
+        // Character sprite container with FIXED dimensions to prevent CLS
+        const spriteContainer = document.createElement('div');
+        spriteContainer.style.position = 'absolute';
+        spriteContainer.style.top = '50%';
+        spriteContainer.style.left = '50%';
+        spriteContainer.style.transform = 'translate(-50%, -50%)';
+        spriteContainer.style.width = '100%';
+        spriteContainer.style.height = '100%';
+        spriteContainer.style.maxWidth = '50px'; // Fixed max size
+        spriteContainer.style.maxHeight = '50px'; // Fixed max size
+        spriteContainer.style.minWidth = '50px'; // Prevent shrinking
+        spriteContainer.style.minHeight = '50px'; // Prevent shrinking
+        spriteContainer.style.display = 'flex';
+        spriteContainer.style.alignItems = 'center';
+        spriteContainer.style.justifyContent = 'center';
+        spriteContainer.style.backgroundColor = 'rgba(139, 69, 19, 0.3)'; // Placeholder background
+        spriteContainer.style.border = '1px solid #8B4513';
+        spriteContainer.style.borderRadius = '4px';
+        spriteContainer.style.zIndex = '10';
+
         const sprite = char.spriteName || 'placeholder';
         const img = document.createElement('img');
         img.src = `assets/art/sprites/${sprite}.png`;
         img.alt = char.name;
+        
+        // CRITICAL: Set explicit dimensions BEFORE adding to DOM
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.maxWidth = '48px'; // Slightly smaller than container
+        img.style.maxHeight = '48px'; // Slightly smaller than container  
+        img.style.objectFit = 'contain';
+        img.style.display = 'block'; // Prevent inline spacing issues
+        
+        // Handle load/error without layout shift
+        img.addEventListener('load', () => {
+            // Image loaded successfully - remove placeholder background
+            spriteContainer.style.backgroundColor = 'transparent';
+            spriteContainer.style.border = 'none';
+        });
+        
         img.addEventListener('error', () => {
+            // Keep placeholder styling and set fallback
             img.src = 'assets/art/sprites/placeholder.png';
         });
-        img.style.width = '100px';
-        img.style.height = '100px';
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '100%';
-        img.style.objectFit = 'contain';
-        img.style.zIndex = '10';
-        img.style.position = 'absolute';
-        img.style.top = '50%';
-        img.style.left = '50%';
-        img.style.transform = 'translate(-50%, -50%)';
 
-        charEl.appendChild(img);
+        spriteContainer.appendChild(img);
+        charEl.appendChild(spriteContainer);
 
-        // HP bar
+        // HP bar with fixed positioning
         if (char.current_hp !== undefined && char.max_hp !== undefined && char.max_hp > 0) {
             const hpBar = document.createElement('div');
             hpBar.className = 'character-hp-bar';
             const hpPercentage = Math.max(0, Math.min(100, Math.round((char.current_hp / char.max_hp) * 100)));
             
-            // Color based on HP percentage
-            let hpColor = '#4CAF50'; // Green
-            if (hpPercentage <= 25) hpColor = '#F44336'; // Red
-            else if (hpPercentage <= 50) hpColor = '#FF9800'; // Orange
-            else if (hpPercentage <= 75) hpColor = '#FFC107'; // Yellow
+            let hpColor = '#4CAF50';
+            if (hpPercentage <= 25) hpColor = '#F44336';
+            else if (hpPercentage <= 50) hpColor = '#FF9800';
+            else if (hpPercentage <= 75) hpColor = '#FFC107';
             
             hpBar.style.width = '90%';
             hpBar.style.height = '6px';
@@ -482,7 +523,7 @@ function renderCharacters() {
             charEl.appendChild(hpBar);
         }
 
-        // Turn status indicator
+        // Turn status indicator with fixed positioning
         if (char.has_moved && char.has_acted) {
             const doneIndicator = document.createElement('div');
             doneIndicator.className = 'turn-done-indicator';
@@ -771,10 +812,22 @@ function showEntityInfo(entity) {
     const hpEl = document.getElementById('infoHP');
     const statsEl = document.getElementById('infoStats');
 
+    // Set fixed dimensions for portrait container to prevent CLS
+    const portraitContainer = portrait.parentElement;
+    if (portraitContainer) {
+        portraitContainer.style.minWidth = '100px';
+        portraitContainer.style.minHeight = '100px';
+    }
+
     if (!entity) {
         nameEl.textContent = '—';
         hpEl.textContent = '';
         statsEl.innerHTML = '';
+        // Set placeholder with fixed dimensions
+        portrait.style.width = '100px';
+        portrait.style.height = '100px';
+        portrait.style.objectFit = 'contain';
+        portrait.style.display = 'block';
         portrait.src = 'assets/art/sprites/placeholder.png';
         return;
     }
@@ -849,11 +902,20 @@ function showEntityInfo(entity) {
             </div>
         `;
 
-        // Set character portrait with fixed size
+        // Set character portrait with FIXED dimensions to prevent CLS
         const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
+        
+        // CRITICAL: Set dimensions before changing src
+        portrait.style.width = '100px';
+        portrait.style.height = '100px';
+        portrait.style.objectFit = 'contain';
+        portrait.style.display = 'block';
+        portrait.style.backgroundColor = 'rgba(139, 69, 19, 0.1)'; // Subtle placeholder
+        
         portrait.src = spritePath;
-        portrait.style.maxWidth = '100px';
-        portrait.style.maxHeight = '100px';
+        portrait.onload = () => {
+            portrait.style.backgroundColor = 'transparent';
+        };
         portrait.onerror = () => {
             portrait.src = 'assets/art/sprites/placeholder.png';
         };
@@ -882,11 +944,20 @@ function showEntityInfo(entity) {
             </div>
         `;
         
-        // Set tile art with fixed size
+        // Set tile art with FIXED dimensions to prevent CLS
         const tilePath = `assets/art/tiles/${tile.art || 'placeholder'}.png`;
+        
+        // CRITICAL: Set dimensions before changing src
+        portrait.style.width = '100px';
+        portrait.style.height = '100px';
+        portrait.style.objectFit = 'contain';
+        portrait.style.display = 'block';
+        portrait.style.backgroundColor = 'rgba(184, 134, 11, 0.1)'; // Subtle tile placeholder
+        
         portrait.src = tilePath;
-        portrait.style.maxWidth = '100px';
-        portrait.style.maxHeight = '100px';
+        portrait.onload = () => {
+            portrait.style.backgroundColor = 'transparent';
+        };
         portrait.onerror = () => {
             portrait.src = 'assets/art/tiles/placeholder.png';
         };
