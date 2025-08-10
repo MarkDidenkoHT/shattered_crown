@@ -14,8 +14,8 @@ let highlightedTiles = [];
 let _supabaseClient = null;
 let _battleState = null;
 let _battleId = null;
-let _realtimeChannel = null;
-let _isProcessingTurn = false; // Generic turn processing flag
+let _unsubscribeFromBattle = null;
+let _isProcessingAITurn = false;
 
 import { initCharacterData } from './character_data.js';
 
@@ -30,12 +30,7 @@ function getSupabaseClient(config) {
     }
 
     _supabaseClient = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
-        auth: { flowType: 'pkce' },
-        realtime: {
-            params: {
-                eventsPerSecond: 10
-            }
-        }
+        auth: { flowType: 'pkce' }
     });
 
     return _supabaseClient;
@@ -78,10 +73,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     try {
         const supabase = getSupabaseClient(supabaseConfig);
         
-        // Clean up any existing realtime subscription
-        if (_realtimeChannel) {
-            await supabase.removeChannel(_realtimeChannel);
-            _realtimeChannel = null;
+        if (_unsubscribeFromBattle) {
+            await supabase.removeChannel(_unsubscribeFromBattle);
         }
         
         console.log('[BATTLE] Attempting to start battle via Edge Function...');
@@ -103,8 +96,24 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
         console.log(`[BATTLE] Battle started with ID: ${_battleId}`);
 
-        // Set up enhanced realtime subscription
-        await setupRealtimeSubscription(supabase);
+        // Subscribe to real-time updates
+        _unsubscribeFromBattle = supabase
+            .channel(`battle_state:${_battleId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'battle_state',
+                    filter: `id=eq.${_battleId}`
+                },
+                (payload) => {
+                    console.log('[REALTIME] Battle state update received:', payload.new);
+                    _battleState = payload.new;
+                    updateGameStateFromRealtime();
+                }
+            )
+            .subscribe();
 
     } catch (err) {
         console.error('Error during battle initialization:', err);
@@ -117,67 +126,14 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     updateGameStateFromRealtime();
 }
 
-async function setupRealtimeSubscription(supabase) {
-    const channelName = `battle_state:${_battleId}`;
-    console.log(`[REALTIME] Setting up subscription for channel: ${channelName}`);
-    
-    _realtimeChannel = supabase
-        .channel(channelName)
-        .on(
-            'postgres_changes',
-            {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'battle_state',
-                filter: `id=eq.${_battleId}`
-            },
-            (payload) => {
-                console.log('[REALTIME] Battle state update received:', payload.new);
-                _battleState = payload.new;
-                updateGameStateFromRealtime();
-            }
-        )
-        .on('system', {}, (status, err) => {
-            console.log(`[REALTIME] System status: ${status}`);
-            updateConnectionStatus(status);
-            if (err) {
-                console.error('[REALTIME] System error:', err);
-            }
-        })
-        .subscribe(async (status, err) => {
-            updateConnectionStatus(status);
-            if (status === 'SUBSCRIBED') {
-                console.log('[REALTIME] Successfully subscribed to battle updates');
-            } else if (status === 'CHANNEL_ERROR') {
-                console.error('[REALTIME] Channel error:', err);
-                displayMessage('Lost connection to battle. Attempting to reconnect...', 'warning');
-                // Attempt to resubscribe after a short delay
-                setTimeout(async () => {
-                    if (_battleId && _realtimeChannel) {
-                        console.log('[REALTIME] Attempting to resubscribe...');
-                        await supabase.removeChannel(_realtimeChannel);
-                        await setupRealtimeSubscription(supabase);
-                    }
-                }, 2000);
-            } else if (status === 'TIMED_OUT') {
-                console.warn('[REALTIME] Subscription timed out');
-                displayMessage('Connection timeout. Battle state may be out of sync.', 'warning');
-            } else if (status === 'CLOSED') {
-                console.log('[REALTIME] Channel closed');
-            }
-        });
-}
-
+/**
+ * Updates the game state from the latest data received from Supabase.
+ * This is the main function that processes server-side changes.
+ */
 function updateGameStateFromRealtime() {
     if (!_battleState) return;
 
     console.log('[BATTLE] Processing realtime update:', _battleState);
-
-    // Check if battle has ended
-    if (_battleState.battle_ended) {
-        handleBattleEnd(_battleState.battle_result);
-        return;
-    }
 
     // Map the characters_state object to an array with proper HP and stats handling
     _characters = Object.values(_battleState.characters_state).map(charState => {
@@ -188,6 +144,7 @@ function updateGameStateFromRealtime() {
             normalizedStats[key.toLowerCase()] = value;
         }
 
+        // Get vitality for HP calculation
         const vitality = normalizedStats.vitality || 0;
         
         return {
@@ -196,7 +153,7 @@ function updateGameStateFromRealtime() {
             type: charState.type,
             isPlayerControlled: charState.isPlayerControlled,
             position: charState.current_position,
-            originalPosition: charState.current_position,
+            originalPosition: charState.current_position, // Store original position for turn tracking
             stats: {
                 strength: normalizedStats.strength || 0,
                 vitality: vitality,
@@ -212,7 +169,7 @@ function updateGameStateFromRealtime() {
             current_hp: charState.current_hp || (vitality * 10),
             max_hp: charState.max_hp || (vitality * 10),
             priority: charState.priority || 999,
-            pendingAction: null
+            pendingAction: null // Track actions for this turn
         };
     });
 
@@ -222,113 +179,35 @@ function updateGameStateFromRealtime() {
     // Handle turn management
     const currentTurn = _battleState.current_turn;
     const currentTurnIndex = _battleState.current_turn_index || 0;
-    const roundNumber = _battleState.round_number || 1;
+    const turnOrder = _battleState.turn_order || [];
     
-    console.log(`[BATTLE] Current turn: ${currentTurn}, Turn index: ${currentTurnIndex}, Round: ${roundNumber}`);
+    console.log(`[BATTLE] Current turn: ${currentTurn}, Turn index: ${currentTurnIndex}, Round: ${_battleState.round_number}`);
     
     // Update UI to show current turn
-    updateTurnDisplay(currentTurn, roundNumber);
+    updateTurnDisplay(currentTurn, _battleState.round_number);
     
-    // Handle player vs AI turn UI
-    if (currentTurn === 'AI') {
-        console.log('[BATTLE] AI turn - disabling player controls');
-        
-        // Clear any player selections during AI turn
-        clearCharacterSelection();
-        _currentTurnCharacter = null;
-        
-        // Disable end turn button during AI turn
-        const endTurnBtn = document.getElementById('endTurnButtonBottom');
-        if (endTurnBtn) {
-            endTurnBtn.disabled = true;
-            endTurnBtn.textContent = 'AI Turn...';
-        }
-        
-    } else {
-        // Player turn
-        console.log('[BATTLE] Player turn - enabling player controls');
-        
-        // Re-enable end turn button
-        const endTurnBtn = document.getElementById('endTurnButtonBottom');
-        if (endTurnBtn) {
-            endTurnBtn.disabled = false;
-            endTurnBtn.textContent = 'End Turn';
-        }
-        
-        // Find player characters that can still act
+    // Set the current turn character for player turns
+    if (currentTurn !== 'AI') {
         const availablePlayerChars = _characters.filter(c => 
-            c.isPlayerControlled && 
-            c.current_hp > 0 && 
-            (!c.has_moved || !c.has_acted)
+            c.isPlayerControlled && (!c.has_moved || !c.has_acted)
         );
-        
-        console.log(`[BATTLE] Available player characters: ${availablePlayerChars.length}`, 
-            availablePlayerChars.map(c => ({
-                name: c.name,
-                id: c.id,
-                has_moved: c.has_moved,
-                has_acted: c.has_acted,
-                hp: c.current_hp
-            }))
-        );
-        
-        if (availablePlayerChars.length > 0) {
-            _currentTurnCharacter = availablePlayerChars[0];
-            
-            // Auto-select the first available character
-            if (_currentTurnCharacter && !_selectedPlayerCharacter) {
-                selectCharacter(_currentTurnCharacter);
-            }
-        } else {
-            _currentTurnCharacter = null;
-            console.log('[BATTLE] No player characters available to act');
-        }
+        _currentTurnCharacter = availablePlayerChars[0] || null;
+    } else {
+        _currentTurnCharacter = null;
     }
     
-    // Update character availability based on current turn
+    // Handle AI turn automatically if it's AI's turn
+    if (currentTurn === 'AI' && !_isProcessingAITurn) {
+        handleAITurn();
+    }
+    
+    // Update character selection based on current turn
     updateCharacterAvailability(currentTurn);
-    
-    // Check for battle end conditions
-    if (!_battleState.battle_ended) {
-        checkBattleEnd();
-    }
 }
 
-function selectCharacter(character) {
-    clearCharacterSelection();
-    
-    if (character && character.isPlayerControlled && (!character.has_moved || !character.has_acted) && character.current_hp > 0) {
-        _selectedPlayerCharacter = character;
-        _currentTurnCharacter = character;
-        
-        // Find and highlight the character element
-        const container = _main.querySelector('.battle-grid-container');
-        if (container && character.position) {
-            const [x, y] = character.position;
-            const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
-            if (cell) {
-                const charEl = cell.querySelector('.character-token');
-                if (charEl) {
-                    charEl.classList.add('character-selected');
-                    _selectedCharacterEl = charEl;
-                }
-            }
-        }
-        
-        highlightWalkableTiles(character);
-        showEntityInfo(character);
-    }
-}
-
-function clearCharacterSelection() {
-    if (_selectedCharacterEl) {
-        _selectedCharacterEl.classList.remove('character-selected');
-        _selectedCharacterEl = null;
-    }
-    _selectedPlayerCharacter = null;
-    unhighlightAllTiles();
-}
-
+/**
+ * Updates the turn display in the UI
+ */
 function updateTurnDisplay(currentTurn, roundNumber) {
     const turnStatusEl = document.getElementById('turnStatus');
     if (turnStatusEl) {
@@ -351,6 +230,9 @@ function updateTurnDisplay(currentTurn, roundNumber) {
     }
 }
 
+/**
+ * Updates which characters can be selected based on current turn
+ */
 function updateCharacterAvailability(currentTurn) {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -382,8 +264,42 @@ function updateCharacterAvailability(currentTurn) {
     });
 }
 
-function triggerAITurn() {
-    console.log('[AI] triggerAITurn called but AI processing happens server-side now');
+/**
+ * Handles automatic AI turn processing
+ */
+async function handleAITurn() {
+    if (_isProcessingAITurn) return;
+    
+    _isProcessingAITurn = true;
+    console.log('[AI] Processing AI turn...');
+    
+    try {
+        // Add a small delay to make AI actions visible
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const aiTurnRes = await _apiCall('/functions/v1/ai-turn', 'POST', {
+            battleId: _battleId
+        });
+        
+        const result = await aiTurnRes.json();
+        
+        if (result.success) {
+            console.log('[AI] AI turn completed:', result.message);
+            
+            if (result.skipTurn) {
+                console.log('[AI] All AI characters completed, ending AI turn');
+                // The server will automatically handle turn progression
+            }
+        } else {
+            console.error('[AI] AI turn failed:', result.message);
+            displayMessage(`AI turn failed: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('[AI] Error during AI turn:', error);
+        displayMessage('Error during AI turn. Please try ending the turn manually.');
+    } finally {
+        _isProcessingAITurn = false;
+    }
 }
 
 function renderBattleScreen(mode, level, layoutData) {
@@ -393,17 +309,14 @@ function renderBattleScreen(mode, level, layoutData) {
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
                 <p id="turnStatus">Turn: —</p>
                 <div class="battle-controls">
-                    <div id="connectionStatus" class="connection-indicator">
-                        <span class="status-dot connected"></span>
-                        <span class="status-text">Connected</span>
-                    </div>
+                    <button id="refreshButton" class="fantasy-button small-btn">Refresh</button>
                 </div>
             </div>
             <div class="battle-grid-container"></div>
             <div class="battle-info-panel" id="entityInfoPanel">
-                <div style="display: flex; width: 100%; height: 100%; min-height: 120px;">
-                    <div style="width: 50%; min-width: 100px; min-height: 100px; display: flex; align-items: center; justify-content: center;">
-                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="width: 100px; height: 100px; object-fit: contain; display: block;" />
+                <div style="display: flex; width: 100%; height: 100%;">
+                    <div style="width: 50%; display: flex; align-items: center; justify-content: center;">
+                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
                     </div>
                     <div class="info-text" style="width: 50%; padding-left: 10px; display: flex; flex-direction: column; justify-content: center;">
                         <h3 id="infoName">—</h3>
@@ -414,79 +327,18 @@ function renderBattleScreen(mode, level, layoutData) {
             </div>
             <div class="battle-bottom-ui"></div>
         </div>
-        
-        <style>
-            .connection-indicator {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-size: 12px;
-                color: #B8860B;
-            }
-            
-            .status-dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                transition: background-color 0.3s ease;
-            }
-            
-            .status-dot.connected {
-                background-color: #4CAF50;
-            }
-            
-            .status-dot.disconnected {
-                background-color: #F44336;
-            }
-            
-            .status-dot.reconnecting {
-                background-color: #FF9800;
-                animation: pulse 1.5s infinite;
-            }
-            
-            @keyframes pulse {
-                0% { opacity: 1; }
-                50% { opacity: 0.4; }
-                100% { opacity: 1; }
-            }
-            
-            .status-text {
-                font-weight: 500;
-            }
-        </style>
     `;
 
     renderBattleGrid(layoutData.layout);
     renderCharacters();
     renderBottomUI();
     createParticles();
-}
-
-function updateConnectionStatus(status) {
-    const statusDot = document.querySelector('.status-dot');
-    const statusText = document.querySelector('.status-text');
     
-    if (!statusDot || !statusText) return;
+    // Add event listeners for buttons
+    const refreshBtn = document.getElementById('refreshButton');
     
-    statusDot.className = 'status-dot';
-    
-    switch (status) {
-        case 'SUBSCRIBED':
-            statusDot.classList.add('connected');
-            statusText.textContent = 'Connected';
-            break;
-        case 'CHANNEL_ERROR':
-        case 'TIMED_OUT':
-            statusDot.classList.add('disconnected');
-            statusText.textContent = 'Disconnected';
-            break;
-        case 'CLOSED':
-            statusDot.classList.add('disconnected');
-            statusText.textContent = 'Connection Closed';
-            break;
-        default:
-            statusDot.classList.add('reconnecting');
-            statusText.textContent = 'Connecting...';
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', handleRefresh);
     }
 }
 
@@ -533,34 +385,19 @@ function renderBattleGrid(layoutJson) {
             td.title = tileName;
             td.dataset.walkable = tileData?.walkable ? 'true' : 'false';
 
-            // CRITICAL: Set minimum size to prevent shrinking and add placeholder
-            td.style.minWidth = '50px';
-            td.style.minHeight = '50px';
+            td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
+            td.style.backgroundSize = 'cover';
+            td.style.backgroundPosition = 'center';
             td.style.width = `${100 / colCount}%`;
-            td.style.height = `${100 / rowCount}%`;
             td.style.padding = '0';
             td.style.margin = '0';
             td.style.position = 'relative';
             td.style.boxSizing = 'border-box';
+            // Add default grey border to all tiles
             td.style.border = '1px solid #666';
-            
-            // Add placeholder background before image loads
-            td.style.backgroundColor = 'rgba(139, 69, 19, 0.1)';
-            td.style.backgroundImage = `url(assets/art/tiles/${art}.png)`;
-            td.style.backgroundSize = 'cover';
-            td.style.backgroundPosition = 'center';
-            
-            // Preload the tile image to reduce CLS
-            const preloadImg = new Image();
-            preloadImg.onload = () => {
-                td.style.backgroundColor = 'transparent';
-            };
-            preloadImg.onerror = () => {
-                td.style.backgroundImage = `url(assets/art/tiles/placeholder.png)`;
-            };
-            preloadImg.src = `assets/art/tiles/${art}.png`;
 
             td.addEventListener('click', handleTileClick);
+
             tr.appendChild(td);
         }
         table.appendChild(tr);
@@ -569,6 +406,9 @@ function renderBattleGrid(layoutJson) {
     container.appendChild(table);
 }
 
+/**
+ * Renders the character tokens on the grid, including HP bars and turn indicators.
+ */
 function renderCharacters() {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -596,64 +436,38 @@ function renderCharacters() {
         charEl.style.zIndex = '5';
         charEl.style.boxSizing = 'border-box';
 
-        // Character sprite container with FIXED dimensions to prevent CLS
-        const spriteContainer = document.createElement('div');
-        spriteContainer.style.position = 'absolute';
-        spriteContainer.style.top = '50%';
-        spriteContainer.style.left = '50%';
-        spriteContainer.style.transform = 'translate(-50%, -50%)';
-        spriteContainer.style.width = '100%';
-        spriteContainer.style.height = '100%';
-        spriteContainer.style.maxWidth = '50px'; // Fixed max size
-        spriteContainer.style.maxHeight = '50px'; // Fixed max size
-        spriteContainer.style.minWidth = '50px'; // Prevent shrinking
-        spriteContainer.style.minHeight = '50px'; // Prevent shrinking
-        spriteContainer.style.display = 'flex';
-        spriteContainer.style.alignItems = 'center';
-        spriteContainer.style.justifyContent = 'center';
-        spriteContainer.style.backgroundColor = 'rgba(139, 69, 19, 0.3)'; // Placeholder background
-        spriteContainer.style.border = '1px solid #8B4513';
-        spriteContainer.style.borderRadius = '4px';
-        spriteContainer.style.zIndex = '10';
-
+        // Character sprite with fixed size
         const sprite = char.spriteName || 'placeholder';
         const img = document.createElement('img');
         img.src = `assets/art/sprites/${sprite}.png`;
         img.alt = char.name;
-        
-        // CRITICAL: Set explicit dimensions BEFORE adding to DOM
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.maxWidth = '48px'; // Slightly smaller than container
-        img.style.maxHeight = '48px'; // Slightly smaller than container  
-        img.style.objectFit = 'contain';
-        img.style.display = 'block'; // Prevent inline spacing issues
-        
-        // Handle load/error without layout shift
-        img.addEventListener('load', () => {
-            // Image loaded successfully - remove placeholder background
-            spriteContainer.style.backgroundColor = 'transparent';
-            spriteContainer.style.border = 'none';
-        });
-        
         img.addEventListener('error', () => {
-            // Keep placeholder styling and set fallback
             img.src = 'assets/art/sprites/placeholder.png';
         });
+        img.style.width = '100px';
+        img.style.height = '100px';
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100%';
+        img.style.objectFit = 'contain';
+        img.style.zIndex = '10';
+        img.style.position = 'absolute';
+        img.style.top = '50%';
+        img.style.left = '50%';
+        img.style.transform = 'translate(-50%, -50%)';
 
-        spriteContainer.appendChild(img);
-        charEl.appendChild(spriteContainer);
+        charEl.appendChild(img);
 
-        // HP bar with fixed positioning
+        // HP bar
         if (char.current_hp !== undefined && char.max_hp !== undefined && char.max_hp > 0) {
             const hpBar = document.createElement('div');
             hpBar.className = 'character-hp-bar';
             const hpPercentage = Math.max(0, Math.min(100, Math.round((char.current_hp / char.max_hp) * 100)));
             
-            let hpColor = '#4CAF50';
-            if (hpPercentage <= 25) hpColor = '#F44336';
-            else if (hpPercentage <= 50) hpColor = '#FF9800';
-            else if (hpPercentage <= 75) hpColor = '#FFC107';
+            // Color based on HP percentage
+            let hpColor = '#4CAF50'; // Green
+            if (hpPercentage <= 25) hpColor = '#F44336'; // Red
+            else if (hpPercentage <= 50) hpColor = '#FF9800'; // Orange
+            else if (hpPercentage <= 75) hpColor = '#FFC107'; // Yellow
             
             hpBar.style.width = '90%';
             hpBar.style.height = '6px';
@@ -668,7 +482,7 @@ function renderCharacters() {
             charEl.appendChild(hpBar);
         }
 
-        // Turn status indicator with fixed positioning
+        // Turn status indicator
         if (char.has_moved && char.has_acted) {
             const doneIndicator = document.createElement('div');
             doneIndicator.className = 'turn-done-indicator';
@@ -694,27 +508,46 @@ function handleTileClick(event) {
     const targetY = parseInt(clickedTileEl.dataset.y);
     const charInCell = _characters.find(c => Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY);
 
-    // Don't allow interactions during AI turn or when processing turns
-    if (_battleState?.current_turn === 'AI' || _isProcessingTurn) {
+    // Don't allow interactions during AI turn
+    if (_battleState?.current_turn === 'AI') {
         displayMessage('Please wait for AI turn to complete.');
         return;
     }
 
     if (charInCell) {
+        unhighlightAllTiles();
+        if (_selectedCharacterEl) {
+            _selectedCharacterEl.classList.remove('character-selected');
+        }
+        
         // Only allow selection of player characters that can still act
         if (charInCell.isPlayerControlled && (!charInCell.has_moved || !charInCell.has_acted)) {
-            selectCharacter(charInCell);
+            const el = clickedTileEl.querySelector('.character-token');
+            if (el) {
+                el.classList.add('character-selected');
+                _selectedCharacterEl = el;
+                _selectedPlayerCharacter = charInCell;
+                _currentTurnCharacter = charInCell;
+                highlightWalkableTiles(_selectedPlayerCharacter);
+            }
         } else {
-            clearCharacterSelection();
-            showEntityInfo(charInCell);
+            _selectedPlayerCharacter = null;
+            _selectedCharacterEl = null;
+            unhighlightAllTiles();
         }
+        showEntityInfo(charInCell);
     } else {
         // Handle movement attempt
         if (_selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
             attemptMoveCharacter(_selectedPlayerCharacter, targetX, targetY);
         } else {
             // Deselect and show tile info
-            clearCharacterSelection();
+            unhighlightAllTiles();
+            if (_selectedCharacterEl) {
+                _selectedCharacterEl.classList.remove('character-selected');
+                _selectedCharacterEl = null;
+            }
+            _selectedPlayerCharacter = null;
             
             // Show tile information
             const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
@@ -804,7 +637,12 @@ async function attemptMoveCharacter(character, targetX, targetY) {
     character.position = [targetX, targetY];
     renderCharacters();
     unhighlightAllTiles();
-    clearCharacterSelection();
+
+    if (_selectedCharacterEl) {
+        _selectedCharacterEl.classList.remove('character-selected');
+        _selectedCharacterEl = null;
+    }
+    _selectedPlayerCharacter = null;
 
     displayMessage('Move queued. Press "End Turn" to confirm.', 'info');
 }
@@ -854,23 +692,17 @@ async function handleEndTurn() {
         return;
     }
 
-    // Prevent multiple simultaneous turn endings
-    const endTurnBtn = document.getElementById('endTurnButtonBottom');
-    if (endTurnBtn) {
-        endTurnBtn.disabled = true;
-        endTurnBtn.textContent = 'Processing...';
-    }
-
     if (!_battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
         console.error('[TURN] Missing required battle or character data.');
         displayMessage('Missing battle or character data.');
-        resetEndTurnButton();
         return;
     }
 
     const characterId = activeCharacter.id;
     const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
     const targetPosition = activeCharacter.position;
+
+    // Collect any action taken this turn (placeholder for now)
     const action = activeCharacter.pendingAction || null;
 
     console.log('[TURN] Ending turn for:', characterId, {
@@ -893,61 +725,44 @@ async function handleEndTurn() {
         if (!result.success) {
             console.error('[TURN] Failed to complete action:', result.message);
             displayMessage(`Error: ${result.message}`, 'error');
-            resetEndTurnButton();
             return;
         }
 
         console.log('[TURN] Action completed:', result.message);
-        
-        // Check if battle ended
-        if (result.battleEnded) {
-            handleBattleEnd(result.battleResult);
-            return;
-        }
-
-        // Clear the current turn character and selection
-        _currentTurnCharacter = null;
-        clearCharacterSelection();
-        
-        // Show success message
         displayMessage('Turn completed successfully!', 'success');
+
+        // Clear the current turn character
+        _currentTurnCharacter = null;
 
     } catch (err) {
         console.error('[TURN] Error ending turn:', err);
         displayMessage('Error completing turn. Please try again.', 'error');
-        resetEndTurnButton();
     }
 }
 
-function resetEndTurnButton() {
-    const endTurnBtn = document.getElementById('endTurnButtonBottom');
-    if (endTurnBtn) {
-        endTurnBtn.disabled = false;
-        endTurnBtn.textContent = 'End Turn';
+async function handleRefresh() {
+    try {
+        console.log('[REFRESH] Refreshing battle state...');
+        
+        const supabase = getSupabaseClient({ SUPABASE_URL: _main.supabaseConfig?.SUPABASE_URL, SUPABASE_ANON_KEY: _main.supabaseConfig?.SUPABASE_ANON_KEY });
+        const { data: battleState, error } = await supabase
+            .from('battle_state')
+            .select('*')
+            .eq('id', _battleId)
+            .single();
+            
+        if (error) {
+            throw error;
+        }
+        
+        _battleState = battleState;
+        updateGameStateFromRealtime();
+        
+        displayMessage('Battle state refreshed successfully.', 'success');
+    } catch (error) {
+        console.error('[REFRESH] Error refreshing battle state:', error);
+        displayMessage('Failed to refresh battle state.', 'error');
     }
-}
-
-function handleBattleEnd(result) {
-    console.log(`[BATTLE] Battle ended with result: ${result}`);
-    
-    // Clear any existing subscriptions
-    if (_realtimeChannel && _supabaseClient) {
-        _supabaseClient.removeChannel(_realtimeChannel);
-        _realtimeChannel = null;
-    }
-    
-    if (result === 'victory') {
-        displayMessage('Victory! All enemies have been defeated!', 'success');
-    } else if (result === 'defeat') {
-        displayMessage('Defeat! All your characters have fallen.', 'error');
-    } else {
-        displayMessage('Battle ended.', 'info');
-    }
-    
-    // Return to embark after a delay
-    setTimeout(() => {
-        window.gameAuth.loadModule('embark');
-    }, 3000);
 }
 
 function showEntityInfo(entity) {
@@ -956,22 +771,10 @@ function showEntityInfo(entity) {
     const hpEl = document.getElementById('infoHP');
     const statsEl = document.getElementById('infoStats');
 
-    // Set fixed dimensions for portrait container to prevent CLS
-    const portraitContainer = portrait.parentElement;
-    if (portraitContainer) {
-        portraitContainer.style.minWidth = '100px';
-        portraitContainer.style.minHeight = '100px';
-    }
-
     if (!entity) {
         nameEl.textContent = '—';
         hpEl.textContent = '';
         statsEl.innerHTML = '';
-        // Set placeholder with fixed dimensions
-        portrait.style.width = '100px';
-        portrait.style.height = '100px';
-        portrait.style.objectFit = 'contain';
-        portrait.style.display = 'block';
         portrait.src = 'assets/art/sprites/placeholder.png';
         return;
     }
@@ -1046,20 +849,11 @@ function showEntityInfo(entity) {
             </div>
         `;
 
-        // Set character portrait with FIXED dimensions to prevent CLS
+        // Set character portrait with fixed size
         const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
-        
-        // CRITICAL: Set dimensions before changing src
-        portrait.style.width = '100px';
-        portrait.style.height = '100px';
-        portrait.style.objectFit = 'contain';
-        portrait.style.display = 'block';
-        portrait.style.backgroundColor = 'rgba(139, 69, 19, 0.1)'; // Subtle placeholder
-        
         portrait.src = spritePath;
-        portrait.onload = () => {
-            portrait.style.backgroundColor = 'transparent';
-        };
+        portrait.style.maxWidth = '100px';
+        portrait.style.maxHeight = '100px';
         portrait.onerror = () => {
             portrait.src = 'assets/art/sprites/placeholder.png';
         };
@@ -1088,20 +882,11 @@ function showEntityInfo(entity) {
             </div>
         `;
         
-        // Set tile art with FIXED dimensions to prevent CLS
+        // Set tile art with fixed size
         const tilePath = `assets/art/tiles/${tile.art || 'placeholder'}.png`;
-        
-        // CRITICAL: Set dimensions before changing src
-        portrait.style.width = '100px';
-        portrait.style.height = '100px';
-        portrait.style.objectFit = 'contain';
-        portrait.style.display = 'block';
-        portrait.style.backgroundColor = 'rgba(184, 134, 11, 0.1)'; // Subtle tile placeholder
-        
         portrait.src = tilePath;
-        portrait.onload = () => {
-            portrait.style.backgroundColor = 'transparent';
-        };
+        portrait.style.maxWidth = '100px';
+        portrait.style.maxHeight = '100px';
         portrait.onerror = () => {
             portrait.src = 'assets/art/tiles/placeholder.png';
         };
@@ -1220,6 +1005,9 @@ function displayMessage(msg, type = 'info') {
     }
 }
 
+/**
+ * Checks if the battle has ended (victory/defeat conditions)
+ */
 function checkBattleEnd() {
     if (!_characters || _characters.length === 0) return false;
     
@@ -1228,24 +1016,33 @@ function checkBattleEnd() {
     
     if (playerCharacters.length === 0) {
         // Player defeat
-        handleBattleEnd('defeat');
+        displayMessage('Defeat! All your characters have fallen.', 'error');
+        setTimeout(() => {
+            window.gameAuth.loadModule('embark');
+        }, 3000);
         return true;
     } else if (enemyCharacters.length === 0) {
         // Player victory
-        handleBattleEnd('victory');
+        displayMessage('Victory! All enemies have been defeated!', 'success');
+        setTimeout(() => {
+            window.gameAuth.loadModule('embark');
+        }, 3000);
         return true;
     }
     
     return false;
 }
 
+/**
+ * Clean up function called when module is unloaded
+ */
 export function cleanup() {
     console.log('[BATTLE] Cleaning up battle manager...');
     
     // Unsubscribe from real-time updates
-    if (_realtimeChannel && _supabaseClient) {
-        _supabaseClient.removeChannel(_realtimeChannel);
-        _realtimeChannel = null;
+    if (_unsubscribeFromBattle && _supabaseClient) {
+        _supabaseClient.removeChannel(_unsubscribeFromBattle);
+        _unsubscribeFromBattle = null;
     }
     
     // Reset all state variables
@@ -1255,7 +1052,7 @@ export function cleanup() {
     _selectedCharacterEl = null;
     _selectedPlayerCharacter = null;
     _currentTurnCharacter = null;
-    _isProcessingTurn = false;
+    _isProcessingAITurn = false;
     
     // Clear highlights
     unhighlightAllTiles();
