@@ -118,23 +118,17 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 }
 
 async function setupRealtimeSubscription(supabase) {
-    _supabaseClient = supabase; // Store for cleanup/reconnect later
+    _supabaseClient = supabase;
 
     const channelName = `battle_state:${_battleId}`;
     console.log(`[REALTIME] Setting up subscription for channel: ${channelName}`);
 
-    // Create the channel
     _realtimeChannel = supabase
-        .channel(channelName, {
-            config: {
-                broadcast: { ack: true }, // optional
-                presence: { key: _profile?.id || 'anon' }
-            }
-        })
+        .channel(channelName)
         .on(
             'postgres_changes',
             {
-                event: '*', // listen to all changes (INSERT, UPDATE, DELETE)
+                event: '*', // or 'UPDATE'
                 schema: 'public',
                 table: 'battle_state',
                 filter: `id=eq.${_battleId}`
@@ -147,18 +141,16 @@ async function setupRealtimeSubscription(supabase) {
                 }
             }
         )
-        .on('system', { }, (status) => {
-            console.log(`[REALTIME] System status: ${status}`);
-            updateConnectionStatus(status);
+        .on('system', {}, (sys) => {
+            console.log(`[REALTIME] System status: ${sys.type}`, sys);
+            updateConnectionStatus(sys.type);
+            if (sys.type === 'CHANNEL_ERROR' || sys.type === 'CLOSED') {
+                console.warn('[REALTIME] Attempting to reconnect in 2s...');
+                setTimeout(() => setupRealtimeSubscription(_supabaseClient), 2000);
+            }
         });
 
-    const { status } = await _realtimeChannel.subscribe();
-
-    if (status === 'SUBSCRIBED') {
-        console.log('[REALTIME] Successfully subscribed to battle updates');
-    } else {
-        console.warn('[REALTIME] Subscription did not return SUBSCRIBED status:', status);
-    }
+    await _realtimeChannel.subscribe();
 }
 
 function updateGameStateFromRealtime() {
