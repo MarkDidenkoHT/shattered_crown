@@ -120,37 +120,30 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 async function setupRealtimeSubscription(supabase) {
     _supabaseClient = supabase;
 
-    const channelName = `battle_state:${_battleId}`;
-    console.log(`[REALTIME] Setting up subscription for channel: ${channelName}`);
+    const channelName = `battle:${_battleId}`;
+    console.log(`[REALTIME] Subscribing to WebSocket channel: ${channelName}`);
 
     _realtimeChannel = supabase
-        .channel(channelName)
-        .on(
-            'postgres_changes',
-            {
-                event: '*', // or 'UPDATE'
-                schema: 'public',
-                table: 'battle_state',
-                filter: `id=eq.${_battleId}`
-            },
-            (payload) => {
-                console.log('[REALTIME] Battle state change received:', payload);
-                if (payload.new) {
-                    _battleState = payload.new;
-                    updateGameStateFromRealtime();
-                }
+        .channel(channelName, {
+            config: {
+                broadcast: { ack: true }
             }
-        )
-        .on('system', {}, (sys) => {
-            console.log(`[REALTIME] System status: ${sys.type}`, sys);
-            updateConnectionStatus(sys.type);
-            if (sys.type === 'CHANNEL_ERROR' || sys.type === 'CLOSED') {
+        })
+        .on('broadcast', { event: 'battle_update' }, (payload) => {
+            console.log('[REALTIME] Broadcast battle update received:', payload);
+            if (payload.payload) {
+                _battleState = payload.payload;
+                updateGameStateFromRealtime();
+            }
+        })
+        .subscribe((status) => {
+            console.log(`[REALTIME] Channel status: ${status}`);
+            updateConnectionStatus(status);
+            if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
                 console.warn('[REALTIME] Attempting to reconnect in 2s...');
                 setTimeout(() => setupRealtimeSubscription(_supabaseClient), 2000);
             }
         });
-
-    await _realtimeChannel.subscribe();
 }
 
 function updateGameStateFromRealtime() {
