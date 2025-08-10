@@ -14,7 +14,7 @@ let highlightedTiles = [];
 let _supabaseClient = null;
 let _battleState = null;
 let _battleId = null;
-let _unsubscribeFromBattle = null;
+let _realtimeChannel = null;
 let _isProcessingAITurn = false;
 
 import { initCharacterData } from './character_data.js';
@@ -30,7 +30,12 @@ function getSupabaseClient(config) {
     }
 
     _supabaseClient = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
-        auth: { flowType: 'pkce' }
+        auth: { flowType: 'pkce' },
+        realtime: {
+            params: {
+                eventsPerSecond: 10
+            }
+        }
     });
 
     return _supabaseClient;
@@ -73,8 +78,10 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     try {
         const supabase = getSupabaseClient(supabaseConfig);
         
-        if (_unsubscribeFromBattle) {
-            await supabase.removeChannel(_unsubscribeFromBattle);
+        // Clean up any existing realtime subscription
+        if (_realtimeChannel) {
+            await supabase.removeChannel(_realtimeChannel);
+            _realtimeChannel = null;
         }
         
         console.log('[BATTLE] Attempting to start battle via Edge Function...');
@@ -96,24 +103,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
         console.log(`[BATTLE] Battle started with ID: ${_battleId}`);
 
-        // Subscribe to real-time updates
-        _unsubscribeFromBattle = supabase
-            .channel(`battle_state:${_battleId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'battle_state',
-                    filter: `id=eq.${_battleId}`
-                },
-                (payload) => {
-                    console.log('[REALTIME] Battle state update received:', payload.new);
-                    _battleState = payload.new;
-                    updateGameStateFromRealtime();
-                }
-            )
-            .subscribe();
+        // Set up enhanced realtime subscription
+        await setupRealtimeSubscription(supabase);
 
     } catch (err) {
         console.error('Error during battle initialization:', err);
@@ -124,6 +115,57 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     renderBattleScreen(selectedMode, areaLevel, _battleState.layout_data);
     updateGameStateFromRealtime();
+}
+
+/**
+ * Sets up the realtime subscription with proper error handling and reconnection
+ */
+async function setupRealtimeSubscription(supabase) {
+    const channelName = `battle_state:${_battleId}`;
+    console.log(`[REALTIME] Setting up subscription for channel: ${channelName}`);
+    
+    _realtimeChannel = supabase
+        .channel(channelName)
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'battle_state',
+                filter: `id=eq.${_battleId}`
+            },
+            (payload) => {
+                console.log('[REALTIME] Battle state update received:', payload.new);
+                _battleState = payload.new;
+                updateGameStateFromRealtime();
+            }
+        )
+        .on('system', {}, (status, err) => {
+            console.log(`[REALTIME] System status: ${status}`);
+            if (err) {
+                console.error('[REALTIME] System error:', err);
+            }
+        })
+        .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('[REALTIME] Successfully subscribed to battle updates');
+            } else if (status === 'CHANNEL_ERROR') {
+                console.error('[REALTIME] Channel error:', err);
+                displayMessage('Lost connection to battle. Attempting to reconnect...', 'warning');
+                // Attempt to resubscribe after a short delay
+                setTimeout(() => {
+                    if (_battleId && _realtimeChannel) {
+                        console.log('[REALTIME] Attempting to resubscribe...');
+                        _realtimeChannel.subscribe();
+                    }
+                }, 2000);
+            } else if (status === 'TIMED_OUT') {
+                console.warn('[REALTIME] Subscription timed out');
+                displayMessage('Connection timeout. Battle state may be out of sync.', 'warning');
+            } else if (status === 'CLOSED') {
+                console.log('[REALTIME] Channel closed');
+            }
+        });
 }
 
 /**
@@ -203,6 +245,9 @@ function updateGameStateFromRealtime() {
     
     // Update character selection based on current turn
     updateCharacterAvailability(currentTurn);
+    
+    // Check for battle end conditions
+    checkBattleEnd();
 }
 
 /**
@@ -309,7 +354,10 @@ function renderBattleScreen(mode, level, layoutData) {
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
                 <p id="turnStatus">Turn: —</p>
                 <div class="battle-controls">
-                    <button id="refreshButton" class="fantasy-button small-btn">Refresh</button>
+                    <div id="connectionStatus" class="connection-indicator">
+                        <span class="status-dot connected"></span>
+                        <span class="status-text">Connected</span>
+                    </div>
                 </div>
             </div>
             <div class="battle-grid-container"></div>
@@ -327,18 +375,82 @@ function renderBattleScreen(mode, level, layoutData) {
             </div>
             <div class="battle-bottom-ui"></div>
         </div>
+        
+        <style>
+            .connection-indicator {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: #B8860B;
+            }
+            
+            .status-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                transition: background-color 0.3s ease;
+            }
+            
+            .status-dot.connected {
+                background-color: #4CAF50;
+            }
+            
+            .status-dot.disconnected {
+                background-color: #F44336;
+            }
+            
+            .status-dot.reconnecting {
+                background-color: #FF9800;
+                animation: pulse 1.5s infinite;
+            }
+            
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.4; }
+                100% { opacity: 1; }
+            }
+            
+            .status-text {
+                font-weight: 500;
+            }
+        </style>
     `;
 
     renderBattleGrid(layoutData.layout);
     renderCharacters();
     renderBottomUI();
     createParticles();
+}
+
+/**
+ * Updates the connection status indicator
+ */
+function updateConnectionStatus(status) {
+    const statusDot = document.querySelector('.status-dot');
+    const statusText = document.querySelector('.status-text');
     
-    // Add event listeners for buttons
-    const refreshBtn = document.getElementById('refreshButton');
+    if (!statusDot || !statusText) return;
     
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', handleRefresh);
+    statusDot.className = 'status-dot';
+    
+    switch (status) {
+        case 'SUBSCRIBED':
+            statusDot.classList.add('connected');
+            statusText.textContent = 'Connected';
+            break;
+        case 'CHANNEL_ERROR':
+        case 'TIMED_OUT':
+            statusDot.classList.add('disconnected');
+            statusText.textContent = 'Disconnected';
+            break;
+        case 'CLOSED':
+            statusDot.classList.add('disconnected');
+            statusText.textContent = 'Connection Closed';
+            break;
+        default:
+            statusDot.classList.add('reconnecting');
+            statusText.textContent = 'Connecting...';
     }
 }
 
@@ -781,31 +893,6 @@ async function handleEndTurn() {
     }
 }
 
-async function handleRefresh() {
-    try {
-        console.log('[REFRESH] Refreshing battle state...');
-        
-        const supabase = getSupabaseClient({ SUPABASE_URL: _main.supabaseConfig?.SUPABASE_URL, SUPABASE_ANON_KEY: _main.supabaseConfig?.SUPABASE_ANON_KEY });
-        const { data: battleState, error } = await supabase
-            .from('battle_state')
-            .select('*')
-            .eq('id', _battleId)
-            .single();
-            
-        if (error) {
-            throw error;
-        }
-        
-        _battleState = battleState;
-        updateGameStateFromRealtime();
-        
-        displayMessage('Battle state refreshed successfully.', 'success');
-    } catch (error) {
-        console.error('[REFRESH] Error refreshing battle state:', error);
-        displayMessage('Failed to refresh battle state.', 'error');
-    }
-}
-
 function showEntityInfo(entity) {
     const portrait = document.getElementById('infoPortrait');
     const nameEl = document.getElementById('infoName');
@@ -1111,9 +1198,9 @@ export function cleanup() {
     console.log('[BATTLE] Cleaning up battle manager...');
     
     // Unsubscribe from real-time updates
-    if (_unsubscribeFromBattle && _supabaseClient) {
-        _supabaseClient.removeChannel(_unsubscribeFromBattle);
-        _unsubscribeFromBattle = null;
+    if (_realtimeChannel && _supabaseClient) {
+        _supabaseClient.removeChannel(_realtimeChannel);
+        _realtimeChannel = null;
     }
     
     // Reset all state variables
