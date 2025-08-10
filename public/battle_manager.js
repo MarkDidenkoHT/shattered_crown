@@ -118,54 +118,47 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 }
 
 async function setupRealtimeSubscription(supabase) {
+    _supabaseClient = supabase; // Store for cleanup/reconnect later
+
     const channelName = `battle_state:${_battleId}`;
     console.log(`[REALTIME] Setting up subscription for channel: ${channelName}`);
-    
+
+    // Create the channel
     _realtimeChannel = supabase
-        .channel(channelName)
+        .channel(channelName, {
+            config: {
+                broadcast: { ack: true }, // optional
+                presence: { key: _profile?.id || 'anon' }
+            }
+        })
         .on(
             'postgres_changes',
             {
-                event: 'UPDATE',
+                event: '*', // listen to all changes (INSERT, UPDATE, DELETE)
                 schema: 'public',
                 table: 'battle_state',
                 filter: `id=eq.${_battleId}`
             },
             (payload) => {
-                console.log('[REALTIME] Battle state update received:', payload.new);
-                _battleState = payload.new;
-                updateGameStateFromRealtime();
+                console.log('[REALTIME] Battle state change received:', payload);
+                if (payload.new) {
+                    _battleState = payload.new;
+                    updateGameStateFromRealtime();
+                }
             }
         )
-        .on('system', {}, (status, err) => {
+        .on('system', { }, (status) => {
             console.log(`[REALTIME] System status: ${status}`);
             updateConnectionStatus(status);
-            if (err) {
-                console.error('[REALTIME] System error:', err);
-            }
-        })
-        .subscribe(async (status, err) => {
-            updateConnectionStatus(status);
-            if (status === 'SUBSCRIBED') {
-                console.log('[REALTIME] Successfully subscribed to battle updates');
-            } else if (status === 'CHANNEL_ERROR') {
-                console.error('[REALTIME] Channel error:', err);
-                displayMessage('Lost connection to battle. Attempting to reconnect...', 'warning');
-                // Attempt to resubscribe after a short delay
-                setTimeout(async () => {
-                    if (_battleId && _realtimeChannel) {
-                        console.log('[REALTIME] Attempting to resubscribe...');
-                        await supabase.removeChannel(_realtimeChannel);
-                        await setupRealtimeSubscription(supabase);
-                    }
-                }, 2000);
-            } else if (status === 'TIMED_OUT') {
-                console.warn('[REALTIME] Subscription timed out');
-                displayMessage('Connection timeout. Battle state may be out of sync.', 'warning');
-            } else if (status === 'CLOSED') {
-                console.log('[REALTIME] Channel closed');
-            }
         });
+
+    const { status } = await _realtimeChannel.subscribe();
+
+    if (status === 'SUBSCRIBED') {
+        console.log('[REALTIME] Successfully subscribed to battle updates');
+    } else {
+        console.warn('[REALTIME] Subscription did not return SUBSCRIBED status:', status);
+    }
 }
 
 function updateGameStateFromRealtime() {
@@ -181,22 +174,20 @@ function updateGameStateFromRealtime() {
 
     // Map the characters_state object to an array with proper HP and stats handling
     _characters = Object.values(_battleState.characters_state).map(charState => {
-        // Normalize stats object to handle case variations
         const stats = charState.stats || {};
         const normalizedStats = {};
         for (const [key, value] of Object.entries(stats)) {
             normalizedStats[key.toLowerCase()] = value;
         }
-
         const vitality = normalizedStats.vitality || 0;
-        
-        return {
+
+        const newChar = {
             id: charState.id,
             name: charState.name,
             type: charState.type,
             isPlayerControlled: charState.isPlayerControlled,
             position: charState.current_position,
-            originalPosition: charState.current_position,
+            originalPosition: charState.current_position ? [...charState.current_position] : null, // 🔹 always update from server
             stats: {
                 strength: normalizedStats.strength || 0,
                 vitality: vitality,
@@ -214,6 +205,8 @@ function updateGameStateFromRealtime() {
             priority: charState.priority || 999,
             pendingAction: null
         };
+
+        return newChar;
     });
 
     console.log('[BATTLE] Updated characters:', _characters);
@@ -800,7 +793,10 @@ async function attemptMoveCharacter(character, targetX, targetY) {
         return;
     }
 
-    // Update character position locally (visual update only)
+    // 🔹 Store the *server-confirmed* position as originalPosition before moving
+    character.originalPosition = [...character.position];
+
+    // 🔹 Update position locally (visual preview)
     character.position = [targetX, targetY];
     renderCharacters();
     unhighlightAllTiles();
