@@ -229,25 +229,59 @@ function updateGameStateFromRealtime() {
     // Update UI to show current turn
     updateTurnDisplay(currentTurn, roundNumber);
     
-    // Set the current turn character for player turns
-    if (currentTurn !== 'AI') {
-        const availablePlayerChars = _characters.filter(c => 
-            c.isPlayerControlled && (!c.has_moved || !c.has_acted) && c.current_hp > 0
-        );
-        _currentTurnCharacter = availablePlayerChars[0] || null;
+    // Handle player vs AI turn UI
+    if (currentTurn === 'AI') {
+        console.log('[BATTLE] AI turn - disabling player controls');
         
-        // Auto-select the first available character
-        if (_currentTurnCharacter && !_selectedPlayerCharacter) {
-            selectCharacter(_currentTurnCharacter);
-        }
-    } else {
-        _currentTurnCharacter = null;
         // Clear any player selections during AI turn
         clearCharacterSelection();
+        _currentTurnCharacter = null;
         
-        // Trigger AI turn processing if not already processing
-        if (!_isProcessingTurn) {
-            triggerAITurn();
+        // Disable end turn button during AI turn
+        const endTurnBtn = document.getElementById('endTurnButtonBottom');
+        if (endTurnBtn) {
+            endTurnBtn.disabled = true;
+            endTurnBtn.textContent = 'AI Turn...';
+        }
+        
+    } else {
+        // Player turn
+        console.log('[BATTLE] Player turn - enabling player controls');
+        
+        // Re-enable end turn button
+        const endTurnBtn = document.getElementById('endTurnButtonBottom');
+        if (endTurnBtn) {
+            endTurnBtn.disabled = false;
+            endTurnBtn.textContent = 'End Turn';
+        }
+        
+        // Find player characters that can still act
+        const availablePlayerChars = _characters.filter(c => 
+            c.isPlayerControlled && 
+            c.current_hp > 0 && 
+            (!c.has_moved || !c.has_acted)
+        );
+        
+        console.log(`[BATTLE] Available player characters: ${availablePlayerChars.length}`, 
+            availablePlayerChars.map(c => ({
+                name: c.name,
+                id: c.id,
+                has_moved: c.has_moved,
+                has_acted: c.has_acted,
+                hp: c.current_hp
+            }))
+        );
+        
+        if (availablePlayerChars.length > 0) {
+            _currentTurnCharacter = availablePlayerChars[0];
+            
+            // Auto-select the first available character
+            if (_currentTurnCharacter && !_selectedPlayerCharacter) {
+                selectCharacter(_currentTurnCharacter);
+            }
+        } else {
+            _currentTurnCharacter = null;
+            console.log('[BATTLE] No player characters available to act');
         }
     }
     
@@ -257,11 +291,6 @@ function updateGameStateFromRealtime() {
     // Check for battle end conditions
     if (!_battleState.battle_ended) {
         checkBattleEnd();
-    }
-
-    // Reset processing flag when it's no longer AI turn
-    if (currentTurn !== 'AI') {
-        _isProcessingTurn = false;
     }
 }
 
@@ -353,59 +382,8 @@ function updateCharacterAvailability(currentTurn) {
     });
 }
 
-async function triggerAITurn() {
-    if (_isProcessingTurn) return;
-    
-    _isProcessingTurn = true;
-    console.log('[AI] Triggering AI turn processing...');
-    
-    try {
-        // Add a small delay to make the turn transition visible
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Get the first AI character that hasn't completed their turn
-        const aiCharacters = _characters.filter(c => 
-            !c.isPlayerControlled && (!c.has_moved || !c.has_acted) && c.current_hp > 0
-        );
-        
-        if (aiCharacters.length === 0) {
-            console.log('[AI] No AI characters available to act');
-            return;
-        }
-        
-        // Sort by priority and take the first one
-        aiCharacters.sort((a, b) => (a.priority || 999) - (b.priority || 999));
-        const aiCharacter = aiCharacters[0];
-        
-        console.log(`[AI] Processing turn for AI character: ${aiCharacter.name} (${aiCharacter.id})`);
-        
-        // For now, AI characters just stay in place and complete their turn
-        // You can enhance this with actual AI logic later
-        const aiTurnRes = await _apiCall('/functions/v1/combined-action-end', 'POST', {
-            battleId: _battleId,
-            characterId: aiCharacter.id,
-            currentPosition: aiCharacter.position,
-            targetPosition: aiCharacter.position, // Stay in place for now
-            action: null // No action for now
-        });
-        
-        const result = await aiTurnRes.json();
-        
-        if (result.success) {
-            console.log('[AI] AI character turn completed:', result.message);
-        } else {
-            console.error('[AI] AI turn failed:', result.message);
-            displayMessage(`AI turn failed: ${result.message}`, 'error');
-        }
-    } catch (error) {
-        console.error('[AI] Error during AI turn:', error);
-        displayMessage('Error during AI turn. The game will continue.', 'warning');
-    } finally {
-        // Reset processing flag after a delay to prevent rapid retries
-        setTimeout(() => {
-            _isProcessingTurn = false;
-        }, 1000);
-    }
+function triggerAITurn() {
+    console.log('[AI] triggerAITurn called but AI processing happens server-side now');
 }
 
 function renderBattleScreen(mode, level, layoutData) {
