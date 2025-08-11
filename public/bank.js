@@ -354,7 +354,7 @@ function addBankStyles() {
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            min-height: 20vh;
+            min-height: 35vh;
             position: relative;
             display: flex;
             align-items: flex-end;
@@ -419,7 +419,7 @@ function addBankStyles() {
         }
 
         .bank-items-container {
-            height: 100%;
+            height: 99%;
             background: rgba(29,20,12,0.3);
             border: 2px solid #3d2914;
             border-radius: 8px;
