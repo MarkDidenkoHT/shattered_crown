@@ -26,7 +26,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <!-- Top Header -->
             <div class="bank-header">
                 <div class="top-right-buttons">
-                    <button class="fantasy-button back-btn">← Back to Castle</button>
+                    <button class="fantasy-button back-btn">Return</button>
                 </div>
                 
                 <!-- Filter Tabs - will be populated dynamically -->
@@ -166,17 +166,12 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    // Use the sprite name if available, otherwise format the item name
-    let spriteName = item.sprite || item.item.replace(/\s+/g, '_');
-    
-    // Determine folder based on type
+    const spriteName = item.sprite;
+
     const isIngredient = item.type === 'Ingredient';
     const basePath = isIngredient ? 'assets/art/ingridients/' : 'assets/art/recipes/';
-    
-    // Add .png extension if not already present
-    const fileName = spriteName.endsWith('.png') ? spriteName : `${spriteName}.png`;
-    
-    return `${basePath}${fileName}`;
+
+    return `${basePath}${spriteName}`;
 }
 
 function formatItemType(type) {
@@ -352,7 +347,6 @@ function addBankStyles() {
             overflow: hidden;
         }
 
-        /* Header Section */
         .bank-header {
             background-image: url('assets/art/castle/main_bank.png');
             background-size: cover;
@@ -360,6 +354,8 @@ function addBankStyles() {
             background-repeat: no-repeat;
             min-height: 20vh;
             position: relative;
+            display: flex;
+            align-items: flex-end;
         }
 
         .bank-title {
@@ -415,11 +411,9 @@ function addBankStyles() {
             font-weight: 600;
         }
 
-        /* Main Content */
         .bank-content {
             flex: 1;
             overflow: hidden;
-            padding: 1rem;
         }
 
         .bank-items-container {
