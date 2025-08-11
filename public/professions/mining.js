@@ -167,17 +167,17 @@ function createMiningRowHTML(rowIndex) {
         </div>
         
         <!-- Property slots (initially hidden for left and right, center starts as ore input) -->
-        <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-left: 20px; z-index: 5; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8);">
-          -
-        </div>
-        
-        <div class="property-slot prop-center" data-row="${rowIndex}" data-position="1" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 50px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; z-index: 10; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8) translate(-50%, -50%);">
-          -
-        </div>
-        
-        <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-right: 20px; z-index: 5; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8);">
-          -
-        </div>
+          <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="position: absolute; left: 60px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">
+            -
+          </div>
+
+          <div class="property-slot prop-center" data-row="${rowIndex}" data-position="1" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 50px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; z-index: 10; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translate(-50%, -50%) scale(0.8);">
+            -
+          </div>
+
+          <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="position: absolute; right: 60px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">
+            -
+          </div>
       </div>
       
       <!-- Right Arrow -->
@@ -195,15 +195,7 @@ function renderCraftingModal() {
   modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${miningState.professionName}</h2>
-      
-      <!-- Mining pick visualization -->
-      <div class="mining-pick-display" style="margin: 1rem 0; display: flex; justify-content: center; align-items: center; gap: 1rem;">
-        <div class="pick-shaft" style="width: 120px; height: 8px; background: linear-gradient(90deg, #8B4513 0%, #A0522D 50%, #654321 100%); border-radius: 4px; position: relative;">
-          <div class="pick-grip" style="position: absolute; right: -10px; top: -6px; width: 20px; height: 20px; background: #654321; border-radius: 50%; border: 2px solid #8B4513;"></div>
-        </div>
-        <div class="pick-head" style="width: 0; height: 0; border-left: 25px solid #C0C0C0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));"></div>
-      </div>
-            
+                
       <!-- Result display (initially shows selection prompt) -->
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select 3 ores to start mining</div>
       
@@ -531,7 +523,6 @@ function setupModalEventListeners(modal) {
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
   const adjustmentCounter = modal.querySelector('#adjustment-counter');
-  const alignmentStatus = modal.querySelector('#alignment-status');
 
   // Close button
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
@@ -587,7 +578,6 @@ function setupModalEventListeners(modal) {
     finishBtn.style.display = 'block';
     finishBtn.disabled = false;
     adjustmentCounter.style.display = 'block';
-    alignmentStatus.style.display = 'block';
 
     // Disable ore interactions
     oresContainer.style.opacity = '0.5';
@@ -609,7 +599,7 @@ function setupModalEventListeners(modal) {
     if (adjustBtn && !adjustBtn.disabled) {
       const rowIdx = parseInt(adjustBtn.dataset.row);
       const direction = adjustBtn.classList.contains('adjust-left') ? 'left' : 'right';
-      handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus);
+      handleAdjustment(rowIdx, direction, resultDiv);
     }
     
     // Handle ore input slot clicks for ore placement/removal
@@ -779,7 +769,6 @@ async function startMiningAnimation(resultDiv, modal) {
 
     setTimeout(() => {
       resultDiv.textContent = 'Use adjustments to align center properties for extraction.';
-      checkAlignment(modal.querySelector('#alignment-status'));
     }, 1000);
 
     miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
@@ -797,7 +786,6 @@ async function startMiningAnimation(resultDiv, modal) {
   }
 }
 
-// Animate ore breaking into property slots
 async function animateOreBreaking(row, properties, rowIndex) {
   const oreInputSlot = row.querySelector('.ore-input-slot');
   const propertySlots = row.querySelectorAll('.property-slot');
@@ -857,12 +845,10 @@ async function animateOreBreaking(row, properties, rowIndex) {
     ease: "power2.out",
     delay: 0.5
   });
-  
-  // Start rock dust effect
+
   createRockDustEffect(row);
 }
 
-// Create ore breaking particle effect
 function createOreBreakingEffect(oreInputSlot) {
   const rect = oreInputSlot.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
@@ -917,7 +903,6 @@ function createOreBreakingEffect(oreInputSlot) {
   });
 }
 
-// Create rock dust particle effect
 function createRockDustEffect(row) {
   const rockFormation = row.querySelector('.rock-formation');
   
@@ -937,7 +922,6 @@ function createRockDustEffect(row) {
     
     rockFormation.appendChild(particle);
     
-    // Animate particle floating up and fading
     gsap.to(particle, {
       y: -20,
       x: `+=${Math.random() * 20 - 10}`,
@@ -952,7 +936,6 @@ function createRockDustEffect(row) {
     });
   }
   
-  // Create particles at intervals
   const dustInterval = setInterval(() => {
     if (document.contains(row)) {
       createDustParticle();
@@ -964,56 +947,8 @@ function createRockDustEffect(row) {
   return dustInterval;
 }
 
-// Check if center column is aligned
-function checkAlignment(alignmentStatus) {
-  if (!miningState.randomizedProperties || miningState.randomizedProperties.length < 3) {
-    return false;
-  }
-  
-  const centerProps = [
-    miningState.randomizedProperties[0][1], // Row 0, center property
-    miningState.randomizedProperties[1][1], // Row 1, center property  
-    miningState.randomizedProperties[2][1]  // Row 2, center property
-  ];
-  
-  const isAligned = centerProps[0] === centerProps[1] && centerProps[1] === centerProps[2];
-  
-  if (alignmentStatus) {
-    const alignmentText = alignmentStatus.querySelector('#alignment-text');
-    if (isAligned) {
-      alignmentText.textContent = `✅ Perfect alignment! "${centerProps[0]}" - Ready to extract!`;
-      alignmentStatus.style.color = '#4CAF50';
-      
-      // Add success glow to center slots
-      document.querySelectorAll('.prop-center').forEach(slot => {
-        gsap.to(slot, {
-          boxShadow: '0 0 20px rgba(76,175,80,0.8), inset 0 0 10px rgba(76,175,80,0.3)',
-          duration: 0.5,
-          ease: "power2.out"
-        });
-      });
-    } else {
-      alignmentText.textContent = `⚠️ Center misaligned: [${centerProps.join(', ')}] - Keep adjusting!`;
-      alignmentStatus.style.color = '#FFC107';
-      
-      // Remove success glow from center slots
-      document.querySelectorAll('.prop-center').forEach(slot => {
-        gsap.to(slot, {
-          boxShadow: '0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2)',
-          duration: 0.5,
-          ease: "power2.out"
-        });
-      });
-    }
-  }
-  
-  return isAligned;
-}
-
 async function patchAndSendCraftRequest(resultDiv) {
   try {
-    // Convert adjustment counts to the expected format
-    // Map visual 'left'/'right' to server's expected 'up'/'down'
     const adjustments = [];
     
     console.log('[MINING] Raw adjustments state:', miningState.adjustments);
@@ -1023,13 +958,11 @@ async function patchAndSendCraftRequest(resultDiv) {
       
       // Only add adjustments with positive counts
       if (adj.left > 0) {
-        // Visual 'left' movement maps to server's 'up' direction
         const adjustment = { bottle: Number(rowIdx), direction: 'up', count: adj.left };
         console.log('[MINING] Adding left->up adjustment:', adjustment);
         adjustments.push(adjustment);
       }
       if (adj.right > 0) {
-        // Visual 'right' movement maps to server's 'down' direction
         const adjustment = { bottle: Number(rowIdx), direction: 'down', count: adj.right };
         console.log('[MINING] Adding right->down adjustment:', adjustment);
         adjustments.push(adjustment);
@@ -1086,7 +1019,7 @@ async function patchAndSendCraftRequest(resultDiv) {
         finishBtn.disabled = false; // Re-enable so user can try again
       }
       
-      return; // Exit early on server error
+      return; 
     }
 
     // Get button references
@@ -1100,7 +1033,6 @@ async function patchAndSendCraftRequest(resultDiv) {
         <span style="color:lime;">⛏️ Successfully extracted: <strong>${json.crafted.name}</strong>!</span>
       `;
 
-      // Add mining success animation
       animateMiningSuccess();
 
       // Hide finish button, show claim button
@@ -1125,7 +1057,6 @@ async function patchAndSendCraftRequest(resultDiv) {
         <br><small style="color:#999;">${json.message || 'Properties not properly aligned'}</small>
       `;
 
-      // Add mining failure animation
       animateMiningFailure();
 
       // Hide finish and claim buttons, show mine again option
@@ -1174,7 +1105,7 @@ async function patchAndSendCraftRequest(resultDiv) {
   }
 }
 
-function handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus) {
+function handleAdjustment(rowIdx, direction, resultDiv) {
   console.log('[DEBUG] handleAdjustment called:', { 
     rowIdx, 
     direction, 
@@ -1196,13 +1127,9 @@ function handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus) {
   }
 
   if (direction === 'left') {
-    // Left arrow = shift left/down by one position
-    // [1,2,3] -> [2,3,1] (first element moves to end)
     props.push(props.shift());
     miningState.adjustments[rowIdx].left++;
   } else if (direction === 'right') {
-    // Right arrow = shift right/up by one position  
-    // [1,2,3] -> [3,1,2] (last element moves to front)
     props.unshift(props.pop());
     miningState.adjustments[rowIdx].right++;
   }
@@ -1215,7 +1142,6 @@ function handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus) {
   console.log('[DEBUG] Adjustment count incremented to:', miningState.adjustmentCount);
   
   updateAdjustmentCounter();
-  checkAlignment(alignmentStatus);
 
   if (miningState.adjustmentCount >= miningState.maxAdjustments) {
     disableAdjustmentButtons();
@@ -1310,18 +1236,6 @@ function animateMiningSuccess() {
       createSuccessSparkles(slot);
     }, index * 200);
   });
-  
-  // Mining pick celebration
-  const pickDisplay = document.querySelector('.mining-pick-display');
-  if (pickDisplay) {
-    gsap.to(pickDisplay, {
-      scale: 1.1,
-      duration: 0.3,
-      ease: "back.out(1.7)",
-      yoyo: true,
-      repeat: 3
-    });
-  }
 }
 
 function animateMiningFailure() {
@@ -1449,7 +1363,6 @@ function getOreColor(oreName) {
   return oreKey ? colors[oreKey] : colors.default;
 }
 
-// Inject CSS for mining animations (compact layout optimized)
 function injectMiningAnimationsCSS() {
   if (document.getElementById('mining-animations-css')) return;
   
@@ -1526,15 +1439,6 @@ function injectMiningAnimationsCSS() {
       100% { background-position: 0% 50%; }
     }
 
-    .mining-pick-display {
-      will-change: transform;
-      transition: transform 0.3s ease;
-    }
-
-    .pick-head {
-      filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3)) drop-shadow(0 0 10px rgba(192,192,192,0.5));
-    }
-
     .ore {
       transition: all 0.2s ease;
     }
@@ -1602,7 +1506,6 @@ function injectMiningAnimationsCSS() {
       }
     }
 
-    /* Scrollbar styling for ore and recipe containers */
     #available-ores::-webkit-scrollbar,
     #available-recipes::-webkit-scrollbar {
       height: 6px;
@@ -1625,23 +1528,11 @@ function injectMiningAnimationsCSS() {
       background: rgba(139,69,19,0.7);
     }
 
-    /* Alignment status styling */
-    #alignment-status {
-      font-weight: bold;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-      padding: 0.5rem;
-      border-radius: 6px;
-      background: rgba(0,0,0,0.2);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    /* Rock texture enhancement */
     .rock-texture {
       mix-blend-mode: multiply;
       opacity: 0.3;
     }
 
-    /* Ore integration effects */
     .ore-input-slot img {
       transition: all 0.3s ease;
     }
@@ -1651,7 +1542,6 @@ function injectMiningAnimationsCSS() {
       filter: brightness(1.1);
     }
 
-    /* Property slot entrance animations */
     .property-slot {
       transform-origin: center;
     }
@@ -1664,7 +1554,6 @@ function injectMiningAnimationsCSS() {
       transform-origin: right center;
     }
 
-    /* Enhanced breaking effect */
     .ore-breaking-particle {
       position: absolute;
       pointer-events: none;
@@ -1672,7 +1561,6 @@ function injectMiningAnimationsCSS() {
       will-change: transform, opacity;
     }
 
-    /* Dust particle effects */
     .rock-dust-particle {
       position: absolute;
       pointer-events: none;
