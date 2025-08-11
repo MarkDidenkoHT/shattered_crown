@@ -167,7 +167,7 @@ function createMiningRowHTML(rowIndex) {
         </div>
         
         <!-- Property slots (initially hidden for left and right, center starts as ore input) -->
-          <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="position: absolute; left: 60px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">
+          <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">
             -
           </div>
 
@@ -175,7 +175,7 @@ function createMiningRowHTML(rowIndex) {
             -
           </div>
 
-          <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="position: absolute; right: 60px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">
+          <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">
             -
           </div>
       </div>
