@@ -14,7 +14,7 @@ export async function startCraftingSession(ctx) {
     
     const [bankResponse, recipesPromise] = await Promise.all([
       context.apiCall(
-        `/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`
+        `/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profcheckAlignmentession_id=eq.${context.professionId}&select=item,amount`
       ),
       context.fetchRecipes(context.professionId) // Start recipe loading in parallel
     ]);
@@ -202,11 +202,6 @@ function renderCraftingModal() {
       <!-- Adjustment counter -->
       <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666; display: none;">
         Adjustments: ${miningState.adjustmentCount}/${miningState.maxAdjustments}
-      </div>
-      
-      <!-- Alignment status -->
-      <div id="alignment-status" style="margin-top: 0.5rem; font-size: 0.9rem; color: #FFD700; display: none;">
-        <span id="alignment-text">Align center column for successful extraction!</span>
       </div>
       
       <!-- Compact mining area (3 rows) -->
@@ -523,7 +518,6 @@ function setupModalEventListeners(modal) {
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
   const adjustmentCounter = modal.querySelector('#adjustment-counter');
-  const alignmentStatus = modal.querySelector('#alignment-status');
 
   // Close button
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
@@ -771,7 +765,6 @@ async function startMiningAnimation(resultDiv, modal) {
 
     setTimeout(() => {
       resultDiv.textContent = 'Use adjustments to align center properties for extraction.';
-      checkAlignment(modal.querySelector('#alignment-status'));
     }, 1000);
 
     miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
@@ -954,52 +947,6 @@ function createRockDustEffect(row) {
   }, Math.random() * 600 + 300);
   
   return dustInterval;
-}
-
-// Check if center column is aligned
-function checkAlignment(alignmentStatus) {
-  if (!miningState.randomizedProperties || miningState.randomizedProperties.length < 3) {
-    return false;
-  }
-  
-  const centerProps = [
-    miningState.randomizedProperties[0][1], // Row 0, center property
-    miningState.randomizedProperties[1][1], // Row 1, center property  
-    miningState.randomizedProperties[2][1]  // Row 2, center property
-  ];
-  
-  const isAligned = centerProps[0] === centerProps[1] && centerProps[1] === centerProps[2];
-  
-  if (alignmentStatus) {
-    const alignmentText = alignmentStatus.querySelector('#alignment-text');
-    if (isAligned) {
-      alignmentText.textContent = `✅ Perfect alignment! "${centerProps[0]}" - Ready to extract!`;
-      alignmentStatus.style.color = '#4CAF50';
-      
-      // Add success glow to center slots
-      document.querySelectorAll('.prop-center').forEach(slot => {
-        gsap.to(slot, {
-          boxShadow: '0 0 20px rgba(76,175,80,0.8), inset 0 0 10px rgba(76,175,80,0.3)',
-          duration: 0.5,
-          ease: "power2.out"
-        });
-      });
-    } else {
-      alignmentText.textContent = `⚠️ Center misaligned: [${centerProps.join(', ')}] - Keep adjusting!`;
-      alignmentStatus.style.color = '#FFC107';
-      
-      // Remove success glow from center slots
-      document.querySelectorAll('.prop-center').forEach(slot => {
-        gsap.to(slot, {
-          boxShadow: '0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2)',
-          duration: 0.5,
-          ease: "power2.out"
-        });
-      });
-    }
-  }
-  
-  return isAligned;
 }
 
 async function patchAndSendCraftRequest(resultDiv) {
@@ -1207,7 +1154,6 @@ function handleAdjustment(rowIdx, direction, resultDiv, alignmentStatus) {
   console.log('[DEBUG] Adjustment count incremented to:', miningState.adjustmentCount);
   
   updateAdjustmentCounter();
-  checkAlignment(alignmentStatus);
 
   if (miningState.adjustmentCount >= miningState.maxAdjustments) {
     disableAdjustmentButtons();
@@ -1593,16 +1539,6 @@ function injectMiningAnimationsCSS() {
     #available-ores::-webkit-scrollbar-thumb:hover,
     #available-recipes::-webkit-scrollbar-thumb:hover {
       background: rgba(139,69,19,0.7);
-    }
-
-    /* Alignment status styling */
-    #alignment-status {
-      font-weight: bold;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-      padding: 0.5rem;
-      border-radius: 6px;
-      background: rgba(0,0,0,0.2);
-      border: 1px solid rgba(255,255,255,0.1);
     }
 
     /* Rock texture enhancement */
