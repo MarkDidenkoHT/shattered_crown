@@ -25,8 +25,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             
             <!-- Top Header -->
             <div class="bank-header">
-                <div class="header-content" style="height: 20vh;">
-                </div>
                 <div class="top-right-buttons">
                     <button class="fantasy-button back-btn">← Back to Castle</button>
                 </div>
@@ -364,11 +362,12 @@ function addBankStyles() {
 
         /* Header Section */
         .bank-header {
-            background: linear-gradient(145deg, rgba(29,20,12,0.95), rgba(42,31,22,0.9));
-            border-bottom: 2px solid #3d2914;
-            padding: 1rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            z-index: 10;
+            background-image: url('assets/art/castle/main_bank.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 20vh;
+            position: relative;
         }
 
         .bank-title {
