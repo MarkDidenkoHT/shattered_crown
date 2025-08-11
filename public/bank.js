@@ -166,12 +166,17 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
+    // Use the sprite name directly from database without modifications
     const spriteName = item.sprite;
-
+    
+    // Determine folder based on type
     const isIngredient = item.type === 'Ingredient';
     const basePath = isIngredient ? 'assets/art/ingridients/' : 'assets/art/recipes/';
-
-    return `${basePath}${spriteName}`;
+    
+    // Add .png extension if not already present
+    const fileName = spriteName.endsWith('.png') ? spriteName : `${spriteName}.png`;
+    
+    return `${basePath}${fileName}`;
 }
 
 function formatItemType(type) {
