@@ -195,14 +195,6 @@ function renderCraftingModal() {
   modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center;">
       <h2>Crafting: ${miningState.professionName}</h2>
-      
-      <!-- Mining pick visualization -->
-      <div class="mining-pick-display" style="margin: 1rem 0; display: flex; justify-content: center; align-items: center; gap: 1rem;">
-        <div class="pick-shaft" style="width: 120px; height: 8px; background: linear-gradient(90deg, #8B4513 0%, #A0522D 50%, #654321 100%); border-radius: 4px; position: relative;">
-          <div class="pick-grip" style="position: absolute; right: -10px; top: -6px; width: 20px; height: 20px; background: #654321; border-radius: 50%; border: 2px solid #8B4513;"></div>
-        </div>
-        <div class="pick-head" style="width: 0; height: 0; border-left: 25px solid #C0C0C0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));"></div>
-      </div>
             
       <!-- Result display (initially shows selection prompt) -->
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select 3 ores to start mining</div>
@@ -1311,19 +1303,6 @@ function animateMiningSuccess() {
     }, index * 200);
   });
   
-  // Mining pick celebration
-  const pickDisplay = document.querySelector('.mining-pick-display');
-  if (pickDisplay) {
-    gsap.to(pickDisplay, {
-      scale: 1.1,
-      duration: 0.3,
-      ease: "back.out(1.7)",
-      yoyo: true,
-      repeat: 3
-    });
-  }
-}
-
 function animateMiningFailure() {
   // Shake all rock formations
   document.querySelectorAll('.rock-formation').forEach((rock, index) => {
@@ -1524,15 +1503,6 @@ function injectMiningAnimationsCSS() {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
-    }
-
-    .mining-pick-display {
-      will-change: transform;
-      transition: transform 0.3s ease;
-    }
-
-    .pick-head {
-      filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3)) drop-shadow(0 0 10px rgba(192,192,192,0.5));
     }
 
     .ore {
