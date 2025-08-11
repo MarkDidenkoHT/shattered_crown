@@ -50,7 +50,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     createParticles();
     await fetchBankItems();
     setupBankInteractions();
-    updateBankStats();
 }
 
 async function fetchBankItems() {
@@ -217,7 +216,6 @@ function setupBankInteractions() {
             }
             
             renderBankItems();
-            updateBankStats();
         }
     });
 
@@ -260,17 +258,11 @@ async function handleDiscardItem(itemId) {
 
             displayMessage(`Discarded ${item.item}!`);
             await fetchBankItems();
-            updateBankStats();
         } catch (error) {
             console.error('Failed to discard item:', error);
             displayMessage('Failed to discard item. Please try again.');
         }
     }
-}
-
-function updateBankStats() {
-    const itemsCount = _filteredItems.length;
-    document.getElementById('itemsCount').textContent = itemsCount;
 }
 
 function showConfirmDialog(title, message) {
