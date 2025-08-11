@@ -175,8 +175,8 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    // Use the sprite name if available, otherwise fallback to item name
-    let spriteName = item.sprite || item.item.toLowerCase().replace(/\s+/g, '_');
+    // Use the sprite name if available, otherwise format the item name
+    let spriteName = item.sprite || item.item.replace(/\s+/g, '_');
     
     // Determine folder based on type
     const isIngredient = item.type === 'Ingredient';
