@@ -22,7 +22,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <div class="particles"></div>
             <div class="top-right-buttons">
                 <button class="fantasy-button settings-btn">Settings</button>
-                <button class="fantasy-button logout-btn">Logout</button>
             </div>
             <div class="castle-scene">
                 <img src="assets/art/castle/main_castle.png" alt="Main Castle" class="castle-image">
@@ -95,10 +94,6 @@ function setupInteractions() {
     _main.querySelector('.settings-btn').addEventListener('click', () => {
         displayMessage('Settings functionality coming soon!');
         // window.gameAuth.loadModule('settings'); // Example of loading another module
-    });
-
-    _main.querySelector('.logout-btn').addEventListener('click', () => {
-        displayMessage('Logging out...');
     });
 
     // Bottom Navigation Buttons
