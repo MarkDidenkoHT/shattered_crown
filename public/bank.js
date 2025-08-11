@@ -60,36 +60,35 @@ async function fetchBankItems() {
         const bankResponse = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=*,professions(name)`);
         const bankItems = await bankResponse.json();
         
-        // Get all unique ingredient and recipe names to fetch sprites
-        const ingredientNames = bankItems.filter(item => item.type === 'ingredient').map(item => item.item);
-        const recipeNames = bankItems.filter(item => item.type !== 'ingredient').map(item => item.item);
+        // Get all unique item names from bank items
+        const allItemNames = [...new Set(bankItems.map(item => item.item))];
         
-        // Fetch sprite data for ingredients and recipes
-        let ingredientSprites = {};
-        let recipeSprites = {};
+        // Create combined sprite lookup by fetching from both tables
+        let spriteMap = {};
         
-        if (ingredientNames.length > 0) {
-            const ingredientsResponse = await _apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${ingredientNames.map(name => `"${name}"`).join(',')})&select=name,sprite`);
+        if (allItemNames.length > 0) {
+            const itemNameQuery = allItemNames.map(name => `"${name}"`).join(',');
+            
+            // Fetch sprites from ingredients table
+            const ingredientsResponse = await _apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`);
             const ingredients = await ingredientsResponse.json();
-            ingredientSprites = ingredients.reduce((acc, ing) => {
-                acc[ing.name] = ing.sprite;
-                return acc;
-            }, {});
-        }
-        
-        if (recipeNames.length > 0) {
-            const recipesResponse = await _apiCall(`/api/supabase/rest/v1/recipes?name=in.(${recipeNames.map(name => `"${name}"`).join(',')})&select=name,sprite`);
+            
+            // Fetch sprites from recipes table
+            const recipesResponse = await _apiCall(`/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`);
             const recipes = await recipesResponse.json();
-            recipeSprites = recipes.reduce((acc, rec) => {
-                acc[rec.name] = rec.sprite;
-                return acc;
-            }, {});
+            
+            // Combine both into single sprite lookup map
+            [...ingredients, ...recipes].forEach(item => {
+                if (item.sprite) {
+                    spriteMap[item.name] = item.sprite;
+                }
+            });
         }
         
         // Merge sprite data into bank items
         _bankItems = bankItems.map(item => ({
             ...item,
-            sprite: item.type === 'ingredient' ? ingredientSprites[item.item] : recipeSprites[item.item]
+            sprite: spriteMap[item.item] || null
         }));
         
         _filteredItems = [..._bankItems];
@@ -166,14 +165,13 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    // Use the sprite name if available, otherwise format the item name
+    // Use the sprite name from database lookup, or fallback to formatted item name
     let spriteName = item.sprite || item.item.replace(/\s+/g, '_');
     
-    // Determine folder based on type
-    const isIngredient = item.type === 'Ingredient';
-    const basePath = isIngredient ? 'assets/art/ingridients/' : 'assets/art/recipes/';
+    // Determine folder based on item type
+    const basePath = item.type === 'ingredient' ? 'assets/art/ingridients/' : 'assets/art/recipes/';
     
-    // Add .png extension if not already present
+    // Always add .png extension if not present
     const fileName = spriteName.endsWith('.png') ? spriteName : `${spriteName}.png`;
     
     return `${basePath}${fileName}`;
