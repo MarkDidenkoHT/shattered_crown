@@ -63,32 +63,39 @@ async function fetchBankItems() {
         // Get all unique item names from bank items
         const allItemNames = [...new Set(bankItems.map(item => item.item))];
         
-        // Create combined sprite lookup by fetching from both tables
-        let spriteMap = {};
+        // Build combined sprite lookup with full paths
+        let spritePathMap = {};
         
         if (allItemNames.length > 0) {
             const itemNameQuery = allItemNames.map(name => `"${name}"`).join(',');
             
-            // Fetch sprites from ingredients table
+            // Fetch from ingredients table and build paths
             const ingredientsResponse = await _apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`);
             const ingredients = await ingredientsResponse.json();
             
-            // Fetch sprites from recipes table
+            ingredients.forEach(item => {
+                if (item.sprite) {
+                    const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+                    spritePathMap[item.name] = `assets/art/ingridients/${fileName}`;
+                }
+            });
+            
+            // Fetch from recipes table and build paths
             const recipesResponse = await _apiCall(`/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`);
             const recipes = await recipesResponse.json();
             
-            // Combine both into single sprite lookup map
-            [...ingredients, ...recipes].forEach(item => {
+            recipes.forEach(item => {
                 if (item.sprite) {
-                    spriteMap[item.name] = item.sprite;
+                    const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+                    spritePathMap[item.name] = `assets/art/recipes/${fileName}`;
                 }
             });
         }
         
-        // Merge sprite data into bank items
+        // Merge sprite paths into bank items
         _bankItems = bankItems.map(item => ({
             ...item,
-            sprite: spriteMap[item.item] || null
+            spritePath: spritePathMap[item.item] || null
         }));
         
         _filteredItems = [..._bankItems];
@@ -165,16 +172,8 @@ function renderBankItems() {
 }
 
 function getItemIcon(item) {
-    // Use the sprite name from database lookup, or fallback to formatted item name
-    let spriteName = item.sprite || item.item.replace(/\s+/g, '_');
-    
-    // Determine folder based on item type
-    const basePath = item.type === 'ingredient' ? 'assets/art/ingridients/' : 'assets/art/recipes/';
-    
-    // Always add .png extension if not present
-    const fileName = spriteName.endsWith('.png') ? spriteName : `${spriteName}.png`;
-    
-    return `${basePath}${fileName}`;
+    // Use the pre-built sprite path, or fallback to default
+    return item.spritePath || 'assets/art/recipes/default_item.png';
 }
 
 function formatItemType(type) {
