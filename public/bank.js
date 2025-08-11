@@ -25,6 +25,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             
             <!-- Top Header -->
             <div class="bank-header">
+                <div class="header-content" style="height: 20vh;">
+                </div>
                 <div class="top-right-buttons">
                     <button class="fantasy-button back-btn">← Back to Castle</button>
                 </div>
@@ -41,14 +43,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
                     <div class="bank-items-list" id="bankItemsList">
                         <!-- Items will be populated here -->
                     </div>
-                </div>
-            </div>
-
-            <!-- Bottom Footer -->
-            <div class="bank-footer">
-                <div class="bank-stats">
-                    <span class="items-count">Items: <span id="itemsCount">0</span></span>
-                    <span class="auction-note">Trading via Player Auction (Coming Soon)</span>
                 </div>
             </div>
         </div>
@@ -603,17 +597,6 @@ function addBankStyles() {
             font-family: 'Cinzel', serif;
             margin-bottom: 0.5rem;
             color: #c4975a;
-        }
-
-        /* Footer Section */
-        .bank-footer {
-            background: linear-gradient(145deg, rgba(29,20,12,0.95), rgba(42,31,22,0.9));
-            border-top: 2px solid #3d2914;
-            padding: 1rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.3);
         }
 
         .bank-stats {
