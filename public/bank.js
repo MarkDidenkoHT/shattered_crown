@@ -25,9 +25,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             
             <!-- Top Header -->
             <div class="bank-header">
-                <div class="header-content">
+                <div class="top-right-buttons">
                     <button class="fantasy-button back-btn">← Back to Castle</button>
-                    <h1 class="bank-title">Bank</h1>
                 </div>
                 
                 <!-- Filter Tabs - will be populated dynamically -->
@@ -180,7 +179,7 @@ function getItemIcon(item) {
     let spriteName = item.sprite || item.item.toLowerCase().replace(/\s+/g, '_');
     
     // Determine folder based on type
-    const isIngredient = item.type === 'ingredient';
+    const isIngredient = item.type === 'Ingredient';
     const basePath = isIngredient ? 'assets/art/ingridients/' : 'assets/art/recipes/';
     
     // Add .png extension if not already present
@@ -376,13 +375,6 @@ function addBankStyles() {
             padding: 1rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             z-index: 10;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
         }
 
         .bank-title {
@@ -665,12 +657,6 @@ function addBankStyles() {
         @media (max-width: 768px) {
             .bank-title {
                 font-size: 1.4rem;
-            }
-
-            .header-content {
-                flex-direction: column;
-                gap: 0.5rem;
-                align-items: stretch;
             }
 
             .filter-tab {

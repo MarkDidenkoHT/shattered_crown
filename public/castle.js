@@ -20,9 +20,11 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     _main.innerHTML = `
         <div class="main-app-container castle-container">
             <div class="particles"></div>
+            
             <div class="top-right-buttons">
                 <button class="fantasy-button settings-btn">Settings</button>
             </div>
+
             <div class="castle-scene">
                 <img src="assets/art/castle/main_castle.png" alt="Main Castle" class="castle-image">
                 
@@ -213,17 +215,16 @@ function addCastleStyles() {
             justify-content: space-between;
             align-items: center;
             overflow: hidden;
-            background-color: #1a150e; /* Dark background */
         }
 
         .castle-scene {
             position: relative;
             width: 100%;
-            height: 75%; /* Main content area, roughly 75% of screen */
+            height: 85%;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; /* Ensure image doesn't overflow */
+            overflow: hidden;
         }
 
         .castle-image {
@@ -328,11 +329,7 @@ function addCastleStyles() {
             width: 10%;
             height: 13%;
         }
-        
-        /* Add more specific hotspots as needed for other buildings on the image */
 
-
-        /* General particle styles (reused) */
         .particles {
             position: absolute;
             width: 100%;
@@ -408,54 +405,6 @@ function addCastleStyles() {
             cursor: pointer;
         }
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .bottom-navigation {
-                grid-template-columns: repeat(3, 1fr); /* 3 buttons per row on smaller screens */
-                gap: 0.4rem;
-                padding: 0.8rem;
-            }
-
-            .bottom-navigation .nav-btn {
-                font-size: 0.8rem;
-                padding: 0.6rem 0.3rem;
-            }
-
-            .top-right-buttons {
-                top: 0.5rem;
-                right: 0.5rem;
-                gap: 0.3rem;
-            }
-            .top-right-buttons .fantasy-button {
-                padding: 0.4rem 0.7rem;
-                font-size: 0.7rem;
-            }
-            
-            /* Adjust castle image to be more prominent on mobile */
-            .castle-image {
-                object-fit: cover; /* Cover might be better for mobile to fill screen */
-            }
-
-            /* Adjust hotspot sizes and positions for mobile if needed */
-            .inn-hotspot {
-                left: 10%; 
-                bottom: 15%; 
-                width: 18%; 
-                height: 25%; 
-            }
-            .altar-hotspot {
-                left: 65%; 
-                bottom: 40%; 
-                width: 12%; 
-                height: 30%; 
-            }
-            .blacksmith-hotspot {
-                left: 28%; 
-                bottom: 10%;
-                width: 15%;
-                height: 20%;
-            }
-        }
     `;
     document.head.appendChild(style);
 }
