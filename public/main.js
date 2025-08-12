@@ -131,16 +131,6 @@ async function loadModule(name, extraArgs = {}) {
 
   try {
     const module = await import(`./${name}.js`);
-    
-    // Special handling for god_selection module
-    if (name === 'god_selection') {
-      const profile = getCurrentProfile();
-      console.log(`[MODULE] Initializing god_selection with profile:`, profile);
-      
-      // Initialize the god_selection module with apiCall and profile
-      module.initGodSelection(apiCall, profile);
-    }
-    
     await module.loadModule(main, {
       currentSession,
       supabaseConfig,
