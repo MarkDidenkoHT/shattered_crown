@@ -372,7 +372,7 @@ function handleSexSelection(sex) {
 async function fetchClassesAndRenderSelection() {
     console.log(`[CLASS_FETCH] Fetching classes for Race ID: ${_selectedRace.id}...`);
     try {
-        const response = await _apiCall(`/api/supabase/rest/v1/classes?god_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
+        const response = await _apiCall(`/api/supabase/rest/v1/classes?race_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
         _classes = await response.json();
         console.log('[CLASS_FETCH] Classes fetched:', _classes);
 
