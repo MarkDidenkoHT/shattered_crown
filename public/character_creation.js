@@ -735,6 +735,15 @@ async function confirmCharacter() {
         await startCharacterCreationFlow(); // Continue to next character or castle
     } catch (error) {
         console.error('[CHAR_SAVE] Error saving character:', error);
+
+        // Extra logging for restart tracking
+        console.warn(`[CHAR_SAVE] Character creation for slot ${_currentCharacterIndex + 1} failed. Restarting creation flow...`, {
+            race: _selectedRace,
+            class: _selectedClass,
+            sex: _selectedSex,
+            profession: _selectedProfession
+        });
+
         displayMessage('Failed to save character. Please try again.');
     }
 }
