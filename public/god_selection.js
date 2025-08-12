@@ -545,7 +545,7 @@ async function selectGod(godId, godName, apiCall, getCurrentProfile) {
     console.log('API response for profile update:', updatedProfiles);
     
     if (!updatedProfiles || updatedProfiles.length === 0) {
-      throw new Error('Failed to update profile');
+      throw new Error('Failed to update profile - no data returned');
     }
     
     // Update local storage with new profile data
@@ -563,7 +563,13 @@ async function selectGod(godId, godName, apiCall, getCurrentProfile) {
     
   } catch (error) {
     console.error('Error selecting god:', error);
-    alert('Failed to select god. Please try again.');
+    
+    // 🔍 Better error handling - don't destroy session
+    if (error.message.includes('Unauthorized')) {
+      alert('Authentication error occurred. Please try refreshing the page and logging in again.');
+    } else {
+      alert(`Failed to select god: ${error.message}. Please try again.`);
+    }
   } finally {
     console.log('--- selectGod function finished ---');
   }
