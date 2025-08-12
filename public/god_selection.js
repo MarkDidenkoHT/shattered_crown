@@ -1,7 +1,24 @@
+// god_selection.js
+let _apiCall = null;
+let _profile = null;
+
+export function initGodSelection(apiCall, profile) {
+  _apiCall = apiCall;
+  _profile = profile;
+}
+
 export async function loadModule(main, { currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall }) {
+  // Initialize the module with the provided apiCall and profile
+  if (apiCall) {
+    _apiCall = apiCall;
+  }
+  if (getCurrentProfile && typeof getCurrentProfile === 'function') {
+    _profile = getCurrentProfile();
+  }
+
   // Console log to indicate the start of the module loading process
   console.log('--- Starting loadModule function ---');
-  console.log('Parameters received by loadModule:', { main, currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall: typeof apiCall });
+  console.log('Parameters received by loadModule:', { main, apiCall: typeof _apiCall });
 
   // Load gods from database
   let gods = [];
@@ -9,7 +26,12 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
   try {
     // Console log before the API call for gods - now including image column
     console.log('Making API call to:', '/api/supabase/rest/v1/gods?select=id,name,description,image');
-    const response = await apiCall('/api/supabase/rest/v1/gods?select=id,name,description,image');
+    const response = await _apiCall('/api/supabase/rest/v1/gods?select=id,name,description,image');
+    
+    if (!response.ok) {
+      throw new Error(`API call failed with status: ${response.status}`);
+    }
+    
     // Console log after successful API response
     console.log('API call for gods successful. Response status:', response.status);
     gods = await response.json();
@@ -397,7 +419,7 @@ export async function loadModule(main, { currentSession, supabaseConfig, getCurr
       
       if (confirm(`Are you sure you want to choose ${godName} as your deity? This choice cannot be changed later.`)) {
         console.log(`User confirmed selection of ${godName}. Calling selectGod function...`);
-        await selectGod(godId, godName, apiCall, getCurrentProfile);
+        await selectGod(godId, godName);
       } else {
         console.log(`User cancelled selection of ${godName}.`);
       }
@@ -444,7 +466,6 @@ function initializeSlider() {
     dots.forEach((dot, index) => {
       const isActive = index === currentSlide;
       dot.classList.toggle('active', isActive);
-      // console.log(`Dot ${index} active state: ${isActive}`); // Can be too verbose, uncomment if needed
     });
   }
   
@@ -489,7 +510,6 @@ function initializeSlider() {
   sliderTrack.addEventListener('touchmove', (e) => {
     if (!isDragging) return;
     e.preventDefault(); // Prevent scrolling while swiping
-    // console.log('Touch move detected (dragging).'); // Can be too verbose
   });
   
   sliderTrack.addEventListener('touchend', (e) => {
@@ -515,23 +535,26 @@ function initializeSlider() {
   console.log('--- initializeSlider function finished ---');
 }
 
-async function selectGod(godId, godName, apiCall, getCurrentProfile) {
+async function selectGod(godId, godName) {
   console.log(`--- Starting selectGod function for God ID: ${godId}, Name: ${godName} ---`);
   try {
-    // Get current profile
-    console.log('Attempting to get current user profile...');
-    const profile = getCurrentProfile();
-    if (!profile) {
-      throw new Error('No profile found');
+    // Validate that we have the necessary dependencies
+    if (!_apiCall) {
+      throw new Error('API call function not initialized. Please call initGodSelection first.');
     }
-    console.log('Current profile retrieved:', profile);
+    
+    if (!_profile) {
+      throw new Error('Profile not available. Please ensure user profile is loaded.');
+    }
+    
+    console.log('Current profile retrieved:', _profile);
     
     // Update profile with selected god using PATCH method
-    const apiUrl = `/api/supabase/rest/v1/profiles?id=eq.${profile.id}`;
+    const apiUrl = `/api/supabase/rest/v1/profiles?id=eq.${_profile.id}`;
     const requestBody = { god: godId };
     console.log(`Preparing to update profile. API URL: ${apiUrl}, Request Body:`, requestBody);
 
-    const response = await apiCall(apiUrl, {
+    const response = await _apiCall(apiUrl, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -541,29 +564,40 @@ async function selectGod(godId, godName, apiCall, getCurrentProfile) {
     });
 
     console.log('API call to update profile made. Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API error:', response.status, errorText);
+      throw new Error(`Failed to update profile: ${response.status} - ${errorText}`);
+    }
+    
     const updatedProfiles = await response.json();
     console.log('API response for profile update:', updatedProfiles);
     
     if (!updatedProfiles || updatedProfiles.length === 0) {
-      throw new Error('Failed to update profile');
+      throw new Error('Failed to update profile - no data returned');
     }
     
-    // Update local storage with new profile data
+    // Update the local profile reference
     const updatedProfile = updatedProfiles[0];
+    _profile = updatedProfile;
     console.log('Profile successfully updated in database. New profile data:', updatedProfile);
-    localStorage.setItem('profile', JSON.stringify(updatedProfile));
-    console.log('Updated profile saved to local storage.');
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
     
     // Load character creation module using the global loadModule function
     console.log('Attempting to load character_creation module...');
-    window.gameAuth.loadModule('character_creation');
-    console.log('Character creation module load initiated.');
+    if (window.gameAuth && typeof window.gameAuth.loadModule === 'function') {
+      window.gameAuth.loadModule('character_creation');
+      console.log('Character creation module load initiated.');
+    } else {
+      console.error('gameAuth.loadModule not available');
+      throw new Error('Unable to navigate to character creation');
+    }
     
   } catch (error) {
     console.error('Error selecting god:', error);
-    alert('Failed to select god. Please try again.');
+    alert(`Failed to select god: ${error.message}. Please try again.`);
   } finally {
     console.log('--- selectGod function finished ---');
   }
