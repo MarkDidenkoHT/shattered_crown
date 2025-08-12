@@ -7,18 +7,17 @@ export function initGodSelection(apiCall, profile) {
   _profile = profile;
 }
 
-export async function loadModule(main, { currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall }) {
-  // Initialize the module with the provided apiCall and profile
-  if (apiCall) {
-    _apiCall = apiCall;
-  }
-  if (getCurrentProfile && typeof getCurrentProfile === 'function') {
-    _profile = getCurrentProfile();
-  }
-
+export async function loadModule(main) {
   // Console log to indicate the start of the module loading process
   console.log('--- Starting loadModule function ---');
-  console.log('Parameters received by loadModule:', { main, apiCall: typeof _apiCall });
+  console.log('Module initialized with apiCall:', typeof _apiCall, 'profile:', !!_profile);
+
+  // Validate that we have the necessary dependencies
+  if (!_apiCall) {
+    console.error('API call function not initialized. Please call initGodSelection first.');
+    alert('Module not properly initialized. Please refresh and try again.');
+    return;
+  }
 
   // Load gods from database
   let gods = [];
