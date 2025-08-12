@@ -388,6 +388,16 @@
             max-width: 1600px;
         }
 
+        /* Desktop grid view */
+        .desktop-view {
+            display: block;
+        }
+
+        /* Hide mobile slider by default */
+        .mobile-view {
+            display: none;
+        }
+
         .selection-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -770,6 +780,12 @@
         }
 
         @media (max-width: 768px) {
+            .desktop-view {
+                display: none;
+            }
+            .mobile-view {
+                display: block;
+            }
             .character-creation-section {
                 padding: 0.5rem;
             }
@@ -895,8 +911,8 @@
     }
 
     /* Mobile adjustments for sex/profession sliders */
-    .selection-slider .selection-slide[data-type="sex"] .card-art-block,
-    .selection-slider .selection-slide[data-type="profession"] .card-art-block {
+    .selection-slider.mobile-view .selection-slide[data-type="sex"] .card-art-block,
+    .selection-slider.mobile-view .selection-slide[data-type="profession"] .card-art-block {
         height: 200px; /* Match desktop card art height */
     }
 
