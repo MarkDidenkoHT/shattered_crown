@@ -64,7 +64,7 @@ async function startCharacterCreationFlow() {
 async function fetchRacesAndRenderSelection() {
     console.log(`[RACE_FETCH] Fetching races for God ID: ${_godId}...`);
     try {
-        const response = await _apiCall(`/api/supabase/rest/v1/races?faction_id=eq.${_godId}&select=id,name,description,base_stats`);
+        const response = await _apiCall(`/api/supabase/rest/v1/races?god_id=eq.${_godId}&select=id,name,description,base_stats`);
         _races = await response.json();
         console.log('[RACE_FETCH] Races fetched:', _races);
 
@@ -372,7 +372,7 @@ function handleSexSelection(sex) {
 async function fetchClassesAndRenderSelection() {
     console.log(`[CLASS_FETCH] Fetching classes for Race ID: ${_selectedRace.id}...`);
     try {
-        const response = await _apiCall(`/api/supabase/rest/v1/classes?faction_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
+        const response = await _apiCall(`/api/supabase/rest/v1/classes?god_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
         _classes = await response.json();
         console.log('[CLASS_FETCH] Classes fetched:', _classes);
 
