@@ -526,21 +526,19 @@ async function selectGod(godId, godName, apiCall, getCurrentProfile) {
     }
     console.log('Current profile retrieved:', profile);
     
-    // Update profile with selected god using PATCH method
-    const apiUrl = `/api/supabase/rest/v1/profiles?id=eq.${profile.id}`;
-    const requestBody = { god: godId };
-    console.log(`Preparing to update profile. API URL: ${apiUrl}, Request Body:`, requestBody);
+    // Update profile with selected god using the edge function
+    const requestBody = {
+      profileId: profile.id,
+      godId: godId
+    };
+    console.log(`Preparing to update profile via edge function. Request Body:`, requestBody);
 
-    const response = await apiCall(apiUrl, {
+    const response = await apiCall('/functions/v1/updateProfile', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify(requestBody)
+      body: requestBody
     });
 
-    console.log('API call to update profile made. Response status:', response.status);
+    console.log('API call to updateProfile edge function made. Response status:', response.status);
     const updatedProfiles = await response.json();
     console.log('API response for profile update:', updatedProfiles);
     
@@ -564,7 +562,7 @@ async function selectGod(godId, godName, apiCall, getCurrentProfile) {
   } catch (error) {
     console.error('Error selecting god:', error);
     
-    // 🔍 Better error handling - don't destroy session
+    // Better error handling - don't destroy session for edge function errors
     if (error.message.includes('Unauthorized')) {
       alert('Authentication error occurred. Please try refreshing the page and logging in again.');
     } else {
