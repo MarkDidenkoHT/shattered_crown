@@ -1,7 +1,7 @@
-export async function loadModule(main, { currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall }) {
+export async function loadModule(main, { currentProfile, supabaseConfig, getCurrentProfile, apiCall }) {
   // Console log to indicate the start of the module loading process
   console.log('--- Starting loadModule function ---');
-  console.log('Parameters received by loadModule:', { main, currentSession, supabaseConfig, getCurrentProfile, getCurrentSession, apiCall: typeof apiCall });
+  console.log('Parameters received by loadModule:', { main, supabaseConfig, getCurrentProfile, apiCall: typeof apiCall });
 
   // Load gods from database
   let gods = [];
