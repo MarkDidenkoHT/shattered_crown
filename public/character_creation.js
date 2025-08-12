@@ -725,73 +725,65 @@ async function confirmCharacter() {
             currentCharacterIndex: _currentCharacterIndex
         });
 
-        const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
-        console.log('[CHAR_SAVE] Final calculated stats:', finalStats);
-
-        const characterData = {
-            player_id: _profile.id,
+        // Prepare data for edge function (only send choices, not calculated stats)
+        const characterCreationData = {
+            chat_id: _profile.chat_id, // Send chat_id instead of player_id
             race_id: _selectedRace.id,
             class_id: _selectedClass.id,
             sex: _selectedSex,
-            profession_id: _selectedProfession.id,
-            stats: finalStats,
-            starting_abilities: _selectedClass.starting_abilities
+            profession_id: _selectedProfession.id
         };
         
-        console.log('[CHAR_SAVE] Character data prepared for API call:', characterData);
+        console.log('[CHAR_SAVE] Character data prepared for edge function:', characterCreationData);
 
-        // Add a small delay to ensure UI is ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        // Call the edge function instead of direct API
+        console.log('[CHAR_SAVE] Making edge function call to create character...');
+        const response = await _apiCall(`${window.gameAuth.supabaseConfig?.SUPABASE_URL}/functions/v1/create-character`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${window.gameAuth.supabaseConfig?.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(characterCreationData)
+        });
 
-        alert('Character data ready for saving: ' + JSON.stringify(characterData, null, 2));
-        console.log('[CHAR_SAVE] Making API call to save character...');
-        console.log('[DEBUG] About to call _apiCall');
-        try {
-            const response = await _apiCall('/api/supabase/rest/v1/characters', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify(characterData)
-            });
-            console.log('[DEBUG] _apiCall completed successfully');
-        } catch (error) {
-            console.log('[DEBUG] _apiCall threw an error:', error);
-            alert('_apiCall failed: ' + error.message);
-            return; // Don't let it continue and potentially reload
-        }
-
-        console.log('[CHAR_SAVE] API response received:', response);
+        console.log('[CHAR_SAVE] Edge function response received:', response);
         console.log('[CHAR_SAVE] Response status:', response.status);
         console.log('[CHAR_SAVE] Response ok:', response.ok);
-        alert('Response ok: ' + response.ok);
-        alert('Response status: ' + response.status);
 
         // Check if response is ok before trying to parse
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('[CHAR_SAVE] API response not ok. Status:', response.status, 'Error text:', errorText);
-            throw new Error(`API call failed with status ${response.status}: ${errorText}`);
+            console.error('[CHAR_SAVE] Edge function response not ok. Status:', response.status, 'Error text:', errorText);
+            
+            // Try to parse as JSON for better error handling
+            try {
+                const errorData = JSON.parse(errorText);
+                throw new Error(errorData.error || `Edge function call failed with status ${response.status}`);
+            } catch {
+                throw new Error(`Edge function call failed with status ${response.status}: ${errorText}`);
+            }
         }
 
-        const savedCharacter = await response.json();
-        console.log('[CHAR_SAVE] Character saved successfully:', savedCharacter);
+        const result = await response.json();
+        console.log('[CHAR_SAVE] Character created successfully via edge function:', result);
         
-        displayMessage(`Character ${_currentCharacterIndex + 1} (${_selectedRace.name} ${_selectedClass.name}) created!`);
+        if (result.success) {
+            displayMessage(`Character ${_currentCharacterIndex + 1} (${result.character.race} ${result.character.class}) created! (${result.characters_created}/${result.max_characters})`);
 
-        _currentCharacterIndex++; // Increment for the next character
-        console.log('[CHAR_SAVE] Character index incremented to:', _currentCharacterIndex);
+            _currentCharacterIndex++; // Increment for the next character
+            console.log('[CHAR_SAVE] Character index incremented to:', _currentCharacterIndex);
 
-        // Remove the alert that might be causing issues
-        console.log(`[CHAR_SAVE] ===== CHARACTER SAVE COMPLETED SUCCESSFULLY =====`);
-        console.log(`[CHAR_SAVE] About to start next character creation flow (${_currentCharacterIndex + 1})`);
-        
-        // Add a delay before starting next character to ensure all processes complete
-        setTimeout(() => {
-            startCharacterCreationFlow();
-        }, 1000);
+            console.log(`[CHAR_SAVE] ===== CHARACTER SAVE COMPLETED SUCCESSFULLY =====`);
+            console.log(`[CHAR_SAVE] About to start next character creation flow (${_currentCharacterIndex + 1})`);
+            
+            // Add a delay before starting next character to ensure all processes complete
+            setTimeout(() => {
+                startCharacterCreationFlow();
+            }, 1000);
+        } else {
+            throw new Error(result.error || 'Unknown error occurred during character creation');
+        }
 
     } catch (error) {
         console.error('[CHAR_SAVE] ===== CHARACTER SAVE ERROR =====');
@@ -808,7 +800,7 @@ async function confirmCharacter() {
             currentIndex: _currentCharacterIndex
         });
 
-        displayMessage('Failed to save character. Please try again.');
+        displayMessage(`Failed to save character: ${error.message}`);
         console.log('[CHAR_SAVE] ===== CHARACTER SAVE ERROR HANDLING COMPLETE =====');
     }
 }

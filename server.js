@@ -259,3 +259,38 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+app.all('/functions/v1/*', requireAuth, async (req, res) => {
+    const supabasePath = req.params[0];
+    const url = `${process.env.SUPABASE_URL}/functions/v1/${supabasePath}`;
+
+    try {
+        const response = await fetch(url, {
+            method: req.method,
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: ['POST', 'PATCH', 'PUT'].includes(req.method) ? JSON.stringify(req.body) : undefined
+        });
+
+        // Handle both JSON and text responses
+        const contentType = response.headers.get('content-type');
+        let responseData;
+        
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+            res.status(response.status).json(responseData);
+        } else {
+            responseData = await response.text();
+            res.status(response.status).send(responseData);
+        }
+        
+        console.log(`[FUNCTIONS PROXY] ${req.method} ${supabasePath} - Status: ${response.status}`);
+        
+    } catch (error) {
+        console.error('[FUNCTIONS PROXY]', error);
+        res.status(500).json({ error: 'Proxy error', details: error.message });
+    }
+});

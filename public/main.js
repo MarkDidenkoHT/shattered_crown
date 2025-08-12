@@ -238,5 +238,6 @@ window.gameAuth = {
   getCurrentProfile,
   logout,
   apiCall,
-  loadModule
+  loadModule,
+  supabaseConfig 
 };
