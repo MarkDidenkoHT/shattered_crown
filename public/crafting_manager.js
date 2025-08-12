@@ -208,7 +208,7 @@ function renderProfessions(characters) {
           .join('')}
       </div>
     </div>
-    <div class="confirm-return-buttons">
+    <div class="top-right-buttons">
       <button class="fantasy-button return-btn">Return</button>
     </div>
   `;
