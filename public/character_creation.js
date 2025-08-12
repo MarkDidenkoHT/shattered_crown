@@ -742,7 +742,9 @@ async function confirmCharacter() {
 
         // Add a small delay to ensure UI is ready
         await new Promise(resolve => setTimeout(resolve, 100));
+        
 
+        alert('Character data ready for saving: ' + JSON.stringify(characterData, null, 2));
         console.log('[CHAR_SAVE] Making API call to save character...');
         const response = await _apiCall('/api/supabase/rest/v1/characters', {
             method: 'POST',
