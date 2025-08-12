@@ -1,21 +1,22 @@
 // god_selection.js
-let _apiCall = null;
-let _profile = null;
 
-export function initGodSelection(apiCall, profile) {
-  _apiCall = apiCall;
-  _profile = profile;
-}
-
-export async function loadModule(main) {
+export async function loadModule(main, { apiCall, getCurrentProfile }) {
   // Console log to indicate the start of the module loading process
   console.log('--- Starting loadModule function ---');
-  console.log('Module initialized with apiCall:', typeof _apiCall, 'profile:', !!_profile);
+  console.log('Module initialized with apiCall:', typeof apiCall, 'getCurrentProfile:', typeof getCurrentProfile);
 
   // Validate that we have the necessary dependencies
-  if (!_apiCall) {
-    console.error('API call function not initialized. Please call initGodSelection first.');
+  if (!apiCall) {
+    console.error('API call function not provided. Please check module initialization.');
     alert('Module not properly initialized. Please refresh and try again.');
+    return;
+  }
+
+  // Get current profile
+  const profile = getCurrentProfile();
+  if (!profile) {
+    console.error('Profile not available. Please ensure user profile is loaded.');
+    alert('Profile not available. Please refresh and try again.');
     return;
   }
 
@@ -25,7 +26,7 @@ export async function loadModule(main) {
   try {
     // Console log before the API call for gods - now including image column
     console.log('Making API call to:', '/api/supabase/rest/v1/gods?select=id,name,description,image');
-    const response = await _apiCall('/api/supabase/rest/v1/gods?select=id,name,description,image');
+    const response = await apiCall('/api/supabase/rest/v1/gods?select=id,name,description,image');
     
     if (!response.ok) {
       throw new Error(`API call failed with status: ${response.status}`);
@@ -418,7 +419,7 @@ export async function loadModule(main) {
       
       if (confirm(`Are you sure you want to choose ${godName} as your deity? This choice cannot be changed later.`)) {
         console.log(`User confirmed selection of ${godName}. Calling selectGod function...`);
-        await selectGod(godId, godName);
+        await selectGod(godId, godName, apiCall, profile, getCurrentProfile);
       } else {
         console.log(`User cancelled selection of ${godName}.`);
       }
@@ -534,26 +535,26 @@ function initializeSlider() {
   console.log('--- initializeSlider function finished ---');
 }
 
-async function selectGod(godId, godName) {
+async function selectGod(godId, godName, apiCall, profile, getCurrentProfile) {
   console.log(`--- Starting selectGod function for God ID: ${godId}, Name: ${godName} ---`);
   try {
     // Validate that we have the necessary dependencies
-    if (!_apiCall) {
-      throw new Error('API call function not initialized. Please call initGodSelection first.');
+    if (!apiCall) {
+      throw new Error('API call function not available.');
     }
     
-    if (!_profile) {
+    if (!profile) {
       throw new Error('Profile not available. Please ensure user profile is loaded.');
     }
     
-    console.log('Current profile retrieved:', _profile);
+    console.log('Current profile retrieved:', profile);
     
     // Update profile with selected god using PATCH method
-    const apiUrl = `/api/supabase/rest/v1/profiles?id=eq.${_profile.id}`;
+    const apiUrl = `/api/supabase/rest/v1/profiles?id=eq.${profile.id}`;
     const requestBody = { god: godId };
     console.log(`Preparing to update profile. API URL: ${apiUrl}, Request Body:`, requestBody);
 
-    const response = await _apiCall(apiUrl, {
+    const response = await apiCall(apiUrl, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -579,7 +580,7 @@ async function selectGod(godId, godName) {
     
     // Update the local profile reference
     const updatedProfile = updatedProfiles[0];
-    _profile = updatedProfile;
+    localStorage.setItem('profile', JSON.stringify(updatedProfile));
     console.log('Profile successfully updated in database. New profile data:', updatedProfile);
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
