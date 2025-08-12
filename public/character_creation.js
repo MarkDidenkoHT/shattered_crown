@@ -746,14 +746,22 @@ async function confirmCharacter() {
 
         alert('Character data ready for saving: ' + JSON.stringify(characterData, null, 2));
         console.log('[CHAR_SAVE] Making API call to save character...');
-        const response = await _apiCall('/api/supabase/rest/v1/characters', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(characterData)
-        });
+        console.log('[DEBUG] About to call _apiCall');
+        try {
+            const response = await _apiCall('/api/supabase/rest/v1/characters', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(characterData)
+            });
+            console.log('[DEBUG] _apiCall completed successfully');
+        } catch (error) {
+            console.log('[DEBUG] _apiCall threw an error:', error);
+            alert('_apiCall failed: ' + error.message);
+            return; // Don't let it continue and potentially reload
+        }
 
         console.log('[CHAR_SAVE] API response received:', response);
         console.log('[CHAR_SAVE] Response status:', response.status);
