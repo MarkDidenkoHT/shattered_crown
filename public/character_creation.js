@@ -5,12 +5,12 @@ let _profile;
 let _godId;
 let _races = [];
 let _classes = [];
-let _professions = []; // Новая переменная для хранения списка профессий
-let _currentCharacterIndex = 0; // 0-indexed for character 1, 2, 3
+let _professions = [];
+let _currentCharacterIndex = 0;
 let _selectedRace = null;
 let _selectedClass = null;
-let _selectedSex = null; // Новая переменная для хранения выбранного пола
-let _selectedProfession = null; // Новая переменная для хранения выбранной профессии
+let _selectedSex = null;
+let _selectedProfession = null;
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
     console.log('[CHAR_CREATE] --- Starting loadModule for Character Creation ---');
@@ -22,7 +22,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     if (!_profile) {
         console.error('[CHAR_CREATE] No profile found. Cannot proceed with character creation.');
         displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login'); // Redirect to login if no profile
+        //window.gameAuth.loadModule('login');
         return;
     }
     _godId = _profile.god; // The god selected in the previous step
@@ -250,11 +250,8 @@ async function handleRaceSelection(raceId) {
     }
     console.log('[RACE_SELECT] Selected Race:', _selectedRace);
 
-    // After race selection, render sex selection
     renderSexSelection();
 }
-
-// --- Новые функции для выбора пола и профессий ---
 
 function renderSexSelection() {
     console.log(`[UI_RENDER] Rendering Sex Selection for Character ${_currentCharacterIndex + 1}.`);
@@ -632,8 +629,8 @@ async function confirmCharacter() {
         player_id: _profile.id,
         race_id: _selectedRace.id,
         class_id: _selectedClass.id,
-        sex: _selectedSex, // Добавлено поле пола
-        profession_id: _selectedProfession.id, // Добавлено поле профессии
+        sex: _selectedSex,
+        profession_id: _selectedProfession.id,
         stats: finalStats,
         starting_abilities: _selectedClass.starting_abilities
     };
@@ -669,7 +666,6 @@ function createParticles() {
         return;
     }
 
-    // Clear existing particles if any
     particlesContainer.innerHTML = '';
 
     const particleCount = 20;
