@@ -650,7 +650,7 @@ function renderCharacterSummary() {
             <div class="summary-art-block">
                 <img src="assets/art/characters/${_selectedRace.name.toLowerCase().replace(/\s+/g, '_')}_${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                     alt="${_selectedRace.name} ${_selectedClass.name}" 
-                    class="summary-art"
+                    class="summary-art">
             </div>
             <div class="summary-info-block">
                 <h2>${_selectedSex === 'male' ? 'Male' : 'Female'} ${_selectedRace.name} ${_selectedClass.name}</h2>
@@ -672,17 +672,22 @@ function renderCharacterSummary() {
             </div>
         </div>
         <div class="confirm-return-buttons">
-            <button class="fantasy-button confirm-btn">Confirm Champion</button>
-            <button class="fantasy-button return-btn">Return</button>
+            <button type="button" class="fantasy-button confirm-btn">Confirm Champion</button>
+            <button type="button" class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
-    section.querySelector('.confirm-btn').addEventListener('click', () => {
-        console.log('[UI_EVENT] Confirm Champion clicked.');
+    // CRITICAL: Add preventDefault to button click handlers
+    section.querySelector('.confirm-btn').addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent any form submission or default behavior
+        e.stopPropagation(); // Stop event bubbling
+        console.log('[UI_EVENT] Confirm Champion clicked - preventDefault applied.');
         confirmCharacter();
     });
 
-    section.querySelector('.return-btn').addEventListener('click', () => {
+    section.querySelector('.return-btn').addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent any form submission or default behavior
+        e.stopPropagation(); // Stop event bubbling
         console.log('[UI_EVENT] Return to Profession Selection clicked from summary.');
         renderProfessionSelection();
     });
@@ -703,21 +708,39 @@ function calculateFinalStats(baseStats, statBonuses) {
 }
 
 async function confirmCharacter() {
-    console.log(`[CHAR_SAVE] Attempting to save Character ${_currentCharacterIndex + 1}...`);
-    const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
-
-    const characterData = {
-        player_id: _profile.id,
-        race_id: _selectedRace.id,
-        class_id: _selectedClass.id,
-        sex: _selectedSex, // Добавлено поле пола
-        profession_id: _selectedProfession.id, // Добавлено поле профессии
-        stats: finalStats,
-        starting_abilities: _selectedClass.starting_abilities
-    };
-    console.log('[CHAR_SAVE] Character data to save:', characterData);
-
+    console.log(`[CHAR_SAVE] ===== STARTING CHARACTER SAVE PROCESS =====`);
+    console.log(`[CHAR_SAVE] Character ${_currentCharacterIndex + 1} save attempt initiated...`);
+    
     try {
+        // Log all current selections before saving
+        console.log('[CHAR_SAVE] Current selections:', {
+            race: _selectedRace,
+            class: _selectedClass,
+            sex: _selectedSex,
+            profession: _selectedProfession,
+            profile: _profile,
+            currentCharacterIndex: _currentCharacterIndex
+        });
+
+        const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
+        console.log('[CHAR_SAVE] Final calculated stats:', finalStats);
+
+        const characterData = {
+            player_id: _profile.id,
+            race_id: _selectedRace.id,
+            class_id: _selectedClass.id,
+            sex: _selectedSex,
+            profession_id: _selectedProfession.id,
+            stats: finalStats,
+            starting_abilities: _selectedClass.starting_abilities
+        };
+        
+        console.log('[CHAR_SAVE] Character data prepared for API call:', characterData);
+
+        // Add a small delay to ensure UI is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        console.log('[CHAR_SAVE] Making API call to save character...');
         const response = await _apiCall('/api/supabase/rest/v1/characters', {
             method: 'POST',
             headers: {
@@ -727,26 +750,51 @@ async function confirmCharacter() {
             body: JSON.stringify(characterData)
         });
 
+        console.log('[CHAR_SAVE] API response received:', response);
+        console.log('[CHAR_SAVE] Response status:', response.status);
+        console.log('[CHAR_SAVE] Response ok:', response.ok);
+
+        // Check if response is ok before trying to parse
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[CHAR_SAVE] API response not ok. Status:', response.status, 'Error text:', errorText);
+            throw new Error(`API call failed with status ${response.status}: ${errorText}`);
+        }
+
         const savedCharacter = await response.json();
         console.log('[CHAR_SAVE] Character saved successfully:', savedCharacter);
+        
         displayMessage(`Character ${_currentCharacterIndex + 1} (${_selectedRace.name} ${_selectedClass.name}) created!`);
 
         _currentCharacterIndex++; // Increment for the next character
+        console.log('[CHAR_SAVE] Character index incremented to:', _currentCharacterIndex);
 
-        alert(`Stopping here — about to start next character (${_currentCharacterIndex + 1}). Check console before continuing.`);
-        await startCharacterCreationFlow(); // Continue to next character or castle
+        // Remove the alert that might be causing issues
+        console.log(`[CHAR_SAVE] ===== CHARACTER SAVE COMPLETED SUCCESSFULLY =====`);
+        console.log(`[CHAR_SAVE] About to start next character creation flow (${_currentCharacterIndex + 1})`);
+        
+        // Add a delay before starting next character to ensure all processes complete
+        setTimeout(() => {
+            startCharacterCreationFlow();
+        }, 1000);
+
     } catch (error) {
-        console.error('[CHAR_SAVE] Error saving character:', error);
+        console.error('[CHAR_SAVE] ===== CHARACTER SAVE ERROR =====');
+        console.error('[CHAR_SAVE] Error details:', error);
+        console.error('[CHAR_SAVE] Error message:', error.message);
+        console.error('[CHAR_SAVE] Error stack:', error.stack);
 
         // Extra logging for restart tracking
-        console.warn(`[CHAR_SAVE] Character creation for slot ${_currentCharacterIndex + 1} failed. Restarting creation flow...`, {
+        console.warn(`[CHAR_SAVE] Character creation for slot ${_currentCharacterIndex + 1} failed. Current state:`, {
             race: _selectedRace,
             class: _selectedClass,
             sex: _selectedSex,
-            profession: _selectedProfession
+            profession: _selectedProfession,
+            currentIndex: _currentCharacterIndex
         });
 
         displayMessage('Failed to save character. Please try again.');
+        console.log('[CHAR_SAVE] ===== CHARACTER SAVE ERROR HANDLING COMPLETE =====');
     }
 }
 
