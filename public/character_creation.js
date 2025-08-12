@@ -732,6 +732,8 @@ async function confirmCharacter() {
         displayMessage(`Character ${_currentCharacterIndex + 1} (${_selectedRace.name} ${_selectedClass.name}) created!`);
 
         _currentCharacterIndex++; // Increment for the next character
+
+        alert(`Stopping here — about to start next character (${_currentCharacterIndex + 1}). Check console before continuing.`);
         await startCharacterCreationFlow(); // Continue to next character or castle
     } catch (error) {
         console.error('[CHAR_SAVE] Error saving character:', error);
