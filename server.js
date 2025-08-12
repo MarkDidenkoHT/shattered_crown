@@ -71,52 +71,82 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ✅ New Telegram-based register
+// Updated server.js registration endpoint
 app.post('/api/auth/register', async (req, res) => {
-    try {
-        const { chatId } = req.body;
-        if (!chatId) {
-            return res.status(400).json({ error: 'chatId is required' });
-        }
+    try {
+        const { chatId } = req.body;
+        if (!chatId) {
+            return res.status(400).json({ error: 'chatId is required' });
+        }
 
-        const checkResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
+        const checkResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
 
-        const existing = await checkResponse.json();
-        if (existing.length > 0) {
-            return res.status(409).json({ error: 'Profile already exists' });
-        }
+        const existing = await checkResponse.json();
+        if (existing.length > 0) {
+            return res.status(409).json({ error: 'Profile already exists' });
+        }
 
-        const createResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles`, {
-            method: 'POST',
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify({ chat_id: chatId })
-        });
+        // Create profile with starter_items set to false initially
+        const createResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ 
+                chat_id: chatId,
+                starter_items: false 
+            })
+        });
 
-        const created = await createResponse.json();
-        if (!createResponse.ok || created.length === 0) {
-            return res.status(400).json({ error: 'Failed to create profile' });
-        }
+        const created = await createResponse.json();
+        if (!createResponse.ok || created.length === 0) {
+            return res.status(400).json({ error: 'Failed to create profile' });
+        }
 
-        const profile = created[0];
-        const session = {
-            access_token: process.env.SUPABASE_ANON_KEY,
-            user: { id: profile.id }
-        };
+        const profile = created[0];
 
-        res.json({ session, profile });
-    } catch (err) {
-        console.error('[REGISTER]', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+        // Call edge function to add starter items
+        try {
+            const starterItemsResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/add-starter-items`, {
+                method: 'POST',
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    player_id: profile.id 
+                })
+            });
+
+            const starterResult = await starterItemsResponse.json();
+            if (!starterItemsResponse.ok) {
+                console.error('[REGISTER] Failed to add starter items:', starterResult);
+                // Don't fail registration if starter items fail, but log the error
+            }
+        } catch (starterError) {
+            console.error('[REGISTER] Error adding starter items:', starterError);
+            // Don't fail registration if starter items fail
+        }
+
+        const session = {
+            access_token: process.env.SUPABASE_ANON_KEY,
+            user: { id: profile.id }
+        };
+
+        res.json({ session, profile });
+    } catch (err) {
+        console.error('[REGISTER]', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Verify token middleware (optional — still uses anon key for now)
