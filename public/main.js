@@ -1,186 +1,188 @@
 let supabaseConfig = null;
-let currentSession = null;
+let currentProfile = null;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[INIT] DOMContentLoaded triggered');
+  console.log('[INIT] DOMContentLoaded triggered');
 
-  const authStatus = document.getElementById('authStatus');
+  const authStatus = document.getElementById('authStatus');
 
-  // Load Supabase configuration
-  try {
-    const response = await fetch('/api/config');
-    supabaseConfig = await response.json();
-  } catch (error) {
-    authStatus.textContent = 'Failed to load configuration';
-    return;
-  }
+  // Load Supabase configuration
+  try {
+    const response = await fetch('/api/config');
+    supabaseConfig = await response.json();
+  } catch (error) {
+    console.error('[CONFIG] Failed to load configuration:', error);
+    authStatus.textContent = 'Failed to load configuration';
+    return;
+  }
 
-  Telegram.WebApp.ready();
-  Telegram.WebApp.expand();
+  Telegram.WebApp.ready();
+  Telegram.WebApp.expand();
 
-  const tgUser = Telegram.WebApp.initDataUnsafe?.user;
-  console.log('[TELEGRAM] initDataUnsafe user:', tgUser);
+  const tgUser = Telegram.WebApp.initDataUnsafe?.user;
+  console.log('[TELEGRAM] initDataUnsafe user:', tgUser);
 
-  if (!tgUser) {
-    authStatus.textContent = 'Telegram user not found. Please open via Telegram.';
-    return;
-  }
+  if (!tgUser) {
+    authStatus.textContent = 'Telegram user not found. Please open via Telegram.';
+    return;
+  }
 
-  const chatId = String(tgUser.id);
-  console.log('[TELEGRAM] chatId:', chatId);
+  const chatId = String(tgUser.id);
+  console.log('[TELEGRAM] chatId:', chatId);
 
-  try {
-    // Try to login with chatId
-    const loginResponse = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chatId })
-    });
+  try {
+    // Try to login with chatId
+    const loginResponse = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId })
+    });
 
-    let data = await loginResponse.json();
-    console.log('[LOGIN] Server response:', data);
+    let data = await loginResponse.json();
+    console.log('[LOGIN] Server response:', data);
 
-    if (loginResponse.ok) {
-      currentSession = data.session;
-      localStorage.setItem('session', JSON.stringify(currentSession));
-      localStorage.setItem('profile', JSON.stringify(data.profile));
-      authStatus.textContent = 'Login successful!';
-      await redirectToGame();
-    } else {
-      console.warn('[LOGIN] Login failed, attempting registration');
+    if (loginResponse.ok) {
+      currentProfile = data.profile;
+      localStorage.setItem('profile', JSON.stringify(currentProfile));
+      localStorage.setItem('chatId', chatId);
+      authStatus.textContent = 'Login successful!';
+      await redirectToGame();
+    } else {
+      console.warn('[LOGIN] Login failed, attempting registration');
 
-      // Try to register
-      const regResponse = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId })
-      });
+      // Try to register
+      const regResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId })
+      });
 
-      data = await regResponse.json();
-      console.log('[REGISTER] Server response:', data);
+      data = await regResponse.json();
+      console.log('[REGISTER] Server response:', data);
 
-      if (regResponse.ok) {
-        currentSession = data.session;
-        localStorage.setItem('session', JSON.stringify(currentSession));
-        localStorage.setItem('profile', JSON.stringify(data.profile));
-        authStatus.textContent = 'Registration successful!';
-        await redirectToGame();
-      } else {
-        console.error('[REGISTER] Registration failed:', data.error);
-        authStatus.textContent = data.error || 'Registration failed!';
-      }
-    }
-  } catch (err) {
-    console.error('[AUTH] Error:', err);
-    authStatus.textContent = 'Authentication error!';
-  }
+      if (regResponse.ok) {
+        currentProfile = data.profile;
+        localStorage.setItem('profile', JSON.stringify(currentProfile));
+        localStorage.setItem('chatId', chatId);
+        authStatus.textContent = 'Registration successful!';
+        await redirectToGame();
+      } else {
+        console.error('[REGISTER] Registration failed:', data.error);
+        authStatus.textContent = data.error || 'Registration failed!';
+      }
+    }
+  } catch (err) {
+    console.error('[AUTH] Error:', err);
+    authStatus.textContent = 'Authentication error!';
+  }
 });
 
-// Redirect logic stays the same
+// Redirect logic
 async function redirectToGame() {
-  const profile = getCurrentProfile();
-  console.log('[REDIRECT] Profile loaded:', profile);
+  const profile = getCurrentProfile();
+  console.log('[REDIRECT] Profile loaded:', profile);
 
-  if (!profile) {
-    console.warn('[REDIRECT] No profile found, loading god_selection');
-    loadModule("god_selection");
-    return;
-  }
+  if (!profile) {
+    console.warn('[REDIRECT] No profile found, loading god_selection');
+    loadModule("god_selection");
+    return;
+  }
 
-  try {
-    if (!profile.god) {
-      console.log('[REDIRECT] No god selected, loading god_selection');
-      loadModule("god_selection");
-      return;
-    }
+  try {
+    if (!profile.god) {
+      console.log('[REDIRECT] No god selected, loading god_selection');
+      loadModule("god_selection");
+      return;
+    }
 
-    const characterCount = await getPlayerCharacterCount(profile.id);
-    console.log(`[REDIRECT] Character count: ${characterCount}`);
+    const characterCount = await getPlayerCharacterCount(profile.id);
+    console.log(`[REDIRECT] Character count: ${characterCount}`);
 
-    if (characterCount < 3) {
-      console.log('[REDIRECT] Less than 3 characters, loading character_creation');
-      loadModule("character_creation");
-    } else {
-      console.log('[REDIRECT] 3+ characters, loading castle');
-      loadModule("castle");
-    }
-  } catch (error) {
-    console.error('[REDIRECT] Error checking progression:', error);
-    loadModule("god_selection");
-  }
+    if (characterCount < 3) {
+      console.log('[REDIRECT] Less than 3 characters, loading character_creation');
+      loadModule("character_creation");
+    } else {
+      console.log('[REDIRECT] 3+ characters, loading castle');
+      loadModule("castle");
+    }
+  } catch (error) {
+    console.error('[REDIRECT] Error checking progression:', error);
+    loadModule("god_selection");
+  }
 }
 
 async function getPlayerCharacterCount(playerId) {
-  console.log(`[CHARACTERS] Fetching character count for playerId: ${playerId}`);
-  try {
-    const response = await apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=id`);
-    const characters = await response.json();
-    console.log(`[CHARACTERS] Characters fetched:`, characters);
-    return characters.length;
-  } catch (error) {
-    console.error('[CHARACTERS] Error fetching character count:', error);
-    throw error;
-  }
+  console.log(`[CHARACTERS] Fetching character count for playerId: ${playerId}`);
+  try {
+    const response = await apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=id`);
+    const characters = await response.json();
+    console.log(`[CHARACTERS] Characters fetched:`, characters);
+    return characters.length;
+  } catch (error) {
+    console.error('[CHARACTERS] Error fetching character count:', error);
+    throw error;
+  }
 }
 
 async function loadModule(name, extraArgs = {}) {
-  const main = document.querySelector(".main-app-container");
-  main.innerHTML = "";
-  console.log(`[MODULE] Loading module: ${name}`);
+  const main = document.querySelector(".main-app-container");
+  main.innerHTML = "";
+  console.log(`[MODULE] Loading module: ${name}`);
 
-  try {
-    const module = await import(`./${name}.js`);
-    await module.loadModule(main, {
-      currentSession,
-      supabaseConfig,
-      getCurrentProfile,
-      getCurrentSession,
-      apiCall,
-      ...extraArgs
-    });
-    console.log(`[MODULE] Loaded module: ${name}`);
-  } catch (error) {
-    console.error(`[MODULE] Error loading module ${name}:`, error);
-    main.innerHTML = `<div>Error loading ${name} module</div>`;
-  }
+  try {
+    const module = await import(`./${name}.js`);
+    await module.loadModule(main, {
+      currentProfile,
+      supabaseConfig,
+      getCurrentProfile,
+      apiCall,
+      ...extraArgs
+    });
+    console.log(`[MODULE] Loaded module: ${name}`);
+  } catch (error) {
+    console.error(`[MODULE] Error loading module ${name}:`, error);
+    main.innerHTML = `<div>Error loading ${name} module</div>`;
+  }
 }
 
 function getCurrentProfile() {
-  const profile = localStorage.getItem('profile');
-  return profile ? JSON.parse(profile) : null;
-}
-
-function getCurrentSession() {
-  return currentSession;
+  if (currentProfile) return currentProfile;
+  
+  const profile = localStorage.getItem('profile');
+  if (profile) {
+    currentProfile = JSON.parse(profile);
+    return currentProfile;
+  }
+  return null;
 }
 
 function clearSession() {
-  console.log('[SESSION] Clearing session');
-  currentSession = null;
-  localStorage.removeItem('session');
-  localStorage.removeItem('profile');
+  console.log('[SESSION] Clearing session');
+  currentProfile = null;
+  localStorage.removeItem('profile');
+  localStorage.removeItem('chatId');
 }
 
 function logout() {
-  console.log('[LOGOUT] User logging out');
-  clearSession();
-  window.location.href = "/";
+  console.log('[LOGOUT] User logging out');
+  clearSession();
+  window.location.href = "/";
 }
 
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
-  if (!currentSession) throw new Error('No active session');
+  if (!supabaseConfig?.SUPABASE_ANON_KEY) {
+    throw new Error('No Supabase configuration available');
+  }
 
   const headers = {
-    'Authorization': `Bearer ${currentSession.access_token}`,
+    'Authorization': `Bearer ${supabaseConfig.SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
   };
 
-  let options = {
-    headers
-  };
+  let options = { headers };
 
-  // Check for the different ways apiCall is being used
+  // Handle different parameter patterns
   if (typeof methodOrOptions === 'string') {
     // Case 1: apiCall(url, 'POST', { body })
     options.method = methodOrOptions;
@@ -201,12 +203,7 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
     options.method = 'GET';
   }
 
-  // Ensure Content-Type is set correctly
-  if (!options.headers['Content-Type']) {
-    options.headers['Content-Type'] = 'application/json';
-  }
-
-  // 🔍 DEBUG: Log what we're sending
+  // Debug logging
   console.log(`[API DEBUG] Making ${options.method} request to: ${url}`);
   console.log(`[API DEBUG] Headers:`, options.headers);
   if (options.body) {
@@ -217,9 +214,12 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
 
   if (response.status === 401) {
     console.error(`[API] 401 Unauthorized for ${url}`);
-    console.error(`[API] Response:`, await response.text());
+    const errorText = await response.text();
+    console.error(`[API] Response:`, errorText);
     
-    // 🚫 DON'T automatically logout - let the calling code handle it
+    // For 401 errors, clear session and redirect to auth
+    clearSession();
+    window.location.href = "/";
     throw new Error(`Unauthorized access to ${url}`);
   }
 
@@ -233,10 +233,10 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   return response;
 }
 
+// Global API for modules
 window.gameAuth = {
-  getCurrentProfile,
-  getCurrentSession,
-  logout,
-  apiCall,
-  loadModule
+  getCurrentProfile,
+  logout,
+  apiCall,
+  loadModule
 };
