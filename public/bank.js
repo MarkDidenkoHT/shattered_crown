@@ -123,7 +123,7 @@ function createDynamicFilters() {
     
     filterTabs.innerHTML = filters.map(filter => `
         <button class="filter-tab ${filter === 'all' ? 'active' : ''}" data-filter="${filter}">
-            ${filter === 'all' ? 'All Items' : formatItemType(filter)}
+            ${filter === 'all' ? 'All Items' : filter}
         </button>
     `).join('');
 }
@@ -152,7 +152,7 @@ function renderBankItems() {
             <div class="item-info">
                 <div class="item-name">${item.item}</div>
                 <div class="item-details">
-                    <span class="item-type">${formatItemType(item.type)}</span>
+                    <span class="item-type">${item.type || 'recipe'}</span>
                     ${item.professions ? `<span class="item-profession">• ${item.professions.name}</span>` : ''}
                 </div>
             </div>
@@ -162,10 +162,6 @@ function renderBankItems() {
                     <span class="btn-icon">🏛️</span>
                     Auction
                 </button>
-                <button class="action-btn discard-btn" data-action="discard" data-item-id="${item.id}">
-                    <span class="btn-icon">🗑️</span>
-                    Discard
-                </button>
             </div>
         </div>
     `).join('');
@@ -174,21 +170,6 @@ function renderBankItems() {
 function getItemIcon(item) {
     // Use the pre-built sprite path, or fallback to default
     return item.spritePath || 'assets/art/recipes/default_item.png';
-}
-
-function formatItemType(type) {
-    if (!type) return 'Recipe';
-    
-    // Handle specific type formatting
-    const typeMap = {
-        'ingredient': 'Ingredient',
-        'consumable': 'Consumable',
-        'weapon': 'Weapon',
-        'armor': 'Armor',
-        'tool': 'Tool'
-    };
-    
-    return typeMap[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function setupBankInteractions() {
@@ -222,10 +203,6 @@ function setupBankInteractions() {
             const btn = e.target.classList.contains('auction-btn') ? e.target : e.target.closest('.auction-btn');
             const itemId = btn.dataset.itemId;
             await handleAuctionItem(itemId);
-        } else if (e.target.classList.contains('discard-btn') || e.target.closest('.discard-btn')) {
-            const btn = e.target.classList.contains('discard-btn') ? e.target : e.target.closest('.discard-btn');
-            const itemId = btn.dataset.itemId;
-            await handleDiscardItem(itemId);
         }
     });
 }
@@ -236,58 +213,6 @@ async function handleAuctionItem(itemId) {
 
     // Placeholder for auction functionality
     displayMessage(`Auction system coming soon! ${item.item} will be available for player trading.`);
-}
-
-async function handleDiscardItem(itemId) {
-    const item = _bankItems.find(i => i.id == itemId);
-    if (!item) return;
-
-    const confirmed = await showConfirmDialog(
-        `Discard ${item.item}?`,
-        `This item will be permanently destroyed and cannot be recovered.`
-    );
-
-    if (confirmed) {
-        try {
-            await _apiCall(`/api/supabase/rest/v1/bank?id=eq.${itemId}`, {
-                method: 'DELETE'
-            });
-
-            displayMessage(`Discarded ${item.item}!`);
-            await fetchBankItems();
-        } catch (error) {
-            console.error('Failed to discard item:', error);
-            displayMessage('Failed to discard item. Please try again.');
-        }
-    }
-}
-
-function showConfirmDialog(title, message) {
-    return new Promise((resolve) => {
-        const dialog = document.createElement('div');
-        dialog.className = 'custom-message-box';
-        dialog.innerHTML = `
-            <div class="message-content confirm-dialog">
-                <h3>${title}</h3>
-                <p>${message}</p>
-                <div class="confirm-buttons">
-                    <button class="fantasy-button confirm-yes">Yes</button>
-                    <button class="fantasy-button confirm-no">No</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(dialog);
-
-        dialog.querySelector('.confirm-yes').addEventListener('click', () => {
-            dialog.remove();
-            resolve(true);
-        });
-
-        dialog.querySelector('.confirm-no').addEventListener('click', () => {
-            dialog.remove();
-            resolve(false);
-        });
-    });
 }
 
 function createParticles() {
@@ -553,12 +478,6 @@ function addBankStyles() {
             background: linear-gradient(145deg, #3a2a4a, #2a1e3a);
         }
 
-        .discard-btn:hover {
-            border-color: #dc3545;
-            color: #dc3545;
-            background: linear-gradient(145deg, #5b1e1e, #4a1d1d);
-        }
-
         .btn-icon {
             font-size: 0.9rem;
         }
@@ -598,29 +517,6 @@ function addBankStyles() {
             color: #8b7355;
             font-style: italic;
             font-size: 0.9rem;
-        }
-
-        /* Confirm Dialog */
-        .confirm-dialog {
-            max-width: 400px;
-        }
-
-        .confirm-dialog h3 {
-            font-family: 'Cinzel', serif;
-            color: #c4975a;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .confirm-buttons {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .confirm-buttons .fantasy-button {
-            flex: 1;
-            padding: 0.75rem;
         }
 
         /* Mobile Responsiveness */
