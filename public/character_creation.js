@@ -758,6 +758,8 @@ async function confirmCharacter() {
         console.log('[CHAR_SAVE] API response received:', response);
         console.log('[CHAR_SAVE] Response status:', response.status);
         console.log('[CHAR_SAVE] Response ok:', response.ok);
+        alert('Response ok: ' + response.ok);
+        alert('Response status: ' + response.status);
 
         // Check if response is ok before trying to parse
         if (!response.ok) {
