@@ -679,6 +679,7 @@ function renderCharacterSummary() {
 
     // CRITICAL: Add preventDefault to button click handlers
     section.querySelector('.confirm-btn').addEventListener('click', (e) => {
+        alert(characterData);
         e.preventDefault(); // Prevent any form submission or default behavior
         e.stopPropagation(); // Stop event bubbling
         console.log('[UI_EVENT] Confirm Champion clicked - preventDefault applied.');
