@@ -168,60 +168,69 @@ function logout() {
   window.location.href = "/";
 }
 
-// ✅ CORRECTED AND ROBUST apiCall FUNCTION
-// This version is backward compatible with all your existing code.
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
-  if (!currentSession) throw new Error('No active session');
+  if (!currentSession) throw new Error('No active session');
 
-  const headers = {
-    'Authorization': `Bearer ${currentSession.access_token}`,
-    'Content-Type': 'application/json',
-  };
+  const headers = {
+    'Authorization': `Bearer ${currentSession.access_token}`,
+    'Content-Type': 'application/json',
+  };
 
-  let options = {
-    headers
-  };
+  let options = {
+    headers
+  };
 
-  // Check for the different ways apiCall is being used
-  if (typeof methodOrOptions === 'string') {
-    // Case 1: apiCall(url, 'POST', { body })
-    options.method = methodOrOptions;
-    if (bodyData) {
-      options.body = JSON.stringify(bodyData);
-    }
-  } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
-    // Case 2: apiCall(url, { options object })
-    options = {
-      ...options, // Keep default headers
-      ...methodOrOptions // Overwrite or add new properties
-    };
-    if (options.body && typeof options.body !== 'string') {
-      options.body = JSON.stringify(options.body);
-    }
-  } else {
-    // Case 3: apiCall(url) - default to GET
-    options.method = 'GET';
-  }
+  // Check for the different ways apiCall is being used
+  if (typeof methodOrOptions === 'string') {
+    // Case 1: apiCall(url, 'POST', { body })
+    options.method = methodOrOptions;
+    if (bodyData) {
+      options.body = JSON.stringify(bodyData);
+    }
+  } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
+    // Case 2: apiCall(url, { options object })
+    options = {
+      ...options, // Keep default headers
+      ...methodOrOptions // Overwrite or add new properties
+    };
+    if (options.body && typeof options.body !== 'string') {
+      options.body = JSON.stringify(options.body);
+    }
+  } else {
+    // Case 3: apiCall(url) - default to GET
+    options.method = 'GET';
+  }
 
-  // Ensure Content-Type is set correctly
-  if (!options.headers['Content-Type']) {
-    options.headers['Content-Type'] = 'application/json';
-  }
+  // Ensure Content-Type is set correctly
+  if (!options.headers['Content-Type']) {
+    options.headers['Content-Type'] = 'application/json';
+  }
 
-  const response = await fetch(url, options);
+  // 🔍 DEBUG: Log what we're sending
+  console.log(`[API DEBUG] Making ${options.method} request to: ${url}`);
+  console.log(`[API DEBUG] Headers:`, options.headers);
+  if (options.body) {
+    console.log(`[API DEBUG] Body:`, options.body);
+  }
 
-  if (response.status === 401) {
-    console.warn('[API] Session expired, logging out');
-    logout();
-    throw new Error('Session expired');
-  }
+  const response = await fetch(url, options);
 
-  if (!response.ok) {
-    console.error(`[API] HTTP error ${response.status} for ${url}`);
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
+  if (response.status === 401) {
+    console.error(`[API] 401 Unauthorized for ${url}`);
+    console.error(`[API] Response:`, await response.text());
+    
+    // 🚫 DON'T automatically logout - let the calling code handle it
+    throw new Error(`Unauthorized access to ${url}`);
+  }
 
-  return response;
+  if (!response.ok) {
+    console.error(`[API] HTTP error ${response.status} for ${url}`);
+    const errorText = await response.text();
+    console.error(`[API] Error response:`, errorText);
+    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+  }
+
+  return response;
 }
 
 window.gameAuth = {
