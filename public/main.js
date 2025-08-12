@@ -1,5 +1,4 @@
 let supabaseConfig = null;
-let currentSession = null;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
@@ -42,8 +41,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[LOGIN] Server response:', data);
 
     if (loginResponse.ok) {
-      currentSession = data.session;
-      localStorage.setItem('session', JSON.stringify(currentSession));
       localStorage.setItem('profile', JSON.stringify(data.profile));
       authStatus.textContent = 'Login successful!';
       await redirectToGame();
@@ -61,8 +58,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('[REGISTER] Server response:', data);
 
       if (regResponse.ok) {
-        currentSession = data.session;
-        localStorage.setItem('session', JSON.stringify(currentSession));
         localStorage.setItem('profile', JSON.stringify(data.profile));
         authStatus.textContent = 'Registration successful!';
         await redirectToGame();
@@ -132,10 +127,8 @@ async function loadModule(name, extraArgs = {}) {
   try {
     const module = await import(`./${name}.js`);
     await module.loadModule(main, {
-      currentSession,
       supabaseConfig,
       getCurrentProfile,
-      getCurrentSession,
       apiCall,
       ...extraArgs
     });
@@ -151,14 +144,8 @@ function getCurrentProfile() {
   return profile ? JSON.parse(profile) : null;
 }
 
-function getCurrentSession() {
-  return currentSession;
-}
-
 function clearSession() {
   console.log('[SESSION] Clearing session');
-  currentSession = null;
-  localStorage.removeItem('session');
   localStorage.removeItem('profile');
 }
 
@@ -168,13 +155,11 @@ function logout() {
   window.location.href = "/";
 }
 
-// ✅ CORRECTED AND ROBUST apiCall FUNCTION
-// This version is backward compatible with all your existing code.
+// ✅ SIMPLE apiCall FUNCTION WITHOUT SESSION
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
-  if (!currentSession) throw new Error('No active session');
-
+  console.log(`[API] Making call to: ${url}`);
+  
   const headers = {
-    'Authorization': `Bearer ${currentSession.access_token}`,
     'Content-Type': 'application/json',
   };
 
@@ -203,30 +188,23 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
     options.method = 'GET';
   }
 
-  // Ensure Content-Type is set correctly
-  if (!options.headers['Content-Type']) {
-    options.headers['Content-Type'] = 'application/json';
-  }
+  console.log(`[API] Request options:`, options);
 
   const response = await fetch(url, options);
 
-  if (response.status === 401) {
-    console.warn('[API] Session expired, logging out');
-    logout();
-    throw new Error('Session expired');
-  }
-
   if (!response.ok) {
     console.error(`[API] HTTP error ${response.status} for ${url}`);
-    throw new Error(`HTTP error! status: ${response.status}`);
+    const errorText = await response.text();
+    console.error(`[API] Error response:`, errorText);
+    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
   }
 
+  console.log(`[API] Successful response from ${url}`);
   return response;
 }
 
 window.gameAuth = {
   getCurrentProfile,
-  getCurrentSession,
   logout,
   apiCall,
   loadModule
