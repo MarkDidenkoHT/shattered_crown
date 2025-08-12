@@ -1,4 +1,3 @@
-// Corrected server.js
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -8,19 +7,18 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORRECTED Security middleware with updated CSP
+// Security middleware with updated CSP
 app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://telegram.org", "https://esm.sh"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https:"],
-            // 👇 UPDATED LINE
-            connectSrc: ["'self'", "https:", "wss:", "wss://lzdlfcapkfcobutadffa.supabase.co"],
-        },
-    },
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://telegram.org", "https://esm.sh"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https:", "wss:", "wss://lzdlfcapkfcobutadffa.supabase.co"],
+        },
+    },
 }));
 
 app.use(cors());
@@ -29,49 +27,45 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Config endpoint
+// Config endpoint - only return what's needed
 app.get('/api/config', (req, res) => {
-    res.json({
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-    });
+    res.json({
+        SUPABASE_URL: process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+    });
 });
 
-// ✅ New Telegram-based login
+// Telegram-based login
 app.post('/api/auth/login', async (req, res) => {
-    try {
-        const { chatId } = req.body;
-        if (!chatId) {
-            return res.status(400).json({ error: 'chatId is required' });
-        }
+    try {
+        const { chatId } = req.body;
+        if (!chatId) {
+            return res.status(400).json({ error: 'chatId is required' });
+        }
 
-        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
+        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
 
-        const profiles = await response.json();
-        if (profiles.length === 0) {
-            return res.status(404).json({ error: 'Profile not found' });
-        }
+        const profiles = await response.json();
+        if (profiles.length === 0) {
+            return res.status(404).json({ error: 'Profile not found' });
+        }
 
-        const profile = profiles[0];
-        const session = {
-            access_token: process.env.SUPABASE_ANON_KEY,
-            user: { id: profile.id }
-        };
-
-        res.json({ session, profile });
-    } catch (err) {
-        console.error('[LOGIN]', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+        const profile = profiles[0];
+        
+        // Simplified response - just return profile, client will handle auth
+        res.json({ profile });
+    } catch (err) {
+        console.error('[LOGIN]', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
-// ✅ New Telegram-based register
-// Updated server.js registration endpoint
+// Telegram-based register
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { chatId } = req.body;
@@ -79,6 +73,7 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(400).json({ error: 'chatId is required' });
         }
 
+        // Check if profile already exists
         const checkResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}`, {
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
@@ -127,143 +122,140 @@ app.post('/api/auth/register', async (req, res) => {
                 })
             });
 
-            const starterResult = await starterItemsResponse.json();
             if (!starterItemsResponse.ok) {
+                const starterResult = await starterItemsResponse.json();
                 console.error('[REGISTER] Failed to add starter items:', starterResult);
-                // Don't fail registration if starter items fail, but log the error
             }
         } catch (starterError) {
             console.error('[REGISTER] Error adding starter items:', starterError);
-            // Don't fail registration if starter items fail
         }
 
-        const session = {
-            access_token: process.env.SUPABASE_ANON_KEY,
-            user: { id: profile.id }
-        };
-
-        res.json({ session, profile });
+        // Simplified response - just return profile
+        res.json({ profile });
     } catch (err) {
         console.error('[REGISTER]', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// Verify token middleware (optional — still uses anon key for now)
-const verifyToken = (req, res, next) => {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-        return res.status(401).json({ error: 'No token' });
-    }
-    req.user = { id: 'anon' }; // dummy user
-    next();
+// Simplified middleware - just check if anon key is provided
+const requireAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authorization header required' });
+    }
+    
+    const token = authHeader.replace('Bearer ', '');
+    if (token !== process.env.SUPABASE_ANON_KEY) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    next();
 };
 
-// Get profile by user id (not chatId)
-app.get('/api/profile', verifyToken, async (req, res) => {
-    try {
-        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${req.user.id}`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
+// Supabase proxy endpoints
+app.get('/api/supabase/*', requireAuth, async (req, res) => {
+    const supabasePath = req.params[0];
+    const queryString = req.url.split('?')[1] || '';
+    const url = `${process.env.SUPABASE_URL}/${supabasePath}${queryString ? '?' + queryString : ''}`;
 
-        const profiles = await response.json();
-        if (profiles.length === 0) {
-            return res.status(404).json({ error: 'Profile not found' });
-        }
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
 
-        res.json(profiles[0]);
-    } catch (err) {
-        console.error('[PROFILE]', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (error) {
+        console.error('[PROXY GET]', error);
+        res.status(500).json({ error: 'Proxy error' });
+    }
 });
 
-// Proxies remain unchanged
-app.get('/api/supabase/*', verifyToken, async (req, res) => {
-    const supabasePath = req.params[0];
-    const queryString = req.url.split('?')[1] || '';
-    const url = `${process.env.SUPABASE_URL}/${supabasePath}${queryString ? '?' + queryString : ''}`;
+app.post('/api/supabase/*', requireAuth, async (req, res) => {
+    const supabasePath = req.params[0];
+    const url = `${process.env.SUPABASE_URL}/${supabasePath}`;
 
-    const response = await fetch(url, {
-        headers: {
-            'apikey': process.env.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-        }
-    });
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(req.body)
+        });
 
-    const data = await response.json();
-    res.status(response.status).json(data);
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (error) {
+        console.error('[PROXY POST]', error);
+        res.status(500).json({ error: 'Proxy error' });
+    }
 });
 
-app.post('/api/supabase/*', verifyToken, async (req, res) => {
-    const supabasePath = req.params[0];
-    const url = `${process.env.SUPABASE_URL}/${supabasePath}`;
+app.patch('/api/supabase/*', requireAuth, async (req, res) => {
+    const supabasePath = req.params[0];
+    const queryString = req.url.split('?')[1] || '';
+    const url = `${process.env.SUPABASE_URL}/${supabasePath}${queryString ? '?' + queryString : ''}`;
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'apikey': process.env.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(req.body)
-    });
+    try {
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(req.body)
+        });
 
-    const data = await response.json();
-    res.status(response.status).json(data);
-});
-
-app.patch('/api/supabase/*', verifyToken, async (req, res) => {
-    const supabasePath = req.params[0];
-    const queryString = req.url.split('?')[1] || '';
-    const url = `${process.env.SUPABASE_URL}/${supabasePath}${queryString ? '?' + queryString : ''}`;
-
-    const response = await fetch(url, {
-        method: 'PATCH',
-        headers: {
-            'apikey': process.env.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(req.body)
-    });
-
-    const data = await response.json();
-    res.status(response.status).json(data);
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (error) {
+        console.error('[PROXY PATCH]', error);
+        res.status(500).json({ error: 'Proxy error' });
+    }
 });
 
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// ✅ Proxy Supabase edge functions
-app.all('/functions/v1/*', async (req, res) => {
-    const supabasePath = req.params[0];
-    const url = `${process.env.SUPABASE_URL}/functions/v1/${supabasePath}`;
+// Proxy Supabase edge functions
+app.all('/functions/v1/*', requireAuth, async (req, res) => {
+    const supabasePath = req.params[0];
+    const url = `${process.env.SUPABASE_URL}/functions/v1/${supabasePath}`;
 
-    const response = await fetch(url, {
-        method: req.method,
-        headers: {
-            'apikey': process.env.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        body: ['POST', 'PATCH', 'PUT'].includes(req.method) ? JSON.stringify(req.body) : undefined
-    });
+    try {
+        const response = await fetch(url, {
+            method: req.method,
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: ['POST', 'PATCH', 'PUT'].includes(req.method) ? JSON.stringify(req.body) : undefined
+        });
 
-    const text = await response.text();
-    res.status(response.status).send(text);
+        const text = await response.text();
+        res.status(response.status).send(text);
+    } catch (error) {
+        console.error('[FUNCTIONS PROXY]', error);
+        res.status(500).json({ error: 'Proxy error' });
+    }
 });
 
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
