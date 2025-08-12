@@ -238,19 +238,6 @@ function addCastleStyles() {
             left: 0;
         }
 
-        .top-right-buttons {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            display: flex;
-            gap: 0.5rem;
-            z-index: 10; /* Ensure buttons are above other content */
-        }
-        .top-right-buttons .fantasy-button {
-            padding: 0.6rem 1rem;
-            font-size: 0.8rem;
-        }
-
         .bottom-navigation {
             position: absolute;
             bottom: 0; /* Aligns to the very bottom */

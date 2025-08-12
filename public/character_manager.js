@@ -72,12 +72,7 @@ function renderCharacters(characters) {
       <p class="subtitle">View your heroes and their current equipment and abilities.</p>
     </div>
     <div class="selection-section">
-      <div class="selection-container desktop-view">
-        <div class="selection-grid">
-          ${characters.map(characterCardHTML).join('')}
-        </div>
-      </div>
-      <div class="selection-slider mobile-view">
+      <div class="selection-slider">
         <div class="slider-container">
           <div class="slider-track">
             ${characters.map(character => `
