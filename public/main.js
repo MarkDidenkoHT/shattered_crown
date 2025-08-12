@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const response = await fetch('/api/config');
     supabaseConfig = await response.json();
+    
+    // *** Update the global config after loading ***
+    window.gameAuth.supabaseConfig = supabaseConfig;
+    
   } catch (error) {
     console.error('[CONFIG] Failed to load configuration:', error);
     authStatus.textContent = 'Failed to load configuration';
@@ -233,11 +237,11 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   return response;
 }
 
-// Global API for modules
+// Global API for modules - Initialize with null, will be set after config loads
 window.gameAuth = {
   getCurrentProfile,
   logout,
   apiCall,
   loadModule,
-  supabaseConfig 
+  supabaseConfig: null
 };
