@@ -70,7 +70,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('profile', JSON.stringify(currentProfile));
         localStorage.setItem('chatId', chatId);
         authStatus.textContent = 'Registration successful!';
-        await redirectToGame();
+        
+        // Show tutorial for new users
+        showTutorial();
       } else {
         console.error('[REGISTER] Registration failed:', data.error);
         authStatus.textContent = data.error || 'Registration failed!';
@@ -81,6 +83,244 @@ document.addEventListener('DOMContentLoaded', async () => {
     authStatus.textContent = 'Authentication error!';
   }
 });
+
+// Tutorial system
+function showTutorial() {
+  console.log('[TUTORIAL] Starting tutorial');
+  
+  const loginSection = document.querySelector('.login-section');
+  loginSection.innerHTML = `
+    <div class="tutorial-container">
+      <div class="tutorial-slides">
+        <!-- Slide 1 -->
+        <div class="tutorial-slide active" data-slide="1">
+          <h2>Welcome to Shattered Crown</h2>
+          <p>Add your tutorial text for slide 1 here...</p>
+        </div>
+        
+        <!-- Slide 2 -->
+        <div class="tutorial-slide" data-slide="2">
+          <h2>Choose Your Divine Patron</h2>
+          <p>Add your tutorial text for slide 2 here...</p>
+        </div>
+        
+        <!-- Slide 3 -->
+        <div class="tutorial-slide" data-slide="3">
+          <h2>Build Your Heroes</h2>
+          <p>Add your tutorial text for slide 3 here...</p>
+        </div>
+        
+        <!-- Slide 4 -->
+        <div class="tutorial-slide" data-slide="4">
+          <h2>Ready to Begin</h2>
+          <p>Add your tutorial text for slide 4 here...</p>
+          <div class="tutorial-final-buttons">
+            <button class="fantasy-button" onclick="startGame()">Start Your Journey</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="tutorial-navigation">
+        <div class="tutorial-dots">
+          <span class="dot active" onclick="goToSlide(1)"></span>
+          <span class="dot" onclick="goToSlide(2)"></span>
+          <span class="dot" onclick="goToSlide(3)"></span>
+          <span class="dot" onclick="goToSlide(4)"></span>
+        </div>
+        
+        <div class="tutorial-buttons">
+          <button class="tutorial-btn prev-btn" onclick="prevSlide()">Previous</button>
+          <button class="tutorial-btn next-btn" onclick="nextSlide()">Next</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Add tutorial styles
+  addTutorialStyles();
+  
+  // Initialize tutorial state
+  window.currentSlide = 1;
+  updateTutorialUI();
+}
+
+function addTutorialStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .tutorial-container {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .tutorial-slides {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      overflow: hidden;
+      border-radius: 8px;
+      background: rgba(29, 20, 12, 0.8);
+      backdrop-filter: blur(10px);
+      border: 2px solid #3d2914;
+    }
+
+    .tutorial-slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.5s ease-in-out;
+    }
+
+    .tutorial-slide.active {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .tutorial-slide.prev {
+      transform: translateX(-100%);
+    }
+
+    .tutorial-slide h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.8rem;
+      color: #c4975a;
+      margin-bottom: 1rem;
+      text-shadow: 2px 2px 0px #3d2914;
+    }
+
+    .tutorial-slide p {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #b8b3a8;
+      max-width: 400px;
+    }
+
+    .tutorial-final-buttons {
+      margin-top: 2rem;
+    }
+
+    .tutorial-navigation {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .tutorial-dots {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3d2914;
+      border: 2px solid #c4975a;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dot.active {
+      background: #c4975a;
+      transform: scale(1.2);
+    }
+
+    .tutorial-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .tutorial-btn {
+      padding: 0.75rem 1.5rem;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      color: #c4975a;
+      background: rgba(29, 20, 12, 0.8);
+      border: 2px solid #3d2914;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+    }
+
+    .tutorial-btn:hover {
+      background: #3d2914;
+      border-color: #c4975a;
+    }
+
+    .tutorial-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function nextSlide() {
+  if (window.currentSlide < 4) {
+    window.currentSlide++;
+    updateTutorialUI();
+  }
+}
+
+function prevSlide() {
+  if (window.currentSlide > 1) {
+    window.currentSlide--;
+    updateTutorialUI();
+  }
+}
+
+function goToSlide(slideNumber) {
+  window.currentSlide = slideNumber;
+  updateTutorialUI();
+}
+
+function updateTutorialUI() {
+  const slides = document.querySelectorAll('.tutorial-slide');
+  const dots = document.querySelectorAll('.dot');
+  const prevBtn = document.querySelector('.prev-btn');
+  const nextBtn = document.querySelector('.next-btn');
+
+  // Update slides
+  slides.forEach((slide, index) => {
+    const slideNum = index + 1;
+    slide.classList.remove('active', 'prev');
+    
+    if (slideNum === window.currentSlide) {
+      slide.classList.add('active');
+    } else if (slideNum < window.currentSlide) {
+      slide.classList.add('prev');
+    }
+  });
+
+  // Update dots
+  dots.forEach((dot, index) => {
+    dot.classList.toggle('active', index + 1 === window.currentSlide);
+  });
+
+  // Update buttons
+  prevBtn.disabled = window.currentSlide === 1;
+  nextBtn.style.display = window.currentSlide === 4 ? 'none' : 'block';
+}
+
+function startGame() {
+  console.log('[TUTORIAL] Tutorial completed, starting game');
+  redirectToGame();
+}
 
 // Redirect logic
 async function redirectToGame() {
