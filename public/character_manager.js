@@ -1,23 +1,19 @@
 let _main;
 let _apiCall;
 let _getCurrentProfile;
-let _getCurrentSession;
 let _profile;
-let _session;
 
-export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentSession }) {
+export async function loadModule(main, { apiCall, getCurrentProfile }) {
   console.log('[CHAR_MGR] --- Starting loadModule for Character Manager ---');
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
-  _getCurrentSession = getCurrentSession;
 
   _profile = _getCurrentProfile();
-  _session = _getCurrentSession();
   if (!_profile) {
-    console.error('[CHAR_MGR] No profile found. Redirecting to login.');
+    console.error('[CHAR_MGR] No profile found. Redirecting to god selection.');
     displayMessage('User profile not found. Please log in again.');
-    window.gameAuth.loadModule('login');
+    window.gameAuth.loadModule('god_selection');
     return;
   }
 

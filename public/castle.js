@@ -22,6 +22,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <div class="particles"></div>
             
             <div class="top-right-buttons">
+                <button class="fantasy-button settings-btn">Support</button>
                 <button class="fantasy-button settings-btn">Settings</button>
             </div>
 
@@ -220,7 +221,7 @@ function addCastleStyles() {
         .castle-scene {
             position: relative;
             width: 100%;
-            height: 85%;
+            height: 83%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -230,8 +231,8 @@ function addCastleStyles() {
         .castle-image {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Ensures the image fits without cropping, maintains aspect ratio */
-            object-position: center bottom; /* Align image to bottom center */
+            /* object-fit: contain; */
+            object-position: center bottom;
             display: block;
             position: absolute;
             bottom: 0;
