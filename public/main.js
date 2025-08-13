@@ -94,20 +94,20 @@ function showTutorial() {
       <div class="tutorial-slides">
         <!-- Slide 1 -->
         <div class="tutorial-slide active" data-slide="1">
-          <h2>Welcome to Shattered Crown</h2>
-          <p>Add your tutorial text for slide 1 here...</p>
+          <h2>Welcome!</h2>
+          <p>Shattered Crown is a fantasy turn based rpg with strategy elements.</p>
         </div>
         
         <!-- Slide 2 -->
         <div class="tutorial-slide" data-slide="2">
-          <h2>Choose Your Divine Patron</h2>
-          <p>Add your tutorial text for slide 2 here...</p>
+          <h2>Divine Patron</h2>
+          <p>In this realm gods fight for an artifact of power. You must choose what deity you will follow. Create three heroes that will recover all parts of the crown for your deity!</p>
         </div>
         
         <!-- Slide 3 -->
         <div class="tutorial-slide" data-slide="3">
-          <h2>Build Your Heroes</h2>
-          <p>Add your tutorial text for slide 3 here...</p>
+          <h2>Crafting</h2>
+          <p>Most gear and equipment comes from crafting, and resources and ingredients come as loot from battles! Each profession has a mini-game.</p>
         </div>
         
         <!-- Slide 4 -->
@@ -115,8 +115,22 @@ function showTutorial() {
           <h2>Ready to Begin</h2>
           <p>Warning! Game is in early development stage and there will be bugs, errors and placeholders! Thank you for testing!</p>
           <div class="tutorial-final-buttons">
-            <button class="fantasy-button start-game-btn">Start Your Journey</button>
+            <button class="fantasy-button" onclick="startGame()">Start Your Journey</button>
           </div>
+        </div>
+      </div>
+      
+      <div class="tutorial-navigation">
+        <div class="tutorial-dots">
+          <span class="dot active" onclick="goToSlide(1)"></span>
+          <span class="dot" onclick="goToSlide(2)"></span>
+          <span class="dot" onclick="goToSlide(3)"></span>
+          <span class="dot" onclick="goToSlide(4)"></span>
+        </div>
+        
+        <div class="tutorial-buttons">
+          <button class="tutorial-btn prev-btn" onclick="prevSlide()">Previous</button>
+          <button class="tutorial-btn next-btn" onclick="nextSlide()">Next</button>
         </div>
       </div>
     </div>
@@ -127,23 +141,7 @@ function showTutorial() {
   
   // Initialize tutorial state
   window.currentSlide = 1;
-  
-  // Add event listeners after DOM is created
-  setupTutorialEventListeners();
   updateTutorialUI();
-}
-
-function setupTutorialEventListeners() {
-  // Add event listeners for navigation buttons
-  document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('tutorial-next-btn')) {
-      nextSlide();
-    } else if (e.target.classList.contains('tutorial-prev-btn')) {
-      prevSlide();
-    } else if (e.target.classList.contains('start-game-btn')) {
-      startGame();
-    }
-  });
 }
 
 function addTutorialStyles() {
@@ -161,7 +159,7 @@ function addTutorialStyles() {
     .tutorial-slides {
       position: relative;
       width: 100%;
-      height: 350px;
+      height: 300px;
       overflow: hidden;
       border-radius: 8px;
       background: rgba(29, 20, 12, 0.8);
@@ -207,21 +205,45 @@ function addTutorialStyles() {
       line-height: 1.6;
       color: #b8b3a8;
       max-width: 400px;
-      margin-bottom: 2rem;
-    }
-
-    .tutorial-slide-nav {
-      display: flex;
-      gap: 1rem;
-      margin-top: auto;
     }
 
     .tutorial-final-buttons {
       margin-top: 2rem;
     }
 
-    .tutorial-prev-btn,
-    .tutorial-next-btn {
+    .tutorial-navigation {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .tutorial-dots {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3d2914;
+      border: 2px solid #c4975a;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dot.active {
+      background: #c4975a;
+      transform: scale(1.2);
+    }
+
+    .tutorial-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .tutorial-btn {
       padding: 0.75rem 1.5rem;
       font-family: 'Cinzel', serif;
       font-size: 1rem;
@@ -234,38 +256,14 @@ function addTutorialStyles() {
       backdrop-filter: blur(5px);
     }
 
-    .tutorial-prev-btn:hover,
-    .tutorial-next-btn:hover {
+    .tutorial-btn:hover {
       background: #3d2914;
       border-color: #c4975a;
     }
 
-    .tutorial-prev-btn:disabled,
-    .tutorial-next-btn:disabled {
+    .tutorial-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-
-    .fantasy-button {
-      padding: 1rem 2rem;
-      font-family: 'Cinzel', serif;
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: #1d140c;
-      background: linear-gradient(145deg, #c4975a, #a67c3a);
-      border: 2px solid #3d2914;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-
-    .fantasy-button:hover {
-      background: linear-gradient(145deg, #a67c3a, #c4975a);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
     }
   `;
   document.head.appendChild(style);
@@ -285,8 +283,16 @@ function prevSlide() {
   }
 }
 
+function goToSlide(slideNumber) {
+  window.currentSlide = slideNumber;
+  updateTutorialUI();
+}
+
 function updateTutorialUI() {
   const slides = document.querySelectorAll('.tutorial-slide');
+  const dots = document.querySelectorAll('.dot');
+  const prevBtn = document.querySelector('.prev-btn');
+  const nextBtn = document.querySelector('.next-btn');
 
   // Update slides
   slides.forEach((slide, index) => {
@@ -299,6 +305,15 @@ function updateTutorialUI() {
       slide.classList.add('prev');
     }
   });
+
+  // Update dots
+  dots.forEach((dot, index) => {
+    dot.classList.toggle('active', index + 1 === window.currentSlide);
+  });
+
+  // Update buttons
+  prevBtn.disabled = window.currentSlide === 1;
+  nextBtn.style.display = window.currentSlide === 4 ? 'none' : 'block';
 }
 
 function startGame() {
@@ -410,23 +425,28 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
 
   let options = { headers };
 
+  // Handle different parameter patterns
   if (typeof methodOrOptions === 'string') {
+    // Case 1: apiCall(url, 'POST', { body })
     options.method = methodOrOptions;
     if (bodyData) {
       options.body = JSON.stringify(bodyData);
     }
   } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
+    // Case 2: apiCall(url, { options object })
     options = {
-      ...options,
-      ...methodOrOptions
+      ...options, // Keep default headers
+      ...methodOrOptions // Overwrite or add new properties
     };
     if (options.body && typeof options.body !== 'string') {
       options.body = JSON.stringify(options.body);
     }
   } else {
+    // Case 3: apiCall(url) - default to GET
     options.method = 'GET';
   }
 
+  // Debug logging
   console.log(`[API DEBUG] Making ${options.method} request to: ${url}`);
   console.log(`[API DEBUG] Headers:`, options.headers);
   if (options.body) {
@@ -439,6 +459,8 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
     console.error(`[API] 401 Unauthorized for ${url}`);
     const errorText = await response.text();
     console.error(`[API] Response:`, errorText);
+    
+    // For 401 errors, clear session and redirect to auth
     clearSession();
     window.location.href = "/";
     throw new Error(`Unauthorized access to ${url}`);
@@ -454,6 +476,7 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   return response;
 }
 
+// Global API for modules - Initialize with null, will be set after config loads
 window.gameAuth = {
   getCurrentProfile,
   logout,
