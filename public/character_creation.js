@@ -25,9 +25,19 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
         window.gameAuth.loadModule('login'); // Redirect to login if no profile
         return;
     }
-    _godId = _profile.god; // The god selected in the previous step
+    
+    // FIX: Use god_id instead of god
+    _godId = _profile.god_id; // The god selected in the previous step
     console.log('[CHAR_CREATE] Profile loaded:', _profile);
     console.log('[CHAR_CREATE] Selected God ID:', _godId);
+
+    // Check if god_id is valid
+    if (!_godId || _godId === null || _godId === 'null') {
+        console.error('[CHAR_CREATE] No god selected or invalid god_id. Redirecting to god selection.');
+        displayMessage('Please select a deity first.');
+        window.gameAuth.loadModule('god_selection');
+        return;
+    }
 
     // Ensure the main container is ready for content
     _main.innerHTML = `
@@ -64,7 +74,19 @@ async function startCharacterCreationFlow() {
 async function fetchRacesAndRenderSelection() {
     console.log(`[RACE_FETCH] Fetching races for God ID: ${_godId}...`);
     try {
-        const response = await _apiCall(`/api/supabase/rest/v1/races?god_id=eq.${_godId}&select=id,name,description,base_stats`);
+        // FIX: Handle the query properly based on whether god_id is null or has a value
+        let queryUrl;
+        if (_godId && _godId !== null && _godId !== 'null') {
+            queryUrl = `/api/supabase/rest/v1/races?god_id=eq.${_godId}&select=id,name,description,base_stats`;
+        } else {
+            // If somehow we still have a null god_id, query for races without god restriction
+            // or redirect to god selection
+            console.error('[RACE_FETCH] God ID is null, redirecting to god selection');
+            window.gameAuth.loadModule('god_selection');
+            return;
+        }
+        
+        const response = await _apiCall(queryUrl);
         _races = await response.json();
         console.log('[RACE_FETCH] Races fetched:', _races);
 
@@ -679,13 +701,10 @@ function renderCharacterSummary() {
 
     // CRITICAL: Add preventDefault to button click handlers
     section.querySelector('.confirm-btn').addEventListener('click', (e) => {
-        
         e.preventDefault(); // Prevent any form submission or default behavior
         e.stopPropagation(); // Stop event bubbling
         console.log('[UI_EVENT] Confirm Champion clicked - preventDefault applied.');
         confirmCharacter();
-
-        alert(characterData);
     });
 
     section.querySelector('.return-btn').addEventListener('click', (e) => {
@@ -845,21 +864,4 @@ function displayMessage(message) {
         messageBox.remove();
         console.log('[MESSAGE] Message box closed.');
     });
-}
-
-function addCharacterCreationStyles() {
-    console.log('[STYLES] Adding character creation styles...');
-    const styleId = 'character-creation-styles';
-    if (document.getElementById(styleId)) {
-        console.log('[STYLES] Styles already present, skipping re-addition.');
-        return;
-    }
-
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-
-    `;
-    document.head.appendChild(style);
-    console.log('[STYLES] Character creation styles appended to document head.');
 }
