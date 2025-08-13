@@ -47,7 +47,7 @@ export async function startCraftingSession(ctx) {
       maxAdjustments: 2,
       enrichedHerbs: null,
       recipes: recipes, // Store recipes immediately
-      sessionId: null
+      //sessionId: null
     };
     
     // Step 5: Minimum loading time and render
@@ -836,17 +836,10 @@ async function startSlotAnimation(resultDiv, modal) {
   const selectedHerbNames = alchemyState.selectedHerbs.map(h => h.name);
 
   try {
-    const reserveRes = await fetch('/functions/v1/reserve_ingredients', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${context.session.access_token}`,
-      },
-      body: JSON.stringify({
-        player_id: context.profile.id,
-        profession_id: alchemyState.professionId,
-        selected_ingredients: selectedHerbNames,
-      }),
+    const reserveRes = await context.apiCall('/functions/v1/reserve_ingredients', 'POST', {
+      player_id: context.profile.id,
+      profession_id: alchemyState.professionId,
+      selected_ingredients: selectedHerbNames,
     });
 
     const reserveJson = await reserveRes.json();
@@ -856,7 +849,6 @@ async function startSlotAnimation(resultDiv, modal) {
       return;
     }
 
-    // Store the session ID and enriched herbs
     alchemyState.sessionId = reserveJson.session_id;
     alchemyState.enrichedHerbs = reserveJson.herbs;
 
@@ -1034,16 +1026,7 @@ async function patchAndSendCraftRequest(resultDiv) {
     };
 
     console.log('[ALCHEMY] Sending craft request payload:', payload);
-
-    const res = await fetch('/functions/v1/craft_alchemy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${context.session.access_token}`
-      },
-      body: JSON.stringify(payload)
-    });
-
+    const res = await context.apiCall('/functions/v1/craft_alchemy', 'POST', payload);
     const json = await res.json();
 
     // Get button references
