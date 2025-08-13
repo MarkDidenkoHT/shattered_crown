@@ -66,7 +66,6 @@ async function fetchPlayerCharacters() {
 function renderCastleScene() {
     const buildingOverlay = _main.querySelector('.building-overlay');
 
-
     buildingOverlay.querySelectorAll('.profession-hotspot').forEach(el => el.remove());
     const professionPositions = {
         'blacksmith': { x: '50%', y: '60%', width: '10%', height: '15%' }, // Example
@@ -95,9 +94,22 @@ function renderCastleScene() {
 
 function setupInteractions() {
     // Top Right Buttons
-    _main.querySelector('.settings-btn').addEventListener('click', () => {
-        displayMessage('Settings functionality coming soon!');
-        // window.gameAuth.loadModule('settings'); // Example of loading another module
+    _main.querySelectorAll('.top-right-buttons .settings-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            console.log(`[CASTLE_INTERACTION] Top button clicked: ${action}`);
+            
+            if (action === 'settings') {
+                displayMessage('Settings functionality coming soon!');
+                // window.gameAuth.loadModule('settings');
+            } else if (action === 'support') {
+                displayMessage('Support functionality coming soon!');
+                // window.gameAuth.loadModule('support');
+            } else if (action === 'roadmap') {
+                displayMessage('Roadmap functionality coming soon!');
+                // window.gameAuth.loadModule('roadmap');
+            }
+        });
     });
 
     // Bottom Navigation Buttons
@@ -106,30 +118,20 @@ function setupInteractions() {
             const action = e.target.dataset.action;
             console.log(`[CASTLE_INTERACTION] Navigation button clicked: ${action}`);
             
-            // Updated logic for navigation buttons
             if (action === 'characters') {
                 window.gameAuth.loadModule('character_manager'); 
             } else if (action === 'trade') {
                 displayMessage('Trade functionality coming soon!');
                 // window.gameAuth.loadModule('marketplace');
             } else if (action === 'bank') {
-              window.gameAuth.loadModule('bank');
+                window.gameAuth.loadModule('bank');
             } else if (action === 'embark') {
                 window.gameAuth.loadModule('embark');
             } else if (action === 'crafting') {
                 window.gameAuth.loadModule('crafting_manager');
-            } else if (action === 'altar-nav') { // Note: using 'altar-nav' to distinguish from building hotspot
+            } else if (action === 'altar-nav') {
                 displayMessage('Altar functionality coming soon!');
                 // window.gameAuth.loadModule('altar_scene');
-            } else if (action === 'settings') {
-                displayMessage('Settings functionality coming soon!');
-                // window.gameAuth.loadModule('');
-            } else if (action === 'support') {
-                displayMessage('Support functionality coming soon!');
-                // window.gameAuth.loadModule('');
-            } else if (action === 'roadmap') {
-                displayMessage('Roadmap functionality coming soon!');
-                // window.gameAuth.loadModule('');
             } else {
                 displayMessage(`${action.charAt(0).toUpperCase() + action.slice(1)} functionality coming soon!`);
             }
