@@ -118,7 +118,7 @@
     }
 
     .art-header {
-      height: 72%;
+      height: 95%;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -165,7 +165,7 @@
       text-shadow: 
         2px 2px 0px #3d2914,
         0 0 10px rgba(196, 151, 90, 0.3);
-      margin-bottom: 0.5rem;
+      margin-bottom: 2.5rem;
       text-align: center;
       letter-spacing: 3px;
     }
@@ -179,10 +179,10 @@
     }
 
     .login-section {
-      height: 28%;
+      height: 5%;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: end;
       align-items: center;
       padding: 2rem;
       position: relative;
@@ -322,10 +322,6 @@
     @media (max-width: 480px) {
       .art-header h1 {
         font-size: 2rem;
-      }
-      
-      .crown-symbol {
-        font-size: 3rem;
       }
       
       .login-section {

@@ -22,8 +22,9 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <div class="particles"></div>
             
             <div class="top-right-buttons">
-                <button class="fantasy-button settings-btn">Support</button>
-                <button class="fantasy-button settings-btn">Settings</button>
+                <button class="fantasy-button settings-btn" data-action="roadmap">Roadmap</button>
+                <button class="fantasy-button settings-btn" data-action="support">Support</button>
+                <button class="fantasy-button settings-btn" data-action="settings">Settings</button>
             </div>
 
             <div class="castle-scene">
@@ -120,6 +121,15 @@ function setupInteractions() {
             } else if (action === 'altar-nav') { // Note: using 'altar-nav' to distinguish from building hotspot
                 displayMessage('Altar functionality coming soon!');
                 // window.gameAuth.loadModule('altar_scene');
+            } else if (action === 'settings') {
+                displayMessage('Settings functionality coming soon!');
+                // window.gameAuth.loadModule('');
+            } else if (action === 'support') {
+                displayMessage('Support functionality coming soon!');
+                // window.gameAuth.loadModule('');
+            } else if (action === 'roadmap') {
+                displayMessage('Roadmap functionality coming soon!');
+                // window.gameAuth.loadModule('');
             } else {
                 displayMessage(`${action.charAt(0).toUpperCase() + action.slice(1)} functionality coming soon!`);
             }

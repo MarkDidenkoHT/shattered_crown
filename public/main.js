@@ -94,26 +94,26 @@ function showTutorial() {
       <div class="tutorial-slides">
         <!-- Slide 1 -->
         <div class="tutorial-slide active" data-slide="1">
-          <h2>Welcome to Shattered Crown</h2>
-          <p>Add your tutorial text for slide 1 here...</p>
+          <h2>Welcome!</h2>
+          <p>Shattered Crown is a fantasy turn based rpg with strategy elements.</p>
         </div>
         
         <!-- Slide 2 -->
         <div class="tutorial-slide" data-slide="2">
-          <h2>Choose Your Divine Patron</h2>
-          <p>Add your tutorial text for slide 2 here...</p>
+          <h2>Divine Patron</h2>
+          <p>In this realm gods fight for an artifact of power. You must choose what deity you will follow. Create three heroes that will recover all parts of the crown for your deity!</p>
         </div>
         
         <!-- Slide 3 -->
         <div class="tutorial-slide" data-slide="3">
-          <h2>Build Your Heroes</h2>
-          <p>Add your tutorial text for slide 3 here...</p>
+          <h2>Crafting</h2>
+          <p>Most gear and equipment comes from crafting, and resources and ingredients come as loot from battles! Each profession has a mini-game.</p>
         </div>
         
         <!-- Slide 4 -->
         <div class="tutorial-slide" data-slide="4">
           <h2>Ready to Begin</h2>
-          <p>Add your tutorial text for slide 4 here...</p>
+          <p>Warning! Game is in early development stage and there will be bugs, errors and placeholders! Thank you for testing!</p>
           <div class="tutorial-final-buttons">
             <button class="fantasy-button" onclick="startGame()">Start Your Journey</button>
           </div>
@@ -173,7 +173,7 @@ function addTutorialStyles() {
       left: 0;
       width: 100%;
       height: 100%;
-      padding: 2rem;
+      padding: 1rem;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -197,7 +197,6 @@ function addTutorialStyles() {
       font-family: 'Cinzel', serif;
       font-size: 1.8rem;
       color: #c4975a;
-      margin-bottom: 1rem;
       text-shadow: 2px 2px 0px #3d2914;
     }
 
