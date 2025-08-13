@@ -1,27 +1,22 @@
 let _main;
 let _apiCall;
 let _getCurrentProfile;
-let _getCurrentSession;
 let _profile;
-let _session;
 
 let craftingState = null;
 
-export async function loadModule(main, { apiCall, getCurrentProfile, getCurrentSession }) {
+export async function loadModule(main, { apiCall, getCurrentProfile }) {
   console.log('[CRAFTING] --- Starting loadModule for Crafting Manager ---');
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
-  _getCurrentSession = getCurrentSession;
 
-   _profile = _getCurrentProfile();
-   _session = _getCurrentSession();
+  _profile = _getCurrentProfile();
   console.log('[DEBUG] Profile:', _profile);
-  console.log('[DEBUG] Session:', _session);
 
-  if (!_profile || !_session) {
-    console.error('[CRAFTING] No profile or session found. Redirecting to login.');
-    displayMessage('User session not found. Please log in again.');
+  if (!_profile) {
+    console.error('[CRAFTING] No profile found. Redirecting to login.');
+    displayMessage('User profile not found. Please log in again.');
     window.gameAuth.loadModule('login');
     return;
   }
@@ -313,12 +308,12 @@ async function loadProfessionModuleWithLoading(professionName, professionId) {
     // Update loading message for the next phase
     loadingMessage.textContent = `Starting ${professionName} crafting session...`;
     
-    // Pass the necessary context to the profession module INCLUDING the loading modal
+    // Pass the necessary context to the profession module WITHOUT session
     const context = {
       main: _main,
       apiCall: _apiCall,
       profile: _profile,
-      session: _session,
+      // Removed session since it doesn't exist in Telegram auth
       professionId,
       professionName,
       craftingState: craftingState,
