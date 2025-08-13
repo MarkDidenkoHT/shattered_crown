@@ -52,7 +52,7 @@ function renderCharacters(characters) {
         <h1>Your Champions</h1>
         <p class="subtitle">You have no champions yet. Create some to start your journey.</p>
       </div>
-      <div class="confirm-return-buttons">
+      <div class="top-right-buttons">
         <button class="fantasy-button return-btn">Return</button>
       </div>
     `;

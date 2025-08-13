@@ -47,7 +47,7 @@ function renderEmbarkScreen() {
         ${createEmbarkCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.png')}
       </div>
     </div>
-    <div class="confirm-return-buttons">
+    <div class="top-right-buttons">
       <button class="fantasy-button return-btn">Return</button>
     </div>
   `;
