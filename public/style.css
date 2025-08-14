@@ -445,9 +445,9 @@
 /* --- Condensed stats/items/consumables blocks --- */
 .stats-block, .abilities-block {
     width: 100%;
-    margin-top: 0.5rem;
+/*     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid rgba(196,151,90,0.08);
+    border-top: 1px solid rgba(196,151,90,0.08); */
 }
 
 .stats-block h4, .abilities-block h4 {
