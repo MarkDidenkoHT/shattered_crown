@@ -103,8 +103,10 @@ function renderCharacters(characters) {
       <h1>Your Champions</h1>
       <p class="subtitle">View your heroes and their current equipment and abilities.</p>
     </div>
-    <div class="characters-grid">
-      ${characters.map(character => characterCardHTML(character)).join('')}
+    <div class="characters-slider-container">
+      <div class="characters-slider" id="charactersSlider">
+        ${characters.map(character => characterCardHTML(character)).join('')}
+      </div>
     </div>
     <div class="confirm-return-buttons">
       <button class="fantasy-button return-btn">Return</button>
@@ -128,6 +130,9 @@ function renderCharacters(characters) {
   
   // Add spellbook handlers
   setupSpellbookHandlers(section, characters);
+
+  // Setup slider functionality
+  setupSlider();
 }
 
 function characterCardHTML(character) {
@@ -146,14 +151,12 @@ function characterCardHTML(character) {
   const armor = Math.floor(strength * 0.25);
   const resistance = Math.floor(spirit * 0.25);
 
-  // Split stats into two columns of 4 each
-  const statsCol1 = [
+  // Stats array for easy rendering
+  const statsData = [
     { label: 'Strength', value: strength },
     { label: 'Dexterity', value: dexterity },
     { label: 'Vitality', value: vitality },
-    { label: 'Spirit', value: spirit }
-  ];
-  const statsCol2 = [
+    { label: 'Spirit', value: spirit },
     { label: 'Intellect', value: intellect },
     { label: 'HP', value: hp },
     { label: 'Armor', value: armor },
@@ -172,10 +175,6 @@ function characterCardHTML(character) {
     { label: 'Gloves', value: equippedItems.equipped_gloves || 'None', slot: 'equipped_gloves', type: 'gloves' },
     { label: 'Consumable', value: equippedItems.equipped_consumable || 'None', slot: 'equipped_consumable', type: 'consumable' }
   ];
-
-  // Split equipment into two columns
-  const equipmentCol1 = equipmentData.slice(0, 4);
-  const equipmentCol2 = equipmentData.slice(4, 8);
 
   const raceName = character.races?.name || 'Race';
   const className = character.classes?.name || 'Class';
@@ -198,46 +197,28 @@ function characterCardHTML(character) {
         </div>
       </div>
       
-      <div class="stats-block condensed-stats">
-        <h4>Stats</h4>
-        <div class="stats-cols">
-          <div>
-            ${statsCol1.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
-          </div>
-          <div>
-            ${statsCol2.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
+      <div class="stats-items-container">
+        <div class="equipment-block">
+          <h4>Equipped Items</h4>
+          <div class="items-list">
+            ${equipmentData.map(item => `
+              <p>${item.label}: 
+                <span class="equipment-item" 
+                      data-character-id="${character.id}" 
+                      data-slot="${item.slot}" 
+                      data-type="${item.type}"
+                      style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
+                  ${item.value}
+                </span>
+              </p>
+            `).join('')}
           </div>
         </div>
-      </div>
-      
-      <div class="stats-block condensed-items">
-        <h4>Equipped Items</h4>
-        <div class="items-cols">
-          <div>
-            ${equipmentCol1.map(item => `
-              <p>${item.label}: 
-                <span class="equipment-item" 
-                      data-character-id="${character.id}" 
-                      data-slot="${item.slot}" 
-                      data-type="${item.type}"
-                      style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
-                  ${item.value}
-                </span>
-              </p>
-            `).join('')}
-          </div>
-          <div>
-            ${equipmentCol2.map(item => `
-              <p>${item.label}: 
-                <span class="equipment-item" 
-                      data-character-id="${character.id}" 
-                      data-slot="${item.slot}" 
-                      data-type="${item.type}"
-                      style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
-                  ${item.value}
-                </span>
-              </p>
-            `).join('')}
+        
+        <div class="stats-block">
+          <h4>Stats</h4>
+          <div class="stats-list">
+            ${statsData.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
           </div>
         </div>
       </div>
@@ -254,9 +235,95 @@ function characterCardHTML(character) {
   `;
 }
 
+function setupSlider() {
+  const slider = _main.querySelector('#charactersSlider');
+  const container = slider.parentElement;
+  
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+  let isDragging = false;
+
+  // Mouse events
+  slider.addEventListener('mousedown', (e) => {
+    isDown = true;
+    isDragging = false;
+    slider.style.cursor = 'grabbing';
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+    e.preventDefault();
+  });
+
+  slider.addEventListener('mouseleave', () => {
+    isDown = false;
+    slider.style.cursor = 'grab';
+  });
+
+  slider.addEventListener('mouseup', () => {
+    isDown = false;
+    slider.style.cursor = 'grab';
+    // Small delay to prevent click events from firing immediately after drag
+    setTimeout(() => {
+      isDragging = false;
+    }, 100);
+  });
+
+  slider.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    isDragging = true;
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX) * 2;
+    slider.scrollLeft = scrollLeft - walk;
+  });
+
+  // Touch events for mobile
+  slider.addEventListener('touchstart', (e) => {
+    isDown = true;
+    isDragging = false;
+    startX = e.touches[0].pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  });
+
+  slider.addEventListener('touchmove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    isDragging = true;
+    const x = e.touches[0].pageX - slider.offsetLeft;
+    const walk = (x - startX) * 2;
+    slider.scrollLeft = scrollLeft - walk;
+  });
+
+  slider.addEventListener('touchend', () => {
+    isDown = false;
+    setTimeout(() => {
+      isDragging = false;
+    }, 100);
+  });
+
+  // Prevent click events during drag
+  slider.addEventListener('click', (e) => {
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
+  // Wheel scrolling
+  slider.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    slider.scrollLeft += e.deltaY;
+  });
+}
+
 function setupEquipmentClickHandlers(section, characters) {
   section.querySelectorAll('.equipment-item').forEach(equipmentEl => {
-    equipmentEl.addEventListener('click', async () => {
+    equipmentEl.addEventListener('click', async (e) => {
+      // Prevent click if we were just dragging
+      if (equipmentEl.closest('.characters-slider').scrollLeft !== equipmentEl.closest('.characters-slider').dataset.lastScrollLeft) {
+        return;
+      }
+      
       const characterId = equipmentEl.dataset.characterId;
       const slot = equipmentEl.dataset.slot;
       const type = equipmentEl.dataset.type;
@@ -272,7 +339,12 @@ function setupEquipmentClickHandlers(section, characters) {
 function setupSpellbookHandlers(section, characters) {
   // Spellbook buttons
   section.querySelectorAll('.spellbook-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', async (e) => {
+      // Prevent click if we were just dragging
+      if (btn.closest('.characters-slider').scrollLeft !== btn.closest('.characters-slider').dataset.lastScrollLeft) {
+        return;
+      }
+      
       const characterId = btn.dataset.characterId;
       const character = characters.find(c => c.id == characterId);
       if (character) {
@@ -283,7 +355,12 @@ function setupSpellbookHandlers(section, characters) {
 
   // Talents buttons (placeholder)
   section.querySelectorAll('.talents-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      // Prevent click if we were just dragging
+      if (btn.closest('.characters-slider').scrollLeft !== btn.closest('.characters-slider').dataset.lastScrollLeft) {
+        return;
+      }
+      
       displayMessage('Talents system coming soon! 🌟');
     });
   });
@@ -589,8 +666,9 @@ function displayMessage(message) {
     console.log('[MESSAGE] Message box closed.');
   });
 }
+
 const styleEl = document.createElement('style');
-  styleEl.textContent = `
+styleEl.textContent = `
   .character-creation-section {
     height: 100%;
     display: flex;
@@ -602,7 +680,7 @@ const styleEl = document.createElement('style');
     z-index: 2;
     background: rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(10px);
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .character-creation-section .art-header {
@@ -613,6 +691,7 @@ const styleEl = document.createElement('style');
     margin-bottom: 1rem;
     text-align: center;
     width: 100%;
+    flex-shrink: 0;
 }
 
 .character-creation-section .art-header h1 {
@@ -625,13 +704,32 @@ const styleEl = document.createElement('style');
     color: #b8b3a8;
 }
 
-/* Characters Grid Layout */
-.characters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1rem;
+/* Characters Slider Layout */
+.characters-slider-container {
+    flex: 1;
     width: 100%;
-    max-width: 1400px;
+    overflow: hidden;
+    padding: 1rem 0;
+}
+
+.characters-slider {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1rem;
+    cursor: grab;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.characters-slider::-webkit-scrollbar {
+    display: none;
+}
+
+.characters-slider:active {
+    cursor: grabbing;
 }
 
 /* Character Card */
@@ -644,6 +742,9 @@ const styleEl = document.createElement('style');
     backdrop-filter: blur(3px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     padding: 1rem;
+    min-width: 380px;
+    flex-shrink: 0;
+    user-select: none;
 }
 
 .character-card:hover {
@@ -657,17 +758,18 @@ const styleEl = document.createElement('style');
 /* Top Row: Portrait + Info */
 .card-top-row {
     display: flex;
-    gap: 2px;
+    gap: 1rem;
     margin-bottom: 1rem;
 }
 
 .card-portrait {
-    width: 50%;
-    aspect-ratio: 1;
+    width: 120px;
+    height: 120px;
     overflow: hidden;
     border-radius: 8px;
     background: rgba(0,0,0,0.3);
     border: 2px solid rgba(196, 151, 90, 0.3);
+    flex-shrink: 0;
 }
 
 .card-art {
@@ -675,6 +777,7 @@ const styleEl = document.createElement('style');
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s ease;
+    pointer-events: none;
 }
 
 .character-card:hover .card-art {
@@ -682,7 +785,7 @@ const styleEl = document.createElement('style');
 }
 
 .card-info {
-    width: 50%;
+    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -719,50 +822,46 @@ const styleEl = document.createElement('style');
     margin: 0;
 }
 
-/* Stats and Equipment Blocks */
-.stats-block, .abilities-block {
-    width: 50%;
-    margin-top: 0.8rem;
-    padding-top: 0.8rem;
+/* Stats and Items Container */
+.stats-items-container {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-top: 1rem;
     border-top: 1px solid rgba(196,151,90,0.15);
 }
 
-.stats-block h4, .abilities-block h4 {
+.equipment-block, .stats-block {
+    flex: 1;
+}
+
+.equipment-block h4, .stats-block h4 {
     font-family: 'Cinzel', serif;
     color: #c4975a;
-    font-size: 1rem;
+    font-size: 0.9rem;
     margin-bottom: 0.6rem;
     text-align: center;
     font-weight: 600;
 }
 
-.stats-block p {
+.items-list, .stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.items-list p, .stats-list p {
     color: #b8b3a8;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     display: flex;
     justify-content: space-between;
-    margin: 0.2rem 0;
+    margin: 0;
     padding: 0.1rem 0;
 }
 
-.stats-block p span {
+.stats-list p span {
     color: #c4975a;
     font-weight: bold;
-}
-
-/* Two-column layouts */
-.stats-cols, .items-cols {
-    display: flex;
-    gap: 1rem;
-}
-
-.stats-cols > div, .items-cols > div {
-    flex: 1;
-}
-
-.condensed-stats, .condensed-items { 
-    padding-top: 0.5rem; 
-    margin-top: 0.5rem; 
 }
 
 /* Equipment styling */
@@ -779,7 +878,6 @@ const styleEl = document.createElement('style');
 .character-actions {
     display: flex;
     gap: 0.8rem;
-    margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid rgba(196,151,90,0.15);
 }
@@ -1006,6 +1104,7 @@ const styleEl = document.createElement('style');
     margin-top: 2rem;
     display: flex;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .confirm-return-buttons .fantasy-button {
@@ -1015,29 +1114,18 @@ const styleEl = document.createElement('style');
 
 /* Responsive design */
 @media (max-width: 768px) {
-    .characters-grid {
-        grid-template-columns: 1fr;
-        max-width: 500px;
-    }
-    
-    .card-top-row {
-        flex-direction: row;
-        align-items: center;
-        text-align: center;
+    .character-card {
+        min-width: 320px;
     }
     
     .card-portrait {
-        width: 120px;
-        height: 120px;
+        width: 100px;
+        height: 100px;
     }
     
-    .card-info {
-        width: 100%;
-    }
-    
-    .stats-cols, .items-cols {
+    .stats-items-container {
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.8rem;
     }
     
     .character-actions {
@@ -1052,5 +1140,23 @@ const styleEl = document.createElement('style');
         display: none;
     }
 }
-  `;
-document.head.appendChild(styleEl);
+
+@media (max-width: 480px) {
+    .characters-slider {
+        padding: 0.5rem;
+    }
+    
+    .character-card {
+        min-width: 280px;
+        padding: 0.8rem;
+    }
+    
+    .card-top-row {
+        gap: 0.8rem;
+    }
+    
+    .card-portrait {
+        width: 80px;
+        height: 80px;
+    }
+}
