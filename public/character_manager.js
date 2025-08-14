@@ -470,8 +470,7 @@ async function showEquipmentModal(character, slot, type) {
             <div class="equipment-option ${item.item === currentItem ? 'selected' : ''}" 
                  data-item="${item.item}"
                  style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${item.item === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: pointer;">
-                 <img src="assets/art/recipes/${item.item.replace(/\s+/g, '')}.png" alt="${item.item}">
-                   alt="${item.item}" 
+                 <img src="assets/art/recipes/${item.item.replace(/\s+/g, '')}.png"
                    style="width: 48px; height: 48px; border-radius: 4px;"
                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
               <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">

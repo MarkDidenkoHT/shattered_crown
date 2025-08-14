@@ -189,8 +189,8 @@ async function fetchUserTickets() {
     console.log('Using chat_id:', _profile.chat_id);
     
     try {
-        const baseUrl = window.location.origin;
-        const url = `${baseUrl}/api/supabase/rest/v1/tickets?chat_id=eq.${_profile.chat_id}&select=*&order=created_at.desc`;
+        // Use the same API pattern as god selection - remove baseUrl construction
+        const url = `/api/supabase/rest/v1/tickets?chat_id=eq.${_profile.chat_id}&select=*&order=created_at.desc`;
         console.log('Making API call to:', url);
         
         const response = await _apiCall(url);
@@ -223,16 +223,14 @@ async function submitTicket(subject, description) {
     console.log('Ticket data to submit:', ticketData);
 
     try {
-        const baseUrl = window.location.origin;
-        const url = `${baseUrl}/api/supabase/rest/v1/tickets`;
+        // Use the same API pattern as god selection - remove baseUrl construction
+        const url = `/api/supabase/rest/v1/tickets`;
         console.log('Making API call to:', url);
         
         const response = await _apiCall(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(ticketData)
+            // Remove explicit headers - let _apiCall handle them
+            body: ticketData  // Pass object directly, not JSON.stringify
         });
         console.log('API call successful. Response status:', response.status);
 
