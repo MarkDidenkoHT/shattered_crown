@@ -216,9 +216,8 @@ async function submitTicket(subject, description) {
 
         const createdTicket = await response.json();
         
-        // Call edge function to notify support (optional - implement if you have the edge function)
         try {
-            await _apiCall('/api/edge/notify-support', {
+            await _apiCall('/functions/v1/notify-support', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
