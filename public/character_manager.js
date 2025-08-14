@@ -702,7 +702,7 @@ styleEl.textContent = `
     backdrop-filter: blur(3px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     padding: 1rem;
-    min-width: 380px;
+    min-width: 100%;
     flex-shrink: 0;
     user-select: none;
 }
@@ -1046,12 +1046,7 @@ styleEl.textContent = `
     font-style: italic;
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
-    .character-card {
-        min-width: 320px;
-    }
-    
     .card-portrait {
         width: 100px;
         height: 100px;
@@ -1078,11 +1073,6 @@ styleEl.textContent = `
 @media (max-width: 480px) {
     .characters-slider {
         padding: 0.5rem;
-    }
-    
-    .character-card {
-        min-width: 280px;
-        padding: 0.8rem;
     }
     
     .card-top-row {
