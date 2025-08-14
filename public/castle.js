@@ -103,8 +103,7 @@ function setupInteractions() {
                 displayMessage('Settings functionality coming soon!');
                 // window.gameAuth.loadModule('settings');
             } else if (action === 'support') {
-                displayMessage('Support functionality coming soon!');
-                // window.gameAuth.loadModule('support');
+                window.gameAuth.loadModule('ticketing_system');
             } else if (action === 'roadmap') {
                  showRoadmapModal();
             }    
