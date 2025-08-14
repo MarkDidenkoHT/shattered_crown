@@ -1111,7 +1111,7 @@ styleEl.textContent = `
     }
     
     .stats-items-container {
-        flex-direction: column;
+        flex-direction: row;
         gap: 0.8rem;
     }
     
