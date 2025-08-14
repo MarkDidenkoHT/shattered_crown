@@ -221,11 +221,15 @@ function showRoadmapModal() {
             <div class="roadmap-body">
                 <div class="roadmap-item">
                     <div class="roadmap-date">30 August 2025</div>
-                    <div class="roadmap-feature">PvE - regions, loot, crafting - 4 working professions!</div>
+                    <div class="roadmap-feature">PvE - 2 regions, loot, crafting - 4 working professions!</div>
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">10 September 2025</div>
-                    <div class="roadmap-feature">Exp, leveling and progressive score systems!</div>
+                    <div class="roadmap-feature">Exp, leveling and progressive score systems! Environmental tools and interactions!</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">15 September 2025</div>
+                    <div class="roadmap-feature">New professions and spells! New region!</div>
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">20 September 2025</div>
@@ -233,7 +237,7 @@ function showRoadmapModal() {
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">30 September 2025</div>
-                    <div class="roadmap-feature">Talent trees!</div>
+                    <div class="roadmap-feature">Talent trees! More loot and items!</div>
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">30 October 2025</div>
