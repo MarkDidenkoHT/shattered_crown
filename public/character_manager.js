@@ -657,7 +657,7 @@ const styleEl = document.createElement('style');
 /* Top Row: Portrait + Info */
 .card-top-row {
     display: flex;
-    gap: 1rem;
+    gap: 2px;
     margin-bottom: 1rem;
 }
 
@@ -721,7 +721,7 @@ const styleEl = document.createElement('style');
 
 /* Stats and Equipment Blocks */
 .stats-block, .abilities-block {
-    width: 100%;
+    width: 50%;
     margin-top: 0.8rem;
     padding-top: 0.8rem;
     border-top: 1px solid rgba(196,151,90,0.15);
@@ -1021,7 +1021,7 @@ const styleEl = document.createElement('style');
     }
     
     .card-top-row {
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
         text-align: center;
     }
