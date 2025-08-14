@@ -4,10 +4,11 @@ let _getCurrentProfile;
 let _profile;
 let _userTickets = [];
 
-export async function loadModule(main, { apiCall, getCurrentProfile }) {
+export async function loadModule(main, { apiCall, getCurrentProfile, supabaseConfig }) {
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
+    _supabaseConfig = supabaseConfig; // Store config like working code
 
     _profile = _getCurrentProfile();
     if (!_profile) {
@@ -184,62 +185,71 @@ function setupSupportModalEvents(modal) {
 }
 
 async function fetchUserTickets() {
+    console.log('--- Starting fetchUserTickets function ---');
+    console.log('Profile data:', _profile);
+    console.log('Using chat_id:', _profile.chat_id);
+    
     try {
-        // Use chat_id from profile, not profile.id
-        const response = await _apiCall(`/api/supabase/rest/v1/tickets?chat_id=eq.${_profile.chat_id}&select=*&order=created_at.desc`);
+        const baseUrl = window.location.origin;
+        const url = `${baseUrl}/api/supabase/rest/v1/tickets?chat_id=eq.${_profile.chat_id}&select=*&order=created_at.desc`;
+        console.log('Making API call to:', url);
+        
+        const response = await _apiCall(url);
+        console.log('API call successful. Response status:', response.status);
+        
         _userTickets = await response.json();
+        console.log('Tickets loaded:', _userTickets);
+        
+        if (_userTickets.length === 0) {
+            console.warn('No tickets found for this user.');
+        }
     } catch (error) {
         console.error('Error fetching tickets:', error);
         _userTickets = [];
     }
+    console.log('--- fetchUserTickets function finished ---');
 }
 
 async function submitTicket(subject, description) {
+    console.log(`--- Starting submitTicket function ---`);
+    console.log('Subject:', subject);
+    console.log('Description length:', description.length);
+    console.log('Profile data:', _profile);
+    
     const ticketData = {
-        chat_id: _profile.chat_id,  // Use chat_id instead of id
+        chat_id: _profile.chat_id,
         ticket_text: `Subject: ${subject}\n\nDescription: ${description}`,
         status: 'open'
     };
+    console.log('Ticket data to submit:', ticketData);
 
     try {
-        // Insert ticket into database
-        const response = await _apiCall('/api/supabase/rest/v1/tickets', {
+        const baseUrl = window.location.origin;
+        const url = `${baseUrl}/api/supabase/rest/v1/tickets`;
+        console.log('Making API call to:', url);
+        
+        const response = await _apiCall(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(ticketData)
         });
+        console.log('API call successful. Response status:', response.status);
 
         if (!response.ok) {
             throw new Error('Failed to create ticket');
         }
 
         const createdTicket = await response.json();
+        console.log('Ticket created successfully:', createdTicket);
         
-        // Call edge function to notify support (optional - implement if you have the edge function)
-        try {
-            await _apiCall('/functions/v1/notify-support', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ticketId: createdTicket[0]?.id,
-                    userId: _profile.chat_id,  // Use chat_id for consistency
-                    chatId: _profile.chat_id,  // Add this for clarity
-                    subject: subject,
-                    description: description
-                })
-            });
-        } catch (notificationError) {
-            console.warn('Support notification failed, but ticket was created:', notificationError);
-        }
-
         return createdTicket;
     } catch (error) {
         console.error('Error creating ticket:', error);
         throw error;
+    } finally {
+        console.log('--- submitTicket function finished ---');
     }
 }
 
