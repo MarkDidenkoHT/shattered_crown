@@ -734,56 +734,58 @@ async function startMiningAnimation(resultDiv, modal) {
   const selectedOreNames = miningState.selectedOres.map(o => o.name);
 
   try {
-    const reserveRes = await fetch('/functions/v1/reserve_ingredients', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${context.session.access_token}`,
-      },
-      body: JSON.stringify({
-        player_id: context.profile.id,
-        profession_id: miningState.professionId,
-        selected_ingredients: selectedOreNames,
-      }),
-    });
-
-    const reserveJson = await reserveRes.json();
-    if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
-      console.error('[MINING] Reservation failed:', reserveJson);
-      resultDiv.textContent = `Ore verification failed: ${reserveJson?.error || 'Unknown error'}`;
-      return;
+  console.log('[MINING] Making API call to reserve ingredients...');
+  
+  // Use apiCall instead of direct fetch
+  const reserveRes = await apiCall('/functions/v1/reserve_ingredients', {
+    method: 'POST',
+    body: {
+      player_id: context.profile.id,
+      profession_id: miningState.professionId,
+      selected_ingredients: selectedOreNames,
     }
+  });
 
-    // Store the session ID and enriched ores
-    miningState.sessionId = reserveJson.session_id;
-    miningState.enrichedOres = reserveJson.herbs; // Server still calls them herbs
-
-    // Animate ore breaking and property revelation for each row
-    for (let idx = 0; idx < miningState.enrichedOres.length; idx++) {
-      const ore = miningState.enrichedOres[idx];
-      const row = rowsArea.children[idx];
-      const props = ore.properties;
-      
-      await animateOreBreaking(row, props, idx);
-    }
-
-    setTimeout(() => {
-      resultDiv.textContent = 'Use adjustments to align center properties for extraction.';
-    }, 1000);
-
-    miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
-    miningState.originalProperties = miningState.randomizedProperties.map(p => [...p]);
-    miningState.currentAdjustedRow = null;
-
-    miningState.adjustments = {};
-    for (let i = 0; i < 3; i++) {
-      miningState.adjustments[i] = { left: 0, right: 0 };
-    }
-
-  } catch (err) {
-    console.error('[MINING] Error during reservation:', err);
-    resultDiv.textContent = 'Server error while verifying ores.';
+  console.log('[MINING] API call response status:', reserveRes.status);
+  const reserveJson = await reserveRes.json();
+  console.log('[MINING] API response data:', reserveJson);
+  
+  if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
+    console.error('[MINING] Reservation failed:', reserveJson);
+    resultDiv.textContent = `Ore verification failed: ${reserveJson?.error || 'Unknown error'}`;
+    return;
   }
+
+  // Store the session ID and enriched ores
+  miningState.sessionId = reserveJson.session_id;
+  miningState.enrichedOres = reserveJson.herbs; // Server still calls them herbs
+
+  // Animate ore breaking and property revelation for each row
+  for (let idx = 0; idx < miningState.enrichedOres.length; idx++) {
+    const ore = miningState.enrichedOres[idx];
+    const row = rowsArea.children[idx];
+    const props = ore.properties;
+    
+    await animateOreBreaking(row, props, idx);
+  }
+
+  setTimeout(() => {
+    resultDiv.textContent = 'Use adjustments to align center properties for extraction.';
+  }, 1000);
+
+  miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
+  miningState.originalProperties = miningState.randomizedProperties.map(p => [...p]);
+  miningState.currentAdjustedRow = null;
+
+  miningState.adjustments = {};
+  for (let i = 0; i < 3; i++) {
+    miningState.adjustments[i] = { left: 0, right: 0 };
+  }
+
+} catch (err) {
+  console.error('[MINING] Error during reservation:', err);
+  resultDiv.textContent = 'Server error while verifying ores.';
+}
 }
 
 async function animateOreBreaking(row, properties, rowIndex) {
@@ -947,7 +949,7 @@ function createRockDustEffect(row) {
   return dustInterval;
 }
 
-async function patchAndSendCraftRequest(resultDiv) {
+async function patchAndSendCraftRequest(resultDiv, apiCall) {
   try {
     const adjustments = [];
     
@@ -993,16 +995,15 @@ async function patchAndSendCraftRequest(resultDiv) {
     
     console.log('[MINING] Sending craft request payload:', payload);
 
-    const res = await fetch('/functions/v1/craft_alchemy', {
+    // Use apiCall instead of direct fetch
+    const res = await apiCall('/functions/v1/craft_alchemy', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${context.session.access_token}`
-      },
-      body: JSON.stringify(payload)
+      body: payload
     });
 
+    console.log('[MINING] API call response status:', res.status);
     const json = await res.json();
+    console.log('[MINING] API response data:', json);
     
     if (!res.ok) {
       console.error('[MINING] Server returned error:', res.status, res.statusText);
