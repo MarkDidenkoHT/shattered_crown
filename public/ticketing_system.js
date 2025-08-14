@@ -104,12 +104,14 @@ function setupSupportModalEvents(modal) {
     // Close modal functionality
     modal.querySelector('.support-close-btn').addEventListener('click', () => {
         modal.remove();
+        window.gameAuth.loadModule('castle'); // Return to castle
     });
 
     // Close modal when clicking outside
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
+            window.gameAuth.loadModule('castle'); // Return to castle
         }
     });
 
@@ -117,6 +119,7 @@ function setupSupportModalEvents(modal) {
     const handleEscape = (e) => {
         if (e.key === 'Escape') {
             modal.remove();
+            window.gameAuth.loadModule('castle'); // Return to castle
             document.removeEventListener('keydown', handleEscape);
         }
     };
