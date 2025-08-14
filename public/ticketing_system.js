@@ -4,11 +4,10 @@ let _getCurrentProfile;
 let _profile;
 let _userTickets = [];
 
-export async function loadModule(main, { apiCall, getCurrentProfile, supabaseConfig }) {
+export async function loadModule(main, { apiCall, getCurrentProfile }) {
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
-    _supabaseConfig = supabaseConfig; // Store config like working code
 
     _profile = _getCurrentProfile();
     if (!_profile) {
