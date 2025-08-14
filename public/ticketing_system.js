@@ -248,7 +248,7 @@ async function submitTicket(subject, description) {
             
             // Send notification to support via edge function
             try {
-                const notificationResponse = await _apiCall('/functions/v1/notifySupport', {
+                const notificationResponse = await _apiCall('/functions/v1/notify-support', {
                     method: 'POST',
                     body: {
                         ticketId: ticketId,
