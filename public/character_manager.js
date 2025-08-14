@@ -104,9 +104,11 @@ function renderCharacters(characters) {
       <p class="subtitle">View your heroes and their current equipment and abilities.</p>
     </div>
     <div class="characters-slider-container">
+      <button class="slider-nav-btn prev-btn" id="prevBtn">‹</button>
       <div class="characters-slider" id="charactersSlider">
         ${characters.map(character => characterCardHTML(character)).join('')}
       </div>
+      <button class="slider-nav-btn next-btn" id="nextBtn">›</button>
     </div>
     <div class="top-right-buttons">
       <button class="fantasy-button return-btn">Return</button>
@@ -237,92 +239,85 @@ function characterCardHTML(character) {
 
 function setupSlider() {
   const slider = _main.querySelector('#charactersSlider');
-  const container = slider.parentElement;
+  const prevBtn = _main.querySelector('#prevBtn');
+  const nextBtn = _main.querySelector('#nextBtn');
   
-  let isDown = false;
-  let startX;
-  let scrollLeft;
-  let isDragging = false;
+  if (!slider || !prevBtn || !nextBtn) return;
 
-  // Mouse events
-  slider.addEventListener('mousedown', (e) => {
-    isDown = true;
-    isDragging = false;
-    slider.style.cursor = 'grabbing';
-    startX = e.pageX - slider.offsetLeft;
-    scrollLeft = slider.scrollLeft;
-    e.preventDefault();
-  });
+  let currentSlide = 0;
+  const cards = slider.querySelectorAll('.character-card');
+  const totalSlides = cards.length;
+  
+  if (totalSlides === 0) return;
 
-  slider.addEventListener('mouseleave', () => {
-    isDown = false;
-    slider.style.cursor = 'grab';
-  });
+  // Calculate slide width (card width + gap)
+  const getSlideWidth = () => {
+    const card = cards[0];
+    const cardStyle = window.getComputedStyle(card);
+    const cardWidth = card.offsetWidth;
+    const gap = parseFloat(window.getComputedStyle(slider).gap) || 24; // 1.5rem default
+    return cardWidth + gap;
+  };
 
-  slider.addEventListener('mouseup', () => {
-    isDown = false;
-    slider.style.cursor = 'grab';
-    // Small delay to prevent click events from firing immediately after drag
-    setTimeout(() => {
-      isDragging = false;
-    }, 100);
-  });
+  const updateSliderPosition = () => {
+    const slideWidth = getSlideWidth();
+    slider.scrollTo({
+      left: currentSlide * slideWidth,
+      behavior: 'smooth'
+    });
+    
+    // Update button states
+    prevBtn.disabled = currentSlide === 0;
+    nextBtn.disabled = currentSlide >= totalSlides - 1;
+    
+    prevBtn.style.opacity = prevBtn.disabled ? '0.3' : '1';
+    nextBtn.style.opacity = nextBtn.disabled ? '0.3' : '1';
+  };
 
-  slider.addEventListener('mousemove', (e) => {
-    if (!isDown) return;
-    e.preventDefault();
-    isDragging = true;
-    const x = e.pageX - slider.offsetLeft;
-    const walk = (x - startX) * 2;
-    slider.scrollLeft = scrollLeft - walk;
-  });
-
-  // Touch events for mobile
-  slider.addEventListener('touchstart', (e) => {
-    isDown = true;
-    isDragging = false;
-    startX = e.touches[0].pageX - slider.offsetLeft;
-    scrollLeft = slider.scrollLeft;
-  });
-
-  slider.addEventListener('touchmove', (e) => {
-    if (!isDown) return;
-    e.preventDefault();
-    isDragging = true;
-    const x = e.touches[0].pageX - slider.offsetLeft;
-    const walk = (x - startX) * 2;
-    slider.scrollLeft = scrollLeft - walk;
-  });
-
-  slider.addEventListener('touchend', () => {
-    isDown = false;
-    setTimeout(() => {
-      isDragging = false;
-    }, 100);
-  });
-
-  // Prevent click events during drag
-  slider.addEventListener('click', (e) => {
-    if (isDragging) {
-      e.preventDefault();
-      e.stopPropagation();
+  const goToPrevSlide = () => {
+    if (currentSlide > 0) {
+      currentSlide--;
+      updateSliderPosition();
     }
-  }, true);
+  };
 
-  // Wheel scrolling
-  slider.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    slider.scrollLeft += e.deltaY;
+  const goToNextSlide = () => {
+    if (currentSlide < totalSlides - 1) {
+      currentSlide++;
+      updateSliderPosition();
+    }
+  };
+
+  // Event listeners
+  prevBtn.addEventListener('click', goToPrevSlide);
+  nextBtn.addEventListener('click', goToNextSlide);
+
+  // Keyboard navigation
+  slider.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goToPrevSlide();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      goToNextSlide();
+    }
   });
+
+  // Make slider focusable for keyboard navigation
+  slider.setAttribute('tabindex', '0');
+
+  // Initialize
+  updateSliderPosition();
+
+  // Handle resize
+  window.addEventListener('resize', updateSliderPosition);
 }
 
 function setupEquipmentClickHandlers(section, characters) {
   section.querySelectorAll('.equipment-item').forEach(equipmentEl => {
     equipmentEl.addEventListener('click', async (e) => {
-      // Prevent click if we were just dragging
-      if (equipmentEl.closest('.characters-slider').scrollLeft !== equipmentEl.closest('.characters-slider').dataset.lastScrollLeft) {
-        return;
-      }
+      e.preventDefault();
+      e.stopPropagation();
       
       const characterId = equipmentEl.dataset.characterId;
       const slot = equipmentEl.dataset.slot;
@@ -340,10 +335,8 @@ function setupSpellbookHandlers(section, characters) {
   // Spellbook buttons
   section.querySelectorAll('.spellbook-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      // Prevent click if we were just dragging
-      if (btn.closest('.characters-slider').scrollLeft !== btn.closest('.characters-slider').dataset.lastScrollLeft) {
-        return;
-      }
+      e.preventDefault();
+      e.stopPropagation();
       
       const characterId = btn.dataset.characterId;
       const character = characters.find(c => c.id == characterId);
@@ -356,10 +349,8 @@ function setupSpellbookHandlers(section, characters) {
   // Talents buttons (placeholder)
   section.querySelectorAll('.talents-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      // Prevent click if we were just dragging
-      if (btn.closest('.characters-slider').scrollLeft !== btn.closest('.characters-slider').dataset.lastScrollLeft) {
-        return;
-      }
+      e.preventDefault();
+      e.stopPropagation();
       
       displayMessage('Talents system coming soon! 🌟');
     });
@@ -710,15 +701,19 @@ styleEl.textContent = `
     width: 100%;
     overflow: hidden;
     padding: 1rem 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
 .characters-slider {
+    flex: 1;
     display: flex;
     gap: 1.5rem;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     padding: 1rem;
-    cursor: grab;
     scroll-behavior: smooth;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -728,8 +723,40 @@ styleEl.textContent = `
     display: none;
 }
 
-.characters-slider:active {
-    cursor: grabbing;
+/* Navigation Buttons */
+.slider-nav-btn {
+    background: linear-gradient(145deg, rgba(196, 151, 90, 0.2), rgba(196, 151, 90, 0.1));
+    border: 2px solid rgba(196, 151, 90, 0.3);
+    color: #c4975a;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+    z-index: 3;
+    flex-shrink: 0;
+}
+
+.slider-nav-btn:hover {
+    background: linear-gradient(145deg, rgba(196, 151, 90, 0.4), rgba(196, 151, 90, 0.2));
+    border-color: rgba(196, 151, 90, 0.6);
+    transform: scale(1.05);
+}
+
+.slider-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.slider-nav-btn:disabled:hover {
+    background: linear-gradient(145deg, rgba(196, 151, 90, 0.2), rgba(196, 151, 90, 0.1));
+    border-color: rgba(196, 151, 90, 0.3);
 }
 
 /* Character Card */
@@ -1126,6 +1153,12 @@ styleEl.textContent = `
     .spell-badge {
         display: none;
     }
+    
+    .slider-nav-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1145,6 +1178,12 @@ styleEl.textContent = `
     .card-portrait {
         width: 80px;
         height: 80px;
+    }
+    
+    .slider-nav-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
     }
 }
 `;
