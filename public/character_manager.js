@@ -1160,3 +1160,5 @@ styleEl.textContent = `
         height: 80px;
     }
 }
+`;
+document.head.appendChild(styleEl);
