@@ -219,10 +219,10 @@ function characterCardHTML(character) {
       
       <div class="character-actions">
         <button class="fantasy-button spellbook-btn" data-character-id="${character.id}">
-          🔮 Spellbook
+          Spellbook
         </button>
         <button class="fantasy-button talents-btn" data-character-id="${character.id}">
-          ⭐ Talents
+          Talents
         </button>
       </div>
     </div>
@@ -470,7 +470,7 @@ async function showEquipmentModal(character, slot, type) {
             <div class="equipment-option ${item.item === currentItem ? 'selected' : ''}" 
                  data-item="${item.item}"
                  style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${item.item === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: pointer;">
-              <img src="assets/art/items/${item.item.toLowerCase().replace(/\s+/g, '_')}.png" 
+                 <img src="assets/art/recipes/${item.item.replace(/\s+/g, '')}.png" alt="${item.item}">
                    alt="${item.item}" 
                    style="width: 48px; height: 48px; border-radius: 4px;"
                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -652,7 +652,7 @@ styleEl.textContent = `
     padding-bottom: 1rem;
     background: none;
     border-bottom: 1px solid rgba(196, 151, 90, 0.2);
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     text-align: center;
     width: 100%;
     flex-shrink: 0;
@@ -668,12 +668,10 @@ styleEl.textContent = `
     color: #b8b3a8;
 }
 
-/* Characters Slider Layout */
 .characters-slider-container {
     flex: 1;
     width: 100%;
     overflow: hidden;
-    padding: 1rem 0;
     position: relative;
 }
 
