@@ -108,7 +108,7 @@ function renderCharacters(characters) {
         ${characters.map(character => characterCardHTML(character)).join('')}
       </div>
     </div>
-    <div class="confirm-return-buttons">
+    <div class="top-right-buttons">
       <button class="fantasy-button return-btn">Return</button>
     </div>
   `;
@@ -1097,19 +1097,6 @@ styleEl.textContent = `
     font-size: 12px;
     color: #6b512f;
     font-style: italic;
-}
-
-/* Return buttons styling */
-.confirm-return-buttons {
-    margin-top: 2rem;
-    display: flex;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.confirm-return-buttons .fantasy-button {
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
 }
 
 /* Responsive design */
