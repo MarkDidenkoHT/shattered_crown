@@ -37,9 +37,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
                   <div style="font-weight:800;">Selected:</div>
                   <div id="selectedSpellText" style="margin-top:4px; opacity:.8">None</div>
                 </div>
-                <footer class="spellbook-footer">
-                  <div>Channel your inner magic</div>
-                </footer>
               </section>
               <!-- Right Page -->
               <section class="spellbook-page">
@@ -47,9 +44,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
                   <div class="spellbook-title">Available Spells</div>
                 </header>
                 <div class="spells-grid" id="spellsGrid"></div>
-                <footer class="spellbook-footer">
-                  <div>Knowledge is power</div>
-                </footer>
               </section>
             </div>
           </div>
@@ -104,11 +98,9 @@ function renderCharacters(characters) {
       <p class="subtitle">View your heroes and their current equipment and abilities.</p>
     </div>
     <div class="characters-slider-container">
-      <button class="slider-nav-btn prev-btn" id="prevBtn">‹</button>
       <div class="characters-slider" id="charactersSlider">
         ${characters.map(character => characterCardHTML(character)).join('')}
       </div>
-      <button class="slider-nav-btn next-btn" id="nextBtn">›</button>
     </div>
     <div class="top-right-buttons">
       <button class="fantasy-button return-btn">Return</button>
@@ -133,8 +125,8 @@ function renderCharacters(characters) {
   // Add spellbook handlers
   setupSpellbookHandlers(section, characters);
 
-  // Setup slider functionality
-  setupSlider();
+  // Setup drag slider functionality
+  setupDragSlider();
 }
 
 function characterCardHTML(character) {
@@ -168,14 +160,14 @@ function characterCardHTML(character) {
   // Parse equipped items from JSONB column
   const equippedItems = character.equipped_items || {};
   const equipmentData = [
-    { label: 'Weapon 1', value: equippedItems.equipped_weapon1 || 'None', slot: 'equipped_weapon1', type: 'weapon' },
-    { label: 'Weapon 2', value: equippedItems.equipped_weapon2 || 'None', slot: 'equipped_weapon2', type: 'weapon' },
-    { label: 'Armor', value: equippedItems.equipped_armor || 'None', slot: 'equipped_armor', type: 'armor' },
-    { label: 'Helmet', value: equippedItems.equipped_helmet || 'None', slot: 'equipped_helmet', type: 'helmet' },
-    { label: 'Trinket', value: equippedItems.equipped_trinket || 'None', slot: 'equipped_trinket', type: 'trinket' },
-    { label: 'Boots', value: equippedItems.equipped_boots || 'None', slot: 'equipped_boots', type: 'boots' },
-    { label: 'Gloves', value: equippedItems.equipped_gloves || 'None', slot: 'equipped_gloves', type: 'gloves' },
-    { label: 'Consumable', value: equippedItems.equipped_consumable || 'None', slot: 'equipped_consumable', type: 'consumable' }
+    { label: 'Weapon 1', value: equippedItems.equipped_weapon1 || 'None', slot: 'equipped_weapon1', type: 'Weapon' },
+    { label: 'Weapon 2', value: equippedItems.equipped_weapon2 || 'None', slot: 'equipped_weapon2', type: 'Weapon' },
+    { label: 'Armor', value: equippedItems.equipped_armor || 'None', slot: 'equipped_armor', type: 'Armor' },
+    { label: 'Helmet', value: equippedItems.equipped_helmet || 'None', slot: 'equipped_helmet', type: 'Helmet' },
+    { label: 'Trinket', value: equippedItems.equipped_trinket || 'None', slot: 'equipped_trinket', type: 'Trinket' },
+    { label: 'Boots', value: equippedItems.equipped_boots || 'None', slot: 'equipped_boots', type: 'Boots' },
+    { label: 'Gloves', value: equippedItems.equipped_gloves || 'None', slot: 'equipped_gloves', type: 'Gloves' },
+    { label: 'Consumable', value: equippedItems.equipped_consumable || 'None', slot: 'equipped_consumable', type: 'Consumable' }
   ];
 
   const raceName = character.races?.name || 'Race';
@@ -237,80 +229,61 @@ function characterCardHTML(character) {
   `;
 }
 
-function setupSlider() {
+function setupDragSlider() {
   const slider = _main.querySelector('#charactersSlider');
-  const prevBtn = _main.querySelector('#prevBtn');
-  const nextBtn = _main.querySelector('#nextBtn');
-  
-  if (!slider || !prevBtn || !nextBtn) return;
+  if (!slider) return;
 
-  let currentSlide = 0;
-  const cards = slider.querySelectorAll('.character-card');
-  const totalSlides = cards.length;
-  
-  if (totalSlides === 0) return;
+  let isDragging = false;
+  let startX = 0;
+  let scrollLeft = 0;
 
-  // Calculate slide width (card width + gap)
-  const getSlideWidth = () => {
-    const card = cards[0];
-    const cardStyle = window.getComputedStyle(card);
-    const cardWidth = card.offsetWidth;
-    const gap = parseFloat(window.getComputedStyle(slider).gap) || 24; // 1.5rem default
-    return cardWidth + gap;
-  };
-
-  const updateSliderPosition = () => {
-    const slideWidth = getSlideWidth();
-    slider.scrollTo({
-      left: currentSlide * slideWidth,
-      behavior: 'smooth'
-    });
-    
-    // Update button states
-    prevBtn.disabled = currentSlide === 0;
-    nextBtn.disabled = currentSlide >= totalSlides - 1;
-    
-    prevBtn.style.opacity = prevBtn.disabled ? '0.3' : '1';
-    nextBtn.style.opacity = nextBtn.disabled ? '0.3' : '1';
-  };
-
-  const goToPrevSlide = () => {
-    if (currentSlide > 0) {
-      currentSlide--;
-      updateSliderPosition();
-    }
-  };
-
-  const goToNextSlide = () => {
-    if (currentSlide < totalSlides - 1) {
-      currentSlide++;
-      updateSliderPosition();
-    }
-  };
-
-  // Event listeners
-  prevBtn.addEventListener('click', goToPrevSlide);
-  nextBtn.addEventListener('click', goToNextSlide);
-
-  // Keyboard navigation
-  slider.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      goToPrevSlide();
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      goToNextSlide();
-    }
+  // Mouse events
+  slider.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    slider.style.cursor = 'grabbing';
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+    e.preventDefault();
   });
 
-  // Make slider focusable for keyboard navigation
-  slider.setAttribute('tabindex', '0');
+  slider.addEventListener('mouseleave', () => {
+    isDragging = false;
+    slider.style.cursor = 'grab';
+  });
 
-  // Initialize
-  updateSliderPosition();
+  slider.addEventListener('mouseup', () => {
+    isDragging = false;
+    slider.style.cursor = 'grab';
+  });
 
-  // Handle resize
-  window.addEventListener('resize', updateSliderPosition);
+  slider.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX) * 2;
+    slider.scrollLeft = scrollLeft - walk;
+  });
+
+  // Touch events for mobile
+  slider.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    startX = e.touches[0].pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  }, { passive: true });
+
+  slider.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const x = e.touches[0].pageX - slider.offsetLeft;
+    const walk = (x - startX) * 2;
+    slider.scrollLeft = scrollLeft - walk;
+  }, { passive: true });
+
+  slider.addEventListener('touchend', () => {
+    isDragging = false;
+  });
+
+  // Set initial cursor
+  slider.style.cursor = 'grab';
 }
 
 function setupEquipmentClickHandlers(section, characters) {
@@ -395,7 +368,7 @@ async function openSpellbook(character) {
     }
     
     // Show overlay
-    overlay.style.display = 'block';
+    overlay.style.display = 'flex';
     
     // Close button handler
     const closeBtn = _main.querySelector('.spellbook-close-btn');
@@ -702,61 +675,23 @@ styleEl.textContent = `
     overflow: hidden;
     padding: 1rem 0;
     position: relative;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
 }
 
 .characters-slider {
-    flex: 1;
+    width: 100%;
     display: flex;
     gap: 1.5rem;
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: hidden;
     padding: 1rem;
     scroll-behavior: smooth;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    user-select: none;
 }
 
 .characters-slider::-webkit-scrollbar {
     display: none;
-}
-
-/* Navigation Buttons */
-.slider-nav-btn {
-    background: linear-gradient(145deg, rgba(196, 151, 90, 0.2), rgba(196, 151, 90, 0.1));
-    border: 2px solid rgba(196, 151, 90, 0.3);
-    color: #c4975a;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(5px);
-    z-index: 3;
-    flex-shrink: 0;
-}
-
-.slider-nav-btn:hover {
-    background: linear-gradient(145deg, rgba(196, 151, 90, 0.4), rgba(196, 151, 90, 0.2));
-    border-color: rgba(196, 151, 90, 0.6);
-    transform: scale(1.05);
-}
-
-.slider-nav-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.slider-nav-btn:disabled:hover {
-    background: linear-gradient(145deg, rgba(196, 151, 90, 0.2), rgba(196, 151, 90, 0.1));
-    border-color: rgba(196, 151, 90, 0.3);
 }
 
 /* Character Card */
@@ -984,6 +919,7 @@ styleEl.textContent = `
     padding: 18px;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .spellbook-header {
@@ -1014,6 +950,7 @@ styleEl.textContent = `
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
     margin-top: 10px;
+    overflow-y: auto;
 }
 
 .spell-card {
@@ -1053,21 +990,6 @@ styleEl.textContent = `
     color: #0c0f14;
     background: linear-gradient(180deg, #c8e9ff, #86c8ff);
     box-shadow: 0 2px 6px rgba(0,0,0,.2);
-}
-
-.spellbook-footer {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: linear-gradient(180deg, transparent, rgba(0,0,0,.04));
-    color: #3a2a12;
-    font-weight: 700;
-    font-size: 0.85rem;
 }
 
 .spellbook-close-btn {
@@ -1153,12 +1075,6 @@ styleEl.textContent = `
     .spell-badge {
         display: none;
     }
-    
-    .slider-nav-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 1.2rem;
-    }
 }
 
 @media (max-width: 480px) {
@@ -1178,12 +1094,6 @@ styleEl.textContent = `
     .card-portrait {
         width: 80px;
         height: 80px;
-    }
-    
-    .slider-nav-btn {
-        width: 35px;
-        height: 35px;
-        font-size: 1rem;
     }
 }
 `;
