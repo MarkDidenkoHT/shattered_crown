@@ -185,7 +185,8 @@ function setupSupportModalEvents(modal) {
 
 async function fetchUserTickets() {
     try {
-        const response = await _apiCall(`/api/supabase/rest/v1/tickets?chat_id=eq.${_profile.id}&select=*&order=created_at.desc`);
+        // Use chat_id from profile, not profile.id
+        const response = await _apiCall(`/api/supabase/rest/v1/tickets?chat_id=eq.${_profile.chat_id}&select=*&order=created_at.desc`);
         _userTickets = await response.json();
     } catch (error) {
         console.error('Error fetching tickets:', error);
@@ -195,7 +196,7 @@ async function fetchUserTickets() {
 
 async function submitTicket(subject, description) {
     const ticketData = {
-        chat_id: _profile.id,
+        chat_id: _profile.chat_id,  // Use chat_id instead of id
         ticket_text: `Subject: ${subject}\n\nDescription: ${description}`,
         status: 'open'
     };
@@ -216,6 +217,7 @@ async function submitTicket(subject, description) {
 
         const createdTicket = await response.json();
         
+        // Call edge function to notify support (optional - implement if you have the edge function)
         try {
             await _apiCall('/functions/v1/notify-support', {
                 method: 'POST',
@@ -224,7 +226,8 @@ async function submitTicket(subject, description) {
                 },
                 body: JSON.stringify({
                     ticketId: createdTicket[0]?.id,
-                    userId: _profile.id,
+                    userId: _profile.chat_id,  // Use chat_id for consistency
+                    chatId: _profile.chat_id,  // Add this for clarity
                     subject: subject,
                     description: description
                 })
