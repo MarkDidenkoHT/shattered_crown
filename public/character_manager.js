@@ -21,6 +21,42 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     <div class="main-app-container">
       <div class="particles"></div>
       <div class="character-creation-section"></div>
+      <div id="spellbookOverlay" class="spellbook-overlay" style="display: none;">
+        <div class="spellbook-stage">
+          <div class="spellbook">
+            <button class="spellbook-close-btn">✕</button>
+            <div class="spellbook-inner">
+              <div class="spellbook-spine"></div>
+              <!-- Left Page -->
+              <section class="spellbook-page">
+                <header class="spellbook-header">
+                  <div class="spellbook-title">Spell Grimoire</div>
+                </header>
+                <div class="spellbook-filters" id="spellFilters"></div>
+                <div id="selectedSpellArea" style="margin-top:14px; color:#2b1c0c;">
+                  <div style="font-weight:800;">Selected:</div>
+                  <div id="selectedSpellText" style="margin-top:4px; opacity:.8">None</div>
+                </div>
+                <footer class="spellbook-footer">
+                  <div>Channel your inner magic</div>
+                </footer>
+              </section>
+              <!-- Right Page -->
+              <section class="spellbook-page">
+                <header class="spellbook-header">
+                  <div class="spellbook-title">Available Spells</div>
+                </header>
+                <div class="spells-grid" id="spellsGrid"></div>
+                <footer class="spellbook-footer">
+                  <div>Knowledge is power</div>
+                </footer>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Spell Tooltip -->
+      <div id="spellTooltip" class="spell-tooltip" style="display: none;"></div>
     </div>
   `;
 
@@ -67,27 +103,8 @@ function renderCharacters(characters) {
       <h1>Your Champions</h1>
       <p class="subtitle">View your heroes and their current equipment and abilities.</p>
     </div>
-    <div class="selection-section">
-      <div class="selection-slider">
-        <div class="slider-container">
-          <div class="slider-track">
-            ${characters.map(character => `
-              <div class="selection-slide">
-                ${characterCardHTML(character)}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="slider-controls">
-          <button class="slider-btn prev-btn" aria-label="Previous character">&lt;</button>
-          <div class="slider-dots">
-            ${characters.map((_, idx) => `
-              <button class="slider-dot${idx === 0 ? ' active' : ''}" data-slide="${idx}"></button>
-            `).join('')}
-          </div>
-          <button class="slider-btn next-btn" aria-label="Next character">&gt;</button>
-        </div>
-      </div>
+    <div class="characters-grid">
+      ${characters.map(character => characterCardHTML(character)).join('')}
     </div>
     <div class="confirm-return-buttons">
       <button class="fantasy-button return-btn">Return</button>
@@ -108,9 +125,9 @@ function renderCharacters(characters) {
 
   // Add equipment click handlers
   setupEquipmentClickHandlers(section, characters);
-
-  // Initialize slider for mobile view
-  initializeCharacterSlider(section);
+  
+  // Add spellbook handlers
+  setupSpellbookHandlers(section, characters);
 }
 
 function characterCardHTML(character) {
@@ -160,78 +177,78 @@ function characterCardHTML(character) {
   const equipmentCol1 = equipmentData.slice(0, 4);
   const equipmentCol2 = equipmentData.slice(4, 8);
 
-  const startingAbilities = character.starting_abilities && character.starting_abilities.length > 0
-    ? character.starting_abilities.join(', ')
-    : 'None';
-  const learnedAbilities = character.learned_abilities && character.learned_abilities.length > 0
-    ? character.learned_abilities.join(', ')
-    : 'None';
   const raceName = character.races?.name || 'Race';
   const className = character.classes?.name || 'Class';
   const professionName = character.professions?.name || 'Profession';
   const exp = character.exp || 0;
 
   return `
-    <div class="selection-card" data-character-id="${character.id}">
-      <div class="card-art-block">
-        <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
-          alt="Character Art" 
-          class="card-art">
+    <div class="character-card" data-character-id="${character.id}">
+      <div class="card-top-row">
+        <div class="card-portrait">
+          <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
+            alt="Character Portrait" 
+            class="card-art">
+        </div>
+        <div class="card-info">
+          <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'}</h3>
+          <p class="card-race-class">${raceName} ${className}</p>
+          <p class="card-profession">${professionName}</p>
+          <p class="card-exp">EXP: ${exp}</p>
+        </div>
       </div>
-      <div class="card-info-block">
-        <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'} ${raceName} ${className}</h3>
-        <p class="card-description"><strong>EXP:</strong> ${exp} &nbsp; <strong>Profession:</strong> ${professionName}</p>
-        <div class="stats-block condensed-stats">
-          <h4>Stats</h4>
-          <div class="stats-cols">
-            <div>
-              ${statsCol1.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
-            </div>
-            <div>
-              ${statsCol2.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
-            </div>
+      
+      <div class="stats-block condensed-stats">
+        <h4>Stats</h4>
+        <div class="stats-cols">
+          <div>
+            ${statsCol1.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
+          </div>
+          <div>
+            ${statsCol2.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
           </div>
         </div>
-        <div class="stats-block condensed-items">
-          <h4>Equipped Items</h4>
-          <div class="items-cols">
-            <div>
-              ${equipmentCol1.map(item => `
-                <p>${item.label}: 
-                  <span class="equipment-item" 
-                        data-character-id="${character.id}" 
-                        data-slot="${item.slot}" 
-                        data-type="${item.type}"
-                        style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
-                    ${item.value}
-                  </span>
-                </p>
-              `).join('')}
-            </div>
-            <div>
-              ${equipmentCol2.map(item => `
-                <p>${item.label}: 
-                  <span class="equipment-item" 
-                        data-character-id="${character.id}" 
-                        data-slot="${item.slot}" 
-                        data-type="${item.type}"
-                        style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
-                    ${item.value}
-                  </span>
-                </p>
-              `).join('')}
-            </div>
+      </div>
+      
+      <div class="stats-block condensed-items">
+        <h4>Equipped Items</h4>
+        <div class="items-cols">
+          <div>
+            ${equipmentCol1.map(item => `
+              <p>${item.label}: 
+                <span class="equipment-item" 
+                      data-character-id="${character.id}" 
+                      data-slot="${item.slot}" 
+                      data-type="${item.type}"
+                      style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
+                  ${item.value}
+                </span>
+              </p>
+            `).join('')}
+          </div>
+          <div>
+            ${equipmentCol2.map(item => `
+              <p>${item.label}: 
+                <span class="equipment-item" 
+                      data-character-id="${character.id}" 
+                      data-slot="${item.slot}" 
+                      data-type="${item.type}"
+                      style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
+                  ${item.value}
+                </span>
+              </p>
+            `).join('')}
           </div>
         </div>
-        <div class="abilities-block">
-          <h4>Starting Abilities</h4>
-          <p>${startingAbilities}</p>
-        </div>
-        <div class="abilities-block">
-          <h4>Learned Abilities</h4>
-          <p>${learnedAbilities}</p>
-        </div>
-        <!-- Future features: talents, detailed ability data -->
+      </div>
+      
+      <div class="character-actions">
+        <button class="fantasy-button spellbook-btn" data-character-id="${character.id}">
+          🔮 Spellbook
+        </button>
+        <button class="fantasy-button talents-btn" data-character-id="${character.id}">
+          ⭐ Talents
+        </button>
       </div>
     </div>
   `;
@@ -252,6 +269,125 @@ function setupEquipmentClickHandlers(section, characters) {
   });
 }
 
+function setupSpellbookHandlers(section, characters) {
+  // Spellbook buttons
+  section.querySelectorAll('.spellbook-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const characterId = btn.dataset.characterId;
+      const character = characters.find(c => c.id == characterId);
+      if (character) {
+        await openSpellbook(character);
+      }
+    });
+  });
+
+  // Talents buttons (placeholder)
+  section.querySelectorAll('.talents-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      displayMessage('Talents system coming soon! 🌟');
+    });
+  });
+}
+
+async function openSpellbook(character) {
+  try {
+    console.log('[SPELLBOOK] Opening spellbook for character:', character);
+    
+    // Fetch character's spells from database by matching starting_abilities names
+    let characterSpells = [];
+    if (character.starting_abilities && character.starting_abilities.length > 0) {
+      const spellNames = character.starting_abilities.map(name => `"${name}"`).join(',');
+      const response = await _apiCall(`/api/supabase/rest/v1/spells?name=in.(${spellNames})`);
+      characterSpells = await response.json();
+    }
+    
+    console.log('[SPELLBOOK] Character spells:', characterSpells);
+    
+    const overlay = _main.querySelector('#spellbookOverlay');
+    const spellsGrid = _main.querySelector('#spellsGrid');
+    
+    // Render spells
+    spellsGrid.innerHTML = '';
+    if (characterSpells.length === 0) {
+      spellsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #666; padding: 2rem;">No spells available</div>';
+    } else {
+      characterSpells.forEach(spell => {
+        const spellCard = document.createElement('button');
+        spellCard.className = 'spell-card';
+        spellCard.innerHTML = `
+          <div class="spell-icon">${spell.sprite || '✨'}</div>
+          <div class="spell-badge">Spell</div>
+        `;
+        spellCard.addEventListener('click', () => selectSpell(spell, spellCard));
+        spellCard.addEventListener('mouseenter', (e) => showSpellTooltip(e, spell));
+        spellCard.addEventListener('mouseleave', hideSpellTooltip);
+        spellCard.addEventListener('mousemove', positionSpellTooltip);
+        spellsGrid.appendChild(spellCard);
+      });
+    }
+    
+    // Show overlay
+    overlay.style.display = 'block';
+    
+    // Close button handler
+    const closeBtn = _main.querySelector('.spellbook-close-btn');
+    closeBtn.onclick = () => {
+      overlay.style.display = 'none';
+    };
+    
+    // Click outside to close
+    overlay.onclick = (e) => {
+      if (e.target === overlay) {
+        overlay.style.display = 'none';
+      }
+    };
+    
+  } catch (error) {
+    console.error('[SPELLBOOK] Error opening spellbook:', error);
+    displayMessage('Failed to load spellbook. Please try again.');
+  }
+}
+
+function selectSpell(spell, element) {
+  const selectedText = _main.querySelector('#selectedSpellText');
+  selectedText.textContent = `${spell.name} — ${spell.description ? spell.description.substring(0, 50) + '...' : 'No description'}`;
+  
+  // Add selection effect
+  element.style.transform = 'scale(1.05)';
+  element.style.border = '2px solid #c4975a';
+  
+  // Remove effect after short delay
+  setTimeout(() => {
+    element.style.transform = '';
+    element.style.border = '';
+  }, 200);
+  
+  console.log('[SPELLBOOK] Selected spell:', spell);
+}
+
+function showSpellTooltip(e, spell) {
+  const tooltip = _main.querySelector('#spellTooltip');
+  tooltip.innerHTML = `
+    <div class="tooltip-name">${spell.name}</div>
+    <div class="tooltip-desc">${spell.description || 'No description available'}</div>
+    ${spell.cooldown ? `<div class="tooltip-cooldown">Cooldown: ${spell.cooldown}s</div>` : ''}
+  `;
+  tooltip.style.display = 'block';
+  positionSpellTooltip(e);
+}
+
+function hideSpellTooltip() {
+  const tooltip = _main.querySelector('#spellTooltip');
+  tooltip.style.display = 'none';
+}
+
+function positionSpellTooltip(e) {
+  const tooltip = _main.querySelector('#spellTooltip');
+  tooltip.style.left = e.clientX + 10 + 'px';
+  tooltip.style.top = e.clientY - 10 + 'px';
+}
+
+// Keep all the existing equipment modal functions unchanged...
 async function showEquipmentModal(character, slot, type) {
   try {
     // Fetch available items of this type from bank
@@ -453,67 +589,468 @@ function displayMessage(message) {
     console.log('[MESSAGE] Message box closed.');
   });
 }
-
-function initializeCharacterSlider(section) {
-  const sliderTrack = section.querySelector('.slider-track');
-  const prevBtn = section.querySelector('.prev-btn');
-  const nextBtn = section.querySelector('.next-btn');
-  const dots = section.querySelectorAll('.slider-dot');
-  if (!sliderTrack || !prevBtn || !nextBtn || dots.length === 0) return;
-
-  let currentSlide = 0;
-  const totalSlides = dots.length;
-
-  function updateSlider() {
-    const translateX = -currentSlide * 100;
-    sliderTrack.style.transform = `translateX(${translateX}%)`;
-    dots.forEach((dot, idx) => {
-      dot.classList.toggle('active', idx === currentSlide);
-    });
-  }
-
-  function nextSlide() {
-    currentSlide = (currentSlide + 1) % totalSlides;
-    updateSlider();
-  }
-
-  function prevSlide() {
-    currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
-    updateSlider();
-  }
-
-  nextBtn.addEventListener('click', nextSlide);
-  prevBtn.addEventListener('click', prevSlide);
-
-  dots.forEach((dot, idx) => {
-    dot.addEventListener('click', () => {
-      currentSlide = idx;
-      updateSlider();
-    });
-  });
-
-  // Touch/swipe support
-  let startX = 0;
-  let isDragging = false;
-
-  sliderTrack.addEventListener('touchstart', (e) => {
-    startX = e.touches[0].clientX;
-    isDragging = true;
-  });
-
-  sliderTrack.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-  });
-
-  sliderTrack.addEventListener('touchend', (e) => {
-    if (!isDragging) return;
-    isDragging = false;
-    const endX = e.changedTouches[0].clientX;
-    const diff = startX - endX;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) nextSlide();
-      else prevSlide();
-    }
-  });
+const styleEl = document.createElement('style');
+  styleEl.textContent = `
+  .character-creation-section {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 1rem;
+    position: relative;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
 }
+
+.character-creation-section .art-header {
+    height: auto;
+    padding-bottom: 1rem;
+    background: none;
+    border-bottom: 1px solid rgba(196, 151, 90, 0.2);
+    margin-bottom: 1rem;
+    text-align: center;
+    width: 100%;
+}
+
+.character-creation-section .art-header h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.character-creation-section .subtitle {
+    font-size: 0.9rem;
+    color: #b8b3a8;
+}
+
+/* Characters Grid Layout */
+.characters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    width: 100%;
+    max-width: 1400px;
+}
+
+/* Character Card */
+.character-card {
+    background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
+    border: 2px solid #3d2914;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s;
+    backdrop-filter: blur(3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 1rem;
+}
+
+.character-card:hover {
+    border-color: #c4975a;
+    transform: translateY(-3px);
+    box-shadow: 
+        inset 0 1px 0 rgba(196, 151, 90, 0.2),
+        0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Top Row: Portrait + Info */
+.card-top-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card-portrait {
+    width: 50%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(196, 151, 90, 0.3);
+}
+
+.card-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.character-card:hover .card-art {
+    transform: scale(1.05);
+}
+
+.card-info {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.3rem;
+}
+
+.card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #c4975a;
+    margin: 0;
+    text-shadow: 1px 1px 0px #3d2914;
+    letter-spacing: 1px;
+}
+
+.card-race-class {
+    font-size: 0.95rem;
+    color: #b8b3a8;
+    font-weight: 500;
+    margin: 0;
+}
+
+.card-profession {
+    font-size: 0.85rem;
+    color: #9a8f7e;
+    font-style: italic;
+    margin: 0;
+}
+
+.card-exp {
+    font-size: 0.8rem;
+    color: #8a7f6e;
+    margin: 0;
+}
+
+/* Stats and Equipment Blocks */
+.stats-block, .abilities-block {
+    width: 100%;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(196,151,90,0.15);
+}
+
+.stats-block h4, .abilities-block h4 {
+    font-family: 'Cinzel', serif;
+    color: #c4975a;
+    font-size: 1rem;
+    margin-bottom: 0.6rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.stats-block p {
+    color: #b8b3a8;
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    margin: 0.2rem 0;
+    padding: 0.1rem 0;
+}
+
+.stats-block p span {
+    color: #c4975a;
+    font-weight: bold;
+}
+
+/* Two-column layouts */
+.stats-cols, .items-cols {
+    display: flex;
+    gap: 1rem;
+}
+
+.stats-cols > div, .items-cols > div {
+    flex: 1;
+}
+
+.condensed-stats, .condensed-items { 
+    padding-top: 0.5rem; 
+    margin-top: 0.5rem; 
+}
+
+/* Equipment styling */
+.equipment-item {
+    transition: color 0.2s ease;
+}
+
+.equipment-item:hover {
+    color: #c4975a !important;
+    text-shadow: 0 0 3px rgba(196, 151, 90, 0.3);
+}
+
+/* Character Actions */
+.character-actions {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(196,151,90,0.15);
+}
+
+.character-actions .fantasy-button {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+/* Spellbook Overlay Styles */
+.spellbook-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(1200px 800px at 50% -10%, rgba(110,195,255,.12), rgba(0,0,0,.76) 40%, rgba(0,0,0,.86));
+    backdrop-filter: blur(2px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spellbook-stage {
+    position: relative;
+    perspective: 1600px;
+}
+
+.spellbook {
+    width: min(900px, 92vw);
+    height: min(560px, 78vh);
+    border-radius: 18px;
+    transform-style: preserve-3d;
+    box-shadow: 0 30px 100px rgba(0,0,0,.55);
+    position: relative;
+    background: linear-gradient(180deg, #7a5d2a, #5b4218);
+    padding: 14px;
+}
+
+.spellbook::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 2px, rgba(0,0,0,.06) 2px 4px);
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+}
+
+.spellbook-inner {
+    position: absolute;
+    inset: 14px;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: linear-gradient(90deg, #e9ddc6 0 50%, #d2c6a8 50% 100%);
+    overflow: hidden;
+}
+
+.spellbook-spine {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    width: 2px;
+    background: rgba(0,0,0,.12);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.06);
+    z-index: 2;
+}
+
+.spellbook-page {
+    position: relative;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+.spellbook-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.spellbook-title {
+    color: #2a1e0f;
+    font-weight: 800;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    font-size: 13px;
+}
+
+.spellbook-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.spells-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.spell-card {
+    background: linear-gradient(180deg, #1e2430, #0f131a);
+    border-radius: 12px;
+    position: relative;
+    aspect-ratio: 1/1;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), inset 0 10px 20px rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.2);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.spell-card:hover {
+    transform: translateY(-2px);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.1), inset 0 10px 20px rgba(255,255,255,.08), 0 15px 30px rgba(0,0,0,.3);
+}
+
+.spell-icon {
+    font-size: 28px;
+    user-select: none;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
+    transform: translateY(2px);
+}
+
+.spell-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 6px;
+    border-radius: 8px;
+    color: #0c0f14;
+    background: linear-gradient(180deg, #c8e9ff, #86c8ff);
+    box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+
+.spellbook-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,.04));
+    color: #3a2a12;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.spellbook-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+    border: 0;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-weight: 800;
+    color: #1a1006;
+    background: linear-gradient(180deg, #ffd7a1, #f0c47d);
+    box-shadow: 0 6px 16px rgba(0,0,0,.25);
+    transition: transform 0.2s ease;
+}
+
+.spellbook-close-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Spell Tooltip */
+.spell-tooltip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 110;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: #121418;
+    background: linear-gradient(180deg, #fffef9, #f2e9d5);
+    border: 1px solid rgba(0,0,0,.15);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    transform: translate(-50%, calc(-100% - 14px));
+}
+
+.tooltip-name {
+    font-weight: 900;
+    letter-spacing: .3px;
+    color: #341f07;
+    margin-bottom: 4px;
+}
+
+.tooltip-desc {
+    font-size: 13px;
+    color: #3e2c14;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.tooltip-cooldown {
+    font-size: 12px;
+    color: #6b512f;
+    font-style: italic;
+}
+
+/* Return buttons styling */
+.confirm-return-buttons {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.confirm-return-buttons .fantasy-button {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .characters-grid {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+    }
+    
+    .card-top-row {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .card-portrait {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .card-info {
+        width: 100%;
+    }
+    
+    .stats-cols, .items-cols {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .character-actions {
+        flex-direction: column;
+    }
+    
+    .spells-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .spell-badge {
+        display: none;
+    }
+}
+  `;
+document.head.appendChild(styleEl);
