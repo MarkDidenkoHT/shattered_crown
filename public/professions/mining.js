@@ -587,9 +587,9 @@ function setupModalEventListeners(modal) {
   });
 
   // Extract button
-  finishBtn.addEventListener('click', () => {
+  finishBtn.addEventListener('click', async () => {
     finishBtn.disabled = true;
-    patchAndSendCraftRequest(resultDiv);
+    await patchAndSendCraftRequest(resultDiv, context.apiCall);
   });
 
   // Use event delegation for adjustment buttons and ore removal
