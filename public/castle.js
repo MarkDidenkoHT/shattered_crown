@@ -106,9 +106,8 @@ function setupInteractions() {
                 displayMessage('Support functionality coming soon!');
                 // window.gameAuth.loadModule('support');
             } else if (action === 'roadmap') {
-                displayMessage('Roadmap functionality coming soon!');
-                // window.gameAuth.loadModule('roadmap');
-            }
+                 showRoadmapModal();
+            }    
         });
     });
 
@@ -208,6 +207,68 @@ function displayMessage(message) {
         messageBox.remove();
         console.log('[MESSAGE] Message box closed.');
     });
+}
+
+function showRoadmapModal() {
+    const modal = document.createElement('div');
+    modal.className = 'roadmap-modal';
+    modal.innerHTML = `
+        <div class="roadmap-modal-content">
+            <div class="roadmap-header">
+                <h2>Development Roadmap</h2>
+                <button class="roadmap-close-btn">&times;</button>
+            </div>
+            <div class="roadmap-body">
+                <div class="roadmap-item">
+                    <div class="roadmap-date">Q1 2025</div>
+                    <div class="roadmap-feature">Enhanced Character Progression System</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">Q1 2025</div>
+                    <div class="roadmap-feature">Guild System & Social Features</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">Q2 2025</div>
+                    <div class="roadmap-feature">PvP Arena & Tournaments</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">Q2 2025</div>
+                    <div class="roadmap-feature">Advanced Crafting System</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">Q3 2025</div>
+                    <div class="roadmap-feature">Mobile App Release</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">Q3 2025</div>
+                    <div class="roadmap-feature">Dynamic World Events</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+
+    // Close modal functionality
+    modal.querySelector('.roadmap-close-btn').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // Close modal with Escape key
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
 }
 
 function addCastleStyles() {
@@ -403,6 +464,166 @@ function addCastleStyles() {
             padding: 1rem;
             font-size: 1rem;
             cursor: pointer;
+        }
+
+        /* roadmpap styles */
+
+.roadmap-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .roadmap-modal-content {
+            background: linear-gradient(145deg, #1d140c, #2a1f16);
+            border: 2px solid #c4975a;
+            border-radius: 15px;
+            padding: 2rem;
+            max-width: 600px;
+            max-height: 70vh;
+            width: 90%;
+            color: #e0d8c9;
+            font-family: 'Cinzel', serif;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .roadmap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #c4975a;
+            padding-bottom: 1rem;
+        }
+
+        .roadmap-header h2 {
+            margin: 0;
+            color: #c4975a;
+            font-size: 1.8rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .roadmap-close-btn {
+            background: none;
+            border: none;
+            color: #c4975a;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .roadmap-close-btn:hover {
+            background-color: rgba(196, 151, 90, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .roadmap-body {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .roadmap-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .roadmap-body::-webkit-scrollbar-track {
+            background: rgba(29, 20, 12, 0.3);
+            border-radius: 4px;
+        }
+
+        .roadmap-body::-webkit-scrollbar-thumb {
+            background: #c4975a;
+            border-radius: 4px;
+        }
+
+        .roadmap-body::-webkit-scrollbar-thumb:hover {
+            background: #d4a76a;
+        }
+
+        .roadmap-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: rgba(42, 31, 22, 0.5);
+            border-radius: 8px;
+            border-left: 4px solid #c4975a;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .roadmap-item:hover {
+            background: rgba(42, 31, 22, 0.8);
+            transform: translateX(5px);
+        }
+
+        .roadmap-date {
+            font-weight: bold;
+            color: #c4975a;
+            min-width: 100px;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 0.3rem 0.8rem;
+            background: rgba(196, 151, 90, 0.1);
+            border-radius: 15px;
+            margin-right: 1rem;
+            border: 1px solid rgba(196, 151, 90, 0.3);
+        }
+
+        .roadmap-feature {
+            flex: 1;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .roadmap-modal-content {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .roadmap-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .roadmap-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .roadmap-date {
+                margin-bottom: 0.5rem;
+                margin-right: 0;
+            }
         }
 
     `;
