@@ -223,16 +223,15 @@ async function submitTicket(subject, description) {
     console.log('Ticket data to submit:', ticketData);
 
     try {
-        // Use the same API pattern as god selection - remove baseUrl construction
+        // First, create the ticket in the database
         const url = `/api/supabase/rest/v1/tickets`;
-        console.log('Making API call to:', url);
+        console.log('Making API call to create ticket:', url);
         
         const response = await _apiCall(url, {
             method: 'POST',
-            // Remove explicit headers - let _apiCall handle them
-            body: ticketData  // Pass object directly, not JSON.stringify
+            body: ticketData
         });
-        console.log('API call successful. Response status:', response.status);
+        console.log('Ticket creation API call successful. Response status:', response.status);
 
         if (!response.ok) {
             throw new Error('Failed to create ticket');
@@ -240,6 +239,40 @@ async function submitTicket(subject, description) {
 
         const createdTicket = await response.json();
         console.log('Ticket created successfully:', createdTicket);
+        
+        // Get the ticket ID from the created ticket
+        const ticketId = createdTicket[0]?.id || createdTicket.id;
+        
+        if (ticketId) {
+            console.log('Attempting to send support notification for ticket ID:', ticketId);
+            
+            // Send notification to support via edge function
+            try {
+                const notificationResponse = await _apiCall('/functions/v1/notifySupport', {
+                    method: 'POST',
+                    body: {
+                        ticketId: ticketId,
+                        userId: _profile.chat_id,
+                        subject: subject,
+                        description: description
+                    }
+                });
+                
+                console.log('Support notification response status:', notificationResponse.status);
+                
+                if (notificationResponse.ok) {
+                    console.log('Support notification sent successfully');
+                } else {
+                    console.warn('Support notification failed, but ticket was created successfully');
+                }
+            } catch (notificationError) {
+                console.error('Error sending support notification:', notificationError);
+                // Don't fail the entire operation if notification fails
+                console.log('Ticket was created successfully despite notification error');
+            }
+        } else {
+            console.warn('No ticket ID found in response, skipping notification');
+        }
         
         return createdTicket;
     } catch (error) {

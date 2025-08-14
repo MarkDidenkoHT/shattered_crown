@@ -572,13 +572,10 @@ async function equipItem(character, slot, itemName) {
     // Update character's equipped_items in database
     const response = await _apiCall(`/api/supabase/rest/v1/characters?id=eq.${character.id}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
+      // Remove explicit headers - let _apiCall handle them
+      body: {
         equipped_items: updatedEquippedItems
-      })
+      }
     });
     
     if (!response.ok) {
