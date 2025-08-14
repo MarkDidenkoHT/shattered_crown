@@ -220,28 +220,32 @@ function showRoadmapModal() {
             </div>
             <div class="roadmap-body">
                 <div class="roadmap-item">
-                    <div class="roadmap-date">Q1 2025</div>
-                    <div class="roadmap-feature">Enhanced Character Progression System</div>
+                    <div class="roadmap-date">30 August 2025</div>
+                    <div class="roadmap-feature">PvE - regions, loot, crafting - 4 working professions!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">Q1 2025</div>
-                    <div class="roadmap-feature">Guild System & Social Features</div>
+                    <div class="roadmap-date">10 September 2025</div>
+                    <div class="roadmap-feature">Exp, leveling and progressive score systems!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">Q2 2025</div>
-                    <div class="roadmap-feature">PvP Arena & Tournaments</div>
+                    <div class="roadmap-date">20 September 2025</div>
+                    <div class="roadmap-feature">Auctionhouse and trading! Player driven economy - you decide what to trade and for what items!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">Q2 2025</div>
-                    <div class="roadmap-feature">Advanced Crafting System</div>
+                    <div class="roadmap-date">30 September 2025</div>
+                    <div class="roadmap-feature">Talent trees!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">Q3 2025</div>
-                    <div class="roadmap-feature">Mobile App Release</div>
+                    <div class="roadmap-date">30 October 2025</div>
+                    <div class="roadmap-feature">PvP</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">Q3 2025</div>
-                    <div class="roadmap-feature">Dynamic World Events</div>
+                    <div class="roadmap-date">November 2025</div>
+                    <div class="roadmap-feature">Implementing store, lore, PvE/PvP story progress</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">December 2025</div>
+                    <div class="roadmap-feature">Second test phase!</div>
                 </div>
             </div>
         </div>
