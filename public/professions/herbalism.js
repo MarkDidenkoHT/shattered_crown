@@ -833,7 +833,6 @@ function createBloomEffect(plot, seedColor) {
   }
 }
 
-// Process individual seed crafting
 async function processSeedCrafting() {
   const craftingPromises = [];
   
@@ -857,39 +856,27 @@ async function craftIndividualSeed(position) {
   const column = position % 2; // 0 or 1
   const row = Math.floor(position / 2); // 0 or 1
   
-  const sunShadeModifier = herbalismState.sunShadeSettings[column];
+  const environment = herbalismState.sunShadeSettings[column]; // 'sun' or 'shade'
   const fertilizerModifier = herbalismState.selectedFertilizers[row];
   
-  // Build the combination for recipe matching
-  let craftingCombination = [seed.name, sunShadeModifier];
+  // Build the craft request
+  const craftRequest = {
+    player_id: context.profile.id,
+    profession_id: herbalismState.professionId,
+    seed_name: seed.name,
+    environment: environment
+  };
   
+  // Add fertilizer if available
   if (fertilizerModifier) {
-    craftingCombination.push(fertilizerModifier.name);
+    craftRequest.fertilizer_name = fertilizerModifier.name;
   }
   
-  console.log(`[HERBALISM] Crafting seed at position ${position}:`, craftingCombination);
+  console.log(`[HERBALISM] Crafting seed at position ${position}:`, craftRequest);
   
   try {
-    // Reserve ingredients (simplified for individual seed)
-    const reserveRes = await context.apiCall('/functions/v1/reserve_ingredients', 'POST', {
-      player_id: context.profile.id,
-      profession_id: herbalismState.professionId,
-      selected_ingredients: [seed.name], // Only the seed needs to be reserved from bank
-    });
-
-    const reserveJson = await reserveRes.json();
-    if (!reserveRes.ok || !reserveJson.success) {
-      herbalismState.results[position] = { success: false, error: 'Failed to reserve seed' };
-      return;
-    }
-
-    // Craft the item
-    const craftRes = await context.apiCall('/functions/v1/craft_alchemy', 'POST', {
-      player_id: context.profile.id,
-      profession_id: herbalismState.professionId,
-      session_id: reserveJson.session_id,
-      adjustments: [] // No adjustments in herbalism
-    });
+    // Call the herbalism-specific craft function
+    const craftRes = await context.apiCall('/functions/v1/craft_herbalism', 'POST', craftRequest);
 
     const craftJson = await craftRes.json();
     herbalismState.results[position] = craftJson;
@@ -899,7 +886,6 @@ async function craftIndividualSeed(position) {
     herbalismState.results[position] = { success: false, error: 'Crafting failed' };
   }
 }
-
 // Display final results
 function displayFinalResults(resultDiv) {
   const results = herbalismState.results.filter(r => r !== null);
