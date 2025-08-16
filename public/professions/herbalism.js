@@ -1,4 +1,4 @@
-// Fixed Herbalism profession module
+// Improved Herbalism profession module
 let context = null;
 let herbalismState = null;
 let ingredientCache = new Map(); // Cache ingredient data
@@ -75,7 +75,7 @@ export async function startCraftingSession(ctx) {
     await finishLoading(loadingModal, loadingStartTime, 2000);
     
     renderCraftingModal();
-    injectHerbalismAnimationsCSS();
+    injectHerbalismCSS();
     
     console.log('[HERBALISM] Herbalism crafting session loaded successfully!');
     
@@ -236,71 +236,77 @@ async function fallbackEnrichIngredients(bankItems) {
 // Create the 3x3 garden grid (with bottom-right empty)
 function createGardenGridHTML() {
   return `
-    <div id="garden-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 0.8rem; max-width: 400px; margin: 0 auto;">
+    <div id="garden-grid" class="garden-grid">
       
       <!-- Top Row: Seed1, Seed2, Fertilizer1 -->
-      <div class="seed-plot" data-position="0" style="width: 80px; height: 80px; border: 2px dashed #8B4513; border-radius: 8px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.7rem; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">Seed 1</span>
-        <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.65rem;">Drop Seed</span>
+      <div class="seed-plot" data-position="0">
+        <span class="plot-label">Seed 1</span>
+        <div class="seed-content">
+          <span class="empty-text">Drop Seed</span>
         </div>
-        <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 6px; overflow: hidden; opacity: 0;"></div>
+        <button class="remove-btn" style="display: none;">×</button>
+        <div class="growth-animation"></div>
       </div>
       
-      <div class="seed-plot" data-position="1" style="width: 80px; height: 80px; border: 2px dashed #8B4513; border-radius: 8px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.7rem; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">Seed 2</span>
-        <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.65rem;">Drop Seed</span>
+      <div class="seed-plot" data-position="1">
+        <span class="plot-label">Seed 2</span>
+        <div class="seed-content">
+          <span class="empty-text">Drop Seed</span>
         </div>
-        <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 6px; overflow: hidden; opacity: 0;"></div>
+        <button class="remove-btn" style="display: none;">×</button>
+        <div class="growth-animation"></div>
       </div>
       
-      <div class="fertilizer-slot" data-row="0" style="width: 80px; height: 80px; border: 2px dashed #228B22; border-radius: 8px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="fertilizer-label" style="color: #90EE90; font-size: 0.7rem; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">Row 1 Fert.</span>
-        <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #90EE90; font-size: 0.6rem;">Drop Fertilizer</span>
+      <div class="fertilizer-slot" data-row="0">
+        <span class="fertilizer-label">Row 1 Fert.</span>
+        <div class="fertilizer-content">
+          <span class="empty-text">Drop Fertilizer</span>
         </div>
+        <button class="remove-btn" style="display: none;">×</button>
       </div>
 
       <!-- Middle Row: Seed3, Seed4, Fertilizer2 -->
-      <div class="seed-plot" data-position="2" style="width: 80px; height: 80px; border: 2px dashed #8B4513; border-radius: 8px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.7rem; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">Seed 3</span>
-        <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.65rem;">Drop Seed</span>
+      <div class="seed-plot" data-position="2">
+        <span class="plot-label">Seed 3</span>
+        <div class="seed-content">
+          <span class="empty-text">Drop Seed</span>
         </div>
-        <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 6px; overflow: hidden; opacity: 0;"></div>
+        <button class="remove-btn" style="display: none;">×</button>
+        <div class="growth-animation"></div>
       </div>
       
-      <div class="seed-plot" data-position="3" style="width: 80px; height: 80px; border: 2px dashed #8B4513; border-radius: 8px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.7rem; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">Seed 4</span>
-        <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.65rem;">Drop Seed</span>
+      <div class="seed-plot" data-position="3">
+        <span class="plot-label">Seed 4</span>
+        <div class="seed-content">
+          <span class="empty-text">Drop Seed</span>
         </div>
-        <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 6px; overflow: hidden; opacity: 0;"></div>
+        <button class="remove-btn" style="display: none;">×</button>
+        <div class="growth-animation"></div>
       </div>
       
-      <div class="fertilizer-slot" data-row="1" style="width: 80px; height: 80px; border: 2px dashed #228B22; border-radius: 8px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="fertilizer-label" style="color: #90EE90; font-size: 0.7rem; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">Row 2 Fert.</span>
-        <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #90EE90; font-size: 0.6rem;">Drop Fertilizer</span>
+      <div class="fertilizer-slot" data-row="1">
+        <span class="fertilizer-label">Row 2 Fert.</span>
+        <div class="fertilizer-content">
+          <span class="empty-text">Drop Fertilizer</span>
         </div>
+        <button class="remove-btn" style="display: none;">×</button>
       </div>
 
       <!-- Bottom Row: Sun/Shade toggles and Empty -->
-      <div class="sun-shade-toggle" data-column="0" style="width: 80px; height: 80px; border: 2px solid #FFA500; border-radius: 8px; background: linear-gradient(to bottom, rgba(255,165,0,0.2) 0%, rgba(255,165,0,0.4) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
-        <div class="toggle-icon" style="font-size: 1.5rem; margin-bottom: 2px;">☀️</div>
-        <div class="toggle-text" style="font-size: 0.65rem; color: #FFA500; font-weight: bold;">Sun</div>
-        <div class="column-label" style="font-size: 0.6rem; color: #999; position: absolute; bottom: 2px;">Col 1</div>
+      <div class="sun-shade-toggle sun" data-column="0">
+        <div class="toggle-icon">☀️</div>
+        <div class="toggle-text">Sun</div>
+        <div class="column-label">Col 1</div>
       </div>
       
-      <div class="sun-shade-toggle" data-column="1" style="width: 80px; height: 80px; border: 2px solid #FFA500; border-radius: 8px; background: linear-gradient(to bottom, rgba(255,165,0,0.2) 0%, rgba(255,165,0,0.4) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
-        <div class="toggle-icon" style="font-size: 1.5rem; margin-bottom: 2px;">☀️</div>
-        <div class="toggle-text" style="font-size: 0.65rem; color: #FFA500; font-weight: bold;">Sun</div>
-        <div class="column-label" style="font-size: 0.6rem; color: #999; position: absolute; bottom: 2px;">Col 2</div>
+      <div class="sun-shade-toggle sun" data-column="1">
+        <div class="toggle-icon">☀️</div>
+        <div class="toggle-text">Sun</div>
+        <div class="column-label">Col 2</div>
       </div>
       
       <!-- Empty bottom-right corner -->
-      <div style="width: 80px; height: 80px;"></div>
+      <div class="empty-grid-cell"></div>
       
     </div>
   `;
@@ -309,42 +315,48 @@ function createGardenGridHTML() {
 // Render main modal
 function renderCraftingModal() {
   const modal = document.createElement('div');
-  modal.className = 'custom-message-box';
+  modal.className = 'custom-message-box herbalism-modal';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1200px; max-height: 95vh; overflow-y: auto; text-align: center;">
-      <h2 style="margin: 0.5rem 0; color: #228B22;">🌱 Crafting: ${herbalismState.professionName}</h2>
+    <div class="message-content herbalism-content">
+      <h2 class="herbalism-title">🌱 Crafting: ${herbalismState.professionName}</h2>
             
       <!-- Result display -->
-      <div id="craft-result" style="margin: 0.5rem 0; font-weight: bold; min-height: 20px;">Set up your garden to start growing</div>
+      <div id="craft-result" class="craft-result">Set up your garden to start growing</div>
       
       <!-- Main garden grid -->
-      <div style="margin: 1rem 0;">
+      <div class="garden-container">
         ${createGardenGridHTML()}
       </div>
       
-      <!-- Seeds row -->
-      <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem; color: #8B4513;">🌰 Available Seeds</h3>
-      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.5rem; border: 1px solid #8B4513; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 70px;">
-        ${renderSeedsHTML()}
+      <!-- Seeds section -->
+      <div class="section-container">
+        <h3 class="section-title seeds">Available Seeds</h3>
+        <div id="available-seeds" class="items-container seeds-container">
+          ${renderSeedsHTML()}
+        </div>
       </div>
       
-      <!-- Fertilizers row -->
-      <h3 style="margin: 0.3rem 0; font-size: 1rem; color: #228B22;">🧪 Available Fertilizers</h3>
-      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.5rem; border: 1px solid #228B22; border-radius: 6px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 70px;">
-        ${renderFertilizersHTML()}
+      <!-- Fertilizers section -->
+      <div class="section-container">
+        <h3 class="section-title fertilizers">Available Fertilizers</h3>
+        <div id="available-fertilizers" class="items-container fertilizers-container">
+          ${renderFertilizersHTML()}
+        </div>
       </div>
       
-      <!-- Recipes row -->
-      <h3 style="margin: 0.3rem 0; font-size: 1rem; color: #4CAF50;">📜 Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 80px;">
-        ${renderRecipesHTML()}
+      <!-- Recipes section -->
+      <div class="section-container">
+        <h3 class="section-title recipes">Recipes</h3>
+        <div id="available-recipes" class="items-container recipes-container">
+          ${renderRecipesHTML()}
+        </div>
       </div>
       
       <!-- Button row -->
-      <div style="display: flex; justify-content: center; gap: 0.4rem;">
-        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px; padding: 0.4rem;">Close</button>
-        <button id="grow-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; padding: 0.4rem;">🌱 Grow</button>
-        <button id="claim-all-btn" class="fantasy-button" style="flex: 1; max-width: 100px; padding: 0.4rem; display: none;">Claim All</button>
+      <div class="button-container">
+        <button class="fantasy-button message-ok-btn">Close</button>
+        <button id="grow-btn" class="fantasy-button grow-btn" disabled>🌱 Grow</button>
+        <button id="claim-all-btn" class="fantasy-button claim-btn" style="display: none;">Claim All</button>
       </div>
     </div>
   `;
@@ -358,16 +370,16 @@ function renderSeedsHTML() {
   console.log('[HERBALISM] Rendering seeds HTML with:', herbalismState.availableSeeds);
   
   if (!herbalismState.availableSeeds || herbalismState.availableSeeds.length === 0) {
-    return '<div style="color: #666; font-style: italic; padding: 0.8rem; font-size: 0.85rem;">No seeds available</div>';
+    return '<div class="no-items-message">No seeds available</div>';
   }
   
   return herbalismState.availableSeeds.map((seed, idx) => {
     console.log('[HERBALISM] Rendering seed:', seed.name, 'sprite:', seed.sprite);
     return `
-      <div class="seed-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 3px; background: rgba(139,69,19,0.1);">
-        <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:40px;height:40px;" onerror="this.src='assets/art/ingridients/default.png'">
-        <div style="font-size:0.7rem; color: #8B4513;">x${seed.amount}</div>
-        <div class="info-icon" data-seed="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #8B4513; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+      <div class="seed-item ingredient-item" data-index="${idx}">
+        <img class="ingredient-image" src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" onerror="this.src='assets/art/ingridients/default.png'">
+        <div class="ingredient-amount seeds">x${seed.amount}</div>
+        <div class="info-icon" data-seed="${idx}">i</div>
       </div>
     `;
   }).join('');
@@ -378,16 +390,16 @@ function renderFertilizersHTML() {
   console.log('[HERBALISM] Rendering fertilizers HTML with:', herbalismState.availableFertilizers);
   
   if (!herbalismState.availableFertilizers || herbalismState.availableFertilizers.length === 0) {
-    return '<div style="color: #666; font-style: italic; padding: 0.8rem; font-size: 0.85rem;">No fertilizers available</div>';
+    return '<div class="no-items-message">No fertilizers available</div>';
   }
   
   return herbalismState.availableFertilizers.map((fertilizer, idx) => {
     console.log('[HERBALISM] Rendering fertilizer:', fertilizer.name, 'sprite:', fertilizer.sprite);
     return `
-      <div class="fertilizer-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 3px; background: rgba(34,139,34,0.1);">
-        <img src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" style="width:40px;height:40px;" onerror="this.src='assets/art/ingridients/default.png'">
-        <div style="font-size:0.7rem; color: #228B22;">x${fertilizer.amount}</div>
-        <div class="info-icon" data-fertilizer="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #228B22; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+      <div class="fertilizer-item ingredient-item" data-index="${idx}">
+        <img class="ingredient-image" src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" onerror="this.src='assets/art/ingridients/default.png'">
+        <div class="ingredient-amount fertilizers">x${fertilizer.amount}</div>
+        <div class="info-icon" data-fertilizer="${idx}">i</div>
       </div>
     `;
   }).join('');
@@ -396,14 +408,14 @@ function renderFertilizersHTML() {
 // Render recipes HTML
 function renderRecipesHTML() {
   if (!herbalismState.recipes || herbalismState.recipes.length === 0) {
-    return '<div style="color: #666; font-style: italic; padding: 0.8rem; font-size: 0.85rem;">No recipes available</div>';
+    return '<div class="no-items-message">No recipes available</div>';
   }
   
   return herbalismState.recipes.map((recipe, idx) => `
-    <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 6px; padding: 6px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 70px; text-align: center; position: relative;">
-      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 40px; height: 40px; border-radius: 3px;" onerror="this.src='assets/art/recipes/default.png'">
-      <div style="font-size: 0.7rem; margin-top: 3px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
-      <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #4CAF50; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    <div class="recipe-card" data-recipe="${idx}">
+      <img class="recipe-image" src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" onerror="this.src='assets/art/recipes/default.png'">
+      <div class="recipe-name">${recipe.name}</div>
+      <div class="info-icon" data-recipe="${idx}">i</div>
     </div>
   `).join('');
 }
@@ -483,21 +495,19 @@ function setupModalEventListeners(modal) {
   // Garden grid event delegation
   const gardenGrid = modal.querySelector('#garden-grid');
   gardenGrid.addEventListener('click', (e) => {
-    // Handle seed plot clicks for removal
-    const seedPlot = e.target.closest('.seed-plot img');
-    if (seedPlot && !herbalismState.isCraftingStarted) {
-      const plot = seedPlot.closest('.seed-plot');
-      const position = parseInt(plot.dataset.position);
-      removeSeedFromPlot(position);
-      return;
-    }
-
-    // Handle fertilizer slot clicks for removal
-    const fertilizerSlot = e.target.closest('.fertilizer-slot img');
-    if (fertilizerSlot && !herbalismState.isCraftingStarted) {
-      const slot = fertilizerSlot.closest('.fertilizer-slot');
-      const row = parseInt(slot.dataset.row);
-      removeFertilizerFromSlot(row);
+    // Handle remove button clicks
+    const removeBtn = e.target.closest('.remove-btn');
+    if (removeBtn && !herbalismState.isCraftingStarted) {
+      const seedPlot = removeBtn.closest('.seed-plot');
+      const fertilizerSlot = removeBtn.closest('.fertilizer-slot');
+      
+      if (seedPlot) {
+        const position = parseInt(seedPlot.dataset.position);
+        removeSeedFromPlot(position);
+      } else if (fertilizerSlot) {
+        const row = parseInt(fertilizerSlot.dataset.row);
+        removeFertilizerFromSlot(row);
+      }
       return;
     }
 
@@ -536,13 +546,14 @@ function handleSeedSelection(seed) {
   
   const plot = document.querySelector(`.seed-plot[data-position="${emptySlotIndex}"]`);
   const content = plot.querySelector('.seed-content');
+  const removeBtn = plot.querySelector('.remove-btn');
   
   content.innerHTML = `
-    <img src="assets/art/ingridients/${seed.sprite}.png" style="width:40px;height:40px;cursor:pointer;" title="Click to remove ${seed.name}" onerror="this.src='assets/art/ingridients/default.png'">
+    <img class="planted-seed-image" src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name}" onerror="this.src='assets/art/ingridients/default.png'">
   `;
   
-  plot.style.border = '2px solid #228B22';
-  plot.style.background = 'linear-gradient(to bottom, #654321 0%, rgba(34,139,34,0.3) 100%)';
+  plot.classList.add('planted');
+  removeBtn.style.display = 'block';
   
   updateGrowButtonState();
 }
@@ -556,13 +567,14 @@ function handleFertilizerSelection(fertilizer) {
   
   const slot = document.querySelector(`.fertilizer-slot[data-row="${emptySlotIndex}"]`);
   const content = slot.querySelector('.fertilizer-content');
+  const removeBtn = slot.querySelector('.remove-btn');
   
   content.innerHTML = `
-    <img src="assets/art/ingridients/${fertilizer.sprite}.png" style="width:36px;height:36px;cursor:pointer;" title="Click to remove ${fertilizer.name}" onerror="this.src='assets/art/ingridients/default.png'">
+    <img class="planted-fertilizer-image" src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name}" onerror="this.src='assets/art/ingridients/default.png'">
   `;
   
-  slot.style.border = '2px solid #32CD32';
-  slot.style.background = 'linear-gradient(to bottom, rgba(34,139,34,0.3) 0%, rgba(34,139,34,0.5) 100%)';
+  slot.classList.add('planted');
+  removeBtn.style.display = 'block';
   
   updateGrowButtonState();
 }
@@ -573,10 +585,11 @@ function removeSeedFromPlot(position) {
   
   const plot = document.querySelector(`.seed-plot[data-position="${position}"]`);
   const content = plot.querySelector('.seed-content');
+  const removeBtn = plot.querySelector('.remove-btn');
   
-  content.innerHTML = '<span style="color: #D2B48C; font-size: 0.65rem;">Drop Seed</span>';
-  plot.style.border = '2px dashed #8B4513';
-  plot.style.background = 'linear-gradient(to bottom, #654321 0%, #8B4513 100%)';
+  content.innerHTML = '<span class="empty-text">Drop Seed</span>';
+  plot.classList.remove('planted');
+  removeBtn.style.display = 'none';
   
   updateGrowButtonState();
 }
@@ -587,10 +600,11 @@ function removeFertilizerFromSlot(row) {
   
   const slot = document.querySelector(`.fertilizer-slot[data-row="${row}"]`);
   const content = slot.querySelector('.fertilizer-content');
+  const removeBtn = slot.querySelector('.remove-btn');
   
-  content.innerHTML = '<span style="color: #90EE90; font-size: 0.6rem;">Drop Fertilizer</span>';
-  slot.style.border = '2px dashed #228B22';
-  slot.style.background = 'linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%)';
+  content.innerHTML = '<span class="empty-text">Drop Fertilizer</span>';
+  slot.classList.remove('planted');
+  removeBtn.style.display = 'none';
   
   updateGrowButtonState();
 }
@@ -605,18 +619,16 @@ function toggleSunShade(column) {
   const icon = toggle.querySelector('.toggle-icon');
   const text = toggle.querySelector('.toggle-text');
   
+  // Remove previous class and add new one
+  toggle.classList.remove('sun', 'shade');
+  toggle.classList.add(newSetting);
+  
   if (newSetting === 'shade') {
     icon.textContent = '🌳';
     text.textContent = 'Shade';
-    text.style.color = '#228B22';
-    toggle.style.border = '2px solid #228B22';
-    toggle.style.background = 'linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%)';
   } else {
     icon.textContent = '☀️';
     text.textContent = 'Sun';
-    text.style.color = '#FFA500';
-    toggle.style.border = '2px solid #FFA500';
-    toggle.style.background = 'linear-gradient(to bottom, rgba(255,165,0,0.2) 0%, rgba(255,165,0,0.4) 100%)';
   }
   
   // Add toggle animation if gsap is available
@@ -663,11 +675,9 @@ async function startGrowthProcess(resultDiv) {
   const fertilizersContainer = document.querySelector('#available-fertilizers');
   const gardenGrid = document.querySelector('#garden-grid');
   
-  seedsContainer.style.opacity = '0.5';
-  seedsContainer.style.pointerEvents = 'none';
-  fertilizersContainer.style.opacity = '0.5';
-  fertilizersContainer.style.pointerEvents = 'none';
-  gardenGrid.style.pointerEvents = 'none';
+  seedsContainer.classList.add('disabled');
+  fertilizersContainer.classList.add('disabled');
+  gardenGrid.classList.add('crafting');
   
   // Start growth animations for planted seeds
   const growthPromises = [];
@@ -706,7 +716,6 @@ async function startSeedGrowthAnimation(position, seed) {
   ];
   
   growthAnimation.style.opacity = '1';
-  growthAnimation.style.background = 'linear-gradient(to top, rgba(139,69,19,0.8) 0%, transparent 100%)';
   
   // Animate through growth stages
   for (let i = 0; i < stages.length; i++) {
@@ -747,17 +756,9 @@ function createSparkleEffect(plot) {
   for (let i = 0; i < 3; i++) {
     setTimeout(() => {
       const sparkle = document.createElement('div');
-      sparkle.style.cssText = `
-        position: absolute;
-        width: 3px;
-        height: 3px;
-        background: #FFD700;
-        border-radius: 50%;
-        top: ${Math.random() * 60 + 10}px;
-        left: ${Math.random() * 60 + 10}px;
-        pointer-events: none;
-        z-index: 20;
-      `;
+      sparkle.className = 'sparkle-effect';
+      sparkle.style.top = `${Math.random() * 60 + 10}px`;
+      sparkle.style.left = `${Math.random() * 60 + 10}px`;
       
       plot.appendChild(sparkle);
       
@@ -789,19 +790,8 @@ function createSparkleEffect(plot) {
 // Create bloom effect when plant is fully grown
 function createBloomEffect(plot, seedColor) {
   const bloom = document.createElement('div');
-  bloom.style.cssText = `
-    position: absolute;
-    top: 20%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 12px;
-    height: 12px;
-    background: ${seedColor};
-    border-radius: 50%;
-    border: 2px solid #FFD700;
-    z-index: 25;
-    box-shadow: 0 0 8px ${seedColor};
-  `;
+  bloom.className = 'bloom-effect';
+  bloom.style.setProperty('--seed-color', seedColor);
   
   plot.appendChild(bloom);
   
@@ -886,6 +876,7 @@ async function craftIndividualSeed(position) {
     herbalismState.results[position] = { success: false, error: 'Crafting failed' };
   }
 }
+
 // Display final results
 function displayFinalResults(resultDiv) {
   const results = herbalismState.results.filter(r => r !== null);
@@ -915,30 +906,11 @@ function displayFinalResults(resultDiv) {
     if (result === null) return;
     
     const plot = document.querySelector(`.seed-plot[data-position="${position}"]`);
-    const growthAnimation = plot.querySelector('.growth-animation');
     
     if (result.success) {
-      // Add success glow
-      if (typeof gsap !== 'undefined') {
-        gsap.to(plot, {
-          boxShadow: '0 0 15px rgba(76, 175, 80, 0.6)',
-          duration: 1,
-          ease: "power2.out"
-        });
-      } else {
-        plot.style.boxShadow = '0 0 15px rgba(76, 175, 80, 0.6)';
-      }
+      plot.classList.add('success');
     } else {
-      // Add failure effect
-      if (typeof gsap !== 'undefined') {
-        gsap.to(growthAnimation, {
-          background: 'linear-gradient(to top, rgba(139,69,19,0.8) 0%, rgba(139,69,19,0.4) 100%)',
-          duration: 1,
-          ease: "power2.out"
-        });
-      } else {
-        growthAnimation.style.background = 'linear-gradient(to top, rgba(139,69,19,0.8) 0%, rgba(139,69,19,0.4) 100%)';
-      }
+      plot.classList.add('failure');
     }
   });
 }
@@ -946,46 +918,45 @@ function displayFinalResults(resultDiv) {
 // Show ingredient properties (reused from alchemy with modifications)
 function showIngredientProperties(ingredient, type) {
   const propsModal = document.createElement('div');
-  propsModal.className = 'custom-message-box';
-  propsModal.style.zIndex = '10001';
+  propsModal.className = 'custom-message-box properties-modal';
   
   let propertiesDisplay = '';
   if (typeof ingredient.properties === 'object' && ingredient.properties !== null) {
     if (Array.isArray(ingredient.properties)) {
       propertiesDisplay = ingredient.properties.map((prop, idx) => 
-        `<div class="property-item" style="background: rgba(76,175,80,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
+        `<div class="property-item">
           <strong>Property ${idx + 1}:</strong> ${prop}
         </div>`
       ).join('');
     } else {
       propertiesDisplay = Object.entries(ingredient.properties).map(([key, value]) => 
-        `<div class="property-item" style="background: rgba(76,175,80,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
+        `<div class="property-item">
           <strong>${key.toUpperCase()}:</strong> ${value}
         </div>`
       ).join('');
     }
   } else {
-    propertiesDisplay = '<div style="color: #999; font-style: italic;">No properties available</div>';
+    propertiesDisplay = '<div class="no-properties">No properties available</div>';
   }
   
-  const typeColor = type === 'seed' ? '#8B4513' : '#228B22';
+  const typeClass = type === 'seed' ? 'seeds' : 'fertilizers';
   const typeIcon = type === 'seed' ? '🌰' : '🧪';
   
   propsModal.innerHTML = `
-    <div class="message-content" style="max-width: 350px; text-align: center;">
-      <h3 style="color: ${typeColor}; margin-bottom: 1rem;">${typeIcon} ${ingredient.name}</h3>
-      <img src="assets/art/ingridients/${ingredient.sprite}.png" alt="${ingredient.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;" onerror="this.src='assets/art/ingridients/default.png'">
+    <div class="message-content properties-content">
+      <h3 class="properties-title ${typeClass}">${typeIcon} ${ingredient.name}</h3>
+      <img class="properties-image" src="assets/art/ingridients/${ingredient.sprite}.png" alt="${ingredient.name}" onerror="this.src='assets/art/ingridients/default.png'">
       
-      <div style="background: rgba(0,0,0,0.3); border: 1px solid ${typeColor}; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: ${typeColor}; margin-bottom: 0.8rem; text-align: center;">Properties:</h4>
+      <div class="properties-container ${typeClass}">
+        <h4 class="properties-subtitle">Properties:</h4>
         ${propertiesDisplay}
       </div>
       
-      <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 0.6rem; margin-bottom: 1rem; font-size: 0.9rem;">
+      <div class="availability-info">
         <strong>Available:</strong> ${ingredient.amount} units
       </div>
       
-      <button class="fantasy-button close-props-btn" style="width: 100%;">Close</button>
+      <button class="fantasy-button close-props-btn">Close</button>
     </div>
   `;
   
@@ -1005,8 +976,7 @@ function showIngredientProperties(ingredient, type) {
 // Show recipe details
 function showRecipeDetails(recipe) {
   const detailsModal = document.createElement('div');
-  detailsModal.className = 'custom-message-box';
-  detailsModal.style.zIndex = '10001';
+  detailsModal.className = 'custom-message-box recipe-details-modal';
   
   let ingredientsList = '';
   if (Array.isArray(recipe.ingridients)) {
@@ -1018,31 +988,31 @@ function showRecipeDetails(recipe) {
   }
   
   detailsModal.innerHTML = `
-    <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto;">
-      <h3 style="color: #c4975a; margin-bottom: 1rem;">📜 ${recipe.name}</h3>
-      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;" onerror="this.src='assets/art/recipes/default.png'">
+    <div class="message-content recipe-details-content">
+      <h3 class="recipe-details-title">📜 ${recipe.name}</h3>
+      <img class="recipe-details-image" src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" onerror="this.src='assets/art/recipes/default.png'">
       
-      <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: #c4975a; margin-bottom: 0.5rem;">Required Combination:</h4>
-        <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${ingredientsList}</div>
+      <div class="recipe-ingredients">
+        <h4>Required Combination:</h4>
+        <div class="ingredients-text">${ingredientsList}</div>
       </div>
       
-      <div style="background: rgba(76,175,80,0.1); border: 1px solid #4CAF50; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: #4CAF50; margin-bottom: 0.8rem;">Herbalism Recipe Format:</h4>
-        <div style="font-size: 0.85rem; color: #ccc;">
-          <div style="margin-bottom: 0.5rem;">🌰 <strong>Seed:</strong> Any seed type</div>
-          <div style="margin-bottom: 0.5rem;">☀️🌳 <strong>Environment:</strong> Sun or Shade</div>
-          <div style="margin-bottom: 0.5rem;">🧪 <strong>Fertilizer:</strong> Optional modifier</div>
+      <div class="recipe-format">
+        <h4>Herbalism Recipe Format:</h4>
+        <div class="format-list">
+          <div>🌰 <strong>Seed:</strong> Any seed type</div>
+          <div>☀️🌳 <strong>Environment:</strong> Sun or Shade</div>
+          <div>🧪 <strong>Fertilizer:</strong> Optional modifier</div>
         </div>
       </div>
       
       ${recipe.description ? `
-        <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem; font-style: italic; color: #ccc; font-size: 0.85rem;">
+        <div class="recipe-description">
           ${recipe.description}
         </div>
       ` : ''}
       
-      <button class="fantasy-button close-details-btn" style="width: 100%;">Close</button>
+      <button class="fantasy-button close-details-btn">Close</button>
     </div>
   `;
   
@@ -1082,40 +1052,844 @@ function getSeedColor(seedName) {
   return seedKey ? colors[seedKey] : colors.default;
 }
 
-// Inject CSS for herbalism animations
-function injectHerbalismAnimationsCSS() {
-  if (document.getElementById('herbalism-animations-css')) return;
+// Inject comprehensive CSS for herbalism interface
+function injectHerbalismCSS() {
+  if (document.getElementById('herbalism-css')) return;
   
   const css = `
-    .seed-plot, .fertilizer-slot, .sun-shade-toggle {
+    /* ===== HERBALISM MODAL BASE ===== */
+    .herbalism-modal {
+      z-index: 10000;
+    }
+    
+    .herbalism-content {
+      width: 95vw;
+      max-width: 1000px;
+      max-height: 95vh;
+      overflow-y: auto;
+      text-align: center;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    
+    .herbalism-title {
+      margin: 0 0 0.5rem 0;
+      color: #228B22;
+      font-size: 1.5rem;
+    }
+    
+    /* ===== RESULT DISPLAY ===== */
+    .craft-result {
+      margin: 0.5rem 0;
+      font-weight: bold;
+      min-height: 20px;
+      font-size: 0.9rem;
+      padding: 0.5rem;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+    }
+    
+    /* ===== GARDEN GRID ===== */
+    .garden-container {
+      margin: 1rem 0;
+    }
+    
+    .garden-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 0.5rem;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    
+    .garden-grid.crafting {
+      pointer-events: none;
+    }
+    
+    /* ===== SEED PLOTS ===== */
+    .seed-plot {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed #8B4513;
+      border-radius: 8px;
+      background: linear-gradient(to bottom, #654321 0%, #8B4513 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
       transition: all 0.3s ease;
     }
-
-    .growth-animation {
-      will-change: height, background;
-    }
-
-    .sun-shade-toggle:hover {
-      transform: scale(1.05);
-    }
-
-    .seed-plot:hover, .fertilizer-slot:hover {
+    
+    .seed-plot:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-
-    @keyframes seed-pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
+    
+    .seed-plot.planted {
+      border: 2px solid #228B22;
+      background: linear-gradient(to bottom, #654321 0%, rgba(34,139,34,0.3) 100%);
     }
-
+    
+    .seed-plot.success {
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+    }
+    
+    .seed-plot.failure .growth-animation {
+      background: linear-gradient(to top, rgba(139,69,19,0.8) 0%, rgba(139,69,19,0.4) 100%) !important;
+    }
+    
+    /* ===== FERTILIZER SLOTS ===== */
+    .fertilizer-slot {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed #228B22;
+      border-radius: 8px;
+      background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .fertilizer-slot:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .fertilizer-slot.planted {
+      border: 2px solid #32CD32;
+      background: linear-gradient(to bottom, rgba(34,139,34,0.3) 0%, rgba(34,139,34,0.5) 100%);
+    }
+    
+    /* ===== SUN/SHADE TOGGLES ===== */
+    .sun-shade-toggle {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .sun-shade-toggle:hover {
+      transform: scale(1.05);
+    }
+    
+    .sun-shade-toggle.sun {
+      border: 2px solid #FFA500;
+      background: linear-gradient(to bottom, rgba(255,165,0,0.2) 0%, rgba(255,165,0,0.4) 100%);
+    }
+    
+    .sun-shade-toggle.shade {
+      border: 2px solid #228B22;
+      background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%);
+    }
+    
+    .toggle-icon {
+      font-size: 1.5rem;
+      margin-bottom: 2px;
+    }
+    
+    .toggle-text {
+      font-size: 0.65rem;
+      font-weight: bold;
+    }
+    
+    .sun .toggle-text {
+      color: #FFA500;
+    }
+    
+    .shade .toggle-text {
+      color: #228B22;
+    }
+    
+    .column-label {
+      display: none;
+      font-size: 0.6rem;
+      color: #999;
+      position: absolute;
+      bottom: 2px;
+    }
+    
+    /* ===== LABELS ===== */
+    .plot-label, .fertilizer-label {
+      color: #D2B48C;
+      font-size: 0.7rem;
+      position: absolute;
+      top: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.5);
+      padding: 1px 3px;
+      border-radius: 3px;
+      z-index: 10;
+    }
+    
+    .fertilizer-label {
+      color: #90EE90;
+    }
+    
+    /* ===== CONTENT AREAS ===== */
+    .seed-content, .fertilizer-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 5;
+    }
+    
+    .empty-text {
+      color: #D2B48C;
+      font-size: 0.65rem;
+    }
+    
+    .fertilizer-content .empty-text {
+      color: #90EE90;
+      font-size: 0.6rem;
+    }
+    
+    .planted-seed-image, .planted-fertilizer-image {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+    }
+    
+    .planted-fertilizer-image {
+      width: 36px;
+      height: 36px;
+    }
+    
+    /* ===== REMOVE BUTTONS ===== */
+    .remove-btn {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 20px;
+      height: 20px;
+      background: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 15;
+      transition: all 0.2s ease;
+    }
+    
+    .remove-btn:hover {
+      background: #ff0000;
+      transform: scale(1.1);
+    }
+    
+    /* ===== GROWTH ANIMATIONS ===== */
+    .growth-animation {
+      position: absolute;
+      inset: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      opacity: 0;
+      height: 0;
+      will-change: height, background;
+      z-index: 8;
+    }
+    
+    .sparkle-effect {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: #FFD700;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 20;
+    }
+    
+    .bloom-effect {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      background: var(--seed-color, rgba(76, 175, 80, 0.8));
+      border-radius: 50%;
+      border: 2px solid #FFD700;
+      z-index: 25;
+      box-shadow: 0 0 8px var(--seed-color, rgba(76, 175, 80, 0.8));
+    }
+    
+    /* ===== EMPTY GRID CELL ===== */
+    .empty-grid-cell {
+      width: 80px;
+      height: 80px;
+    }
+    
+    /* ===== SECTION CONTAINERS ===== */
+    .section-container {
+      margin: 0.8rem 0;
+    }
+    
+    .section-title {
+      margin: 0.3rem 0;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+    
+    .section-title.seeds {
+      color: #8B4513;
+    }
+    
+    .section-title.fertilizers {
+      color: #228B22;
+    }
+    
+    .section-title.recipes {
+      color: #4CAF50;
+    }
+    
+    /* ===== ITEMS CONTAINERS ===== */
+    .items-container {
+      display: flex;
+      overflow-x: auto;
+      gap: 0.4rem;
+      padding: 4px;
+      border-radius: 6px;
+      scrollbar-width: thin;
+      max-height: 60px;
+      border: 1px solid;
+    }
+    
+    .items-container::-webkit-scrollbar {
+      height: 4px;
+    }
+    
+    .items-container::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    
+    .items-container::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+    }
+    
+    .seeds-container {
+      border-color: #8B4513;
+      background: rgba(139,69,19,0.1);
+    }
+    
+    .fertilizers-container {
+      border-color: #228B22;
+      background: rgba(34,139,34,0.1);
+    }
+    
+    .recipes-container {
+      border-color: #444;
+      background: rgba(139,69,19,0.1);
+      max-height: 70px;
+    }
+    
+    .items-container.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    
+    /* ===== NO ITEMS MESSAGE ===== */
+    .no-items-message {
+      color: #666;
+      font-style: italic;
+      padding: 0.8rem;
+      font-size: 0.85rem;
+      text-align: center;
+      flex: 1;
+    }
+    
+    /* ===== INGREDIENT ITEMS ===== */
+    .ingredient-item {
+      flex: 0 0 auto;
+      cursor: pointer;
+      position: relative;
+      border-radius: 3px;
+      padding: 3px;
+      transition: transform 0.2s ease;
+    }
+    
+    .ingredient-item:hover {
+      transform: scale(1.05);
+    }
+    
+    .seed-item {
+      background: rgba(139,69,19,0.1);
+    }
+    
+    .fertilizer-item {
+      background: rgba(34,139,34,0.1);
+    }
+    
+    .ingredient-image {
+      width: 40px;
+      height: 40px;
+      display: block;
+    }
+    
+    .ingredient-amount {
+      font-size: 0.7rem;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 2px;
+    }
+    
+    .ingredient-amount.seeds {
+      color: #8B4513;
+    }
+    
+    .ingredient-amount.fertilizers {
+      color: #228B22;
+    }
+    
+    /* ===== RECIPE CARDS ===== */
+    .recipe-card {
+      flex: 0 0 auto;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 6px;
+      background: rgba(139,69,19,0.2);
+      border: 1px solid #8B4513;
+      min-width: 60px;
+      text-align: center;
+      position: relative;
+      transition: transform 0.2s ease;
+    }
+    
+    .recipe-card:hover {
+      transform: scale(1.05);
+    }
+    
+    .recipe-image {
+      width: 40px;
+      height: 40px;
+      border-radius: 3px;
+      display: block;
+      margin: 0 auto;
+    }
+    
+    .recipe-name {
+      font-size: 0.65rem;
+      margin-top: 3px;
+      color: #c4975a;
+      font-weight: bold;
+      line-height: 1.1;
+    }
+    
+    /* ===== INFO ICONS ===== */
+    .info-icon {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      color: white;
+      font-size: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      transition: transform 0.2s ease;
+    }
+    
+    .info-icon:hover {
+      transform: scale(1.2);
+    }
+    
+    .seed-item .info-icon {
+      background: #8B4513;
+    }
+    
+    .fertilizer-item .info-icon {
+      background: #228B22;
+    }
+    
+    .recipe-card .info-icon {
+      background: #4CAF50;
+    }
+    
+    /* ===== BUTTON CONTAINER ===== */
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .button-container button {
+      flex: 0 1 auto;
+      min-width: 80px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+    
+    .grow-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .claim-btn {
+      background: linear-gradient(145deg, #4CAF50, #45a049);
+    }
+    
+    /* ===== PROPERTIES MODAL ===== */
+    .properties-modal {
+      z-index: 10001;
+    }
+    
+    .properties-content {
+      max-width: 350px;
+      text-align: center;
+    }
+    
+    .properties-title {
+      margin-bottom: 1rem;
+    }
+    
+    .properties-title.seeds {
+      color: #8B4513;
+    }
+    
+    .properties-title.fertilizers {
+      color: #228B22;
+    }
+    
+    .properties-image {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    
+    .properties-container {
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: left;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid;
+    }
+    
+    .properties-container.seeds {
+      border-color: #8B4513;
+    }
+    
+    .properties-container.fertilizers {
+      border-color: #228B22;
+    }
+    
+    .properties-subtitle {
+      margin-bottom: 0.8rem;
+      text-align: center;
+    }
+    
+    .properties-container.seeds .properties-subtitle {
+      color: #8B4513;
+    }
+    
+    .properties-container.fertilizers .properties-subtitle {
+      color: #228B22;
+    }
+    
+    .property-item {
+      background: rgba(76,175,80,0.2);
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.3rem;
+    }
+    
+    .no-properties {
+      color: #999;
+      font-style: italic;
+    }
+    
+    .availability-info {
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    
+    .close-props-btn {
+      width: 100%;
+    }
+    
+    /* ===== RECIPE DETAILS MODAL ===== */
+    .recipe-details-modal {
+      z-index: 10001;
+    }
+    
+    .recipe-details-content {
+      max-width: 500px;
+      text-align: center;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .recipe-details-title {
+      color: #c4975a;
+      margin-bottom: 1rem;
+    }
+    
+    .recipe-details-image {
+      width: 96px;
+      height: 96px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    
+    .recipe-ingredients {
+      background: rgba(139,69,19,0.1);
+      border: 1px solid #8B4513;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+    
+    .recipe-ingredients h4 {
+      color: #c4975a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .ingredients-text {
+      color: #fff;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    
+    .recipe-format {
+      background: rgba(76,175,80,0.1);
+      border: 1px solid #4CAF50;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+    
+    .recipe-format h4 {
+      color: #4CAF50;
+      margin-bottom: 0.8rem;
+      text-align: center;
+    }
+    
+    .format-list {
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+    
+    .format-list div {
+      margin-bottom: 0.5rem;
+    }
+    
+    .recipe-description {
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      font-style: italic;
+      color: #ccc;
+      font-size: 0.85rem;
+    }
+    
+    .close-details-btn {
+      width: 100%;
+    }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @media (max-width: 768px) {
+      .herbalism-content {
+        padding: 0.5rem;
+        width: 98vw;
+      }
+      
+      .herbalism-title {
+        font-size: 1.2rem;
+      }
+      
+      .garden-grid {
+        max-width: 270px;
+        gap: 0.3rem;
+      }
+      
+      .seed-plot, .fertilizer-slot, .sun-shade-toggle, .empty-grid-cell {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .planted-seed-image, .planted-fertilizer-image {
+        width: 35px;
+        height: 35px;
+      }
+      
+      .planted-fertilizer-image {
+        width: 32px;
+        height: 32px;
+      }
+      
+      .ingredient-image, .recipe-image {
+        width: 35px;
+        height: 35px;
+      }
+      
+      .items-container {
+        max-height: 55px;
+      }
+      
+      .recipes-container {
+        max-height: 65px;
+      }
+      
+      .button-container {
+        gap: 0.3rem;
+      }
+      
+      .button-container button {
+        min-width: 70px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .garden-grid {
+        max-width: 240px;
+      }
+      
+      .seed-plot, .fertilizer-slot, .sun-shade-toggle, .empty-grid-cell {
+        width: 65px;
+        height: 65px;
+      }
+      
+      .section-title {
+        font-size: 0.8rem;
+      }
+      
+      .items-container {
+        max-height: 50px;
+      }
+      
+      .craft-result {
+        font-size: 0.8rem;
+      }
+    }
+    
+    /* ===== ANIMATIONS ===== */
+    @keyframes seed-pulse {
+      0%, 100% { 
+        transform: scale(1); 
+      }
+      50% { 
+        transform: scale(1.1); 
+      }
+    }
+    
     .seed-planted {
       animation: seed-pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes sparkle {
+      0% {
+        opacity: 0;
+        transform: scale(0);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.5);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0) translateY(-20px);
+      }
+    }
+    
+    .sparkle-effect {
+      animation: sparkle 1s ease-out forwards;
+    }
+    
+    @keyframes bloom-pulse {
+      0%, 100% {
+        transform: translateX(-50%) scale(1);
+      }
+      50% {
+        transform: translateX(-50%) scale(1.2);
+      }
+    }
+    
+    .bloom-effect {
+      animation: bloom-pulse 1.5s ease-in-out infinite;
+    }
+    
+    /* ===== FOCUS STATES FOR ACCESSIBILITY ===== */
+    .seed-plot:focus,
+    .fertilizer-slot:focus,
+    .sun-shade-toggle:focus,
+    .ingredient-item:focus,
+    .recipe-card:focus {
+      outline: 2px solid #4CAF50;
+      outline-offset: 2px;
+    }
+    
+    .remove-btn:focus {
+      outline: 2px solid #ffffff;
+      outline-offset: 1px;
+    }
+    
+    /* ===== HIGH CONTRAST MODE SUPPORT ===== */
+    @media (prefers-contrast: high) {
+      .seed-plot,
+      .fertilizer-slot,
+      .sun-shade-toggle {
+        border-width: 3px;
+      }
+      
+      .ingredient-item,
+      .recipe-card {
+        border: 2px solid currentColor;
+      }
+      
+      .info-icon {
+        border: 1px solid white;
+      }
+    }
+    
+    /* ===== REDUCED MOTION SUPPORT ===== */
+    @media (prefers-reduced-motion: reduce) {
+      .seed-plot,
+      .fertilizer-slot,
+      .sun-shade-toggle,
+      .ingredient-item,
+      .recipe-card,
+      .remove-btn,
+      .info-icon {
+        transition: none;
+      }
+      
+      .seed-planted,
+      .sparkle-effect,
+      .bloom-effect {
+        animation: none;
+      }
     }
   `;
 
   const style = document.createElement('style');
-  style.id = 'herbalism-animations-css';
+  style.id = 'herbalism-css';
   style.textContent = css;
   document.head.appendChild(style);
 }
