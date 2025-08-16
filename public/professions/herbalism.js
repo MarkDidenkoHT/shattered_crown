@@ -21,6 +21,7 @@ export async function startCraftingSession(ctx) {
     ]);
     
     const bankItems = await bankResponse.json();
+    console.log('[HERBALISM] Bank items loaded:', bankItems);
     
     // Step 2: Separate seeds and fertilizers
     updateLoadingProgress(loadingModal, "Sorting seeds and fertilizers...", "Organizing your materials...");
