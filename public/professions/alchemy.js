@@ -219,8 +219,8 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1200px; max-height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
-      <h2 style="margin: 0.5rem 0;">Crafting: ${alchemyState.professionName}</h2>
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+      <h2>Crafting: ${alchemyState.professionName}</h2>
             
       <!-- Result display with reserved space to prevent CLS -->
       <div id="craft-result" style="margin: 0.5rem 0; font-weight: bold; min-height: 20px;">Select 3 herbs to start crafting</div>

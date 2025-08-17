@@ -307,7 +307,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 900px; max-height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2 style="margin: 0.4rem 0; color: #228B22; font-size: 1.3rem;">🌱 Crafting: ${herbalismState.professionName}</h2>
             
       <!-- Result display -->
