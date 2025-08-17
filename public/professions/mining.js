@@ -193,7 +193,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2>Crafting: ${miningState.professionName}</h2>
                 
       <!-- Result display (initially shows selection prompt) -->
@@ -216,13 +216,13 @@ function renderCraftingModal() {
       
       <!-- Bank row (horizontal scrollable) -->
       <h3>Available Ores</h3>
-      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none;">
+      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
         ${renderOresHTML()}
       </div>
       
       <!-- Recipes row (horizontal scrollable) -->
       <h3>Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; max-height: 90px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -427,7 +427,7 @@ function showRecipeDetails(recipe) {
   const ingredientMatchingHTML = generateIngredientMatching(recipe);
   
   detailsModal.innerHTML = `
-    <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto;">
+    <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto; scrollbar-width:none;">
       <h3 style="color: #FFD700; margin-bottom: 1rem;">${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
       
@@ -487,7 +487,7 @@ function showOreProperties(oreIndex) {
   }
   
   propsModal.innerHTML = `
-    <div class="message-content" style="max-width: 350px; text-align: center;">
+    <div class="message-content" style="max-width: 350px; text-align: center; scrollbar-width:none;">
       <h3 style="color: #8B4513; margin-bottom: 1rem;">${ore.name}</h3>
       <img src="assets/art/ingridients/${ore.sprite}.png" alt="${ore.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
       
@@ -770,7 +770,7 @@ async function startMiningAnimation(resultDiv, modal) {
   }
 
   setTimeout(() => {
-    resultDiv.textContent = 'Use adjustments to align center properties for extraction.';
+    resultDiv.textContent = 'You may now apply adjustments.';
   }, 1000);
 
   miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));

@@ -219,7 +219,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1200px; max-height: 95vh; overflow-y: auto; text-align: center;">
+    <div class="message-content" style="width: 95%; max-width: 1200px; max-height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2 style="margin: 0.5rem 0;">Crafting: ${alchemyState.professionName}</h2>
             
       <!-- Result display with reserved space to prevent CLS -->
@@ -237,13 +237,13 @@ function renderCraftingModal() {
       
       <!-- Bank row (horizontal scrollable) - MADE SMALLER -->
       <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem;">Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 70px;">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 85px;">
         ${renderHerbsHTML()}
       </div>
       
       <!-- Recipes row (horizontal scrollable) - MADE SMALLER -->
       <h3 style="margin: 0.3rem 0; font-size: 1rem;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 90px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -450,7 +450,7 @@ function showRecipeDetails(recipe) {
   const ingredientMatchingHTML = generateIngredientMatching(recipe);
   
   detailsModal.innerHTML = `
-    <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto;">
+    <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto; scrollbar-width:none;">
       <h3 style="color: #c4975a; margin-bottom: 1rem;">${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
       
@@ -510,7 +510,7 @@ function showHerbProperties(herbIndex) {
   }
   
   propsModal.innerHTML = `
-    <div class="message-content" style="max-width: 350px; text-align: center;">
+    <div class="message-content" style="max-width: 350px; text-align: center; scrollbar-width:none;">
       <h3 style="color: #4CAF50; margin-bottom: 1rem;">${herb.name}</h3>
       <img src="assets/art/ingridients/${herb.sprite}.png" alt="${herb.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
       

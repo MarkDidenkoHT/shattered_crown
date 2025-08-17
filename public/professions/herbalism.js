@@ -307,7 +307,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 900px; max-height: 95vh; overflow-y: auto; text-align: center;">
+    <div class="message-content" style="width: 95%; max-width: 900px; max-height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2 style="margin: 0.4rem 0; color: #228B22; font-size: 1.3rem;">🌱 Crafting: ${herbalismState.professionName}</h2>
             
       <!-- Result display -->
@@ -320,19 +320,19 @@ function renderCraftingModal() {
       
       <!-- Seeds row -->
       <h3 style="margin: 0.4rem 0 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Seeds</h3>
-      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 75px;">
+      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
         ${renderSeedsHTML()}
       </div>
       
       <!-- Fertilizers row -->
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #228B22;">Available Fertilizers</h3>
-      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 75px;">
+      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 85px;">
         ${renderFertilizersHTML()}
       </div>
       
       <!-- Recipes row -->
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #4CAF50;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 90px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -977,7 +977,7 @@ function showIngredientProperties(ingredient, type) {
   const typeIcon = type === 'seed' ? '🌰' : '🧪';
   
   propsModal.innerHTML = `
-    <div class="message-content" style="max-width: 300px; text-align: center;">
+    <div class="message-content" style="max-width: 300px; text-align: center; scrollbar-width:none;">
       <h3 style="color: ${typeColor}; margin-bottom: 0.8rem; font-size: 1.1rem;">${typeIcon} ${ingredient.name}</h3>
       <img src="assets/art/ingridients/${ingredient.sprite}.png" alt="${ingredient.name}" style="width: 60px; height: 60px; border-radius: 6px; margin-bottom: 0.8rem;" onerror="this.src='assets/art/ingridients/default.png'">
       
@@ -1023,7 +1023,7 @@ function showRecipeDetails(recipe) {
   }
   
   detailsModal.innerHTML = `
-    <div class="message-content" style="max-width: 400px; text-align: center; max-height: 75vh; overflow-y: auto;">
+    <div class="message-content" style="max-width: 400px; text-align: center; max-height: 75vh; overflow-y: auto; scrollbar-width:none;">
       <h3 style="color: #c4975a; margin-bottom: 0.8rem; font-size: 1.1rem;">📜 ${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 70px; height: 70px; border-radius: 6px; margin-bottom: 0.8rem;" onerror="this.src='assets/art/recipes/default.png'">
       
