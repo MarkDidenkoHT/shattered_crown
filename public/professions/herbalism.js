@@ -240,7 +240,6 @@ function createGardenGridHTML() {
       
       <!-- Top Row: Seed1, Seed2, Fertilizer1 -->
       <div class="seed-plot" data-position="0" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.6rem; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 2px; border-radius: 2px;">Seed 1</span>
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
@@ -249,7 +248,6 @@ function createGardenGridHTML() {
       </div>
       
       <div class="seed-plot" data-position="1" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.6rem; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 2px; border-radius: 2px;">Seed 2</span>
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
@@ -258,7 +256,7 @@ function createGardenGridHTML() {
       </div>
       
       <div class="fertilizer-slot" data-row="0" style="width: 60px; height: 60px; border: 2px dashed #228B22; border-radius: 6px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="fertilizer-label" style="color: #90EE90; font-size: 0.6rem; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 2px; border-radius: 2px;">Row 1 Fert.</span>
+        
         <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #90EE90; font-size: 0.5rem;">Drop Fertilizer</span>
         </div>
@@ -267,7 +265,6 @@ function createGardenGridHTML() {
 
       <!-- Middle Row: Seed3, Seed4, Fertilizer2 -->
       <div class="seed-plot" data-position="2" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.6rem; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 2px; border-radius: 2px;">Seed 3</span>
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
@@ -276,7 +273,6 @@ function createGardenGridHTML() {
       </div>
       
       <div class="seed-plot" data-position="3" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="plot-label" style="color: #D2B48C; font-size: 0.6rem; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 2px; border-radius: 2px;">Seed 4</span>
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
@@ -285,7 +281,7 @@ function createGardenGridHTML() {
       </div>
       
       <div class="fertilizer-slot" data-row="1" style="width: 60px; height: 60px; border: 2px dashed #228B22; border-radius: 6px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <span class="fertilizer-label" style="color: #90EE90; font-size: 0.6rem; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 1px 2px; border-radius: 2px;">Row 2 Fert.</span>
+      
         <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #90EE90; font-size: 0.5rem;">Drop Fertilizer</span>
         </div>
@@ -349,7 +345,7 @@ function renderCraftingModal() {
       <!-- Button row -->
       <div style="display: flex; justify-content: center; gap: 0.3rem;">
         <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem;">Close</button>
-        <button id="grow-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem;">🌱 Grow</button>
+        <button id="grow-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem;">Grow</button>
         <button id="claim-all-btn" class="fantasy-button" style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem; display: none;">Claim All</button>
       </div>
     </div>
@@ -1144,31 +1140,6 @@ function injectHerbalismAnimationsCSS() {
 
     .seed-planted {
       animation: seed-pulse 2s ease-in-out infinite;
-    }
-
-    /* Responsive adjustments for smaller screens */
-    @media (max-width: 600px) {
-      .seed-plot, .fertilizer-slot, .sun-shade-toggle {
-        width: 50px !important;
-        height: 50px !important;
-      }
-      
-      .seed-plot img, .fertilizer-slot img {
-        width: 25px !important;
-        height: 25px !important;
-      }
-      
-      .toggle-icon {
-        font-size: 1rem !important;
-      }
-      
-      .plot-label, .fertilizer-label {
-        font-size: 0.5rem !important;
-      }
-      
-      .toggle-text {
-        font-size: 0.45rem !important;
-      }
     }
   `;
 
