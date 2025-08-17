@@ -265,7 +265,7 @@ function renderCraftingModal() {
 function renderHerbsHTML() {
   return alchemyState.availableHerbs.map((herb, idx) => `
     <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 3px; background: rgba(255,255,255,0.05);">
-      <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:40px;height:40px;">
+      <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
       <div style="font-size:0.7rem;">x${herb.amount}</div>
       <div class="info-icon" data-herb="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #4CAF50; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
@@ -280,7 +280,7 @@ function renderRecipesHTML() {
   
   return alchemyState.recipes.map((recipe, idx) => `
     <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 6px; padding: 6px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 70px; text-align: center; position: relative;">
-      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 40px; height: 40px; border-radius: 3px;">
+      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 3px;">
       <div style="font-size: 0.7rem; margin-top: 3px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
       <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #4CAF50; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>

@@ -313,7 +313,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; text-align: center;">
+    <div class="message-content" style="width: 95%; max-width: 900px; max-height: 95vh; overflow-y: auto; text-align: center;">
       <h2 style="margin: 0.4rem 0; color: #228B22; font-size: 1.3rem;">🌱 Crafting: ${herbalismState.professionName}</h2>
             
       <!-- Result display -->
@@ -367,7 +367,7 @@ function renderSeedsHTML() {
     console.log('[HERBALISM] Rendering seed:', seed.name, 'sprite:', seed.sprite);
     return `
       <div class="seed-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(139,69,19,0.1);">
-        <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:40px;height:40px;" onerror="this.src='assets/art/ingridients/default.png'">
+        <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:48px;height:48px;" onerror="this.src='assets/art/ingridients/default.png'">
         <div style="font-size:0.6rem; color: #8B4513;">x${seed.amount}</div>
         <div class="info-icon" data-seed="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #8B4513; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
@@ -387,7 +387,7 @@ function renderFertilizersHTML() {
     console.log('[HERBALISM] Rendering fertilizer:', fertilizer.name, 'sprite:', fertilizer.sprite);
     return `
       <div class="fertilizer-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(34,139,34,0.1);">
-        <img src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" style="width:40px;height:40px;" onerror="this.src='assets/art/ingridients/default.png'">
+        <img src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" style="width:48px;height:48px;" onerror="this.src='assets/art/ingridients/default.png'">
         <div style="font-size:0.6rem; color: #228B22;">x${fertilizer.amount}</div>
         <div class="info-icon" data-fertilizer="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #228B22; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
@@ -403,7 +403,7 @@ function renderRecipesHTML() {
   
   return herbalismState.recipes.map((recipe, idx) => `
     <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 55px; text-align: center; position: relative;">
-      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 30px; height: 30px; border-radius: 2px;" onerror="this.src='assets/art/recipes/default.png'">
+      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 2px;" onerror="this.src='assets/art/recipes/default.png'">
       <div style="font-size: 0.6rem; margin-top: 2px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
       <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #4CAF50; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
