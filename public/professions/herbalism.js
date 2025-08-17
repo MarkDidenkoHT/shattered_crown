@@ -244,7 +244,6 @@ function createGardenGridHTML() {
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
-        <div class="remove-btn" style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #dc3545; border: 1px solid #fff; border-radius: 50%; color: white; font-size: 8px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">×</div>
       </div>
       
       <div class="seed-plot" data-position="1" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
@@ -252,7 +251,6 @@ function createGardenGridHTML() {
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
-        <div class="remove-btn" style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #dc3545; border: 1px solid #fff; border-radius: 50%; color: white; font-size: 8px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">×</div>
       </div>
       
       <div class="fertilizer-slot" data-row="0" style="width: 60px; height: 60px; border: 2px dashed #228B22; border-radius: 6px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
@@ -260,7 +258,6 @@ function createGardenGridHTML() {
         <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #90EE90; font-size: 0.5rem;">Drop Fertilizer</span>
         </div>
-        <div class="remove-btn" style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #dc3545; border: 1px solid #fff; border-radius: 50%; color: white; font-size: 8px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">×</div>
       </div>
 
       <!-- Middle Row: Seed3, Seed4, Fertilizer2 -->
@@ -269,7 +266,6 @@ function createGardenGridHTML() {
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
-        <div class="remove-btn" style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #dc3545; border: 1px solid #fff; border-radius: 50%; color: white; font-size: 8px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">×</div>
       </div>
       
       <div class="seed-plot" data-position="3" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
@@ -277,7 +273,6 @@ function createGardenGridHTML() {
           <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
-        <div class="remove-btn" style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #dc3545; border: 1px solid #fff; border-radius: 50%; color: white; font-size: 8px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">×</div>
       </div>
       
       <div class="fertilizer-slot" data-row="1" style="width: 60px; height: 60px; border: 2px dashed #228B22; border-radius: 6px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
@@ -285,7 +280,6 @@ function createGardenGridHTML() {
         <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
           <span style="color: #90EE90; font-size: 0.5rem;">Drop Fertilizer</span>
         </div>
-        <div class="remove-btn" style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #dc3545; border: 1px solid #fff; border-radius: 50%; color: white; font-size: 8px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">×</div>
       </div>
 
       <!-- Bottom Row: Sun/Shade toggles and Empty -->
@@ -482,22 +476,26 @@ function setupModalEventListeners(modal) {
     }
   });
 
-  // Garden grid event delegation - Updated for remove buttons
+  // Garden grid event delegation - Updated for direct sprite clicks
   const gardenGrid = modal.querySelector('#garden-grid');
   gardenGrid.addEventListener('click', (e) => {
-    // Handle remove button clicks
-    const removeBtn = e.target.closest('.remove-btn');
-    if (removeBtn && !herbalismState.isCraftingStarted) {
-      e.stopPropagation();
-      
-      const seedPlot = removeBtn.closest('.seed-plot');
-      const fertilizerSlot = removeBtn.closest('.fertilizer-slot');
-      
-      if (seedPlot) {
-        const position = parseInt(seedPlot.dataset.position);
+    // Handle seed plot clicks
+    const seedPlot = e.target.closest('.seed-plot');
+    if (seedPlot && !herbalismState.isCraftingStarted) {
+      const position = parseInt(seedPlot.dataset.position);
+      if (herbalismState.selectedSeeds[position]) {
+        // Remove seed if one is planted
         removeSeedFromPlot(position);
-      } else if (fertilizerSlot) {
-        const row = parseInt(fertilizerSlot.dataset.row);
+      }
+      return;
+    }
+
+    // Handle fertilizer slot clicks
+    const fertilizerSlot = e.target.closest('.fertilizer-slot');
+    if (fertilizerSlot && !herbalismState.isCraftingStarted) {
+      const row = parseInt(fertilizerSlot.dataset.row);
+      if (herbalismState.selectedFertilizers[row]) {
+        // Remove fertilizer if one is applied
         removeFertilizerFromSlot(row);
       }
       return;
@@ -538,7 +536,6 @@ function handleSeedSelection(seed) {
   
   const plot = document.querySelector(`.seed-plot[data-position="${emptySlotIndex}"]`);
   const content = plot.querySelector('.seed-content');
-  const removeBtn = plot.querySelector('.remove-btn');
   
   content.innerHTML = `
     <img src="assets/art/ingridients/${seed.sprite}.png" style="width:30px;height:30px;" title="${seed.name}" onerror="this.src='assets/art/ingridients/default.png'">
@@ -546,9 +543,7 @@ function handleSeedSelection(seed) {
   
   plot.style.border = '2px solid #228B22';
   plot.style.background = 'linear-gradient(to bottom, #654321 0%, rgba(34,139,34,0.3) 100%)';
-  
-  // Show remove button
-  removeBtn.style.display = 'flex';
+  plot.classList.add('has-seed');
   
   updateGrowButtonState();
 }
@@ -562,7 +557,6 @@ function handleFertilizerSelection(fertilizer) {
   
   const slot = document.querySelector(`.fertilizer-slot[data-row="${emptySlotIndex}"]`);
   const content = slot.querySelector('.fertilizer-content');
-  const removeBtn = slot.querySelector('.remove-btn');
   
   content.innerHTML = `
     <img src="assets/art/ingridients/${fertilizer.sprite}.png" style="width:28px;height:28px;" title="${fertilizer.name}" onerror="this.src='assets/art/ingridients/default.png'">
@@ -570,9 +564,7 @@ function handleFertilizerSelection(fertilizer) {
   
   slot.style.border = '2px solid #32CD32';
   slot.style.background = 'linear-gradient(to bottom, rgba(34,139,34,0.3) 0%, rgba(34,139,34,0.5) 100%)';
-  
-  // Show remove button
-  removeBtn.style.display = 'flex';
+  slot.classList.add('has-fertilizer');
   
   updateGrowButtonState();
 }
@@ -583,14 +575,11 @@ function removeSeedFromPlot(position) {
   
   const plot = document.querySelector(`.seed-plot[data-position="${position}"]`);
   const content = plot.querySelector('.seed-content');
-  const removeBtn = plot.querySelector('.remove-btn');
   
   content.innerHTML = '<span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>';
   plot.style.border = '2px dashed #8B4513';
   plot.style.background = 'linear-gradient(to bottom, #654321 0%, #8B4513 100%)';
-  
-  // Hide remove button
-  removeBtn.style.display = 'none';
+  plot.classList.remove('has-seed');
   
   updateGrowButtonState();
 }
@@ -601,14 +590,11 @@ function removeFertilizerFromSlot(row) {
   
   const slot = document.querySelector(`.fertilizer-slot[data-row="${row}"]`);
   const content = slot.querySelector('.fertilizer-content');
-  const removeBtn = slot.querySelector('.remove-btn');
   
   content.innerHTML = '<span style="color: #90EE90; font-size: 0.5rem;">Drop Fertilizer</span>';
   slot.style.border = '2px dashed #228B22';
   slot.style.background = 'linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%)';
-  
-  // Hide remove button
-  removeBtn.style.display = 'none';
+  slot.classList.remove('has-fertilizer');
   
   updateGrowButtonState();
 }
@@ -686,11 +672,6 @@ async function startGrowthProcess(resultDiv) {
   fertilizersContainer.style.opacity = '0.5';
   fertilizersContainer.style.pointerEvents = 'none';
   gardenGrid.style.pointerEvents = 'none';
-  
-  // Hide all remove buttons during crafting
-  document.querySelectorAll('.remove-btn').forEach(btn => {
-    btn.style.display = 'none';
-  });
   
   // Start growth animations for planted seeds
   const growthPromises = [];
@@ -1128,9 +1109,9 @@ function injectHerbalismAnimationsCSS() {
       box-shadow: 0 3px 6px rgba(0,0,0,0.2);
     }
 
-    .remove-btn:hover {
-      background: #dc2626 !important;
-      transform: scale(1.1);
+    .seed-plot.has-seed:hover, .fertilizer-slot.has-fertilizer:hover {
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
     }
 
     @keyframes seed-pulse {
