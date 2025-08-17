@@ -236,7 +236,7 @@ async function fallbackEnrichIngredients(bankItems) {
 // Create the 3x3 garden grid (with bottom-right empty) - Made smaller
 function createGardenGridHTML() {
   return `
-    <div id="garden-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 0.6rem; max-width: 300px; margin: 0 auto;">
+    <div id="garden-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 0.6rem; max-width: 250px; margin: 0 auto;">
       
       <!-- Top Row: Seed1, Seed2, Fertilizer1 -->
       <div class="seed-plot" data-position="0" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
@@ -326,13 +326,13 @@ function renderCraftingModal() {
       
       <!-- Seeds row -->
       <h3 style="margin: 0.4rem 0 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Seeds</h3>
-      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 60px;">
+      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 70px;">
         ${renderSeedsHTML()}
       </div>
       
       <!-- Fertilizers row -->
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #228B22;">Available Fertilizers</h3>
-      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 60px;">
+      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 70px;">
         ${renderFertilizersHTML()}
       </div>
       
@@ -367,7 +367,7 @@ function renderSeedsHTML() {
     console.log('[HERBALISM] Rendering seed:', seed.name, 'sprite:', seed.sprite);
     return `
       <div class="seed-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(139,69,19,0.1);">
-        <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:30px;height:30px;" onerror="this.src='assets/art/ingridients/default.png'">
+        <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:40px;height:40px;" onerror="this.src='assets/art/ingridients/default.png'">
         <div style="font-size:0.6rem; color: #8B4513;">x${seed.amount}</div>
         <div class="info-icon" data-seed="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #8B4513; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
@@ -387,7 +387,7 @@ function renderFertilizersHTML() {
     console.log('[HERBALISM] Rendering fertilizer:', fertilizer.name, 'sprite:', fertilizer.sprite);
     return `
       <div class="fertilizer-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(34,139,34,0.1);">
-        <img src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" style="width:30px;height:30px;" onerror="this.src='assets/art/ingridients/default.png'">
+        <img src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" style="width:40px;height:40px;" onerror="this.src='assets/art/ingridients/default.png'">
         <div style="font-size:0.6rem; color: #228B22;">x${fertilizer.amount}</div>
         <div class="info-icon" data-fertilizer="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #228B22; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
