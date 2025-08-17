@@ -320,19 +320,19 @@ function renderCraftingModal() {
       
       <!-- Seeds row -->
       <h3 style="margin: 0.4rem 0 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Seeds</h3>
-      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 70px;">
+      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 75px;">
         ${renderSeedsHTML()}
       </div>
       
       <!-- Fertilizers row -->
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #228B22;">Available Fertilizers</h3>
-      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 70px;">
+      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 75px;">
         ${renderFertilizersHTML()}
       </div>
       
       <!-- Recipes row -->
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #4CAF50;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 70px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 90px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -398,7 +398,7 @@ function renderRecipesHTML() {
   return herbalismState.recipes.map((recipe, idx) => `
     <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 55px; text-align: center; position: relative;">
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 2px;" onerror="this.src='assets/art/recipes/default.png'">
-      <div style="font-size: 0.6rem; margin-top: 2px; color: #c4975a; font-weight: bold;">${recipe.name}</div>
+      <div style="font-size: 0.6rem; color: #c4975a; font-weight: bold;">${recipe.name}</div>
       <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #4CAF50; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');

@@ -231,19 +231,19 @@ function renderCraftingModal() {
       </div>
       
       <!-- Main crafting area - MADE MORE COMPACT -->
-      <div id="crafting-slots" style="display: flex; justify-content: center; gap: 0.8rem; margin: 0.5rem 0;">
+      <div id="crafting-slots" style="display: flex; justify-content: center; gap: 0.8rem;">
         ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
       </div>
       
       <!-- Bank row (horizontal scrollable) - MADE SMALLER -->
       <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem;">Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.5rem; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 70px;">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 70px;">
         ${renderHerbsHTML()}
       </div>
       
       <!-- Recipes row (horizontal scrollable) - MADE SMALLER -->
       <h3 style="margin: 0.3rem 0; font-size: 1rem;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 80px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 90px;">
         ${renderRecipesHTML()}
       </div>
       
