@@ -30,11 +30,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
                     <button class="fantasy-button back-btn">Return</button>
                 </div>
                 
-                <!-- Auction Title -->
-                <div class="auction-title-section">
-                    <h1 class="bank-title">Auction House</h1>
-                </div>
-                
                 <!-- Filter Tabs -->
                 <div class="filter-tabs" id="filterTabs">
                     <button class="filter-tab active" data-view="buy">Buy Items</button>
@@ -728,11 +723,6 @@ function addAuctionStyles() {
 
         .bank-header {
             background-image: url('assets/art/castle/main_bank.png');
-        }
-
-        .auction-title-section {
-            text-align: center;
-            padding: 1rem 0;
         }
 
         .bank-title {
