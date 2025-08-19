@@ -617,10 +617,7 @@ async function handleCancelListing(listingId) {
 }
 
 function itemNameToSpriteFormat(itemName) {
-    // Convert "Some Item" to "SomeItem"
-    return itemName.split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join('');
+    return itemName.replace(/\s+/g, '');
 }
 
 async function getItemSprites(itemNames) {
