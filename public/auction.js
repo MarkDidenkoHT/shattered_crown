@@ -197,7 +197,7 @@ async function loadBuyView(container) {
                             <div class="auction-trade">
                                 <div class="trade-offer">
                                     <div class="trade-item-display">
-                                        <img src="${getItemIcon(auction.item_selling)}" alt="${auction.item_selling}" onerror="this.src='assets/art/recipes/default_item.png'">
+                                        <img src="${getItemIcon(auction.item_selling)}" alt="${auction.item_selling}">
                                         <div class="item-details">
                                             <div class="item-name">${auction.item_selling}</div>
                                             <div class="item-amount">×${auction.amount_selling}</div>
@@ -209,7 +209,7 @@ async function loadBuyView(container) {
                                 
                                 <div class="trade-want">
                                     <div class="trade-item-display">
-                                        <img src="${getItemIcon(auction.item_wanted)}" alt="${auction.item_wanted}" onerror="this.src='assets/art/recipes/default_item.png'">
+                                        <img src="${getItemIcon(auction.item_wanted)}" alt="${auction.item_wanted}">
                                         <div class="item-details">
                                             <div class="item-name">${auction.item_wanted}</div>
                                             <div class="item-amount">×${auction.amount_wanted}</div>
@@ -270,7 +270,7 @@ async function loadSellView(container) {
                     ${_bankItems.map(item => `
                         <div class="bank-item-card" data-item-id="${item.id}">
                             <div class="item-icon">
-                                <img src="${item.spritePath}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
+                                <img src="${item.spritePath}" alt="${item.item}">
                                 <span class="item-quantity">×${item.amount}</span>
                             </div>
                             
@@ -324,7 +324,7 @@ async function loadMyListingsView(container) {
                             <div class="listing-trade">
                                 <div class="trade-offer">
                                     <div class="trade-item-display">
-                                        <img src="${getItemIcon(listing.item_selling)}" alt="${listing.item_selling}" onerror="this.src='assets/art/recipes/default_item.png'">
+                                        <img src="${getItemIcon(listing.item_selling)}" alt="${listing.item_selling}">
                                         <div class="item-details">
                                             <div class="item-name">${listing.item_selling}</div>
                                             <div class="item-amount">×${listing.amount_selling}</div>
@@ -336,7 +336,7 @@ async function loadMyListingsView(container) {
                                 
                                 <div class="trade-want">
                                     <div class="trade-item-display">
-                                        <img src="${getItemIcon(listing.item_wanted)}" alt="${listing.item_wanted}" onerror="this.src='assets/art/recipes/default_item.png'">
+                                        <img src="${getItemIcon(listing.item_wanted)}" alt="${listing.item_wanted}">
                                         <div class="item-details">
                                             <div class="item-name">${listing.item_wanted}</div>
                                             <div class="item-amount">×${listing.amount_wanted}</div>
