@@ -294,3 +294,395 @@ app.all('/functions/v1/*', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Proxy error', details: error.message });
     }
 });
+
+
+// Add these endpoints to your existing server.js file
+
+// Get all active auctions (status = false)
+app.get('/api/auction/active', requireAuth, async (req, res) => {
+    try {
+        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?status=eq.false&select=*,seller:seller_id(chat_id)`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const auctions = await response.json();
+        res.json(auctions);
+    } catch (error) {
+        console.error('[AUCTION ACTIVE]', error);
+        res.status(500).json({ error: 'Failed to fetch active auctions' });
+    }
+});
+
+// Get player's bank items for selling
+app.get('/api/auction/bank/:playerId', requireAuth, async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        
+        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&select=*,professions(name)`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const bankItems = await response.json();
+        res.json(bankItems);
+    } catch (error) {
+        console.error('[AUCTION BANK]', error);
+        res.status(500).json({ error: 'Failed to fetch bank items' });
+    }
+});
+
+// Get all unique items from recipes and ingredients for trade selection
+app.get('/api/auction/items', requireAuth, async (req, res) => {
+    try {
+        // Get unique items from both tables
+        const [recipesResponse, ingredientsResponse] = await Promise.all([
+            fetch(`${process.env.SUPABASE_URL}/rest/v1/recipes?select=name,sprite,type`, {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
+            }),
+            fetch(`${process.env.SUPABASE_URL}/rest/v1/ingridients?select=name,sprite`, {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
+            })
+        ]);
+
+        const [recipes, ingredients] = await Promise.all([
+            recipesResponse.json(),
+            ingredientsResponse.json()
+        ]);
+
+        // Combine and deduplicate items
+        const itemMap = new Map();
+        
+        // Add ingredients
+        ingredients.forEach(item => {
+            if (item.name) {
+                itemMap.set(item.name, {
+                    name: item.name,
+                    sprite: item.sprite,
+                    spritePath: item.sprite ? `assets/art/ingridients/${item.sprite.endsWith('.png') ? item.sprite : item.sprite + '.png'}` : null,
+                    type: 'ingredient'
+                });
+            }
+        });
+        
+        // Add recipes (may override ingredients if same name)
+        recipes.forEach(item => {
+            if (item.name) {
+                itemMap.set(item.name, {
+                    name: item.name,
+                    sprite: item.sprite,
+                    spritePath: item.sprite ? `assets/art/recipes/${item.sprite.endsWith('.png') ? item.sprite : item.sprite + '.png'}` : null,
+                    type: item.type || 'recipe'
+                });
+            }
+        });
+
+        const uniqueItems = Array.from(itemMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        res.json(uniqueItems);
+    } catch (error) {
+        console.error('[AUCTION ITEMS]', error);
+        res.status(500).json({ error: 'Failed to fetch available items' });
+    }
+});
+
+// Create new auction listing
+app.post('/api/auction/create', requireAuth, async (req, res) => {
+    try {
+        const { seller_id, item_selling, amount_selling, item_wanted, amount_wanted } = req.body;
+
+        // Validate required fields
+        if (!seller_id || !item_selling || !amount_selling || !item_wanted || !amount_wanted) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Check if player has enough items to sell
+        const bankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const bankItems = await bankResponse.json();
+        const totalAmount = bankItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+        if (totalAmount < amount_selling) {
+            return res.status(400).json({ error: 'Insufficient items in bank' });
+        }
+
+        // Remove items from seller's bank
+        let remainingToRemove = amount_selling;
+        for (const bankItem of bankItems) {
+            if (remainingToRemove <= 0) break;
+
+            const amountToTake = Math.min(remainingToRemove, bankItem.amount);
+            remainingToRemove -= amountToTake;
+
+            if (amountToTake === bankItem.amount) {
+                // Remove entire entry
+                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                    }
+                });
+            } else {
+                // Update amount
+                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ amount: bankItem.amount - amountToTake })
+                });
+            }
+        }
+
+        // Create auction listing
+        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+                seller_id,
+                item_selling,
+                amount_selling,
+                item_wanted,
+                amount_wanted,
+                status: false
+            })
+        });
+
+        const newAuction = await auctionResponse.json();
+        res.json({ success: true, auction: newAuction[0] });
+    } catch (error) {
+        console.error('[AUCTION CREATE]', error);
+        res.status(500).json({ error: 'Failed to create auction' });
+    }
+});
+
+// Purchase auction item
+app.post('/api/auction/buy', requireAuth, async (req, res) => {
+    try {
+        const { auction_id, buyer_id } = req.body;
+
+        if (!auction_id || !buyer_id) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Get auction details
+        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const auctions = await auctionResponse.json();
+        if (auctions.length === 0) {
+            return res.status(404).json({ error: 'Auction not found or already sold' });
+        }
+
+        const auction = auctions[0];
+
+        // Prevent self-purchase
+        if (auction.seller_id === buyer_id) {
+            return res.status(400).json({ error: 'Cannot buy your own auction' });
+        }
+
+        // Check if buyer has required items
+        const buyerBankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${buyer_id}&item=eq.${auction.item_wanted}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const buyerItems = await buyerBankResponse.json();
+        const buyerTotal = buyerItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+        if (buyerTotal < auction.amount_wanted) {
+            return res.status(400).json({ error: 'Insufficient items to complete purchase' });
+        }
+
+        // Remove items from buyer's bank
+        let remainingToRemove = auction.amount_wanted;
+        for (const bankItem of buyerItems) {
+            if (remainingToRemove <= 0) break;
+
+            const amountToTake = Math.min(remainingToRemove, bankItem.amount);
+            remainingToRemove -= amountToTake;
+
+            if (amountToTake === bankItem.amount) {
+                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                    }
+                });
+            } else {
+                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount: bankItem.amount - amountToTake })
+                });
+            }
+        }
+
+        // Add sold items to buyer's bank
+        await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling);
+
+        // Add payment items to seller's bank
+        await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted);
+
+        // Mark auction as sold
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                status: true, 
+                buyer_id,
+                modified_at: new Date().toISOString()
+            })
+        });
+
+        res.json({ success: true, message: 'Purchase completed successfully' });
+    } catch (error) {
+        console.error('[AUCTION BUY]', error);
+        res.status(500).json({ error: 'Failed to complete purchase' });
+    }
+});
+
+// Cancel auction (seller only)
+app.delete('/api/auction/cancel/:auctionId', requireAuth, async (req, res) => {
+    try {
+        const { auctionId } = req.params;
+        const { seller_id } = req.body;
+
+        if (!seller_id) {
+            return res.status(400).json({ error: 'Seller ID required' });
+        }
+
+        // Get auction details
+        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auctionId}&seller_id=eq.${seller_id}&status=eq.false`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const auctions = await auctionResponse.json();
+        if (auctions.length === 0) {
+            return res.status(404).json({ error: 'Auction not found or cannot be cancelled' });
+        }
+
+        const auction = auctions[0];
+
+        // Return items to seller's bank
+        await addItemsToBank(seller_id, auction.item_selling, auction.amount_selling);
+
+        // Delete auction
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auctionId}`, {
+            method: 'DELETE',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        res.json({ success: true, message: 'Auction cancelled and items returned' });
+    } catch (error) {
+        console.error('[AUCTION CANCEL]', error);
+        res.status(500).json({ error: 'Failed to cancel auction' });
+    }
+});
+
+// Get player's auction listings
+app.get('/api/auction/my-listings/:playerId', requireAuth, async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        
+        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?seller_id=eq.${playerId}&order=created_at.desc`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const auctions = await response.json();
+        res.json(auctions);
+    } catch (error) {
+        console.error('[MY LISTINGS]', error);
+        res.status(500).json({ error: 'Failed to fetch your listings' });
+    }
+});
+
+// Helper function to add items to bank
+async function addItemsToBank(playerId, itemName, amount) {
+    // Check if player already has this item in bank
+    const existingResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&item=eq.${itemName}`, {
+        headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+    });
+
+    const existingItems = await existingResponse.json();
+    
+    if (existingItems.length > 0) {
+        // Update existing item
+        const existingItem = existingItems[0];
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${existingItem.id}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount: existingItem.amount + amount })
+        });
+    } else {
+        // Create new bank entry
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                player_id: playerId,
+                item: itemName,
+                amount: amount,
+                type: 'auction' // You might want to determine type properly
+            })
+        });
+    }
+}
