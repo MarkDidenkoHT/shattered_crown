@@ -244,13 +244,13 @@ async function loadSellView(container) {
         const response = await _apiCall(`/api/auction/bank/${_profile.id}`);
         _bankItems = await response.json();
         
-        // Get sprite paths for items
+        // Get sprite paths for items using the updated function
         const itemNames = [...new Set(_bankItems.map(item => item.item))];
         const spriteMap = await getItemSprites(itemNames);
         
         _bankItems = _bankItems.map(item => ({
             ...item,
-            spritePath: spriteMap[item.item] || 'assets/art/recipes/default_item.png'
+            spritePath: spriteMap[item.item] || `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`
         }));
         
         if (_bankItems.length === 0) {
@@ -266,7 +266,7 @@ async function loadSellView(container) {
                     ${_bankItems.map(item => `
                         <div class="bank-item-card" data-item-id="${item.id}">
                             <div class="item-icon">
-                                <img src="${item.spritePath}" alt="${item.item}">
+                                <img src="${item.spritePath}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
                                 <span class="item-quantity">×${item.amount}</span>
                             </div>
                             
@@ -616,6 +616,13 @@ async function handleCancelListing(listingId) {
     }
 }
 
+function itemNameToSpriteFormat(itemName) {
+    // Convert "Some Item" to "SomeItem"
+    return itemName.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join('');
+}
+
 async function getItemSprites(itemNames) {
     if (itemNames.length === 0) return {};
     
@@ -644,8 +651,24 @@ async function getItemSprites(itemNames) {
                 spriteMap[item.name] = `assets/art/recipes/${fileName}`;
             }
         });
+        
+        // For items not found in database, generate sprite paths based on naming convention
+        itemNames.forEach(itemName => {
+            if (!spriteMap[itemName]) {
+                const spriteName = itemNameToSpriteFormat(itemName);
+                // Default to recipes folder, but you could implement logic to determine the correct folder
+                spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+            }
+        });
+        
     } catch (error) {
-        console.error('Failed to get item sprites:', error);
+        console.error('Failed to get item sprites from database:', error);
+        
+        // Fallback: generate all sprite paths based on naming convention
+        itemNames.forEach(itemName => {
+            const spriteName = itemNameToSpriteFormat(itemName);
+            spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+        });
     }
     
     return spriteMap;
@@ -658,8 +681,9 @@ function getItemIcon(itemName) {
         return availableItem.spritePath;
     }
     
-    // Fallback to default
-    return 'assets/art/recipes/default_item.png';
+    // Generate sprite path based on naming convention
+    const spriteName = itemNameToSpriteFormat(itemName);
+    return `assets/art/recipes/${spriteName}.png`;
 }
 
 function formatTime(dateString) {
