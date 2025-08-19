@@ -447,13 +447,14 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
 
         console.log('✅ Bank items removed successfully');
 
-        // Create auction listing
         const auctionData = {
             seller_id,
             item_selling,
             amount_selling,
+            item_selling_type: req.body.item_selling_type,   // 👈 from client
             item_wanted,
             amount_wanted,
+            item_wanted_type: req.body.item_wanted_type,     // 👈 from client
             status: false
         };
 
@@ -641,8 +642,8 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
             }
         }
 
-        await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling);
-        await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted);
+        await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling, auction.item_selling_type);
+        await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted, auction.item_wanted_type);
 
         const updateResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}`, {
             method: 'PATCH',
@@ -750,7 +751,7 @@ app.get('/api/auction/my-listings/:playerId', requireAuth, async (req, res) => {
 });
 
 // Helper function to add items to bank
-async function addItemsToBank(playerId, itemName, amount) {
+async function addItemsToBank(playerId, itemName, amount, itemType) {
     // Check if player already has this item in bank
     const existingResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&item=eq.${itemName}`, {
         headers: {
@@ -774,7 +775,7 @@ async function addItemsToBank(playerId, itemName, amount) {
             body: JSON.stringify({ amount: existingItem.amount + amount })
         });
     } else {
-        // Create new bank entry
+        // Create new bank entry with correct type
         await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank`, {
             method: 'POST',
             headers: {
@@ -786,7 +787,7 @@ async function addItemsToBank(playerId, itemName, amount) {
                 player_id: playerId,
                 item: itemName,
                 amount: amount,
-                type: 'auction' // You might want to determine type properly
+                type: itemType   // 👈 use correct type here
             })
         });
     }
