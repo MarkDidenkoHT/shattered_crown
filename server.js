@@ -523,7 +523,41 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
     }
 });
 
-// Purchase auction item
+// Add this helper function at the top of your file (with other helper functions)
+async function sendTelegramNotification(chatId, message) {
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
+        console.warn('TELEGRAM_BOT_TOKEN not set - skipping notification');
+        return;
+    }
+
+    if (!chatId) {
+        console.warn('No chatId provided - skipping notification');
+        return;
+    }
+
+    try {
+        const response = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            console.error('Failed to send Telegram notification:', error);
+        }
+    } catch (error) {
+        console.error('Error sending Telegram notification:', error);
+    }
+}
+
+// Then modify your /api/auction/buy endpoint like this:
 app.post('/api/auction/buy', requireAuth, async (req, res) => {
     try {
         const { auction_id, buyer_id } = req.body;
@@ -532,8 +566,8 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Get auction details
-        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false`, {
+        // Get auction details with seller's chat_id
+        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false&select=*,seller:seller_id(chat_id,account_name)`, {
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
@@ -546,11 +580,22 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
         }
 
         const auction = auctions[0];
+        const seller = auction.seller; // Contains chat_id and account_name
 
         // Prevent self-purchase
         if (auction.seller_id === buyer_id) {
             return res.status(400).json({ error: 'Cannot buy your own auction' });
         }
+
+        // Get buyer's profile for notification
+        const buyerProfileResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${buyer_id}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+        const buyerProfiles = await buyerProfileResponse.json();
+        const buyerProfile = buyerProfiles.length > 0 ? buyerProfiles[0] : null;
 
         // Check if buyer has required items
         const buyerBankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${buyer_id}&item=eq.${auction.item_wanted}`, {
@@ -596,14 +641,10 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
             }
         }
 
-        // Add sold items to buyer's bank
         await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling);
-
-        // Add payment items to seller's bank
         await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted);
 
-        // Mark auction as sold
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}`, {
+        const updateResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}`, {
             method: 'PATCH',
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
@@ -617,10 +658,30 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
             })
         });
 
+        if (!updateResponse.ok) {
+            throw new Error('Failed to update auction status');
+        }
+
+        // Send notification to seller
+        if (seller && seller.chat_id) {
+            const buyerName = buyerProfile?.account_name || 'Another player';
+            const message = `
+<b>Your item has been sold!</b>
+
+<b>Item sold:</b> ${auction.amount_selling}x ${auction.item_selling}
+<b>Received:</b> ${auction.amount_wanted}x ${auction.item_wanted}
+<b>Buyer:</b> ${buyerName}
+
+The items have been added to your bank.
+            `;
+            
+            await sendTelegramNotification(seller.chat_id, message);
+        }
+
         res.json({ success: true, message: 'Purchase completed successfully' });
     } catch (error) {
         console.error('[AUCTION BUY]', error);
-        res.status(500).json({ error: 'Failed to complete purchase' });
+        res.status(500).json({ error: 'Failed to complete purchase', details: error.message });
     }
 });
 
