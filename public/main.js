@@ -97,7 +97,7 @@ function showTutorial() {
           <h2>Welcome!</h2>
           <p>Shattered Crown is a fantasy turn based rpg with strategy elements.</p>
           <div class="slide-buttons">
-            <button class="tutorial-btn next-btn" id="slide1-next">Next</button>
+            <button class="tutorial-btn next-btn" data-action="next">Next</button>
           </div>
         </div>
         
@@ -106,8 +106,8 @@ function showTutorial() {
           <h2>Divine Patron</h2>
           <p>In this realm gods fight for an artifact of power. You must choose what deity you will follow. Create three heroes that will recover all parts of the crown for your deity!</p>
           <div class="slide-buttons">
-            <button class="tutorial-btn prev-btn" id="slide2-prev">Previous</button>
-            <button class="tutorial-btn next-btn" id="slide2-next">Next</button>
+            <button class="tutorial-btn prev-btn" data-action="prev">Previous</button>
+            <button class="tutorial-btn next-btn" data-action="next">Next</button>
           </div>
         </div>
         
@@ -116,8 +116,8 @@ function showTutorial() {
           <h2>Crafting</h2>
           <p>Most gear and equipment comes from crafting, and resources and ingredients come as loot from battles! Each profession has a mini-game.</p>
           <div class="slide-buttons">
-            <button class="tutorial-btn prev-btn" id="slide3-prev">Previous</button>
-            <button class="tutorial-btn next-btn" id="slide3-next">Next</button>
+            <button class="tutorial-btn prev-btn" data-action="prev">Previous</button>
+            <button class="tutorial-btn next-btn" data-action="next">Next</button>
           </div>
         </div>
         
@@ -126,8 +126,8 @@ function showTutorial() {
           <h2>Ready to Begin</h2>
           <p>Warning! Game is in early development stage and there will be bugs, errors and placeholders! Thank you for testing!</p>
           <div class="slide-buttons">
-            <button class="tutorial-btn prev-btn" id="slide4-prev">Previous</button>
-            <button class="fantasy-button" id="start-game-btn">Start Your Journey</button>
+            <button class="tutorial-btn prev-btn" data-action="prev">Previous</button>
+            <button class="fantasy-button" data-action="start-game">Start Your Journey</button>
           </div>
         </div>
       </div>
@@ -140,35 +140,34 @@ function showTutorial() {
   // Initialize tutorial state
   window.currentSlide = 1;
   
-  // Add event listeners (CSP-compliant)
+  // Add event listeners using event delegation (CSP-compliant)
   addTutorialEventListeners();
   updateTutorialUI();
 }
 
 function addTutorialEventListeners() {
-  // Next buttons
-  const slide1Next = document.getElementById('slide1-next');
-  const slide2Next = document.getElementById('slide2-next');
-  const slide3Next = document.getElementById('slide3-next');
+  // Use event delegation to handle all tutorial button clicks
+  const tutorialContainer = document.querySelector('.tutorial-container');
   
-  // Previous buttons
-  const slide2Prev = document.getElementById('slide2-prev');
-  const slide3Prev = document.getElementById('slide3-prev');
-  const slide4Prev = document.getElementById('slide4-prev');
-  
-  // Start game button
-  const startGameBtn = document.getElementById('start-game-btn');
-  
-  // Add event listeners
-  if (slide1Next) slide1Next.addEventListener('click', nextSlide);
-  if (slide2Next) slide2Next.addEventListener('click', nextSlide);
-  if (slide3Next) slide3Next.addEventListener('click', nextSlide);
-  
-  if (slide2Prev) slide2Prev.addEventListener('click', prevSlide);
-  if (slide3Prev) slide3Prev.addEventListener('click', prevSlide);
-  if (slide4Prev) slide4Prev.addEventListener('click', prevSlide);
-  
-  if (startGameBtn) startGameBtn.addEventListener('click', startGame);
+  if (tutorialContainer) {
+    tutorialContainer.addEventListener('click', (event) => {
+      const action = event.target.dataset.action;
+      
+      if (!action) return;
+      
+      switch (action) {
+        case 'next':
+          nextSlide();
+          break;
+        case 'prev':
+          prevSlide();
+          break;
+        case 'start-game':
+          startGame();
+          break;
+      }
+    });
+  }
 }
 
 function addTutorialStyles() {
