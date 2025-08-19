@@ -119,8 +119,7 @@ function setupInteractions() {
             if (action === 'characters') {
                 window.gameAuth.loadModule('character_manager'); 
             } else if (action === 'trade') {
-                displayMessage('Trade functionality coming soon!');
-                // window.gameAuth.loadModule('marketplace');
+                window.gameAuth.loadModule('auction');
             } else if (action === 'bank') {
                 window.gameAuth.loadModule('bank');
             } else if (action === 'embark') {
