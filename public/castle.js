@@ -230,10 +230,6 @@ function showRoadmapModal() {
                     <div class="roadmap-feature">New professions and spells! New region!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">20 September 2025</div>
-                    <div class="roadmap-feature">Auctionhouse and trading! Player driven economy - you decide what to trade and for what items!</div>
-                </div>
-                <div class="roadmap-item">
                     <div class="roadmap-date">30 September 2025</div>
                     <div class="roadmap-feature">Talent trees! More loot and items!</div>
                 </div>

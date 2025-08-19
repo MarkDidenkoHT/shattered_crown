@@ -276,13 +276,6 @@ function addBankStyles() {
 
         .bank-header {
             background-image: url('assets/art/castle/main_bank.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            min-height: 35vh;
-            position: relative;
-            display: flex;
-            align-items: flex-end;
         }
 
         .bank-title {
@@ -293,49 +286,6 @@ function addBankStyles() {
             margin: 0;
             text-align: center;
             flex: 1;
-        }
-
-        /* Filter Tabs - Horizontal Scrollable */
-        .filter-tabs {
-            display: flex;
-            gap: 0.5rem;
-            overflow-x: auto;
-            overflow-y: hidden;
-            padding: 0.25rem 0;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-
-        .filter-tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .filter-tab {
-            background: linear-gradient(145deg, #2a1f16, #1d140c);
-            border: 2px solid #3d2914;
-            color: #b8b3a8;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: 'Cinzel', serif;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-            flex-shrink: 0;
-            min-width: fit-content;
-        }
-
-        .filter-tab:hover {
-            border-color: #c4975a;
-            color: #c4975a;
-        }
-
-        .filter-tab.active {
-            background: linear-gradient(145deg, #c4975a, #a25612);
-            border-color: #c4975a;
-            color: #1d140c;
-            font-weight: 600;
         }
 
         .bank-content {
@@ -452,11 +402,6 @@ function addBankStyles() {
             color: #9a8566;
         }
 
-        .item-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
         .action-btn {
             background: linear-gradient(145deg, #2a1f16, #1d140c);
             border: 2px solid #3d2914;
@@ -533,11 +478,6 @@ function addBankStyles() {
             .bank-item {
                 gap: 0.5rem;
                 padding: 0.5rem;
-            }
-
-            .item-actions {
-                flex-direction: column;
-                gap: 0.3rem;
             }
 
             .action-btn {

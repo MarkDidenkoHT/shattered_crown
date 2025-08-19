@@ -2,7 +2,7 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _currentView = 'buy'; // 'buy', 'sell', 'return'
+let _currentView = 'buy';
 let _activeAuctions = [];
 let _bankItems = [];
 let _availableItems = [];
@@ -20,40 +20,35 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
         return;
     }
 
-    // Setup the auction house interface
     _main.innerHTML = `
         <div class="main-app-container auction-container">
             <div class="particles"></div>
             
             <!-- Top Header -->
-            <div class="auction-header">
+            <div class="bank-header">
                 <div class="top-right-buttons">
                     <button class="fantasy-button back-btn">Return</button>
                 </div>
                 
-                <div class="auction-title">
-                    <h1>🏛️ Auction House</h1>
-                    <p class="auction-subtitle">Player-driven marketplace</p>
+                <!-- Auction Title -->
+                <div class="auction-title-section">
+                    <h1 class="bank-title">Auction House</h1>
+                </div>
+                
+                <!-- Filter Tabs -->
+                <div class="filter-tabs" id="filterTabs">
+                    <button class="filter-tab active" data-view="buy">Buy Items</button>
+                    <button class="filter-tab" data-view="sell">Sell Items</button>
+                    <button class="filter-tab" data-view="return">My Listings</button>
                 </div>
             </div>
 
-            <!-- Navigation Tabs -->
-            <div class="auction-nav">
-                <button class="nav-tab active" data-view="buy">
-                    Buy
-                </button>
-                <button class="nav-tab" data-view="sell">
-                    Sell
-                </button>
-                <button class="nav-tab" data-view="return">
-                    My Listings
-                </button>
-            </div>
-
-            <!-- Main Content -->
-            <div class="auction-content">
-                <div id="auction-view-container">
-                    <!-- Dynamic content will be loaded here -->
+            <!-- Main Auction Content -->
+            <div class="bank-content">
+                <div class="bank-items-container">
+                    <div class="bank-items-list" id="auctionItemsList">
+                        <!-- Items will be populated here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -100,7 +95,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             </div>
         </div>
 
-        <!-- Purchase Confirmation Modal -->
+        <!-- Buy Modal -->
         <div id="buy-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
@@ -147,7 +142,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 }
 
 async function loadCurrentView() {
-    const container = document.getElementById('auction-view-container');
+    const container = document.getElementById('auctionItemsList');
     
     try {
         switch (_currentView) {
@@ -176,58 +171,39 @@ async function loadBuyView(container) {
         
         if (_activeAuctions.length === 0) {
             container.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-bank">
                     <div class="empty-icon">🏛️</div>
                     <h3>No Active Auctions</h3>
-                    <p>Be the first to list something for sale!</p>
+                    <p>No items are currently available for purchase</p>
                 </div>
             `;
         } else {
-            container.innerHTML = `
-                <div class="auctions-grid">
-                    ${_activeAuctions.map(auction => `
-                        <div class="auction-card" data-auction-id="${auction.id}">
-                            <div class="auction-seller">
-                                Seller: ${auction.seller?.chat_id || 'Anonymous'}
-                            </div>
-                            
-                            <div class="auction-trade">
-                                <div class="trade-offer">
-                                    <div class="trade-item-display">
-                                        <img src="${getItemIcon(auction.item_selling)}" alt="${auction.item_selling}">
-                                        <div class="item-details">
-                                            <div class="item-name">${auction.item_selling}</div>
-                                            <div class="item-amount">×${auction.amount_selling}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="trade-arrow">⇄</div>
-                                
-                                <div class="trade-want">
-                                    <div class="trade-item-display">
-                                        <img src="${getItemIcon(auction.item_wanted)}" alt="${auction.item_wanted}">
-                                        <div class="item-details">
-                                            <div class="item-name">${auction.item_wanted}</div>
-                                            <div class="item-amount">×${auction.amount_wanted}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="auction-actions">
-                                <button class="fantasy-button buy-btn" data-auction-id="${auction.id}">
-                                    Purchase
-                                </button>
-                            </div>
-                            
-                            <div class="auction-time">
-                                Listed: ${formatTime(auction.created_at)}
-                            </div>
+            container.innerHTML = _activeAuctions.map(auction => `
+                <div class="bank-item auction-item" data-auction-id="${auction.id}">
+                    <div class="item-icon">
+                        <img src="${getItemIcon(auction.item_selling)}" alt="${auction.item_selling}" onerror="this.src='assets/art/recipes/default_item.png'">
+                        ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
+                    </div>
+                    
+                    <div class="item-info">
+                        <div class="item-name">${auction.item_selling}</div>
+                        <div class="item-details">
+                            <span class="item-type">Seller: ${auction.seller?.chat_id || 'Anonymous'}</span>
+                            <span class="item-profession">• ${formatTime(auction.created_at)}</span>
                         </div>
-                    `).join('')}
+                        <div class="auction-trade-info">
+                            <span class="trade-want">Wants: ${auction.amount_wanted}× ${auction.item_wanted}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="item-actions">
+                        <button class="action-btn buy-btn" data-action="buy" data-auction-id="${auction.id}">
+                            <span class="btn-icon">💰</span>
+                            Buy
+                        </button>
+                    </div>
                 </div>
-            `;
+            `).join('');
         }
         
         closeMessageBox();
@@ -244,7 +220,7 @@ async function loadSellView(container) {
         const response = await _apiCall(`/api/auction/bank/${_profile.id}`);
         _bankItems = await response.json();
         
-        // Get sprite paths for items using the updated function
+        // Get sprite paths for items
         const itemNames = [...new Set(_bankItems.map(item => item.item))];
         const spriteMap = await getItemSprites(itemNames);
         
@@ -255,35 +231,36 @@ async function loadSellView(container) {
         
         if (_bankItems.length === 0) {
             container.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-bank">
+                    <div class="empty-icon">📦</div>
                     <h3>No Items to Sell</h3>
-                    <p>You need items in your bank to create auction listings.</p>
+                    <p>You need items in your bank to create auction listings</p>
                 </div>
             `;
         } else {
-            container.innerHTML = `
-                <div class="bank-items-grid">
-                    ${_bankItems.map(item => `
-                        <div class="bank-item-card" data-item-id="${item.id}">
-                            <div class="item-icon">
-                                <img src="${item.spritePath}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
-                                <span class="item-quantity">×${item.amount}</span>
-                            </div>
-                            
-                            <div class="item-info">
-                                <div class="item-name">${item.item}</div>
-                                <div class="item-type">${item.type || 'recipe'}</div>
-                            </div>
-                            
-                            <div class="item-actions">
-                                <button class="fantasy-button sell-btn" data-item-id="${item.id}">
-                                    Sell
-                                </button>
-                            </div>
+            container.innerHTML = _bankItems.map(item => `
+                <div class="bank-item" data-item-id="${item.id}">
+                    <div class="item-icon">
+                        <img src="${item.spritePath}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
+                        ${item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
+                    </div>
+                    
+                    <div class="item-info">
+                        <div class="item-name">${item.item}</div>
+                        <div class="item-details">
+                            <span class="item-type">${item.type || 'recipe'}</span>
+                            ${item.professions ? `<span class="item-profession">• ${item.professions.name}</span>` : ''}
                         </div>
-                    `).join('')}
+                    </div>
+                    
+                    <div class="item-actions">
+                        <button class="action-btn sell-btn" data-action="sell" data-item-id="${item.id}">
+                            <span class="btn-icon">🏷️</span>
+                            Sell
+                        </button>
+                    </div>
                 </div>
-            `;
+            `).join('');
         }
         
         closeMessageBox();
@@ -302,59 +279,46 @@ async function loadMyListingsView(container) {
         
         if (_myListings.length === 0) {
             container.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-bank">
+                    <div class="empty-icon">📋</div>
                     <h3>No Active Listings</h3>
-                    <p>You haven't created any auction listings yet.</p>
+                    <p>You haven't created any auction listings yet</p>
                 </div>
             `;
         } else {
-            container.innerHTML = `
-                <div class="my-listings-grid">
-                    ${_myListings.map(listing => `
-                        <div class="listing-card ${listing.status ? 'sold' : 'active'}" data-listing-id="${listing.id}">
-                            <div class="listing-status">
-                                ${listing.status ? 'SOLD' : 'ACTIVE'}
-                            </div>
-                            
-                            <div class="listing-trade">
-                                <div class="trade-offer">
-                                    <div class="trade-item-display">
-                                        <img src="${getItemIcon(listing.item_selling)}" alt="${listing.item_selling}">
-                                        <div class="item-details">
-                                            <div class="item-name">${listing.item_selling}</div>
-                                            <div class="item-amount">×${listing.amount_selling}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="trade-arrow">⇄</div>
-                                
-                                <div class="trade-want">
-                                    <div class="trade-item-display">
-                                        <img src="${getItemIcon(listing.item_wanted)}" alt="${listing.item_wanted}">
-                                        <div class="item-details">
-                                            <div class="item-name">${listing.item_wanted}</div>
-                                            <div class="item-amount">×${listing.amount_wanted}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="listing-actions">
-                                ${!listing.status ? `
-                                    <button class="fantasy-button cancel-btn" data-listing-id="${listing.id}">
-                                        Cancel
-                                    </button>
-                                ` : ''}
-                            </div>
-                            
-                            <div class="listing-time">
-                                ${listing.status ? `Sold: ${formatTime(listing.modified_at)}` : `Listed: ${formatTime(listing.created_at)}`}
-                            </div>
+            container.innerHTML = _myListings.map(listing => `
+                <div class="bank-item listing-item ${listing.status ? 'sold' : 'active'}" data-listing-id="${listing.id}">
+                    <div class="item-icon">
+                        <img src="${getItemIcon(listing.item_selling)}" alt="${listing.item_selling}" onerror="this.src='assets/art/recipes/default_item.png'">
+                        ${listing.amount_selling > 1 ? `<span class="item-quantity">${listing.amount_selling}</span>` : ''}
+                        <div class="listing-status-badge ${listing.status ? 'sold' : 'active'}">
+                            ${listing.status ? 'SOLD' : 'ACTIVE'}
                         </div>
-                    `).join('')}
+                    </div>
+                    
+                    <div class="item-info">
+                        <div class="item-name">${listing.item_selling}</div>
+                        <div class="item-details">
+                            <span class="item-type">Status: ${listing.status ? 'Sold' : 'Active'}</span>
+                            <span class="item-profession">• ${listing.status ? formatTime(listing.modified_at) : formatTime(listing.created_at)}</span>
+                        </div>
+                        <div class="auction-trade-info">
+                            <span class="trade-want">For: ${listing.amount_wanted}× ${listing.item_wanted}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="item-actions">
+                        ${!listing.status ? `
+                            <button class="action-btn cancel-btn" data-action="cancel" data-listing-id="${listing.id}">
+                                <span class="btn-icon">❌</span>
+                                Cancel
+                            </button>
+                        ` : `
+                            <span class="sold-indicator">✅ Completed</span>
+                        `}
+                    </div>
                 </div>
-            `;
+            `).join('');
         }
         
         closeMessageBox();
@@ -370,31 +334,34 @@ function setupAuctionInteractions() {
         window.gameAuth.loadModule('castle');
     });
 
-    // Navigation tabs
-    _main.querySelectorAll('.nav-tab').forEach(tab => {
-        tab.addEventListener('click', async () => {
-            if (tab.dataset.view === _currentView) return;
+    // Navigation tabs (using event delegation)
+    _main.querySelector('#filterTabs').addEventListener('click', async (e) => {
+        if (e.target.classList.contains('filter-tab')) {
+            if (e.target.dataset.view === _currentView) return;
             
             // Update active tab
-            _main.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
+            _main.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
             
             // Change view
-            _currentView = tab.dataset.view;
+            _currentView = e.target.dataset.view;
             await loadCurrentView();
-        });
+        }
     });
 
-    // Auction actions (using event delegation)
-    _main.addEventListener('click', async (e) => {
-        if (e.target.classList.contains('buy-btn')) {
-            const auctionId = e.target.dataset.auctionId;
+    // Item action buttons (using event delegation)
+    _main.querySelector('#auctionItemsList').addEventListener('click', async (e) => {
+        if (e.target.classList.contains('buy-btn') || e.target.closest('.buy-btn')) {
+            const btn = e.target.classList.contains('buy-btn') ? e.target : e.target.closest('.buy-btn');
+            const auctionId = btn.dataset.auctionId;
             await handleBuyClick(auctionId);
-        } else if (e.target.classList.contains('sell-btn')) {
-            const itemId = e.target.dataset.itemId;
+        } else if (e.target.classList.contains('sell-btn') || e.target.closest('.sell-btn')) {
+            const btn = e.target.classList.contains('sell-btn') ? e.target : e.target.closest('.sell-btn');
+            const itemId = btn.dataset.itemId;
             await handleSellClick(itemId);
-        } else if (e.target.classList.contains('cancel-btn')) {
-            const listingId = e.target.dataset.listingId;
+        } else if (e.target.classList.contains('cancel-btn') || e.target.closest('.cancel-btn')) {
+            const btn = e.target.classList.contains('cancel-btn') ? e.target : e.target.closest('.cancel-btn');
+            const listingId = btn.dataset.listingId;
             await handleCancelListing(listingId);
         }
     });
@@ -549,9 +516,9 @@ async function handleConfirmSell() {
             
             // Refresh current view
             if (_currentView === 'sell') {
-                await loadSellView(document.getElementById('auction-view-container'));
+                await loadSellView(document.getElementById('auctionItemsList'));
             } else if (_currentView === 'return') {
-                await loadMyListingsView(document.getElementById('auction-view-container'));
+                await loadMyListingsView(document.getElementById('auctionItemsList'));
             }
         } else {
             displayMessage(result.error || 'Failed to create auction listing.');
@@ -580,7 +547,7 @@ async function handleConfirmBuy() {
             document.getElementById('buy-modal').style.display = 'none';
             
             // Refresh buy view
-            await loadBuyView(document.getElementById('auction-view-container'));
+            await loadBuyView(document.getElementById('auctionItemsList'));
         } else {
             displayMessage(result.error || 'Failed to complete purchase.');
         }
@@ -606,7 +573,7 @@ async function handleCancelListing(listingId) {
         
         if (result.success) {
             displayMessage('Listing cancelled and items returned to your bank.');
-            await loadMyListingsView(document.getElementById('auction-view-container'));
+            await loadMyListingsView(document.getElementById('auctionItemsList'));
         } else {
             displayMessage(result.error || 'Failed to cancel listing.');
         }
@@ -653,7 +620,6 @@ async function getItemSprites(itemNames) {
         itemNames.forEach(itemName => {
             if (!spriteMap[itemName]) {
                 const spriteName = itemNameToSpriteFormat(itemName);
-                // Default to recipes folder, but you could implement logic to determine the correct folder
                 spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
             }
         });
@@ -705,15 +671,15 @@ function createParticles() {
     if (!particlesContainer) return;
 
     particlesContainer.innerHTML = '';
-    const particleCount = 20;
+    const particleCount = 15;
     
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.left = Math.random() * 100 + '%';
         particle.style.top = Math.random() * 100 + '%';
-        particle.style.animationDelay = Math.random() * 8 + 's';
-        particle.style.animationDuration = (Math.random() * 4 + 6) + 's';
+        particle.style.animationDelay = Math.random() * 6 + 's';
+        particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
         particlesContainer.appendChild(particle);
     }
 }
@@ -743,12 +709,13 @@ function closeMessageBox() {
 }
 
 function addAuctionStyles() {
-    const styleId = 'auction-styles';
+    const styleId = 'auction-styles-refactored';
     if (document.getElementById(styleId)) return;
 
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
+        /* Base Container - Using Bank Styles */
         .auction-container {
             position: relative;
             width: 100%;
@@ -759,208 +726,92 @@ function addAuctionStyles() {
             overflow: hidden;
         }
 
-        .auction-header {
-            background-image: url('assets/art/castle/main_auction.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            min-height: 25vh;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
+        .bank-header {
+            background-image: url('assets/art/castle/main_bank.png');
         }
 
-        .auction-title {
+        .auction-title-section {
             text-align: center;
+            padding: 1rem 0;
+        }
+
+        .bank-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
             color: #c4975a;
             text-shadow: 2px 2px 0px #3d2914;
-        }
-
-        .auction-title h1 {
-            font-family: 'Cinzel', serif;
-            font-size: 2.2rem;
-            margin: 0 0 0.5rem 0;
-        }
-
-        .auction-subtitle {
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
             margin: 0;
-            opacity: 0.8;
         }
 
-        /* Navigation Tabs */
-        .auction-nav {
-            display: flex;
-            background: rgba(29,20,12,0.8);
-            border-bottom: 2px solid #3d2914;
-            padding: 0;
-        }
-
-        .nav-tab {
+        .bank-content {
             flex: 1;
-            background: transparent;
-            border: none;
-            border-right: 1px solid #3d2914;
-            color: #b8b3a8;
-            padding: 1rem;
-            cursor: pointer;
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
+            overflow: hidden;
         }
 
-        .nav-tab:last-child {
-            border-right: none;
+        .bank-items-container {
+            height: 99%;
+            background: rgba(29,20,12,0.3);
+            border: 2px solid #3d2914;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        .nav-tab:hover {
-            background: rgba(196,151,90,0.1);
-            color: #c4975a;
-        }
-
-        .nav-tab.active {
-            background: linear-gradient(145deg, #c4975a, #a25612);
-            color: #1d140c;
-            font-weight: 600;
-        }
-
-        .auction-content {
-            flex: 1;
-            padding: 1rem;
+        .bank-items-list {
+            height: 100%;
             overflow-y: auto;
-        }
-
-        .auctions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1rem;
             padding: 0.5rem;
         }
 
-        .auction-card {
-            background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.7));
-            border: 2px solid #3d2914;
-            border-radius: 8px;
-            padding: 1rem;
-            transition: all 0.3s ease;
+        /* Custom Scrollbar */
+        .bank-items-list::-webkit-scrollbar {
+            width: 12px;
         }
 
-        .auction-card:hover {
-            border-color: #c4975a;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        .auction-seller {
-            font-size: 0.9rem;
-            color: #8b7355;
-            margin-bottom: 0.75rem;
-            font-family: 'Cinzel', serif;
-        }
-
-        .auction-trade {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background: rgba(42,31,22,0.5);
+        .bank-items-list::-webkit-scrollbar-track {
+            background: rgba(29,20,12,0.5);
             border-radius: 6px;
-            border: 1px solid #3d2914;
         }
 
-        .trade-offer, .trade-want {
-            flex: 1;
+        .bank-items-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(145deg, #c4975a, #a25612);
+            border-radius: 6px;
         }
 
-        .trade-item-display {
+        .bank-items-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(145deg, #d4a76a, #b26622);
+        }
+
+        /* Bank Items - Enhanced for Auction */
+        .bank-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-
-        .trade-item-display img {
-            width: 40px;
-            height: 40px;
-            border-radius: 4px;
-            border: 1px solid #3d2914;
-        }
-
-        .item-details {
-            flex: 1;
-        }
-
-        .item-name {
-            font-family: 'Cinzel', serif;
-            font-weight: 600;
-            color: #c4975a;
-            font-size: 0.9rem;
-        }
-
-        .item-amount {
-            color: #b8b3a8;
-            font-size: 0.8rem;
-        }
-
-        .trade-arrow {
-            font-size: 1.2rem;
-            color: #c4975a;
-            font-weight: bold;
-        }
-
-        .auction-actions {
-            display: flex;
-            justify-content: center;
+            gap: 1rem;
+            padding: 0.75rem;
             margin-bottom: 0.5rem;
-        }
-
-        .buy-btn {
-            background: linear-gradient(145deg, #2a5a2a, #1e4a1e);
-            border-color: #3a7a3a;
-            color: #90c690;
-        }
-
-        .buy-btn:hover {
-            border-color: #4a9a4a;
-            color: #a0d6a0;
-        }
-
-        .auction-time {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #8b7355;
-            font-style: italic;
-        }
-
-        /* Sell View - Bank Items Grid */
-        .bank-items-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1rem;
-            padding: 0.5rem;
-        }
-
-        .bank-item-card {
-            background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.7));
+            background: linear-gradient(145deg, rgba(29,20,12,0.8), rgba(42,31,22,0.6));
             border: 2px solid #3d2914;
-            border-radius: 8px;
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+            border-radius: 6px;
             transition: all 0.3s ease;
         }
 
-        .bank-item-card:hover {
+        .bank-item:hover {
             border-color: #c4975a;
             transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        /* Auction-specific item states */
+        .auction-item {
+            border-left: 4px solid #2a5a2a;
+        }
+
+        .listing-item.active {
+            border-left: 4px solid #c4975a;
+        }
+
+        .listing-item.sold {
+            border-left: 4px solid #4a7a4a;
+            opacity: 0.85;
         }
 
         .item-icon {
@@ -992,11 +843,33 @@ function addAuctionStyles() {
             text-align: center;
         }
 
-        .item-info {
-            flex: 1;
+        .listing-status-badge {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            font-size: 0.6rem;
+            font-weight: bold;
+            padding: 0.2rem 0.4rem;
+            border-radius: 10px;
+            text-transform: uppercase;
         }
 
-        .item-info .item-name {
+        .listing-status-badge.active {
+            background: #c4975a;
+            color: #1d140c;
+        }
+
+        .listing-status-badge.sold {
+            background: #4a7a4a;
+            color: #fff;
+        }
+
+        .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-name {
             font-family: 'Cinzel', serif;
             font-size: 1rem;
             font-weight: 600;
@@ -1004,95 +877,138 @@ function addAuctionStyles() {
             margin-bottom: 0.25rem;
         }
 
-        .item-type {
+        .item-details {
             font-size: 0.8rem;
+            color: #b8b3a8;
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .item-type {
             color: #8b7355;
         }
 
-        .sell-btn {
-            background: linear-gradient(145deg, #5a3a2a, #4a2a1a);
-            border-color: #7a5a3a;
-            color: #d4a76a;
+        .item-profession {
+            color: #9a8566;
+        }
+
+        .auction-trade-info {
+            font-size: 0.8rem;
+            color: #9a8566;
+            font-style: italic;
+        }
+
+        .trade-want {
+            color: #b8b3a8;
+        }
+
+        .item-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: linear-gradient(145deg, #2a1f16, #1d140c);
+            border: 2px solid #3d2914;
+            color: #b8b3a8;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: 'Cinzel', serif;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .buy-btn:hover {
+            border-color: #2a5a2a;
+            color: #90c690;
+            background: linear-gradient(145deg, #2a3a2a, #1a2a1a);
         }
 
         .sell-btn:hover {
-            border-color: #9a7a5a;
-            color: #e4b77a;
-        }
-
-        /* My Listings View */
-        .my-listings-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1rem;
-            padding: 0.5rem;
-        }
-
-        .listing-card {
-            background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.7));
-            border: 2px solid #3d2914;
-            border-radius: 8px;
-            padding: 1rem;
-            position: relative;
-        }
-
-        .listing-card.sold {
-            border-color: #4a7a4a;
-            background: linear-gradient(145deg, rgba(29,30,20,0.9), rgba(35,42,31,0.7));
-        }
-
-        .listing-status {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            font-size: 0.8rem;
-            font-weight: bold;
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            background: rgba(0,0,0,0.7);
-        }
-
-        .listing-card.sold .listing-status {
-            color: #90c690;
-        }
-
-        .listing-card.active .listing-status {
+            border-color: #c4975a;
             color: #c4975a;
-        }
-
-        .listing-trade {
-            margin: 2rem 0 1rem 0;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem;
-            background: rgba(42,31,22,0.5);
-            border-radius: 6px;
-            border: 1px solid #3d2914;
-        }
-
-        .listing-actions {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .cancel-btn {
-            background: linear-gradient(145deg, #5a2a2a, #4a1a1a);
-            border-color: #7a3a3a;
-            color: #d46a6a;
+            background: linear-gradient(145deg, #3a2f26, #2a1f16);
         }
 
         .cancel-btn:hover {
-            border-color: #9a5a5a;
-            color: #e47a7a;
+            border-color: #5a2a2a;
+            color: #d46a6a;
+            background: linear-gradient(145deg, #3a2a2a, #2a1a1a);
         }
 
-        .listing-time {
-            text-align: center;
+        .btn-icon {
+            font-size: 0.9rem;
+        }
+
+        .sold-indicator {
+            color: #90c690;
             font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* Empty State */
+        .empty-bank {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
             color: #8b7355;
-            font-style: italic;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-bank h3 {
+            font-family: 'Cinzel', serif;
+            margin-bottom: 0.5rem;
+            color: #c4975a;
+        }
+
+        /* Filter Tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(29,20,12,0.5);
+            border-bottom: 2px solid #3d2914;
+        }
+
+        .filter-tab {
+            background: linear-gradient(145deg, #2a1f16, #1d140c);
+            border: 2px solid #3d2914;
+            color: #8b7355;
+            padding: 0.6rem 1.2rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+            text-align: center;
+        }
+
+        .filter-tab:hover {
+            border-color: #c4975a;
+            color: #c4975a;
+        }
+
+        .filter-tab.active {
+            background: linear-gradient(145deg, #c4975a, #a25612);
+            border-color: #c4975a;
+            color: #1d140c;
         }
 
         /* Modals */
@@ -1116,6 +1032,8 @@ function addAuctionStyles() {
             padding: 2rem;
             max-width: 500px;
             width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
             position: relative;
         }
 
@@ -1257,28 +1175,6 @@ function addAuctionStyles() {
             font-weight: bold;
         }
 
-        /* Empty State */
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #8b7355;
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .empty-state h3 {
-            font-family: 'Cinzel', serif;
-            margin-bottom: 0.5rem;
-            color: #c4975a;
-        }
-
-        .empty-state p {
-            opacity: 0.8;
-        }
-
         /* Particles */
         .particles {
             position: absolute;
@@ -1316,160 +1212,7 @@ function addAuctionStyles() {
             }
         }
 
-        /* Scrollbar */
-        .auction-content::-webkit-scrollbar {
-            width: 12px;
-        }
-
-        .auction-content::-webkit-scrollbar-track {
-            background: rgba(29,20,12,0.5);
-            border-radius: 6px;
-        }
-
-        .auction-content::-webkit-scrollbar-thumb {
-            background: linear-gradient(145deg, #c4975a, #a25612);
-            border-radius: 6px;
-        }
-
-        .auction-content::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(145deg, #d4a76a, #b26622);
-        }
-
-        /* Disabled button state */
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        button:disabled:hover {
-            background: linear-gradient(145deg, #2a1f16, #1d140c) !important;
-            border-color: #3d2914 !important;
-            color: #b8b3a8 !important;
-        }
-
-        /* Success/Error indicators */
-        .success-indicator {
-            color: #90c690;
-            font-weight: bold;
-        }
-
-        .error-indicator {
-            color: #d46a6a;
-            font-weight: bold;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .auction-title h1 {
-                font-size: 1.8rem;
-            }
-
-            .auction-subtitle {
-                font-size: 0.9rem;
-            }
-
-            .nav-tab {
-                padding: 0.75rem 0.5rem;
-                font-size: 0.9rem;
-                flex-direction: column;
-                gap: 0.25rem;
-            }
-
-            .tab-icon {
-                font-size: 1rem;
-            }
-
-            .auction-content {
-                padding: 0.5rem;
-            }
-
-            .auctions-grid, .bank-items-grid, .my-listings-grid {
-                grid-template-columns: 1fr;
-                gap: 0.75rem;
-            }
-
-            .auction-trade, .listing-trade {
-                flex-direction: column;
-                gap: 0.5rem;
-                text-align: center;
-            }
-
-            .trade-arrow {
-                transform: rotate(90deg);
-            }
-
-            .trade-preview {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .trade-preview .trade-arrow {
-                transform: rotate(90deg);
-                font-size: 1.5rem;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 1.5rem;
-                margin: 1rem;
-            }
-
-            .form-actions {
-                flex-direction: column;
-                gap: 0.75rem;
-            }
-
-            .bank-item-card {
-                flex-direction: column;
-                text-align: center;
-                gap: 0.75rem;
-            }
-
-            .item-actions {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .auction-header {
-                min-height: 20vh;
-            }
-
-            .auction-title h1 {
-                font-size: 1.5rem;
-            }
-
-            .nav-tab {
-                padding: 0.5rem 0.25rem;
-                font-size: 0.8rem;
-            }
-
-            .auction-card, .bank-item-card, .listing-card {
-                padding: 0.75rem;
-            }
-
-            .trade-item-display {
-                flex-direction: column;
-                text-align: center;
-                gap: 0.25rem;
-            }
-
-            .trade-item-display img {
-                width: 32px;
-                height: 32px;
-            }
-
-            .item-name {
-                font-size: 0.8rem !important;
-            }
-
-            .item-amount {
-                font-size: 0.7rem !important;
-            }
-        }
-
-        /* Custom Message Box Integration */
+        /* Message Box */
         .custom-message-box {
             position: fixed;
             top: 0;
@@ -1512,90 +1255,97 @@ function addAuctionStyles() {
             transition: all 0.3s ease;
         }
 
-        .message-ok-btn:hover {
-            background: linear-gradient(145deg, #d4a76a, #b26622);
-            transform: translateY(-1px);
+        /* Button States */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        /* Loading states */
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #c4975a;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            transform: translate(-50%, -50%);
-        }
-
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        /* Hover effects for interactive elements */
-        .auction-card:hover .buy-btn {
-            transform: scale(1.05);
-        }
-
-        .bank-item-card:hover .sell-btn {
-            transform: scale(1.05);
-        }
-
-        .listing-card:hover .cancel-btn {
-            transform: scale(1.05);
-        }
-
-        /* Animation for new items */
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .bank-title {
+                font-size: 1.4rem;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+
+            .filter-tab {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+
+            .bank-item {
+                gap: 0.5rem;
+                padding: 0.5rem;
+            }
+
+            .item-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .action-btn {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.7rem;
+            }
+
+            .auction-trade-info {
+                font-size: 0.7rem;
+            }
+
+            .trade-preview {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .trade-preview .trade-arrow {
+                transform: rotate(90deg);
+                font-size: 1.5rem;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .filter-tabs {
+                flex-direction: column;
+                gap: 0.25rem;
+                padding: 0.5rem;
+            }
+
+            .filter-tab {
+                flex: none;
             }
         }
 
-        .auction-card, .bank-item-card, .listing-card {
-            animation: slideIn 0.3s ease-out;
-        }
+        /* Ultra Mobile (320px and below) */
+        @media (max-width: 320px) {
+            .bank-title {
+                font-size: 1.2rem;
+            }
 
-        /* Tooltip styles for better UX */
-        [data-tooltip] {
-            position: relative;
-        }
+            .bank-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
 
-        [data-tooltip]::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.9);
-            color: #c4975a;
-            padding: 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 100;
-        }
+            .item-info {
+                order: 2;
+            }
 
-        [data-tooltip]:hover::after {
-            opacity: 1;
+            .item-actions {
+                order: 3;
+            }
+
+            .auction-trade-info {
+                margin-top: 0.25rem;
+            }
         }
     `;
     document.head.appendChild(style);
