@@ -712,7 +712,7 @@ app.delete('/api/auction/cancel/:auctionId', requireAuth, async (req, res) => {
         const auction = auctions[0];
 
         // Return items to seller's bank
-        await addItemsToBank(seller_id, auction.item_selling, auction.amount_selling);
+        await addItemsToBank(seller_id, auction.item_selling, auction.amount_selling, auction.item_selling_type);
 
         // Delete auction
         await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auctionId}`, {
