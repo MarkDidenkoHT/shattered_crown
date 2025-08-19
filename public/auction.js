@@ -40,15 +40,12 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <!-- Navigation Tabs -->
             <div class="auction-nav">
                 <button class="nav-tab active" data-view="buy">
-                    <span class="tab-icon">🛒</span>
                     Buy
                 </button>
                 <button class="nav-tab" data-view="sell">
-                    <span class="tab-icon">💰</span>
                     Sell
                 </button>
                 <button class="nav-tab" data-view="return">
-                    <span class="tab-icon">📋</span>
                     My Listings
                 </button>
             </div>
@@ -259,7 +256,6 @@ async function loadSellView(container) {
         if (_bankItems.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon">📦</div>
                     <h3>No Items to Sell</h3>
                     <p>You need items in your bank to create auction listings.</p>
                 </div>
@@ -307,7 +303,6 @@ async function loadMyListingsView(container) {
         if (_myListings.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon">📋</div>
                     <h3>No Active Listings</h3>
                     <p>You haven't created any auction listings yet.</p>
                 </div>
@@ -318,7 +313,7 @@ async function loadMyListingsView(container) {
                     ${_myListings.map(listing => `
                         <div class="listing-card ${listing.status ? 'sold' : 'active'}" data-listing-id="${listing.id}">
                             <div class="listing-status">
-                                ${listing.status ? '✅ SOLD' : '🕒 ACTIVE'}
+                                ${listing.status ? 'SOLD' : 'ACTIVE'}
                             </div>
                             
                             <div class="listing-trade">
@@ -815,18 +810,12 @@ function addAuctionStyles() {
             font-weight: 600;
         }
 
-        .tab-icon {
-            font-size: 1.2rem;
-        }
-
-        /* Main Content */
         .auction-content {
             flex: 1;
             padding: 1rem;
             overflow-y: auto;
         }
 
-        /* Buy View - Auctions Grid */
         .auctions-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -1257,12 +1246,6 @@ function addAuctionStyles() {
             color: #8b7355;
             text-align: center;
             padding: 2rem;
-        }
-
-        .empty-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
         }
 
         .empty-state h3 {
