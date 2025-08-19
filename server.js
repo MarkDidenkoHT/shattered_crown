@@ -352,31 +352,56 @@ app.get('/api/auction/items', requireAuth, async (req, res) => {
 });
 
 // Create new auction listing
+// Replace your auction creation endpoint with this debug version
 app.post('/api/auction/create', requireAuth, async (req, res) => {
     try {
         const { seller_id, item_selling, amount_selling, item_wanted, amount_wanted } = req.body;
 
+        console.log('=== AUCTION CREATE DEBUG ===');
+        console.log('Request body:', req.body);
+
         // Validate required fields
         if (!seller_id || !item_selling || !amount_selling || !item_wanted || !amount_wanted) {
+            console.log('❌ Missing required fields');
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
+        console.log('✅ All required fields present');
+
         // Check if player has enough items to sell
-        const bankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}`, {
+        const bankUrl = `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}`;
+        console.log('Bank query URL:', bankUrl);
+        
+        const bankResponse = await fetch(bankUrl, {
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
             }
         });
 
+        console.log('Bank response status:', bankResponse.status);
+        
+        if (!bankResponse.ok) {
+            const errorText = await bankResponse.text();
+            console.log('❌ Bank query failed:', errorText);
+            return res.status(500).json({ error: 'Failed to check bank items' });
+        }
+
         const bankItems = await bankResponse.json();
+        console.log('Bank items found:', bankItems);
+        
         const totalAmount = bankItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+        console.log('Total amount in bank:', totalAmount, 'Required:', amount_selling);
 
         if (totalAmount < amount_selling) {
+            console.log('❌ Insufficient items in bank');
             return res.status(400).json({ error: 'Insufficient items in bank' });
         }
 
+        console.log('✅ Player has enough items');
+
         // Remove items from seller's bank
+        console.log('🔄 Starting bank item removal...');
         let remainingToRemove = amount_selling;
         for (const bankItem of bankItems) {
             if (remainingToRemove <= 0) break;
@@ -384,18 +409,25 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
             const amountToTake = Math.min(remainingToRemove, bankItem.amount);
             remainingToRemove -= amountToTake;
 
+            console.log(`Removing ${amountToTake} of ${bankItem.item} from bank entry ${bankItem.id}`);
+
             if (amountToTake === bankItem.amount) {
                 // Remove entire entry
-                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                const deleteResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
                     method: 'DELETE',
                     headers: {
                         'apikey': process.env.SUPABASE_ANON_KEY,
                         'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
                     }
                 });
+                console.log('Delete bank entry response status:', deleteResponse.status);
+                if (!deleteResponse.ok) {
+                    const deleteError = await deleteResponse.text();
+                    console.log('❌ Delete failed:', deleteError);
+                }
             } else {
                 // Update amount
-                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                const updateResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
                     method: 'PATCH',
                     headers: {
                         'apikey': process.env.SUPABASE_ANON_KEY,
@@ -405,11 +437,32 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
                     },
                     body: JSON.stringify({ amount: bankItem.amount - amountToTake })
                 });
+                console.log('Update bank entry response status:', updateResponse.status);
+                if (!updateResponse.ok) {
+                    const updateError = await updateResponse.text();
+                    console.log('❌ Update failed:', updateError);
+                }
             }
         }
 
+        console.log('✅ Bank items removed successfully');
+
         // Create auction listing
-        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction`, {
+        const auctionData = {
+            seller_id,
+            item_selling,
+            amount_selling,
+            item_wanted,
+            amount_wanted,
+            status: false
+        };
+
+        console.log('🔄 Creating auction with data:', auctionData);
+        
+        const auctionUrl = `${process.env.SUPABASE_URL}/rest/v1/auction`;
+        console.log('Auction creation URL:', auctionUrl);
+
+        const auctionResponse = await fetch(auctionUrl, {
             method: 'POST',
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
@@ -417,21 +470,56 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({
-                seller_id,
-                item_selling,
-                amount_selling,
-                item_wanted,
-                amount_wanted,
-                status: false
-            })
+            body: JSON.stringify(auctionData)
         });
 
-        const newAuction = await auctionResponse.json();
+        console.log('Auction response status:', auctionResponse.status);
+        console.log('Auction response headers:', Object.fromEntries(auctionResponse.headers.entries()));
+        
+        const responseText = await auctionResponse.text();
+        console.log('Auction response body (text):', responseText);
+
+        let newAuction;
+        try {
+            newAuction = JSON.parse(responseText);
+            console.log('Auction response body (parsed):', newAuction);
+        } catch (parseError) {
+            console.log('❌ Failed to parse auction response as JSON:', parseError);
+            return res.status(500).json({ error: 'Invalid response from database' });
+        }
+
+        if (!auctionResponse.ok) {
+            console.log('❌ Auction creation failed');
+            // Try to restore items to bank if auction creation failed
+            console.log('🔄 Attempting to restore items to bank...');
+            try {
+                await addItemsToBank(seller_id, item_selling, amount_selling);
+                console.log('✅ Items restored to bank');
+            } catch (restoreError) {
+                console.log('❌ Failed to restore items:', restoreError);
+            }
+            return res.status(auctionResponse.status).json({ error: newAuction.message || 'Failed to create auction' });
+        }
+
+        if (!newAuction || newAuction.length === 0) {
+            console.log('❌ No auction data returned');
+            // Try to restore items to bank
+            try {
+                await addItemsToBank(seller_id, item_selling, amount_selling);
+                console.log('✅ Items restored to bank');
+            } catch (restoreError) {
+                console.log('❌ Failed to restore items:', restoreError);
+            }
+            return res.status(500).json({ error: 'No auction data returned' });
+        }
+
+        console.log('✅ Auction created successfully:', newAuction[0]);
+        console.log('=== AUCTION CREATE DEBUG END ===');
+
         res.json({ success: true, auction: newAuction[0] });
     } catch (error) {
-        console.error('[AUCTION CREATE]', error);
-        res.status(500).json({ error: 'Failed to create auction' });
+        console.error('❌ [AUCTION CREATE ERROR]', error);
+        res.status(500).json({ error: 'Failed to create auction', details: error.message });
     }
 });
 
