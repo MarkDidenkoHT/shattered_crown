@@ -767,11 +767,6 @@ function addAuctionStyles() {
             border-radius: 6px;
         }
 
-        .bank-items-list::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(145deg, #d4a76a, #b26622);
-        }
-
-        /* Bank Items - Enhanced for Auction */
         .bank-item {
             display: flex;
             align-items: center;
@@ -782,12 +777,6 @@ function addAuctionStyles() {
             border: 2px solid #3d2914;
             border-radius: 6px;
             transition: all 0.3s ease;
-        }
-
-        .bank-item:hover {
-            border-color: #c4975a;
-            transform: translateX(2px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         }
 
         /* Auction-specific item states */
@@ -913,24 +902,6 @@ function addAuctionStyles() {
             gap: 0.3rem;
         }
 
-        .buy-btn:hover {
-            border-color: #2a5a2a;
-            color: #90c690;
-            background: linear-gradient(145deg, #2a3a2a, #1a2a1a);
-        }
-
-        .sell-btn:hover {
-            border-color: #c4975a;
-            color: #c4975a;
-            background: linear-gradient(145deg, #3a2f26, #2a1f16);
-        }
-
-        .cancel-btn:hover {
-            border-color: #5a2a2a;
-            color: #d46a6a;
-            background: linear-gradient(145deg, #3a2a2a, #2a1a1a);
-        }
-
         .btn-icon {
             font-size: 0.9rem;
         }
@@ -967,15 +938,6 @@ function addAuctionStyles() {
             color: #c4975a;
         }
 
-        /* Filter Tabs */
-        .filter-tabs {
-            display: flex;
-            gap: 0.5rem;
-            padding: 1rem;
-            background: rgba(29,20,12,0.5);
-            border-bottom: 2px solid #3d2914;
-        }
-
         .filter-tab {
             background: linear-gradient(145deg, #2a1f16, #1d140c);
             border: 2px solid #3d2914;
@@ -988,11 +950,6 @@ function addAuctionStyles() {
             transition: all 0.3s ease;
             flex: 1;
             text-align: center;
-        }
-
-        .filter-tab:hover {
-            border-color: #c4975a;
-            color: #c4975a;
         }
 
         .filter-tab.active {
@@ -1245,7 +1202,6 @@ function addAuctionStyles() {
             transition: all 0.3s ease;
         }
 
-        /* Button States */
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -1302,39 +1258,8 @@ function addAuctionStyles() {
                 gap: 0.75rem;
             }
 
-            .filter-tabs {
-                flex-direction: column;
-                gap: 0.25rem;
-                padding: 0.5rem;
-            }
-
             .filter-tab {
                 flex: none;
-            }
-        }
-
-        /* Ultra Mobile (320px and below) */
-        @media (max-width: 320px) {
-            .bank-title {
-                font-size: 1.2rem;
-            }
-
-            .bank-item {
-                flex-direction: column;
-                text-align: center;
-                gap: 0.5rem;
-            }
-
-            .item-info {
-                order: 2;
-            }
-
-            .item-actions {
-                order: 3;
-            }
-
-            .auction-trade-info {
-                margin-top: 0.25rem;
             }
         }
     `;
