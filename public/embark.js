@@ -35,9 +35,8 @@ function renderEmbarkScreen() {
   const section = _main.querySelector('.character-creation-section');
 
   section.innerHTML = `
-    <div class="art-header">
-      <h1>Choose Your Adventure</h1>
-      <p class="subtitle">Select where you'd like to embark with your champions.</p>
+    <div class="bank-header">
+      <h1>Choose Your Adventure</h1> 
     </div>
     <div class="selection-section">
       <div class="selection-grid">
@@ -116,4 +115,18 @@ function displayMessage(message) {
     messageBox.remove();
     console.log('[MESSAGE] Message box closed.');
   });
+}
+
+function addBankStyles() {
+    const styleId = 'bank-styles';
+    if (document.getElementById(styleId)) return;
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+        .bank-header {
+         background-image: url('assets/art/castle/main_embark.png');
+        }
+    `;
+    document.head.appendChild(style);
 }
