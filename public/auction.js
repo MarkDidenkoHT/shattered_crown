@@ -722,7 +722,7 @@ function addAuctionStyles() {
         }
 
         .bank-header {
-            background-image: url('assets/art/castle/main_bank.png');
+            background-image: url('assets/art/castle/main_auction.png');
         }
 
         .bank-title {
