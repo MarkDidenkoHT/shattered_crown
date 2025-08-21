@@ -351,27 +351,16 @@ app.get('/api/auction/items', requireAuth, async (req, res) => {
     }
 });
 
-// Create new auction listing
-// Replace your auction creation endpoint with this debug version
 app.post('/api/auction/create', requireAuth, async (req, res) => {
     try {
         const { seller_id, item_selling, amount_selling, item_wanted, amount_wanted } = req.body;
 
-        console.log('=== AUCTION CREATE DEBUG ===');
-        console.log('Request body:', req.body);
-
-        // Validate required fields
         if (!seller_id || !item_selling || !amount_selling || !item_wanted || !amount_wanted) {
             console.log('❌ Missing required fields');
             return res.status(400).json({ error: 'Missing required fields' });
         }
-
-        console.log('✅ All required fields present');
-
-        // Check if player has enough items to sell
         const bankUrl = `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}`;
-        console.log('Bank query URL:', bankUrl);
-        
+
         const bankResponse = await fetch(bankUrl, {
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
@@ -388,28 +377,19 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
         }
 
         const bankItems = await bankResponse.json();
-        console.log('Bank items found:', bankItems);
-        
         const totalAmount = bankItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-        console.log('Total amount in bank:', totalAmount, 'Required:', amount_selling);
 
         if (totalAmount < amount_selling) {
             console.log('❌ Insufficient items in bank');
             return res.status(400).json({ error: 'Insufficient items in bank' });
         }
 
-        console.log('✅ Player has enough items');
-
-        // Remove items from seller's bank
-        console.log('🔄 Starting bank item removal...');
         let remainingToRemove = amount_selling;
         for (const bankItem of bankItems) {
             if (remainingToRemove <= 0) break;
 
             const amountToTake = Math.min(remainingToRemove, bankItem.amount);
             remainingToRemove -= amountToTake;
-
-            console.log(`Removing ${amountToTake} of ${bankItem.item} from bank entry ${bankItem.id}`);
 
             if (amountToTake === bankItem.amount) {
                 // Remove entire entry
@@ -420,10 +400,8 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
                         'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
                     }
                 });
-                console.log('Delete bank entry response status:', deleteResponse.status);
                 if (!deleteResponse.ok) {
                     const deleteError = await deleteResponse.text();
-                    console.log('❌ Delete failed:', deleteError);
                 }
             } else {
                 // Update amount
@@ -445,20 +423,18 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
             }
         }
 
-        console.log('✅ Bank items removed successfully');
 
         const auctionData = {
             seller_id,
             item_selling,
             amount_selling,
-            item_selling_type: req.body.item_selling_type,   // 👈 from client
+            item_selling_type: req.body.item_selling_type,   
             item_wanted,
             amount_wanted,
-            item_wanted_type: req.body.item_wanted_type,     // 👈 from client
+            item_wanted_type: req.body.item_wanted_type,    
             status: false
         };
 
-        console.log('🔄 Creating auction with data:', auctionData);
         
         const auctionUrl = `${process.env.SUPABASE_URL}/rest/v1/auction`;
         console.log('Auction creation URL:', auctionUrl);
@@ -473,9 +449,6 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
             },
             body: JSON.stringify(auctionData)
         });
-
-        console.log('Auction response status:', auctionResponse.status);
-        console.log('Auction response headers:', Object.fromEntries(auctionResponse.headers.entries()));
         
         const responseText = await auctionResponse.text();
         console.log('Auction response body (text):', responseText);
@@ -490,9 +463,6 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
         }
 
         if (!auctionResponse.ok) {
-            console.log('❌ Auction creation failed');
-            // Try to restore items to bank if auction creation failed
-            console.log('🔄 Attempting to restore items to bank...');
             try {
                 await addItemsToBank(seller_id, item_selling, amount_selling);
                 console.log('✅ Items restored to bank');
@@ -503,8 +473,7 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
         }
 
         if (!newAuction || newAuction.length === 0) {
-            console.log('❌ No auction data returned');
-            // Try to restore items to bank
+
             try {
                 await addItemsToBank(seller_id, item_selling, amount_selling);
                 console.log('✅ Items restored to bank');
@@ -514,9 +483,6 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
             return res.status(500).json({ error: 'No auction data returned' });
         }
 
-        console.log('✅ Auction created successfully:', newAuction[0]);
-        console.log('=== AUCTION CREATE DEBUG END ===');
-
         res.json({ success: true, auction: newAuction[0] });
     } catch (error) {
         console.error('❌ [AUCTION CREATE ERROR]', error);
@@ -524,7 +490,6 @@ app.post('/api/auction/create', requireAuth, async (req, res) => {
     }
 });
 
-// Add this helper function at the top of your file (with other helper functions)
 async function sendTelegramNotification(chatId, message) {
     if (!process.env.TELEGRAM_BOT_TOKEN) {
         console.warn('TELEGRAM_BOT_TOKEN not set - skipping notification');
@@ -558,7 +523,6 @@ async function sendTelegramNotification(chatId, message) {
     }
 }
 
-// Then modify your /api/auction/buy endpoint like this:
 app.post('/api/auction/buy', requireAuth, async (req, res) => {
     try {
         const { auction_id, buyer_id } = req.body;
@@ -567,7 +531,6 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Get auction details with seller's chat_id
         const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false&select=*,seller:seller_id(chat_id,account_name)`, {
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
