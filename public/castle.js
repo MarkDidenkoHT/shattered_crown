@@ -235,6 +235,10 @@ function showRoadmapModal() {
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">30 October 2025</div>
+                    <div class="roadmap-feature">New Gods!</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">30 October 2025</div>
                     <div class="roadmap-feature">PvP</div>
                 </div>
                 <div class="roadmap-item">
