@@ -47,41 +47,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[LOGIN] Server response:', data);
 
     if (loginResponse.ok) {
-      currentProfile = data.profile;
-      localStorage.setItem('profile', JSON.stringify(currentProfile));
-      localStorage.setItem('chatId', chatId);
-      authStatus.textContent = 'Login successful!';
-      await redirectToGame();
-    } else {
-      console.warn('[LOGIN] Login failed, attempting registration');
+  currentProfile = data.profile;
+  localStorage.setItem('profile', JSON.stringify(currentProfile));
+  localStorage.setItem('chatId', chatId);
+  
+  // Load user's language preference from profile
+  await loadUserLanguageFromProfile(currentProfile);
+  
+  authStatus.textContent = 'Login successful!';
+  await redirectToGame();
+} else {
+  console.warn('[LOGIN] Login failed, attempting registration');
 
-      // Try to register
-      const regResponse = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId })
-      });
+  // Try to register
+  const regResponse = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chatId })
+  });
 
-      data = await regResponse.json();
-      console.log('[REGISTER] Server response:', data);
+  data = await regResponse.json();
+  console.log('[REGISTER] Server response:', data);
 
-      if (regResponse.ok) {
-        currentProfile = data.profile;
-        localStorage.setItem('profile', JSON.stringify(currentProfile));
-        localStorage.setItem('chatId', chatId);
-        authStatus.textContent = 'Registration successful!';
-        
-        // Show tutorial for new users
-        showTutorial();
-      } else {
-        console.error('[REGISTER] Registration failed:', data.error);
-        authStatus.textContent = data.error || 'Registration failed!';
-      }
+  if (regResponse.ok) {
+    currentProfile = data.profile;
+    localStorage.setItem('profile', JSON.stringify(currentProfile));
+    localStorage.setItem('chatId', chatId);
+    
+    // For new users, save their detected language to profile
+    const currentLang = getCurrentLanguage();
+    if (currentLang !== 'en') {
+      await updateProfileLanguageSetting(currentLang);
     }
-  } catch (err) {
-    console.error('[AUTH] Error:', err);
-    authStatus.textContent = 'Authentication error!';
+    
+    authStatus.textContent = 'Registration successful!';
+    
+    // Show tutorial for new users
+    showTutorial();
+  } else {
+    console.error('[REGISTER] Registration failed:', data.error);
+    authStatus.textContent = data.error || 'Registration failed!';
   }
+}
 });
 
 // Tutorial system
