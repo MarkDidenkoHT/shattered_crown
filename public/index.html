@@ -7,24 +7,85 @@
 <title>Shattered Crown - Login</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script type="text/javascript" src="https://cdn.weglot.com/weglot.min.js"></script>
 <script src="main.js"></script>
+<style>
+  /* Hide Weglot's default language selector */
+  .wg-dropdown, .wg-element, .weglot-dropdown {
+    display: none !important;
+  }
+</style>
 </head>
 <body>
 <div class="main-app-container">
   <div class="particles"></div>
-
   <div class="art-header">
     <h1>Shattered Crown</h1>
   </div>
-
   <div class="login-section">
     <div class="form-container">
       <p id="authStatus">Authenticating via Telegram...</p>
     </div>
   </div>
 </div>
-
 <script>
+  // Initialize Weglot with hidden UI
+  Weglot.initialize({
+    api_key: 'wg_84ac9d225641f5dd0b55f4d7596e5f122',
+    originalLanguage: 'en',
+    destinationLanguages: 'ru',
+    switchers: [] // No automatic switchers
+  });
+
+  // Language detection and initialization
+  window.initializeLanguage = function() {
+    try {
+      const tgUser = Telegram.WebApp.initDataUnsafe?.user;
+      const tgLanguage = tgUser?.language_code;
+      
+      console.log('[LANGUAGE] Telegram language detected:', tgLanguage);
+      
+      // Check for saved language preference first
+      const savedLanguage = localStorage.getItem('userLanguage');
+      
+      let targetLanguage = 'en'; // Default fallback
+      
+      if (savedLanguage) {
+        targetLanguage = savedLanguage;
+        console.log('[LANGUAGE] Using saved preference:', savedLanguage);
+      } else if (tgLanguage && tgLanguage.startsWith('ru')) {
+        targetLanguage = 'ru';
+        console.log('[LANGUAGE] Auto-detected Russian from Telegram');
+      }
+      
+      // Set Weglot language
+      if (targetLanguage === 'ru' && Weglot.getCurrentLang() !== 'ru') {
+        Weglot.switchTo('ru');
+        console.log('[LANGUAGE] Switched to Russian');
+      }
+      
+      // Store the language preference
+      localStorage.setItem('userLanguage', targetLanguage);
+      
+    } catch (error) {
+      console.error('[LANGUAGE] Error initializing language:', error);
+    }
+  };
+
+  // Initialize language when Weglot is ready
+  Weglot.on('languageChanged', function(newLang, prevLang) {
+    console.log('[WEGLOT] Language changed from', prevLang, 'to', newLang);
+    localStorage.setItem('userLanguage', newLang);
+  });
+
+  // Wait for Weglot to be ready, then initialize language
+  document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure Weglot is fully loaded
+    setTimeout(() => {
+      initializeLanguage();
+    }, 100);
+  });
+
   // particles retained as before
   window.addEventListener('load', () => {
     const particles = document.querySelector('.particles');
