@@ -12,11 +12,36 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://telegram.org", "https://esm.sh"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            scriptSrc: [
+                "'self'", 
+                "'unsafe-inline'", 
+                "https://cdn.jsdelivr.net", 
+                "https://cdnjs.cloudflare.com", 
+                "https://telegram.org", 
+                "https://esm.sh",
+                "https://cdn.weglot.com",  // Add Weglot CDN
+                "https://api.weglot.com"   // Weglot API
+            ],
+            styleSrc: [
+                "'self'", 
+                "'unsafe-inline'", 
+                "https://fonts.googleapis.com", 
+                "https://cdn.jsdelivr.net",
+                "https://cdn.weglot.com"   // Weglot styles
+            ],
+            fontSrc: [
+                "'self'", 
+                "https://fonts.gstatic.com",
+                "https://cdn.weglot.com"   // Weglot fonts
+            ],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https:", "wss:", "wss://lzdlfcapkfcobutadffa.supabase.co"],
+            connectSrc: [
+                "'self'", 
+                "https:", 
+                "wss:", 
+                "wss://lzdlfcapkfcobutadffa.supabase.co",
+                "https://api.weglot.com"   // Weglot API connections
+            ],
         },
     },
 }));
