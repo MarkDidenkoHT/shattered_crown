@@ -4,7 +4,7 @@ let _getCurrentProfile;
 let _profile;
 let _playerCharacters = []; // Для хранения персонажей игрока
 
-export async function loadModule(main, { apiCall, getCurrentProfile }) {
+export async function loadModule(main, {refreshTranslations, apiCall, getCurrentProfile }) {
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
@@ -52,6 +52,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     await fetchPlayerCharacters(); // Fetch characters to display profession buildings
     renderCastleScene();
     setupInteractions();
+
+    refreshTranslations();
 }
 
 async function fetchPlayerCharacters() {
