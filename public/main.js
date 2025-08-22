@@ -491,27 +491,42 @@ async function getPlayerCharacterCount(playerId) {
 function refreshWeglotTranslations() {
   console.log('[TRANSLATION] refreshWeglotTranslations called');
   console.log('[TRANSLATION] Weglot available:', typeof Weglot !== 'undefined');
-  console.log('[TRANSLATION] Weglot.translate available:', typeof Weglot !== 'undefined' && typeof Weglot.translate === 'function');
   
-  if (typeof Weglot !== 'undefined' && typeof Weglot.translate === 'function') {
+  if (typeof Weglot !== 'undefined') {
     try {
-      Weglot.translate();
-      console.log('[TRANSLATION] Weglot translate triggered');
+      // Method 1: Try using the refresh method if it exists
+      if (typeof Weglot.refresh === 'function') {
+        Weglot.refresh();
+        console.log('[TRANSLATION] Weglot refresh triggered');
+        return;
+      }
+      
+      // Method 2: Try forcing a re-scan by switching language back and forth
+      if (typeof Weglot.getCurrentLang === 'function' && typeof Weglot.switchTo === 'function') {
+        const currentLang = Weglot.getCurrentLang();
+        // Trigger a micro language switch to force re-scan
+        setTimeout(() => {
+          Weglot.switchTo(currentLang);
+          console.log('[TRANSLATION] Weglot re-scan triggered via language switch');
+        }, 50);
+        return;
+      }
+      
+      // Method 3: Dispatch a custom event to trigger Weglot re-scan
+      const event = new CustomEvent('weglot:refresh');
+      document.dispatchEvent(event);
+      console.log('[TRANSLATION] Weglot refresh event dispatched');
+      
     } catch (error) {
-      console.error('[TRANSLATION] Weglot translate error:', error);
+      console.error('[TRANSLATION] Weglot refresh error:', error);
     }
   } else {
-    console.log('[TRANSLATION] Weglot not ready yet, skipping refresh');
+    console.log('[TRANSLATION] Weglot not available, skipping refresh');
     
-    // Optional: Try again after a short delay if Weglot isn't ready
+    // Try again after a delay if Weglot isn't ready
     setTimeout(() => {
-      if (typeof Weglot !== 'undefined' && typeof Weglot.translate === 'function') {
-        try {
-          Weglot.translate();
-          console.log('[TRANSLATION] Weglot translate triggered (delayed)');
-        } catch (error) {
-          console.error('[TRANSLATION] Weglot translate error (delayed):', error);
-        }
+      if (typeof Weglot !== 'undefined') {
+        refreshWeglotTranslations();
       }
     }, 500);
   }
