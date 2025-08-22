@@ -488,6 +488,17 @@ async function getPlayerCharacterCount(playerId) {
   }
 }
 
+function refreshWeglotTranslations() {
+  if (typeof Weglot !== 'undefined' && Weglot.refresh) {
+    try {
+      Weglot.refresh();
+      console.log('[TRANSLATION] Weglot refresh triggered');
+    } catch (error) {
+      console.error('[TRANSLATION] Weglot refresh error:', error);
+    }
+  }
+}
+
 async function loadModule(name, extraArgs = {}) {
   const main = document.querySelector(".main-app-container");
   main.innerHTML = "";
@@ -500,8 +511,13 @@ async function loadModule(name, extraArgs = {}) {
       supabaseConfig,
       getCurrentProfile,
       apiCall,
+      refreshTranslations: refreshWeglotTranslations,
       ...extraArgs
     });
+    
+    // Refresh translations after module loads
+    refreshWeglotTranslations();
+    
     console.log(`[MODULE] Loaded module: ${name}`);
   } catch (error) {
     console.error(`[MODULE] Error loading module ${name}:`, error);
