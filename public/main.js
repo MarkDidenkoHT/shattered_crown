@@ -489,6 +489,10 @@ async function getPlayerCharacterCount(playerId) {
 }
 
 function refreshWeglotTranslations() {
+  console.log('[TRANSLATION] refreshWeglotTranslations called');
+  console.log('[TRANSLATION] Weglot available:', typeof Weglot !== 'undefined');
+  console.log('[TRANSLATION] Weglot.refresh available:', typeof Weglot !== 'undefined' && Weglot.refresh);
+  
   if (typeof Weglot !== 'undefined' && Weglot.refresh) {
     try {
       Weglot.refresh();
@@ -496,6 +500,8 @@ function refreshWeglotTranslations() {
     } catch (error) {
       console.error('[TRANSLATION] Weglot refresh error:', error);
     }
+  } else {
+    console.log('[TRANSLATION] Weglot not ready yet, skipping refresh');
   }
 }
 
