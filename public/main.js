@@ -1,11 +1,114 @@
 let supabaseConfig = null;
 let currentProfile = null;
 
+// Language management functions
+function getCurrentLanguage() {
+  if (typeof Weglot !== 'undefined') {
+    return Weglot.getCurrentLang();
+  }
+  return localStorage.getItem('userLanguage') || 'en';
+}
+
+function switchLanguage(langCode) {
+  console.log('[LANGUAGE] Switching to:', langCode);
+  
+  if (typeof Weglot !== 'undefined') {
+    Weglot.switchTo(langCode);
+  }
+  
+  localStorage.setItem('userLanguage', langCode);
+  
+  // Update profile settings if user is logged in
+  if (currentProfile) {
+    updateProfileLanguageSetting(langCode);
+  }
+}
+
+async function updateProfileLanguageSetting(language) {
+  try {
+    const currentSettings = currentProfile.settings || {};
+    const updatedSettings = {
+      ...currentSettings,
+      language: language
+    };
+
+    const response = await apiCall(`/api/supabase/rest/v1/profiles?id=eq.${currentProfile.id}`, 'PATCH', {
+      settings: updatedSettings
+    });
+
+    if (response.ok) {
+      currentProfile.settings = updatedSettings;
+      localStorage.setItem('profile', JSON.stringify(currentProfile));
+      console.log('[LANGUAGE] Profile language setting updated');
+    }
+  } catch (error) {
+    console.error('[LANGUAGE] Failed to update profile language setting:', error);
+  }
+}
+
+async function loadUserLanguageFromProfile(profile) {
+  try {
+    if (profile?.settings?.language) {
+      console.log('[LANGUAGE] Loading language from profile:', profile.settings.language);
+      switchLanguage(profile.settings.language);
+      return profile.settings.language;
+    }
+    return null;
+  } catch (error) {
+    console.error('[LANGUAGE] Error loading language from profile:', error);
+    return null;
+  }
+}
+
+// Initialize language detection
+function initializeLanguageDetection() {
+  try {
+    const tgUser = Telegram.WebApp.initDataUnsafe?.user;
+    const tgLanguage = tgUser?.language_code;
+    
+    console.log('[LANGUAGE] Telegram language detected:', tgLanguage);
+    
+    // Check for saved language preference first
+    const savedLanguage = localStorage.getItem('userLanguage');
+    
+    let targetLanguage = 'en'; // Default fallback
+    
+    if (savedLanguage) {
+      targetLanguage = savedLanguage;
+      console.log('[LANGUAGE] Using saved preference:', savedLanguage);
+    } else if (tgLanguage && tgLanguage.startsWith('ru')) {
+      targetLanguage = 'ru';
+      console.log('[LANGUAGE] Auto-detected Russian from Telegram');
+    }
+    
+    // Store the language preference
+    localStorage.setItem('userLanguage', targetLanguage);
+    
+    // Wait for Weglot to be ready, then set language
+    if (typeof Weglot !== 'undefined') {
+      if (targetLanguage === 'ru' && Weglot.getCurrentLang() !== 'ru') {
+        setTimeout(() => {
+          Weglot.switchTo('ru');
+          console.log('[LANGUAGE] Switched to Russian');
+        }, 500);
+      }
+    }
+    
+  } catch (error) {
+    console.error('[LANGUAGE] Error initializing language detection:', error);
+  }
+}
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[INIT] DOMContentLoaded triggered');
 
   const authStatus = document.getElementById('authStatus');
+
+  // Wait a bit for Weglot to load, then initialize language detection
+  setTimeout(() => {
+    initializeLanguageDetection();
+  }, 1000);
 
   // Load Supabase configuration
   try {
@@ -47,48 +150,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[LOGIN] Server response:', data);
 
     if (loginResponse.ok) {
-  currentProfile = data.profile;
-  localStorage.setItem('profile', JSON.stringify(currentProfile));
-  localStorage.setItem('chatId', chatId);
-  
-  // Load user's language preference from profile
-  await loadUserLanguageFromProfile(currentProfile);
-  
-  authStatus.textContent = 'Login successful!';
-  await redirectToGame();
-} else {
-  console.warn('[LOGIN] Login failed, attempting registration');
+      currentProfile = data.profile;
+      localStorage.setItem('profile', JSON.stringify(currentProfile));
+      localStorage.setItem('chatId', chatId);
+      
+      // Load user's language preference from profile
+      await loadUserLanguageFromProfile(currentProfile);
+      
+      authStatus.textContent = 'Login successful!';
+      await redirectToGame();
+    } else {
+      console.warn('[LOGIN] Login failed, attempting registration');
 
-  // Try to register
-  const regResponse = await fetch('/api/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chatId })
-  });
+      // Try to register
+      const regResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId })
+      });
 
-  data = await regResponse.json();
-  console.log('[REGISTER] Server response:', data);
+      data = await regResponse.json();
+      console.log('[REGISTER] Server response:', data);
 
-  if (regResponse.ok) {
-    currentProfile = data.profile;
-    localStorage.setItem('profile', JSON.stringify(currentProfile));
-    localStorage.setItem('chatId', chatId);
-    
-    // For new users, save their detected language to profile
-    const currentLang = getCurrentLanguage();
-    if (currentLang !== 'en') {
-      await updateProfileLanguageSetting(currentLang);
+      if (regResponse.ok) {
+        currentProfile = data.profile;
+        localStorage.setItem('profile', JSON.stringify(currentProfile));
+        localStorage.setItem('chatId', chatId);
+        
+        // For new users, save their detected language to profile
+        const currentLang = getCurrentLanguage();
+        if (currentLang !== 'en') {
+          await updateProfileLanguageSetting(currentLang);
+        }
+        
+        authStatus.textContent = 'Registration successful!';
+        
+        // Show tutorial for new users
+        showTutorial();
+      } else {
+        console.error('[REGISTER] Registration failed:', data.error);
+        authStatus.textContent = data.error || 'Registration failed!';
+      }
     }
-    
-    authStatus.textContent = 'Registration successful!';
-    
-    // Show tutorial for new users
-    showTutorial();
-  } else {
-    console.error('[REGISTER] Registration failed:', data.error);
-    authStatus.textContent = data.error || 'Registration failed!';
+  } catch (err) {
+    console.error('[AUTH] Error:', err);
+    authStatus.textContent = 'Authentication error!';
   }
-}
 });
 
 // Tutorial system
@@ -495,70 +602,7 @@ window.gameAuth = {
   logout,
   apiCall,
   loadModule,
-  supabaseConfig: null
+  supabaseConfig: null,
+  getCurrentLanguage,
+  switchLanguage
 };
-
-// Add these functions to your main.js file
-
-// Language management functions
-function getCurrentLanguage() {
-  if (typeof Weglot !== 'undefined') {
-    return Weglot.getCurrentLang();
-  }
-  return localStorage.getItem('userLanguage') || 'en';
-}
-
-function switchLanguage(langCode) {
-  console.log('[LANGUAGE] Switching to:', langCode);
-  
-  if (typeof Weglot !== 'undefined') {
-    Weglot.switchTo(langCode);
-  }
-  
-  localStorage.setItem('userLanguage', langCode);
-  
-  // Update profile settings if user is logged in
-  if (currentProfile) {
-    updateProfileLanguageSetting(langCode);
-  }
-}
-
-async function updateProfileLanguageSetting(language) {
-  try {
-    const currentSettings = currentProfile.settings || {};
-    const updatedSettings = {
-      ...currentSettings,
-      language: language
-    };
-
-    const response = await apiCall(`/api/supabase/rest/v1/profiles?id=eq.${currentProfile.id}`, 'PATCH', {
-      settings: updatedSettings
-    });
-
-    if (response.ok) {
-      currentProfile.settings = updatedSettings;
-      localStorage.setItem('profile', JSON.stringify(currentProfile));
-      console.log('[LANGUAGE] Profile language setting updated');
-    }
-  } catch (error) {
-    console.error('[LANGUAGE] Failed to update profile language setting:', error);
-  }
-}
-
-async function loadUserLanguageFromProfile(profile) {
-  try {
-    if (profile?.settings?.language) {
-      console.log('[LANGUAGE] Loading language from profile:', profile.settings.language);
-      switchLanguage(profile.settings.language);
-      return profile.settings.language;
-    }
-    return null;
-  } catch (error) {
-    console.error('[LANGUAGE] Error loading language from profile:', error);
-    return null;
-  }
-}
-
-// Add language functions to global API
-window.gameAuth.getCurrentLanguage = getCurrentLanguage;
-window.gameAuth.switchLanguage = switchLanguage;
