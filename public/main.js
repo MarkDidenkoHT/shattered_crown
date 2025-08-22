@@ -490,3 +490,68 @@ window.gameAuth = {
   loadModule,
   supabaseConfig: null
 };
+
+// Add these functions to your main.js file
+
+// Language management functions
+function getCurrentLanguage() {
+  if (typeof Weglot !== 'undefined') {
+    return Weglot.getCurrentLang();
+  }
+  return localStorage.getItem('userLanguage') || 'en';
+}
+
+function switchLanguage(langCode) {
+  console.log('[LANGUAGE] Switching to:', langCode);
+  
+  if (typeof Weglot !== 'undefined') {
+    Weglot.switchTo(langCode);
+  }
+  
+  localStorage.setItem('userLanguage', langCode);
+  
+  // Update profile settings if user is logged in
+  if (currentProfile) {
+    updateProfileLanguageSetting(langCode);
+  }
+}
+
+async function updateProfileLanguageSetting(language) {
+  try {
+    const currentSettings = currentProfile.settings || {};
+    const updatedSettings = {
+      ...currentSettings,
+      language: language
+    };
+
+    const response = await apiCall(`/api/supabase/rest/v1/profiles?id=eq.${currentProfile.id}`, 'PATCH', {
+      settings: updatedSettings
+    });
+
+    if (response.ok) {
+      currentProfile.settings = updatedSettings;
+      localStorage.setItem('profile', JSON.stringify(currentProfile));
+      console.log('[LANGUAGE] Profile language setting updated');
+    }
+  } catch (error) {
+    console.error('[LANGUAGE] Failed to update profile language setting:', error);
+  }
+}
+
+async function loadUserLanguageFromProfile(profile) {
+  try {
+    if (profile?.settings?.language) {
+      console.log('[LANGUAGE] Loading language from profile:', profile.settings.language);
+      switchLanguage(profile.settings.language);
+      return profile.settings.language;
+    }
+    return null;
+  } catch (error) {
+    console.error('[LANGUAGE] Error loading language from profile:', error);
+    return null;
+  }
+}
+
+// Add language functions to global API
+window.gameAuth.getCurrentLanguage = getCurrentLanguage;
+window.gameAuth.switchLanguage = switchLanguage;
