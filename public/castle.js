@@ -63,7 +63,6 @@ export async function loadModule(main, {refreshTranslations, apiCall, getCurrent
         console.error('[CASTLE] refreshTranslations is not a function:', refreshTranslations);
     }
 }
-}
 
 async function fetchPlayerCharacters() {
     try {
