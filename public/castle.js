@@ -5,14 +5,17 @@ let _profile;
 let _playerCharacters = []; // Для хранения персонажей игрока
 
 export async function loadModule(main, {refreshTranslations, apiCall, getCurrentProfile }) {
+    console.log('[CASTLE] loadModule called');
+    console.log('[CASTLE] refreshTranslations function:', typeof refreshTranslations);
+    
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
-
-    _profile = _getCurrentProfile();
+    
+    _profile = _getCurrentProfile(); // ← Fix this syntax error
     if (!_profile) {
         displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login'); // Redirect to login if no profile
+        window.gameAuth.loadModule('login');
         return;
     }
 
@@ -53,7 +56,13 @@ export async function loadModule(main, {refreshTranslations, apiCall, getCurrent
     renderCastleScene();
     setupInteractions();
 
-    refreshTranslations();
+    console.log('[CASTLE] About to call refreshTranslations');
+    if (typeof refreshTranslations === 'function') {
+        refreshTranslations();
+    } else {
+        console.error('[CASTLE] refreshTranslations is not a function:', refreshTranslations);
+    }
+}
 }
 
 async function fetchPlayerCharacters() {
