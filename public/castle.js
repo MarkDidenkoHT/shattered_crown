@@ -100,8 +100,7 @@ function setupInteractions() {
             console.log(`[CASTLE_INTERACTION] Top button clicked: ${action}`);
             
             if (action === 'settings') {
-                displayMessage('Settings functionality coming soon!');
-                // window.gameAuth.loadModule('settings');
+                window.gameAuth.loadModule('settings');
             } else if (action === 'support') {
                 window.gameAuth.loadModule('ticketing_system');
             } else if (action === 'roadmap') {
