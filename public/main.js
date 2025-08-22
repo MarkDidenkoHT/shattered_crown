@@ -491,17 +491,29 @@ async function getPlayerCharacterCount(playerId) {
 function refreshWeglotTranslations() {
   console.log('[TRANSLATION] refreshWeglotTranslations called');
   console.log('[TRANSLATION] Weglot available:', typeof Weglot !== 'undefined');
-  console.log('[TRANSLATION] Weglot.refresh available:', typeof Weglot !== 'undefined' && Weglot.refresh);
+  console.log('[TRANSLATION] Weglot.translate available:', typeof Weglot !== 'undefined' && typeof Weglot.translate === 'function');
   
-  if (typeof Weglot !== 'undefined' && Weglot.refresh) {
+  if (typeof Weglot !== 'undefined' && typeof Weglot.translate === 'function') {
     try {
-      Weglot.refresh();
-      console.log('[TRANSLATION] Weglot refresh triggered');
+      Weglot.translate();
+      console.log('[TRANSLATION] Weglot translate triggered');
     } catch (error) {
-      console.error('[TRANSLATION] Weglot refresh error:', error);
+      console.error('[TRANSLATION] Weglot translate error:', error);
     }
   } else {
     console.log('[TRANSLATION] Weglot not ready yet, skipping refresh');
+    
+    // Optional: Try again after a short delay if Weglot isn't ready
+    setTimeout(() => {
+      if (typeof Weglot !== 'undefined' && typeof Weglot.translate === 'function') {
+        try {
+          Weglot.translate();
+          console.log('[TRANSLATION] Weglot translate triggered (delayed)');
+        } catch (error) {
+          console.error('[TRANSLATION] Weglot translate error (delayed):', error);
+        }
+      }
+    }, 500);
   }
 }
 
