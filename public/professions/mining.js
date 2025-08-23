@@ -753,7 +753,7 @@ function createOreBreakingEffect(oreInputSlot) {
       scale: Math.random() * 0.5 + 0.5,
       duration: Math.random() * 1.2 + 0.8,
       ease: "power2.out",
-      onComplete: () => particle.parentNode?.remove()
+      onComplete: () => particle.remove()
     });
   }
   
@@ -791,7 +791,7 @@ function createRockDustEffect(row) {
       opacity: 0,
       duration: Math.random() * 2 + 1,
       ease: "power1.out",
-      onComplete: () => particle.parentNode?.remove()
+      onComplete: () => particle.remove()
     });
   }
   
@@ -1014,7 +1014,7 @@ function createImpactParticles(row) {
         opacity: 0,
         duration: Math.random() * 0.8 + 0.5,
         ease: "power2.out",
-        onComplete: () => particle.parentNode?.remove()
+        onComplete: () => particle.remove()
       });
     }, i * 50);
   }
@@ -1068,7 +1068,7 @@ function createSuccessSparkles(element) {
       scale: 0,
       duration: 1,
       ease: "power2.out",
-      onComplete: () => sparkle.parentNode?.remove()
+      onComplete: () => sparkle.remove()
     });
   }
 }
@@ -1097,7 +1097,7 @@ function createDebrisParticles(rockFormation) {
       opacity: 0,
       duration: Math.random() * 1.5 + 1,
       ease: "power2.out",
-      onComplete: () => debris.parentNode?.remove()
+      onComplete: () => debris.remove()
     });
   }
 }
