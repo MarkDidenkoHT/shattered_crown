@@ -1,6 +1,5 @@
 let context = null;
 let forgingState = null;
-let ingredientCache = new Map();
 
 const ITEM_TYPES = [
   { name: 'Armor', type: 'Armor', sprite: 'armor' },
@@ -32,7 +31,7 @@ export async function startCraftingSession(ctx) {
     const bankItems = await bankResponse.json();
     updateLoadingProgress(loadingModal, "Analyzing metal properties...", "Processing materials...");
     
-    const enriched = await batchEnrichIngredients(bankItems);
+    const enriched = await enrichIngredients(bankItems);
     updateLoadingProgress(loadingModal, "Heating the forge...", "Preparing interface...");
     
     forgingState = {
@@ -64,76 +63,43 @@ export async function startCraftingSession(ctx) {
   }
 }
 
-async function batchEnrichIngredients(bankItems) {
+async function enrichIngredients(bankItems) {
   if (!bankItems.length) return [];
   
   const itemNames = bankItems.map(item => item.item);
   const uniqueNames = [...new Set(itemNames)];
-  const uncachedNames = uniqueNames.filter(name => !ingredientCache.has(name));
+  const namesQuery = uniqueNames.map(name => encodeURIComponent(name)).join(',');
   
-  if (uncachedNames.length > 0) {
-    const namesQuery = uncachedNames.map(name => encodeURIComponent(name)).join(',');
+  try {
+    const response = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`);
+    const ingredients = await response.json();
     
-    try {
-      const response = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`);
-      const ingredients = await response.json();
-      ingredients.forEach(ingredient => ingredientCache.set(ingredient.name, ingredient));
-    } catch (error) {
-      return await fallbackEnrichIngredients(bankItems);
-    }
-  }
-  
-  const enriched = [];
-  for (const item of bankItems) {
-    const cachedIngredient = ingredientCache.get(item.item);
-    if (cachedIngredient) {
-      enriched.push({
-        name: item.item,
-        amount: item.amount,
-        properties: cachedIngredient.properties,
-        sprite: cachedIngredient.sprite,
-      });
-    }
-  }
-  
-  return enriched;
-}
-
-async function fallbackEnrichIngredients(bankItems) {
-  const enriched = [];
-  const BATCH_SIZE = 5;
-  
-  for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-    const batch = bankItems.slice(i, i + BATCH_SIZE);
-    
-    const batchPromises = batch.map(async (item) => {
-      try {
-        const res = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`);
-        const [ingredient] = await res.json();
-        
-        if (ingredient) {
-          return {
-            name: item.item,
-            amount: item.amount,
-            properties: ingredient.properties,
-            sprite: ingredient.sprite,
-          };
-        }
-      } catch (error) {
-        // Silently continue on error
-      }
-      return null;
+    // Create a map for quick lookups
+    const ingredientMap = new Map();
+    ingredients.forEach(ingredient => {
+      ingredientMap.set(ingredient.name, ingredient);
     });
     
-    const batchResults = await Promise.all(batchPromises);
-    enriched.push(...batchResults.filter(Boolean));
-    
-    if (i + BATCH_SIZE < bankItems.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
+    // Enrich all bank items
+    const enriched = [];
+    for (const item of bankItems) {
+      const ingredient = ingredientMap.get(item.item);
+      if (ingredient) {
+        enriched.push({
+          name: item.item,
+          amount: item.amount,
+          properties: ingredient.properties,
+          sprite: ingredient.sprite,
+        });
+      }
     }
+    
+    return enriched;
+    
+  } catch (error) {
+    console.error('Error enriching ingredients:', error);
+    return [];
   }
-  
-  return enriched;
 }
 
 function renderBlacksmithingModal() {
@@ -258,7 +224,6 @@ function setupBlacksmithingEventListeners(modal) {
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
     forgingState = null;
-    ingredientCache.clear();
   });
 
   // Item type selection
@@ -1013,12 +978,4 @@ function injectBlacksmithingCSS() {
   style.id = 'blacksmithing-css';
   style.textContent = css;
   document.head.appendChild(style);
-}
-
-export function clearIngredientCache() {
-  ingredientCache.clear();
-}
-
-export function preloadIngredients(ingredientNames) {
-  return batchEnrichIngredients(ingredientNames.map(name => ({ item: name, amount: 1 })));
 }
