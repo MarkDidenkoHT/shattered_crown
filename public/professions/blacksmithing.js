@@ -400,11 +400,6 @@ function updateCraftButtonState(modal) {
 
 async function startForging(modal) {
   try {
-    console.log('=== FRONTEND FORGING DEBUG ===');
-    console.log('Forging state:', forgingState);
-    console.log('Context profile:', context.profile);
-    console.log('Context profession ID:', context.professionId, typeof context.professionId);
-    
     forgingState.isCraftingStarted = true;
     
     const craftBtn = modal.querySelector('#craft-btn');
@@ -416,121 +411,27 @@ async function startForging(modal) {
     craftBtn.style.display = 'none';
     resultDiv.textContent = 'Heating materials in the forge...';
 
-    // CRITICAL: Ensure all required data exists before API call
-    if (!context.profile || !context.profile.id) {
-      throw new Error('Missing player profile');
-    }
-    
-    if (!forgingState.professionId && !context.professionId) {
-      throw new Error('Missing profession ID');
-    }
-    
-    if (!forgingState.selectedBar || !forgingState.selectedBar.name) {
-      throw new Error('Missing selected bar');
-    }
-    
-    if (!forgingState.selectedPowder || !forgingState.selectedPowder.name) {
-      throw new Error('Missing selected powder');
-    }
-    
-    if (!forgingState.selectedItemType || !forgingState.selectedItemType.name) {
-      throw new Error('Missing selected item type');
-    }
-    
-    // CRITICAL: Ensure profession_id is a number
-    const professionId = forgingState.professionId || context.professionId;
-    const professionIdNum = parseInt(professionId);
-    
-    if (isNaN(professionIdNum)) {
-      throw new Error(`Invalid profession ID: ${professionId}`);
-    }
-    
-    const requestPayload = {
-      player_id: context.profile.id,
-      profession_id: professionIdNum, // Send as number, not string
-      selected_bar: forgingState.selectedBar.name,
-      selected_powder: forgingState.selectedPowder.name,
-      item_type: forgingState.selectedItemType.name
-    };
-    
-    console.log('API request payload:', requestPayload);
-
-    // Reserve ingredients with better error handling
+    // Reserve ingredients
     const reserveRes = await context.apiCall('/functions/v1/reserve_blacksmith_ingredients', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: requestPayload
+      body: {
+        player_id: context.profile.id,
+        profession_id: forgingState.professionId,
+        selected_bar: forgingState.selectedBar.name,
+        selected_powder: forgingState.selectedPowder.name,
+        item_type: forgingState.selectedItemType.name
+      }
     });
 
-    console.log('Reserve response status:', reserveRes.status);
-    console.log('Reserve response headers:', reserveRes.headers);
+    const reserveJson = await reserveRes.json();
     
-    let reserveJson;
-    try {
-      reserveJson = await reserveRes.json();
-      console.log('Reserve response JSON:', reserveJson);
-    } catch (jsonError) {
-      console.error('Failed to parse reserve response as JSON:', jsonError);
-      const responseText = await reserveRes.text();
-      console.error('Raw response text:', responseText);
-      throw new Error('Server returned invalid JSON response');
-    }
-    
-    if (!reserveRes.ok) {
-      console.error('Reserve request failed:', reserveRes.status, reserveJson);
-      resultDiv.textContent = `Material verification failed: ${reserveJson?.error || 'Server error'} (${reserveRes.status})`;
-      
-      // Re-enable craft button
-      craftBtn.style.display = 'block';
-      forgingState.isCraftingStarted = false;
-      return;
-    }
-    
-    if (!reserveJson.success) {
-      console.error('Reserve operation failed:', reserveJson);
+    if (!reserveRes.ok || !reserveJson.success) {
       resultDiv.textContent = `Material verification failed: ${reserveJson?.error || 'Unknown error'}`;
-      
-      // Re-enable craft button
-      craftBtn.style.display = 'block';
-      forgingState.isCraftingStarted = false;
       return;
     }
-    
-    console.log('Reserve successful:', reserveJson);
-    
-    // Store session data
+
     forgingState.sessionId = reserveJson.session_id;
     forgingState.barProperties = reserveJson.bar_properties;
-    
-    console.log('Session ID:', forgingState.sessionId);
-    console.log('Bar properties:', forgingState.barProperties);
-    
-    // Validate bar properties structure
-    if (!Array.isArray(forgingState.barProperties) || forgingState.barProperties.length !== 3) {
-      console.error('Invalid bar properties structure:', forgingState.barProperties);
-      resultDiv.textContent = 'Invalid material properties received from server';
-      
-      // Re-enable craft button
-      craftBtn.style.display = 'block';
-      forgingState.isCraftingStarted = false;
-      return;
-    }
-    
-    // Validate each property row has 3 elements
-    for (let i = 0; i < forgingState.barProperties.length; i++) {
-      const row = forgingState.barProperties[i];
-      if (!Array.isArray(row) || row.length !== 3) {
-        console.error(`Invalid property row ${i}:`, row);
-        resultDiv.textContent = `Invalid material properties structure (row ${i})`;
-        
-        // Re-enable craft button
-        craftBtn.style.display = 'block';
-        forgingState.isCraftingStarted = false;
-        return;
-      }
-    }
 
     // Show forging area and populate properties
     forgingArea.style.display = 'block';
@@ -556,18 +457,8 @@ async function startForging(modal) {
     modal.querySelector('#item-types').style.pointerEvents = 'none';
 
   } catch (error) {
-    console.error('Frontend forging error:', error);
-    console.error('Error stack:', error.stack);
-    
     const resultDiv = modal.querySelector('#craft-result');
-    resultDiv.textContent = `Forge malfunction: ${error.message}`;
-    
-    // Re-enable craft button
-    const craftBtn = modal.querySelector('#craft-btn');
-    if (craftBtn) {
-      craftBtn.style.display = 'block';
-      forgingState.isCraftingStarted = false;
-    }
+    resultDiv.textContent = 'Forge malfunction! Please try again.';
   }
 }
 
