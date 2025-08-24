@@ -64,35 +64,58 @@ export async function startCraftingSession(ctx) {
 }
 
 async function enrichIngredients(bankItems) {
-  if (!bankItems.length) return [];
+  console.log('=== DEBUGGING INGREDIENT ENRICHMENT ===');
+  console.log('Bank items received:', bankItems);
+  
+  if (!bankItems.length) {
+    console.log('No bank items found');
+    return [];
+  }
   
   const itemNames = bankItems.map(item => item.item);
+  console.log('All item names:', itemNames);
+  
   const uniqueNames = [...new Set(itemNames)];
+  console.log('Unique item names:', uniqueNames);
+  
   const namesQuery = uniqueNames.map(name => encodeURIComponent(name)).join(',');
+  console.log('Query string:', namesQuery);
   
   try {
-    const response = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`);
+    const apiUrl = `/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`;
+    console.log('API URL:', apiUrl);
+    
+    const response = await context.apiCall(apiUrl);
     const ingredients = await response.json();
+    console.log('API response:', ingredients);
     
     // Create a map for quick lookups
     const ingredientMap = new Map();
     ingredients.forEach(ingredient => {
       ingredientMap.set(ingredient.name, ingredient);
     });
+    console.log('Ingredient map:', ingredientMap);
     
     // Enrich all bank items
     const enriched = [];
     for (const item of bankItems) {
       const ingredient = ingredientMap.get(item.item);
+      console.log(`Processing ${item.item}:`, ingredient ? 'FOUND' : 'NOT FOUND');
       if (ingredient) {
-        enriched.push({
+        const enrichedItem = {
           name: item.item,
           amount: item.amount,
           properties: ingredient.properties,
           sprite: ingredient.sprite,
-        });
+        };
+        console.log('Enriched item:', enrichedItem);
+        enriched.push(enrichedItem);
       }
     }
+    
+    console.log('Final enriched array:', enriched);
+    console.log('Bars found:', enriched.filter(item => item.name.includes('Bar')));
+    console.log('Powders found:', enriched.filter(item => item.name.includes('Powder')));
     
     return enriched;
     
