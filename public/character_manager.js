@@ -428,7 +428,6 @@ function positionSpellTooltip(e) {
   tooltip.style.top = e.clientY - 10 + 'px';
 }
 
-// Keep all the existing equipment modal functions unchanged...
 async function showEquipmentModal(character, slot, type) {
   try {
     // Fetch available items of this type from bank
@@ -466,22 +465,32 @@ async function showEquipmentModal(character, slot, type) {
         <!-- Available items -->
         ${bankItems.length === 0 
           ? '<p style="color: #999; font-style: italic; text-align: center; padding: 2rem;">No items of this type available in bank</p>'
-          : bankItems.map(item => `
-            <div class="equipment-option ${item.item === currentItem ? 'selected' : ''}" 
-                 data-item="${item.item}"
-                 style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${item.item === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: pointer;">
-                 <img src="assets/art/recipes/${item.item.replace(/\s+/g, '')}.png"
-                   style="width: 48px; height: 48px; border-radius: 4px;"
-                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-              <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
-                ${type.toUpperCase()}
-              </div>
-              <div>
-                <strong style="color: #4CAF50;">${item.item}</strong><br>
-                <span style="color: #999; font-size: 0.9rem;">Available: ${item.amount}</span>
-              </div>
-            </div>
-          `).join('')}
+          : bankItems.map(item => {
+              // Check if item is already equipped by checking if it appears in any character's equipped_items
+              // Note: This is a client-side check for UI feedback, server will do the authoritative check
+              const isEquippedElsewhere = false; // We could implement this check but server will handle it
+              
+              return `
+                <div class="equipment-option ${item.item === currentItem ? 'selected' : ''}" 
+                     data-item="${item.item}"
+                     ${item.amount <= 0 ? 'data-disabled="true"' : ''}
+                     style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${item.item === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${item.amount <= 0 ? 'not-allowed' : 'pointer'}; opacity: ${item.amount <= 0 ? '0.5' : '1'};">
+                     <img src="assets/art/recipes/${item.item.replace(/\s+/g, '')}.png"
+                       style="width: 48px; height: 48px; border-radius: 4px;"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
+                    ${type.toUpperCase()}
+                  </div>
+                  <div style="flex: 1;">
+                    <strong style="color: #4CAF50;">${item.item}</strong><br>
+                    <span style="color: #999; font-size: 0.9rem;">
+                      Available: ${item.amount}
+                      ${item.amount <= 0 ? ' (Out of stock)' : ''}
+                    </span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
         
         <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem;">
           <button class="fantasy-button cancel-btn" style="flex: 1; max-width: 120px;">Cancel</button>
@@ -498,6 +507,10 @@ async function showEquipmentModal(character, slot, type) {
     
     // Handle option selection
     modal.querySelectorAll('.equipment-option').forEach(option => {
+      if (option.dataset.disabled === 'true') {
+        return; // Skip disabled items
+      }
+      
       option.addEventListener('click', () => {
         // Remove previous selection
         modal.querySelectorAll('.equipment-option').forEach(opt => {
@@ -521,12 +534,23 @@ async function showEquipmentModal(character, slot, type) {
       });
     });
     
-    // Handle equip button
+    // Handle equip button with loading state
     equipBtn.addEventListener('click', async () => {
-      await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem);
-      modal.remove();
-      // Refresh the character display
-      await fetchAndRenderCharacters();
+      const originalText = equipBtn.textContent;
+      equipBtn.disabled = true;
+      equipBtn.textContent = 'Processing...';
+      
+      try {
+        await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem);
+        modal.remove();
+        // Refresh the character display
+        await fetchAndRenderCharacters();
+      } catch (error) {
+        // Reset button state on error
+        equipBtn.disabled = false;
+        equipBtn.textContent = originalText;
+        // Error is already handled in equipItem function
+      }
     });
     
     // Handle cancel button
@@ -549,45 +573,36 @@ async function showEquipmentModal(character, slot, type) {
 
 async function equipItem(character, slot, itemName) {
   try {
-    // Get current equipped items
-    const currentEquippedItems = character.equipped_items || {
-      equipped_weapon1: "none",
-      equipped_weapon2: "none", 
-      equipped_armor: "none",
-      equipped_helmet: "none",
-      equipped_trinket: "none",
-      equipped_boots: "none",
-      equipped_gloves: "none",
-      equipped_consumable: "none"
-    };
+    console.log('[CHAR_MGR] Equipping item:', { character_id: character.id, slot, itemName });
     
-    // Update the specific slot
-    const updatedEquippedItems = {
-      ...currentEquippedItems,
-      [slot]: itemName === 'none' ? 'none' : itemName
-    };
-    
-    console.log('[CHAR_MGR] Updating equipment for character', character.id, ':', updatedEquippedItems);
-    
-    // Update character's equipped_items in database
-    const response = await _apiCall(`/api/supabase/rest/v1/characters?id=eq.${character.id}`, {
-      method: 'PATCH',
-      // Remove explicit headers - let _apiCall handle them
+    // Call the server-side equip endpoint
+    const response = await _apiCall('/api/supabase/functions/v1/equip_item', {
+      method: 'POST',
       body: {
-        equipped_items: updatedEquippedItems
+        character_id: character.id,
+        slot: slot,
+        item_name: itemName === 'none' ? null : itemName,
+        player_id: _profile.id
       }
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to update equipment: ${response.status}`);
+      const errorResult = await response.json();
+      throw new Error(errorResult.error || 'Failed to equip item');
     }
     
-    console.log('[CHAR_MGR] Equipment updated successfully');
-    displayMessage(`Equipment updated successfully!`);
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to equip item');
+    }
+    
+    console.log('[CHAR_MGR] Equipment updated successfully:', result);
+    displayMessage(result.message);
     
   } catch (error) {
     console.error('[CHAR_MGR] Error updating equipment:', error);
-    displayMessage('Failed to update equipment. Please try again.');
+    displayMessage(error.message || 'Failed to update equipment. Please try again.');
   }
 }
 
