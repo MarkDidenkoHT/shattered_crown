@@ -86,8 +86,18 @@ async function enrichIngredients(bankItems) {
     console.log('API URL:', apiUrl);
     
     const response = await context.apiCall(apiUrl);
+    console.log('Raw response status:', response.status);
+    console.log('Raw response headers:', response.headers);
+    
     const ingredients = await response.json();
     console.log('API response:', ingredients);
+    console.log('API response type:', typeof ingredients);
+    console.log('API response length:', ingredients?.length);
+    
+    // Let's also try to fetch all ingredients to see what's actually in the table
+    const allIngredientsResponse = await context.apiCall('/api/supabase/rest/v1/ingridients?select=name,properties,sprite');
+    const allIngredients = await allIngredientsResponse.json();
+    console.log('ALL INGREDIENTS in table:', allIngredients);
     
     // Create a map for quick lookups
     const ingredientMap = new Map();
@@ -110,6 +120,12 @@ async function enrichIngredients(bankItems) {
         };
         console.log('Enriched item:', enrichedItem);
         enriched.push(enrichedItem);
+      } else {
+        // Let's see if there's a case-sensitive issue
+        const matchingNames = allIngredients.filter(ing => 
+          ing.name.toLowerCase() === item.item.toLowerCase()
+        );
+        console.log(`Case-insensitive matches for ${item.item}:`, matchingNames);
       }
     }
     
