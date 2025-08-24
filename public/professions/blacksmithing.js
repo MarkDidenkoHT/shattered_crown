@@ -463,12 +463,16 @@ async function startForging(modal) {
 }
 
 async function animateForgeHeatup(modal) {
+  console.log('=== ANIMATE FORGE HEATUP DEBUG ===');
   const rows = modal.querySelectorAll('.property-row');
+  console.log('Rows found:', rows.length);
   
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const slots = row.querySelectorAll('.property-slot');
     const properties = forgingState.barProperties[i];
+    
+    console.log(`Row ${i} properties:`, properties);
     
     // Animate heating effect
     createSparkEffect(row);
@@ -476,31 +480,79 @@ async function animateForgeHeatup(modal) {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     // Populate properties with animation
-    gsap.to(slots, {
-      opacity: 1,
-      scale: 1,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: "back.out(1.2)",
-      onStart: () => {
-        slots[0].textContent = properties[0];
-        slots[1].textContent = properties[1];
-        slots[2].textContent = properties[2];
-      }
-    });
+    if (typeof gsap !== 'undefined') {
+      gsap.to(slots, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "back.out(1.2)",
+        onStart: () => {
+          slots[0].textContent = properties[0];
+          slots[1].textContent = properties[1];
+          slots[2].textContent = properties[2];
+        }
+      });
+    } else {
+      // Fallback without GSAP
+      slots[0].textContent = properties[0];
+      slots[1].textContent = properties[1];
+      slots[2].textContent = properties[2];
+    }
     
     // Enable center slot if bonuses available
     if (forgingState.maxBonuses > 0) {
       const centerSlot = row.querySelector('.prop-center');
-      centerSlot.classList.add('clickable');
-      const bonusCounter = centerSlot.querySelector('.bonus-counter');
-      bonusCounter.style.display = 'flex';
+      console.log(`Row ${i} center slot:`, centerSlot);
+      
+      if (centerSlot) {
+        centerSlot.classList.add('clickable');
+        
+        // ENSURE THE BONUS COUNTER EXISTS
+        let bonusCounter = centerSlot.querySelector('.bonus-counter');
+        console.log(`Row ${i} existing bonus counter:`, bonusCounter);
+        
+        if (!bonusCounter) {
+          console.log(`Creating bonus counter for row ${i}`);
+          bonusCounter = document.createElement('div');
+          bonusCounter.className = 'bonus-counter';
+          bonusCounter.style.cssText = `
+            position: absolute; 
+            top: -8px; 
+            right: -8px; 
+            width: 20px; 
+            height: 20px; 
+            background: #FF4500; 
+            border-radius: 50%; 
+            color: white; 
+            font-size: 0.7rem; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            border: 2px solid #fff;
+          `;
+          bonusCounter.textContent = '0';
+          centerSlot.appendChild(bonusCounter);
+        } else {
+          bonusCounter.style.display = 'flex';
+        }
+        
+        console.log(`Row ${i} final bonus counter:`, bonusCounter);
+      }
     }
   }
+  console.log('=== END ANIMATE FORGE HEATUP DEBUG ===');
 }
 
 function assignBonus(rowIdx, modal) {
+  console.log('=== ASSIGN BONUS DEBUG ===');
+  console.log('rowIdx:', rowIdx);
+  console.log('forgingState.totalAssigned:', forgingState.totalAssigned);
+  console.log('forgingState.maxBonuses:', forgingState.maxBonuses);
+  
   if (forgingState.totalAssigned >= forgingState.maxBonuses) {
+    console.log('Max bonuses reached, returning');
     return;
   }
 
@@ -508,17 +560,52 @@ function assignBonus(rowIdx, modal) {
   forgingState.totalAssigned++;
 
   const row = modal.querySelector(`[data-row="${rowIdx}"]`);
-  const centerSlot = row.querySelector('.prop-center');
-  const bonusCounterEl = centerSlot.querySelector('.bonus-counter');
+  console.log('Row found:', row);
   
-  // Update bonus counter display
-  bonusCounterEl.textContent = forgingState.bonusAssignments[rowIdx];
+  const centerSlot = row?.querySelector('.prop-center');
+  console.log('Center slot found:', centerSlot);
   
-  // Fix: Use modal context to find the bonus counter elements
+  const bonusCounterEl = centerSlot?.querySelector('.bonus-counter');
+  console.log('Bonus counter element found:', bonusCounterEl);
+  console.log('Center slot HTML:', centerSlot?.innerHTML);
+  
+  // Update bonus counter display - ADD NULL CHECK
+  if (bonusCounterEl) {
+    bonusCounterEl.textContent = forgingState.bonusAssignments[rowIdx];
+  } else {
+    console.error('Bonus counter element not found! Creating it...');
+    // Create the bonus counter if it doesn't exist
+    if (centerSlot) {
+      const newBonusCounter = document.createElement('div');
+      newBonusCounter.className = 'bonus-counter';
+      newBonusCounter.style.cssText = `
+        position: absolute; 
+        top: -8px; 
+        right: -8px; 
+        width: 20px; 
+        height: 20px; 
+        background: #FF4500; 
+        border-radius: 50%; 
+        color: white; 
+        font-size: 0.7rem; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-weight: bold; 
+        border: 2px solid #fff;
+      `;
+      newBonusCounter.textContent = forgingState.bonusAssignments[rowIdx];
+      centerSlot.appendChild(newBonusCounter);
+    }
+  }
+  
+  // Update total counter with null checks
   const bonusAssignedEl = modal.querySelector('#bonus-assigned');
   const bonusTotalEl = modal.querySelector('#bonus-total');
   
-  // Add null checks to prevent errors
+  console.log('Bonus assigned element:', bonusAssignedEl);
+  console.log('Bonus total element:', bonusTotalEl);
+  
   if (bonusAssignedEl) {
     bonusAssignedEl.textContent = forgingState.totalAssigned;
   }
@@ -528,26 +615,27 @@ function assignBonus(rowIdx, modal) {
   }
   
   // Visual feedback
-  createHammerStrike(centerSlot);
-  
-  // Make sure GSAP is available before using it
-  if (typeof gsap !== 'undefined') {
-    gsap.to(centerSlot, {
-      backgroundColor: 'rgba(255,69,0,0.6)',
-      duration: 0.2,
-      ease: "power2.out",
-      yoyo: true,
-      repeat: 1
-    });
-  } else {
-    // Fallback animation without GSAP
-    centerSlot.style.backgroundColor = 'rgba(255,69,0,0.6)';
-    setTimeout(() => {
-      centerSlot.style.backgroundColor = '';
-    }, 400);
+  if (centerSlot) {
+    createHammerStrike(centerSlot);
+    
+    // Animation with fallback
+    if (typeof gsap !== 'undefined') {
+      gsap.to(centerSlot, {
+        backgroundColor: 'rgba(255,69,0,0.6)',
+        duration: 0.2,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 1
+      });
+    } else {
+      centerSlot.style.backgroundColor = 'rgba(255,69,0,0.6)';
+      setTimeout(() => {
+        centerSlot.style.backgroundColor = '';
+      }, 400);
+    }
   }
   
-  // Update result text to show progress
+  // Update result text
   const resultDiv = modal.querySelector('#craft-result');
   if (resultDiv) {
     const remaining = forgingState.maxBonuses - forgingState.totalAssigned;
@@ -557,6 +645,8 @@ function assignBonus(rowIdx, modal) {
       resultDiv.textContent = 'All bonuses assigned! Click Finish to complete your masterwork!';
     }
   }
+  
+  console.log('=== END ASSIGN BONUS DEBUG ===');
 }
 
 function createSparkEffect(row) {
