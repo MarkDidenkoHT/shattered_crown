@@ -514,19 +514,49 @@ function assignBonus(rowIdx, modal) {
   // Update bonus counter display
   bonusCounterEl.textContent = forgingState.bonusAssignments[rowIdx];
   
-  // Update total counter
-  modal.querySelector('#bonus-assigned').textContent = forgingState.totalAssigned;
+  // Fix: Use modal context to find the bonus counter elements
+  const bonusAssignedEl = modal.querySelector('#bonus-assigned');
+  const bonusTotalEl = modal.querySelector('#bonus-total');
+  
+  // Add null checks to prevent errors
+  if (bonusAssignedEl) {
+    bonusAssignedEl.textContent = forgingState.totalAssigned;
+  }
+  
+  if (bonusTotalEl) {
+    bonusTotalEl.textContent = forgingState.maxBonuses;
+  }
   
   // Visual feedback
   createHammerStrike(centerSlot);
   
-  gsap.to(centerSlot, {
-    backgroundColor: 'rgba(255,69,0,0.6)',
-    duration: 0.2,
-    ease: "power2.out",
-    yoyo: true,
-    repeat: 1
-  });
+  // Make sure GSAP is available before using it
+  if (typeof gsap !== 'undefined') {
+    gsap.to(centerSlot, {
+      backgroundColor: 'rgba(255,69,0,0.6)',
+      duration: 0.2,
+      ease: "power2.out",
+      yoyo: true,
+      repeat: 1
+    });
+  } else {
+    // Fallback animation without GSAP
+    centerSlot.style.backgroundColor = 'rgba(255,69,0,0.6)';
+    setTimeout(() => {
+      centerSlot.style.backgroundColor = '';
+    }, 400);
+  }
+  
+  // Update result text to show progress
+  const resultDiv = modal.querySelector('#craft-result');
+  if (resultDiv) {
+    const remaining = forgingState.maxBonuses - forgingState.totalAssigned;
+    if (remaining > 0) {
+      resultDiv.textContent = `${remaining} bonus${remaining !== 1 ? 'es' : ''} remaining - keep clicking center properties!`;
+    } else {
+      resultDiv.textContent = 'All bonuses assigned! Click Finish to complete your masterwork!';
+    }
+  }
 }
 
 function createSparkEffect(row) {
