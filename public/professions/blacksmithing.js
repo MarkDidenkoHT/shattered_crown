@@ -135,7 +135,7 @@ function renderBlacksmithingModal() {
         </div>
       </div>
       
-      <div id="forging-area" class="forge-section" style="display: none;">
+      <div id="forging-area" class="forge-section" style="display: block;">
         <div class="forge-workspace">
           <div class="forge-fire"></div>
           <div id="property-rows">
@@ -1058,11 +1058,6 @@ function injectBlacksmithingCSS() {
     }
 
     @media (max-width: 480px) {
-      .blacksmith-modal {
-        width: 98vw;
-        max-height: 98vh;
-        padding: 1rem;
-      }
 
       .property-display {
         width: 240px;
