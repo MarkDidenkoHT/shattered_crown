@@ -163,8 +163,6 @@ function renderBlacksmithingModal() {
       
       <div id="forging-area" style="margin: 1.5rem 0; display: none;">
         <div class="forge-workspace" style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%); border: 3px solid #654321; border-radius: 20px; padding: 1.5rem; position: relative; box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);">
-          <div class="forge-fire" style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 60px; height: 20px; background: linear-gradient(45deg, #FF4500, #FFA500, #FFD700); border-radius: 50%; box-shadow: 0 0 20px rgba(255,69,0,0.6); animation: flicker 2s infinite ease-in-out;"></div>
-          
           <div id="property-rows" style="margin: 1rem 0;">
             ${[0,1,2].map(i => createPropertyRowHTML(i)).join('')}
           </div>
@@ -174,14 +172,14 @@ function renderBlacksmithingModal() {
       <div class="materials-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
         <div>
           <h3>Metal Bars</h3>
-          <div id="available-bars" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
+          <div id="available-bars" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
             ${renderBarsHTML()}
           </div>
         </div>
         
         <div>
           <h3>Enhancement Powders</h3>
-          <div id="available-powders" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
+          <div id="available-powders" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
             ${renderPowdersHTML()}
           </div>
         </div>
@@ -214,9 +212,9 @@ function renderBarsHTML() {
   }
   
   return forgingState.availableBars.map((bar, idx) => `
-    <div class="material-item bar" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05); border: 2px solid transparent;">
+    <div class="material-item bar" data-index="${idx}" style="cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139, 69, 19, 0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative; flex: 0 0 auto;">
       <img src="assets/art/ingridients/${bar.sprite}.png" title="${bar.name} (${bar.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size: 0.8rem;">x${bar.amount}</div>
+      <div style="font-size: 0.8rem; margin-top: 4px; color: #FFD700; font-weight: bold;">x${bar.amount}</div>
       <div class="info-icon" data-bar="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
@@ -228,9 +226,9 @@ function renderPowdersHTML() {
   }
   
   return forgingState.availablePowders.map((powder, idx) => `
-    <div class="material-item powder" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05); border: 2px solid transparent;">
+    <div class="material-item powder" data-index="${idx}" style="cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139, 69, 19, 0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative; flex: 0 0 auto;">
       <img src="assets/art/ingridients/${powder.sprite}.png" title="${powder.name} (${powder.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size: 0.8rem;">x${powder.amount}</div>
+      <div style="font-size: 0.8rem; margin-top: 4px; color: #FFD700; font-weight: bold;">x${powder.amount}</div>
       <div class="rarity-indicator" style="position: absolute; top: -2px; left: -2px; width: 12px; height: 12px; background: ${RARITY_LEVELS[powder.name]?.color || '#666'}; border-radius: 50%; border: 1px solid #fff;"></div>
       <div class="info-icon" data-powder="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
@@ -240,15 +238,9 @@ function renderPowdersHTML() {
 function createPropertyRowHTML(rowIndex) {
   return `
     <div class="property-row" data-row="${rowIndex}" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; justify-content: center;">
-      <div class="property-display" style="width: 320px; height: 60px; background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%); border: 2px solid #543528; border-radius: 12px; display: flex; align-items: center; position: relative; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);">
-        <div class="property-slot prop-left" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 80px; height: 40px; border: 2px solid #8B4513; border-radius: 6px; background: rgba(139,69,19,0.6); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold;">-</div>
-
-        <div class="property-slot prop-center clickable" data-row="${rowIndex}" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 80px; height: 40px; border: 3px solid #FFD700; border-radius: 6px; background: linear-gradient(135deg, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.6) 100%); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; cursor: pointer; transition: all 0.2s ease; position: relative;">
-          -
-          <div class="bonus-counter" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #FF4500; border-radius: 50%; color: white; font-size: 0.7rem; display: none; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff;">0</div>
-        </div>
-
-        <div class="property-slot prop-right" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 80px; height: 40px; border: 2px solid #8B4513; border-radius: 6px; background: rgba(139,69,19,0.6); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold;">-</div>
+      <div class="property-display" style="width: 150px; height: 50px; background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%); border: 3px solid #FFD700; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.2s ease;" data-row="${rowIndex}">
+        <div class="property-text" style="font-size: 0.9rem; color: #FFD700; font-weight: bold; text-align: center;">-</div>
+        <div class="bonus-counter" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #FF4500; border-radius: 50%; color: white; font-size: 0.7rem; display: none; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff;">0</div>
       </div>
     </div>
   `;
@@ -313,9 +305,9 @@ function setupBlacksmithingEventListeners(modal) {
   // Property slot clicking for bonus assignment
   const forgingArea = modal.querySelector('#forging-area');
   forgingArea.addEventListener('click', (e) => {
-    const centerSlot = e.target.closest('.prop-center.clickable');
-    if (centerSlot && forgingState.isCraftingStarted) {
-      const rowIdx = parseInt(centerSlot.dataset.row);
+    const propertyDisplay = e.target.closest('.property-display');
+    if (propertyDisplay && forgingState.isCraftingStarted) {
+      const rowIdx = parseInt(propertyDisplay.dataset.row);
       assignBonus(rowIdx, modal);
     }
   });
@@ -349,7 +341,7 @@ function selectItemType(typeIndex, modal) {
 function selectBar(barIndex, modal) {
   // Clear previous selection
   modal.querySelectorAll('.bar').forEach(item => {
-    item.style.border = '2px solid transparent';
+    item.style.border = '1px solid #8B4513';
   });
 
   // Highlight selected
@@ -363,7 +355,7 @@ function selectBar(barIndex, modal) {
 function selectPowder(powderIndex, modal) {
   // Clear previous selection
   modal.querySelectorAll('.powder').forEach(item => {
-    item.style.border = '2px solid transparent';
+    item.style.border = '1px solid #8B4513';
   });
 
   // Highlight selected
@@ -445,7 +437,7 @@ async function startForging(modal) {
     finishBtn.disabled = false;
     
     resultDiv.textContent = forgingState.maxBonuses > 0 ? 
-      'Click center properties to assign bonus stats!' : 
+      'Click properties to assign bonus stats!' : 
       'Basic item ready - click Finish to complete!';
 
     // Disable material selection
@@ -469,77 +461,68 @@ async function animateForgeHeatup(modal) {
   
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const slots = row.querySelectorAll('.property-slot');
+    const propertyDisplay = row.querySelector('.property-display');
+    const propertyText = row.querySelector('.property-text');
     const properties = forgingState.barProperties[i];
     
     console.log(`Row ${i} properties:`, properties);
     
     // Animate heating effect
-    createSparkEffect(row);
+    createSparkEffect(propertyDisplay);
     
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Populate properties with animation
+    // Populate property with the center property (index 1)
     if (typeof gsap !== 'undefined') {
-      gsap.to(slots, {
+      gsap.to(propertyText, {
         opacity: 1,
         scale: 1,
         duration: 0.6,
-        stagger: 0.1,
         ease: "back.out(1.2)",
         onStart: () => {
-          slots[0].textContent = properties[0];
-          slots[1].textContent = properties[1];
-          slots[2].textContent = properties[2];
+          propertyText.textContent = properties[1]; // Only show center property
         }
       });
     } else {
       // Fallback without GSAP
-      slots[0].textContent = properties[0];
-      slots[1].textContent = properties[1];
-      slots[2].textContent = properties[2];
+      propertyText.textContent = properties[1];
     }
     
-    // Enable center slot if bonuses available
+    // Enable property display if bonuses available
     if (forgingState.maxBonuses > 0) {
-      const centerSlot = row.querySelector('.prop-center');
-      console.log(`Row ${i} center slot:`, centerSlot);
+      console.log(`Row ${i} enabling bonus counter`);
       
-      if (centerSlot) {
-        centerSlot.classList.add('clickable');
-        
-        // ENSURE THE BONUS COUNTER EXISTS
-        let bonusCounter = centerSlot.querySelector('.bonus-counter');
-        console.log(`Row ${i} existing bonus counter:`, bonusCounter);
-        
-        if (!bonusCounter) {
-          console.log(`Creating bonus counter for row ${i}`);
-          bonusCounter = document.createElement('div');
-          bonusCounter.className = 'bonus-counter';
-          bonusCounter.style.cssText = `
-            position: absolute; 
-            top: -8px; 
-            right: -8px; 
-            width: 20px; 
-            height: 20px; 
-            background: #FF4500; 
-            border-radius: 50%; 
-            color: white; 
-            font-size: 0.7rem; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            border: 2px solid #fff;
-          `;
-          bonusCounter.textContent = '0';
-          centerSlot.appendChild(bonusCounter);
-        } else {
-          bonusCounter.style.display = 'flex';
-        }
-        
-        console.log(`Row ${i} final bonus counter:`, bonusCounter);
+      // Make sure bonus counter exists and is visible
+      let bonusCounter = propertyDisplay.querySelector('.bonus-counter');
+      console.log(`Row ${i} existing bonus counter:`, bonusCounter);
+      
+      if (!bonusCounter) {
+        console.log(`Creating bonus counter for row ${i}`);
+        bonusCounter = document.createElement('div');
+        bonusCounter.className = 'bonus-counter';
+        bonusCounter.style.cssText = `
+          position: absolute; 
+          top: -8px; 
+          right: -8px; 
+          width: 20px; 
+          height: 20px; 
+          background: #FF4500; 
+          border-radius: 50%; 
+          color: white; 
+          font-size: 0.7rem; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          font-weight: bold; 
+          border: 2px solid #fff;
+        `;
+        bonusCounter.textContent = '0';
+        propertyDisplay.appendChild(bonusCounter);
+      } else {
+        bonusCounter.style.display = 'flex';
       }
+      
+      console.log(`Row ${i} final bonus counter:`, bonusCounter);
     }
   }
   console.log('=== END ANIMATE FORGE HEATUP DEBUG ===');
@@ -562,12 +545,11 @@ function assignBonus(rowIdx, modal) {
   const row = modal.querySelector(`[data-row="${rowIdx}"]`);
   console.log('Row found:', row);
   
-  const centerSlot = row?.querySelector('.prop-center');
-  console.log('Center slot found:', centerSlot);
+  const propertyDisplay = row?.querySelector('.property-display');
+  console.log('Property display found:', propertyDisplay);
   
-  const bonusCounterEl = centerSlot?.querySelector('.bonus-counter');
+  const bonusCounterEl = propertyDisplay?.querySelector('.bonus-counter');
   console.log('Bonus counter element found:', bonusCounterEl);
-  console.log('Center slot HTML:', centerSlot?.innerHTML);
   
   // Update bonus counter display - ADD NULL CHECK
   if (bonusCounterEl) {
@@ -575,7 +557,7 @@ function assignBonus(rowIdx, modal) {
   } else {
     console.error('Bonus counter element not found! Creating it...');
     // Create the bonus counter if it doesn't exist
-    if (centerSlot) {
+    if (propertyDisplay) {
       const newBonusCounter = document.createElement('div');
       newBonusCounter.className = 'bonus-counter';
       newBonusCounter.style.cssText = `
@@ -595,7 +577,7 @@ function assignBonus(rowIdx, modal) {
         border: 2px solid #fff;
       `;
       newBonusCounter.textContent = forgingState.bonusAssignments[rowIdx];
-      centerSlot.appendChild(newBonusCounter);
+      propertyDisplay.appendChild(newBonusCounter);
     }
   }
   
@@ -615,12 +597,12 @@ function assignBonus(rowIdx, modal) {
   }
   
   // Visual feedback
-  if (centerSlot) {
-    createHammerStrike(centerSlot);
+  if (propertyDisplay) {
+    createHammerStrike(propertyDisplay);
     
     // Animation with fallback
     if (typeof gsap !== 'undefined') {
-      gsap.to(centerSlot, {
+      gsap.to(propertyDisplay, {
         backgroundColor: 'rgba(255,69,0,0.6)',
         duration: 0.2,
         ease: "power2.out",
@@ -628,9 +610,9 @@ function assignBonus(rowIdx, modal) {
         repeat: 1
       });
     } else {
-      centerSlot.style.backgroundColor = 'rgba(255,69,0,0.6)';
+      propertyDisplay.style.backgroundColor = 'rgba(255,69,0,0.6)';
       setTimeout(() => {
-        centerSlot.style.backgroundColor = '';
+        propertyDisplay.style.backgroundColor = '';
       }, 400);
     }
   }
@@ -640,7 +622,7 @@ function assignBonus(rowIdx, modal) {
   if (resultDiv) {
     const remaining = forgingState.maxBonuses - forgingState.totalAssigned;
     if (remaining > 0) {
-      resultDiv.textContent = `${remaining} bonus${remaining !== 1 ? 'es' : ''} remaining - keep clicking center properties!`;
+      resultDiv.textContent = `${remaining} bonus${remaining !== 1 ? 'es' : ''} remaining - keep clicking properties!`;
     } else {
       resultDiv.textContent = 'All bonuses assigned! Click Finish to complete your masterwork!';
     }
@@ -649,8 +631,8 @@ function assignBonus(rowIdx, modal) {
   console.log('=== END ASSIGN BONUS DEBUG ===');
 }
 
-function createSparkEffect(row) {
-  const rect = row.getBoundingClientRect();
+function createSparkEffect(element) {
+  const rect = element.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
   
@@ -675,15 +657,19 @@ function createSparkEffect(row) {
     const finalX = centerX + Math.cos(angle) * distance;
     const finalY = centerY + Math.sin(angle) * distance;
     
-    gsap.to(spark, {
-      x: finalX - centerX,
-      y: finalY - centerY,
-      rotation: Math.random() * 180,
-      opacity: 0,
-      duration: Math.random() * 0.8 + 0.5,
-      ease: "power2.out",
-      onComplete: () => spark.remove()
-    });
+    if (typeof gsap !== 'undefined') {
+      gsap.to(spark, {
+        x: finalX - centerX,
+        y: finalY - centerY,
+        rotation: Math.random() * 180,
+        opacity: 0,
+        duration: Math.random() * 0.8 + 0.5,
+        ease: "power2.out",
+        onComplete: () => spark.remove()
+      });
+    } else {
+      setTimeout(() => spark.remove(), 800);
+    }
   }
 }
 
@@ -709,24 +695,30 @@ function createHammerStrike(element) {
     
     document.body.appendChild(impact);
     
-    gsap.to(impact, {
-      x: (Math.random() - 0.5) * 30,
-      y: (Math.random() - 0.5) * 30,
-      opacity: 0,
-      duration: 0.5,
-      ease: "power2.out",
-      onComplete: () => impact.remove()
-    });
+    if (typeof gsap !== 'undefined') {
+      gsap.to(impact, {
+        x: (Math.random() - 0.5) * 30,
+        y: (Math.random() - 0.5) * 30,
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.out",
+        onComplete: () => impact.remove()
+      });
+    } else {
+      setTimeout(() => impact.remove(), 500);
+    }
   }
   
   // Shake effect
-  gsap.to(element, {
-    y: '+=2',
-    duration: 0.1,
-    ease: "power2.inOut",
-    yoyo: true,
-    repeat: 3
-  });
+  if (typeof gsap !== 'undefined') {
+    gsap.to(element, {
+      y: '+=2',
+      duration: 0.1,
+      ease: "power2.inOut",
+      yoyo: true,
+      repeat: 3
+    });
+  }
 }
 
 async function finishForging(resultDiv) {
@@ -833,15 +825,15 @@ async function finishForging(resultDiv) {
 }
 
 function animateSuccessfulForging() {
-  document.querySelectorAll('.prop-center').forEach((slot, index) => {
+  document.querySelectorAll('.property-display').forEach((display, index) => {
     setTimeout(() => {
-      createSuccessGlow(slot);
-      createGoldenSparks(slot);
+      createSuccessGlow(display);
+      createGoldenSparks(display);
     }, index * 200);
   });
   
   const forgeWorkspace = document.querySelector('.forge-workspace');
-  if (forgeWorkspace) {
+  if (forgeWorkspace && typeof gsap !== 'undefined') {
     gsap.to(forgeWorkspace, {
       boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 24px rgba(255,215,0,0.4)',
       duration: 1,
@@ -853,26 +845,30 @@ function animateSuccessfulForging() {
 function animateFailedForging() {
   document.querySelectorAll('.property-row').forEach((row, index) => {
     setTimeout(() => {
-      gsap.to(row, {
-        x: '+=5',
-        duration: 0.1,
-        ease: "power2.inOut",
-        yoyo: true,
-        repeat: 5
-      });
+      if (typeof gsap !== 'undefined') {
+        gsap.to(row, {
+          x: '+=5',
+          duration: 0.1,
+          ease: "power2.inOut",
+          yoyo: true,
+          repeat: 5
+        });
+      }
       createSmokeEffect(row);
     }, index * 100);
   });
 }
 
 function createSuccessGlow(element) {
-  gsap.to(element, {
-    boxShadow: '0 0 30px rgba(255,215,0,0.8), inset 0 0 15px rgba(255,215,0,0.3)',
-    duration: 1,
-    ease: "power2.out",
-    yoyo: true,
-    repeat: 2
-  });
+  if (typeof gsap !== 'undefined') {
+    gsap.to(element, {
+      boxShadow: '0 0 30px rgba(255,215,0,0.8), inset 0 0 15px rgba(255,215,0,0.3)',
+      duration: 1,
+      ease: "power2.out",
+      yoyo: true,
+      repeat: 2
+    });
+  }
 }
 
 function createGoldenSparks(element) {
@@ -895,15 +891,19 @@ function createGoldenSparks(element) {
     const angle = (i / 12) * Math.PI * 2;
     const distance = 50;
     
-    gsap.to(spark, {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-      opacity: 0,
-      scale: 0,
-      duration: 1.2,
-      ease: "power2.out",
-      onComplete: () => spark.remove()
-    });
+    if (typeof gsap !== 'undefined') {
+      gsap.to(spark, {
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: 0,
+        scale: 0,
+        duration: 1.2,
+        ease: "power2.out",
+        onComplete: () => spark.remove()
+      });
+    } else {
+      setTimeout(() => spark.remove(), 1200);
+    }
   }
 }
 
@@ -924,15 +924,19 @@ function createSmokeEffect(row) {
     
     row.appendChild(smoke);
     
-    gsap.to(smoke, {
-      y: -40,
-      x: `+=${Math.random() * 40 - 20}`,
-      opacity: 0,
-      scale: Math.random() * 1.5 + 0.5,
-      duration: Math.random() * 2 + 1.5,
-      ease: "power1.out",
-      onComplete: () => smoke.remove()
-    });
+    if (typeof gsap !== 'undefined') {
+      gsap.to(smoke, {
+        y: -40,
+        x: `+=${Math.random() * 40 - 20}`,
+        opacity: 0,
+        scale: Math.random() * 1.5 + 0.5,
+        duration: Math.random() * 2 + 1.5,
+        ease: "power1.out",
+        onComplete: () => smoke.remove()
+      });
+    } else {
+      setTimeout(() => smoke.remove(), 2000);
+    }
   }
 }
 
@@ -1008,18 +1012,13 @@ function injectBlacksmithingCSS() {
   if (document.getElementById('blacksmithing-css')) return;
   
   const css = `
-    @keyframes flicker {
-      0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
-      50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+    .forge-workspace {
+      animation: forge-glow 4s infinite ease-in-out;
     }
 
     @keyframes forge-glow {
       0%, 100% { box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2); }
       50% { box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 20px rgba(255,69,0,0.3); }
-    }
-
-    .forge-workspace {
-      animation: forge-glow 4s infinite ease-in-out;
     }
 
     .item-type-card:hover {
@@ -1032,14 +1031,14 @@ function injectBlacksmithingCSS() {
       box-shadow: 0 4px 8px rgba(139,69,19,0.3);
     }
 
-    .prop-center.clickable:hover {
+    .property-display:hover {
       background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%);
-      transform: translate(-50%, -50%) scale(1.05);
+      transform: scale(1.05);
       cursor: pointer;
     }
 
-    .prop-center.clickable:active {
-      transform: translate(-50%, -50%) scale(0.95);
+    .property-display:active {
+      transform: scale(0.95);
     }
 
     .bonus-counter {
@@ -1051,7 +1050,7 @@ function injectBlacksmithingCSS() {
       50% { transform: scale(1.1); }
     }
 
-    .property-slot {
+    .property-display {
       transition: all 0.3s ease;
       will-change: transform, background-color;
     }
@@ -1071,13 +1070,11 @@ function injectBlacksmithingCSS() {
       }
       
       .property-display {
-        width: 280px !important;
-        height: 50px !important;
+        width: 120px !important;
+        height: 40px !important;
       }
       
-      .property-slot {
-        width: 70px !important;
-        height: 35px !important;
+      .property-text {
         font-size: 0.7rem !important;
       }
       
@@ -1088,6 +1085,10 @@ function injectBlacksmithingCSS() {
       .item-type-card img {
         width: 40px !important;
         height: 40px !important;
+      }
+
+      .material-item {
+        min-width: 70px !important;
       }
     }
   `;
