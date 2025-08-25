@@ -155,14 +155,14 @@ function renderBlacksmithingModal() {
       </div>
       
       <div id="forging-area" style="margin: 1.5rem 0;">
-        <div class="forge-workspace" style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%); border: 3px solid #654321; border-radius: 20px; padding: 1.5rem; position: relative; box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);">
+        <div class="forge-workspace" style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%); border: 3px solid #654321; border-radius: 20px; position: relative; box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);">
           <div id="property-rows" style="margin: 1rem 0; display: flex; gap: 1rem; justify-content: center;">
             ${[0,1,2].map(i => createPropertyRowHTML(i)).join('')}
           </div>
         </div>
       </div>
       
-      <div class="materials-section" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div class="materials-section" style="margin-bottom: 1rem;">
         <div>
           <h3>Item Types</h3>
           <div id="item-types" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
@@ -1013,22 +1013,6 @@ function injectBlacksmithingCSS() {
       50% { box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 20px rgba(255,69,0,0.3); }
     }
 
-    .item-type-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(139,69,19,0.3);
-    }
-
-    .material-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(139,69,19,0.3);
-    }
-
-    .property-display:hover {
-      background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%);
-      transform: scale(1.05);
-      cursor: pointer;
-    }
-
     .property-display:active {
       transform: scale(0.95);
     }
@@ -1059,11 +1043,6 @@ function injectBlacksmithingCSS() {
     @media (max-width: 768px) {
       .materials-section {
         grid-template-columns: 1fr !important;
-      }
-      
-      .property-display {
-        width: 60px !important;
-        height: 40px !important;
       }
       
       .property-text {
