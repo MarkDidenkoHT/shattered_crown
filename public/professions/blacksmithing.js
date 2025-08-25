@@ -680,7 +680,7 @@ function injectBlacksmithingCSS() {
   const css = `
     .blacksmith-modal {
       width: 95vw;
-      max-width: 800px;
+      max-width: 800px !important;
       max-height: 95vh;
       overflow-y: auto;
       text-align: center;
