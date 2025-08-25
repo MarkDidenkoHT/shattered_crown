@@ -146,7 +146,7 @@ function renderBlacksmithingModal() {
   modal.className = 'custom-message-box';
   modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
-      <h2>Blacksmithing: Forge of Creation</h2>
+      <h2>Blacksmithing</h2>
                 
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select materials and item type to begin forging</div>
       
@@ -154,22 +154,22 @@ function renderBlacksmithingModal() {
         Bonuses: <span id="bonus-assigned">0</span>/<span id="bonus-total">0</span> assigned
       </div>
       
-      <div id="item-type-selection" style="margin: 1.5rem 0;">
-        <h3>Select Item Type</h3>
-        <div id="item-types" style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 1rem;">
-          ${renderItemTypesHTML()}
-        </div>
-      </div>
-      
-      <div id="forging-area" style="margin: 1.5rem 0; display: none;">
+      <div id="forging-area" style="margin: 1.5rem 0;">
         <div class="forge-workspace" style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%); border: 3px solid #654321; border-radius: 20px; padding: 1.5rem; position: relative; box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);">
-          <div id="property-rows" style="margin: 1rem 0;">
+          <div id="property-rows" style="margin: 1rem 0; display: flex; gap: 1rem; justify-content: center;">
             ${[0,1,2].map(i => createPropertyRowHTML(i)).join('')}
           </div>
         </div>
       </div>
       
-      <div class="materials-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div class="materials-section" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <h3>Item Types</h3>
+          <div id="item-types" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
+            ${renderItemTypesHTML()}
+          </div>
+        </div>
+        
         <div>
           <h3>Metal Bars</h3>
           <div id="available-bars" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
@@ -237,11 +237,9 @@ function renderPowdersHTML() {
 
 function createPropertyRowHTML(rowIndex) {
   return `
-    <div class="property-row" data-row="${rowIndex}" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; justify-content: center;">
-      <div class="property-display" style="width: 150px; height: 50px; background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%); border: 3px solid #FFD700; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.2s ease;" data-row="${rowIndex}">
-        <div class="property-text" style="font-size: 0.9rem; color: #FFD700; font-weight: bold; text-align: center;">-</div>
-        <div class="bonus-counter" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #FF4500; border-radius: 50%; color: white; font-size: 0.7rem; display: none; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff;">0</div>
-      </div>
+    <div class="property-display" style="width: 80px; height: 50px; background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%); border: 3px solid #FFD700; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.2s ease;" data-row="${rowIndex}">
+      <div class="property-text" style="font-size: 0.8rem; color: #FFD700; font-weight: bold; text-align: center;">-</div>
+      <div class="bonus-counter" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #FF4500; border-radius: 50%; color: white; font-size: 0.7rem; display: none; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff;">0</div>
     </div>
   `;
 }
@@ -330,7 +328,7 @@ function selectItemType(typeIndex, modal) {
   });
 
   // Highlight selected
-  const selectedCard = modal.querySelector(`[data-index="${typeIndex}"]`);
+  const selectedCard = modal.querySelector(`.item-type-card[data-index="${typeIndex}"]`);
   selectedCard.style.border = '2px solid #FFD700';
   selectedCard.style.background = 'rgba(255,215,0,0.2)';
 
@@ -398,7 +396,6 @@ async function startForging(modal) {
     const finishBtn = modal.querySelector('#finish-btn');
     const resultDiv = modal.querySelector('#craft-result');
     const bonusCounter = modal.querySelector('#bonus-counter');
-    const forgingArea = modal.querySelector('#forging-area');
     
     craftBtn.style.display = 'none';
     resultDiv.textContent = 'Heating materials in the forge...';
@@ -425,8 +422,7 @@ async function startForging(modal) {
     forgingState.sessionId = reserveJson.session_id;
     forgingState.barProperties = reserveJson.bar_properties;
 
-    // Show forging area and populate properties
-    forgingArea.style.display = 'block';
+    // Animate forge heatup
     await animateForgeHeatup(modal);
 
     // Show bonus counter
@@ -456,16 +452,15 @@ async function startForging(modal) {
 
 async function animateForgeHeatup(modal) {
   console.log('=== ANIMATE FORGE HEATUP DEBUG ===');
-  const rows = modal.querySelectorAll('.property-row');
-  console.log('Rows found:', rows.length);
+  const propertyDisplays = modal.querySelectorAll('.property-display');
+  console.log('Property displays found:', propertyDisplays.length);
   
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const propertyDisplay = row.querySelector('.property-display');
-    const propertyText = row.querySelector('.property-text');
+  for (let i = 0; i < propertyDisplays.length; i++) {
+    const propertyDisplay = propertyDisplays[i];
+    const propertyText = propertyDisplay.querySelector('.property-text');
     const properties = forgingState.barProperties[i];
     
-    console.log(`Row ${i} properties:`, properties);
+    console.log(`Property ${i} properties:`, properties);
     
     // Animate heating effect
     createSparkEffect(propertyDisplay);
@@ -490,14 +485,14 @@ async function animateForgeHeatup(modal) {
     
     // Enable property display if bonuses available
     if (forgingState.maxBonuses > 0) {
-      console.log(`Row ${i} enabling bonus counter`);
+      console.log(`Property ${i} enabling bonus counter`);
       
       // Make sure bonus counter exists and is visible
       let bonusCounter = propertyDisplay.querySelector('.bonus-counter');
-      console.log(`Row ${i} existing bonus counter:`, bonusCounter);
+      console.log(`Property ${i} existing bonus counter:`, bonusCounter);
       
       if (!bonusCounter) {
-        console.log(`Creating bonus counter for row ${i}`);
+        console.log(`Creating bonus counter for property ${i}`);
         bonusCounter = document.createElement('div');
         bonusCounter.className = 'bonus-counter';
         bonusCounter.style.cssText = `
@@ -522,7 +517,7 @@ async function animateForgeHeatup(modal) {
         bonusCounter.style.display = 'flex';
       }
       
-      console.log(`Row ${i} final bonus counter:`, bonusCounter);
+      console.log(`Property ${i} final bonus counter:`, bonusCounter);
     }
   }
   console.log('=== END ANIMATE FORGE HEATUP DEBUG ===');
@@ -542,10 +537,7 @@ function assignBonus(rowIdx, modal) {
   forgingState.bonusAssignments[rowIdx]++;
   forgingState.totalAssigned++;
 
-  const row = modal.querySelector(`[data-row="${rowIdx}"]`);
-  console.log('Row found:', row);
-  
-  const propertyDisplay = row?.querySelector('.property-display');
+  const propertyDisplay = modal.querySelector(`[data-row="${rowIdx}"]`);
   console.log('Property display found:', propertyDisplay);
   
   const bonusCounterEl = propertyDisplay?.querySelector('.bonus-counter');
@@ -843,10 +835,10 @@ function animateSuccessfulForging() {
 }
 
 function animateFailedForging() {
-  document.querySelectorAll('.property-row').forEach((row, index) => {
+  document.querySelectorAll('.property-display').forEach((display, index) => {
     setTimeout(() => {
       if (typeof gsap !== 'undefined') {
-        gsap.to(row, {
+        gsap.to(display, {
           x: '+=5',
           duration: 0.1,
           ease: "power2.inOut",
@@ -854,7 +846,7 @@ function animateFailedForging() {
           repeat: 5
         });
       }
-      createSmokeEffect(row);
+      createSmokeEffect(display);
     }, index * 100);
   });
 }
@@ -907,7 +899,7 @@ function createGoldenSparks(element) {
   }
 }
 
-function createSmokeEffect(row) {
+function createSmokeEffect(element) {
   for (let i = 0; i < 6; i++) {
     const smoke = document.createElement('div');
     smoke.style.cssText = `
@@ -922,7 +914,7 @@ function createSmokeEffect(row) {
       z-index: 25;
     `;
     
-    row.appendChild(smoke);
+    element.appendChild(smoke);
     
     if (typeof gsap !== 'undefined') {
       gsap.to(smoke, {
@@ -1070,7 +1062,7 @@ function injectBlacksmithingCSS() {
       }
       
       .property-display {
-        width: 120px !important;
+        width: 60px !important;
         height: 40px !important;
       }
       
