@@ -236,14 +236,14 @@ function showRoadmapModal() {
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">15 September 2025</div>
-                    <div class="roadmap-feature">New professions and spells! New region!</div>
+                    <div class="roadmap-feature">New professions - enchanting and jewelcrafting!</div>
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">30 September 2025</div>
-                    <div class="roadmap-feature">Talent trees! More loot and items!</div>
+                    <div class="roadmap-feature">Talent trees!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">30 October 2025</div>
+                    <div class="roadmap-date">10 October 2025</div>
                     <div class="roadmap-feature">New Gods!</div>
                 </div>
                 <div class="roadmap-item">
