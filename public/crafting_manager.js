@@ -1,21 +1,13 @@
-let _main;
-let _apiCall;
-let _getCurrentProfile;
-let _profile;
-
+let _main, _apiCall, _getCurrentProfile, _profile;
 let craftingState = null;
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
-  console.log('[CRAFTING] --- Starting loadModule for Crafting Manager ---');
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
-
   _profile = _getCurrentProfile();
-  console.log('[DEBUG] Profile:', _profile);
 
   if (!_profile) {
-    console.error('[CRAFTING] No profile found. Redirecting to login.');
     displayMessage('User profile not found. Please log in again.');
     window.gameAuth.loadModule('login');
     return;
@@ -30,10 +22,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 
   createParticles();
   await fetchAndRenderProfessions();
-  console.log('[CRAFTING] --- loadModule for Crafting Manager finished ---');
 }
 
-// Loading animation utilities
 function createLoadingModal(title = "Loading Profession Data", message = "Gathering recipes and materials...") {
   const modal = document.createElement('div');
   modal.className = 'loading-modal';
@@ -44,26 +34,15 @@ function createLoadingModal(title = "Loading Profession Data", message = "Gather
         <p class="loading-message">${message}</p>
       </div>
       
-      <!-- Animated crafting icon -->
       <div class="loading-animation">
         <div class="crafting-wheel">
-          <div class="wheel-spoke"></div>
-          <div class="wheel-spoke"></div>
-          <div class="wheel-spoke"></div>
-          <div class="wheel-spoke"></div>
-          <div class="wheel-spoke"></div>
-          <div class="wheel-spoke"></div>
+          ${Array(6).fill().map(() => '<div class="wheel-spoke"></div>').join('')}
         </div>
         <div class="loading-particles">
-          <div class="particle"></div>
-          <div class="particle"></div>
-          <div class="particle"></div>
-          <div class="particle"></div>
-          <div class="particle"></div>
+          ${Array(5).fill().map(() => '<div class="particle"></div>').join('')}
         </div>
       </div>
       
-      <!-- Progress bar -->
       <div class="loading-progress">
         <div class="progress-bar">
           <div class="progress-fill"></div>
@@ -74,7 +53,6 @@ function createLoadingModal(title = "Loading Profession Data", message = "Gather
         </div>
       </div>
       
-      <!-- Loading dots -->
       <div class="loading-dots">
         <span>.</span><span>.</span><span>.</span>
       </div>
@@ -85,7 +63,6 @@ function createLoadingModal(title = "Loading Profession Data", message = "Gather
   return modal;
 }
 
-// Enhanced loading with progress steps
 function createAdvancedLoadingModal(professionName = "Profession") {
   const modal = createLoadingModal(`Loading ${professionName}`, `Preparing your ${professionName.toLowerCase()} workspace...`);
   
@@ -97,54 +74,47 @@ function createAdvancedLoadingModal(professionName = "Profession") {
     { text: "Finalizing workspace...", duration: 200 }
   ];
   
-  let currentStep = 0;
-  let progress = 0;
-  
+  let currentStep = 0, progress = 0;
   const progressFill = modal.querySelector('.progress-fill');
   const progressStep = modal.querySelector('.progress-step');
   const progressPercent = modal.querySelector('.progress-percent');
   
   function updateProgress() {
-    if (currentStep < progressSteps.length) {
-      const step = progressSteps[currentStep];
-      progressStep.textContent = step.text;
+    if (currentStep >= progressSteps.length) return;
+    
+    const step = progressSteps[currentStep];
+    progressStep.textContent = step.text;
+    
+    const targetProgress = ((currentStep + 1) / progressSteps.length) * 100;
+    const startProgress = progress;
+    const progressDiff = targetProgress - startProgress;
+    const startTime = Date.now();
+    
+    function animateProgress() {
+      const elapsed = Date.now() - startTime;
+      const progressRatio = Math.min(elapsed / step.duration, 1);
       
-      const targetProgress = ((currentStep + 1) / progressSteps.length) * 100;
+      progress = startProgress + (progressDiff * progressRatio);
+      progressFill.style.width = `${progress}%`;
+      progressPercent.textContent = `${Math.round(progress)}%`;
       
-      // Animate progress bar
-      const startProgress = progress;
-      const progressDiff = targetProgress - startProgress;
-      const startTime = Date.now();
-      
-      function animateProgress() {
-        const elapsed = Date.now() - startTime;
-        const progressRatio = Math.min(elapsed / step.duration, 1);
-        
-        progress = startProgress + (progressDiff * progressRatio);
-        progressFill.style.width = `${progress}%`;
-        progressPercent.textContent = `${Math.round(progress)}%`;
-        
-        if (progressRatio < 1) {
-          requestAnimationFrame(animateProgress);
-        } else {
-          currentStep++;
-          if (currentStep < progressSteps.length) {
-            setTimeout(updateProgress, 100);
-          }
+      if (progressRatio < 1) {
+        requestAnimationFrame(animateProgress);
+      } else {
+        currentStep++;
+        if (currentStep < progressSteps.length) {
+          setTimeout(updateProgress, 100);
         }
       }
-      
-      animateProgress();
     }
+    
+    animateProgress();
   }
   
-  // Start progress animation
   setTimeout(updateProgress, 300);
-  
   return modal;
 }
 
-// Simple spinner loading for quick operations
 function createSpinnerModal(message = "Loading...") {
   const modal = document.createElement('div');
   modal.className = 'loading-modal simple-loading';
@@ -159,30 +129,22 @@ function createSpinnerModal(message = "Loading...") {
   return modal;
 }
 
-// Utility to remove loading modals with fade out
 function removeLoadingModal(modal) {
-  if (modal && modal.parentNode) {
+  if (modal?.parentNode) {
     modal.style.animation = 'fadeOut 0.3s ease';
-    setTimeout(() => {
-      if (modal.parentNode) {
-        modal.remove();
-      }
-    }, 300);
+    setTimeout(() => modal.parentNode && modal.remove(), 300);
   }
 }
 
 async function fetchAndRenderProfessions() {
-  console.log('[CRAFTING] Fetching player characters with professions...');
   try {
     const response = await _apiCall(
       `/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=*,races(name),classes(name),professions(id,name)`
     );
     const characters = await response.json();
-    console.log('[CRAFTING] Characters fetched:', characters);
-
     renderProfessions(characters);
   } catch (error) {
-    console.error('[CRAFTING] Error fetching professions:', error);
+    console.error('Error fetching professions:', error);
     displayMessage('Failed to load professions. Please try again.');
   }
 }
@@ -212,7 +174,6 @@ function renderProfessions(characters) {
     window.gameAuth.loadModule('castle');
   });
 
-  // Add click handlers to profession cards
   section.querySelectorAll('.profession-card').forEach(card => {
     card.addEventListener('click', async () => {
       const profName = card.dataset.profession;
@@ -221,7 +182,7 @@ function renderProfessions(characters) {
       try {
         await loadProfessionModuleWithLoading(profName, profId);
       } catch (err) {
-        console.error('[CRAFTING] Failed to start crafting session:', err);
+        console.error('Failed to start crafting session:', err);
         displayMessage(`Failed to start crafting for ${profName}`);
       }
     });
@@ -254,9 +215,8 @@ async function fetchRecipes(professionId) {
   return await response.json();
 }
 
-// Helper function for profession modules to control loading
 function updateLoadingProgress(loadingModal, step, message) {
-  if (!loadingModal || !loadingModal.parentNode) return;
+  if (!loadingModal?.parentNode) return;
   
   const progressStep = loadingModal.querySelector('.progress-step');
   const loadingMessage = loadingModal.querySelector('.loading-message');
@@ -265,62 +225,47 @@ function updateLoadingProgress(loadingModal, step, message) {
   if (loadingMessage) loadingMessage.textContent = message;
 }
 
-// Helper function for profession modules to finish loading
 function finishLoading(loadingModal, loadingStartTime, minimumTime = 3000) {
-  if (!loadingModal || !loadingModal.parentNode) return Promise.resolve();
+  if (!loadingModal?.parentNode) return Promise.resolve();
   
   return new Promise(resolve => {
     const elapsedTime = Date.now() - loadingStartTime;
     const remainingTime = Math.max(0, minimumTime - elapsedTime);
     
-    // Update to final step
     updateLoadingProgress(loadingModal, "Crafting interface ready!", "Welcome to your workshop!");
     
     setTimeout(() => {
       removeLoadingModal(loadingModal);
       resolve();
-    }, Math.max(remainingTime, 500)); // At least 500ms to show final message
+    }, Math.max(remainingTime, 500));
   });
 }
 
-// Enhanced profession module loading with advanced loading animation
 async function loadProfessionModuleWithLoading(professionName, professionId) {
-  console.log(`[CRAFTING] Loading ${professionName} module with loading animation...`);
-  
-  // Create advanced loading modal immediately
   const loadingModal = createAdvancedLoadingModal(professionName);
   const loadingStartTime = Date.now();
   
   try {
-    // Convert profession name to filename format (e.g., "Alchemy" -> "alchemy")
     const moduleFileName = professionName.toLowerCase().replace(/\s+/g, '_');
     
-    // Update loading message to be more specific
     const loadingMessage = loadingModal.querySelector('.loading-message');
     loadingMessage.textContent = `Initializing ${professionName} crafting interface...`;
     
-    // Simulate some loading steps while actually loading the module
-    await new Promise(resolve => setTimeout(resolve, 800)); // Let progress animation start
+    await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Dynamically import the profession module
     const professionModule = await import(`./professions/${moduleFileName}.js`);
     
-    // Update loading message for the next phase
     loadingMessage.textContent = `Starting ${professionName} crafting session...`;
     
-    // Pass the necessary context to the profession module WITHOUT session
     const context = {
       main: _main,
       apiCall: _apiCall,
       profile: _profile,
-      // Removed session since it doesn't exist in Telegram auth
       professionId,
       professionName,
-      craftingState: craftingState,
-      // Pass the loading modal so the profession module can control it
-      loadingModal: loadingModal,
-      loadingStartTime: loadingStartTime,
-      // Utility functions that profession modules might need
+      craftingState,
+      loadingModal,
+      loadingStartTime,
       displayMessage,
       fetchRecipes,
       createParticles,
@@ -330,24 +275,19 @@ async function loadProfessionModuleWithLoading(professionName, professionId) {
       finishLoading
     };
     
-    // DON'T remove loading modal here - let the profession module handle it
-    // Start the profession-specific crafting session
     await professionModule.startCraftingSession(context);
     
-    // Fallback: if profession module doesn't handle loading modal removal
     setTimeout(() => {
       if (loadingModal.parentNode) {
-        console.log('[CRAFTING] Fallback: removing loading modal after timeout');
         removeLoadingModal(loadingModal);
       }
-    }, 8000); // 8 second fallback timeout
+    }, 8000);
     
   } catch (error) {
-    console.error(`[CRAFTING] Failed to load ${professionName} module:`, error);
+    console.error(`Failed to load ${professionName} module:`, error);
     removeLoadingModal(loadingModal);
     
-    // Show more helpful error message
-    if (error.message && error.message.includes('Failed to resolve module')) {
+    if (error.message?.includes('Failed to resolve module')) {
       displayMessage(`${professionName} crafting interface is not available yet. Please check back later.`);
     } else {
       displayMessage(`Failed to load ${professionName} crafting interface. Please try again.`);
@@ -355,18 +295,14 @@ async function loadProfessionModuleWithLoading(professionName, professionId) {
   }
 }
 
-// Original function kept for backward compatibility
-async function loadProfessionModule(professionName, professionId) {
-  return await loadProfessionModuleWithLoading(professionName, professionId);
-}
+
 
 function createParticles() {
   const particlesContainer = _main.querySelector('.particles');
   if (!particlesContainer) return;
 
   particlesContainer.innerHTML = '';
-  const particleCount = 20;
-  for (let i = 0; i < particleCount; i++) {
+  for (let i = 0; i < 20; i++) {
     const particle = document.createElement('div');
     particle.className = 'particle';
     particle.style.left = Math.random() * 100 + '%';
@@ -392,18 +328,15 @@ function displayMessage(message) {
     messageBox.remove();
   });
 
-  // Add fade in animation
   messageBox.style.animation = 'fadeIn 0.3s ease';
 }
 
-// Add loading animation styles to the page
 function injectLoadingStyles() {
-  if (document.getElementById('crafting-loading-styles')) return; // Already injected
+  if (document.getElementById('crafting-loading-styles')) return;
   
   const style = document.createElement('style');
   style.id = 'crafting-loading-styles';
   style.textContent = `
-    /* Loading Modal Styles */
     .loading-modal {
       position: fixed;
       top: 0;
@@ -455,7 +388,6 @@ function injectLoadingStyles() {
       opacity: 0.9;
     }
 
-    /* Crafting Wheel Animation */
     .loading-animation {
       position: relative;
       width: 120px;
@@ -494,7 +426,6 @@ function injectLoadingStyles() {
     .wheel-spoke:nth-child(5) { transform: translate(-50%, -100%) rotate(240deg); }
     .wheel-spoke:nth-child(6) { transform: translate(-50%, -100%) rotate(300deg); }
 
-    /* Loading Particles */
     .loading-particles {
       position: absolute;
       top: 0;
@@ -515,33 +446,12 @@ function injectLoadingStyles() {
       box-shadow: 0 0 6px rgba(196, 151, 90, 0.5);
     }
 
-    .loading-particles .particle:nth-child(1) {
-      top: 20%;
-      left: 30%;
-      animation-delay: 0s;
-    }
-    .loading-particles .particle:nth-child(2) {
-      top: 60%;
-      right: 25%;
-      animation-delay: 0.4s;
-    }
-    .loading-particles .particle:nth-child(3) {
-      bottom: 30%;
-      left: 20%;
-      animation-delay: 0.8s;
-    }
-    .loading-particles .particle:nth-child(4) {
-      top: 40%;
-      right: 40%;
-      animation-delay: 1.2s;
-    }
-    .loading-particles .particle:nth-child(5) {
-      bottom: 20%;
-      right: 30%;
-      animation-delay: 1.6s;
-    }
+    .loading-particles .particle:nth-child(1) { top: 20%; left: 30%; animation-delay: 0s; }
+    .loading-particles .particle:nth-child(2) { top: 60%; right: 25%; animation-delay: 0.4s; }
+    .loading-particles .particle:nth-child(3) { bottom: 30%; left: 20%; animation-delay: 0.8s; }
+    .loading-particles .particle:nth-child(4) { top: 40%; right: 40%; animation-delay: 1.2s; }
+    .loading-particles .particle:nth-child(5) { bottom: 20%; right: 30%; animation-delay: 1.6s; }
 
-    /* Progress Bar */
     .loading-progress {
       width: 100%;
       margin-bottom: 1.5rem;
@@ -586,7 +496,6 @@ function injectLoadingStyles() {
       font-family: 'Cinzel', serif;
     }
 
-    /* Loading Dots */
     .loading-dots {
       color: #c4975a;
       font-size: 2rem;
@@ -602,7 +511,6 @@ function injectLoadingStyles() {
     .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
     .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-    /* Simple Spinner */
     .spinner {
       width: 50px;
       height: 50px;
@@ -614,7 +522,6 @@ function injectLoadingStyles() {
       box-shadow: 0 0 10px rgba(196, 151, 90, 0.3);
     }
 
-    /* Profession Card Styles - Horizontal Layout */
     .profession-card {
       display: flex;
       align-items: center;
@@ -689,7 +596,6 @@ function injectLoadingStyles() {
       opacity: 0.6;
     }
 
-    /* Card Loading State */
     .card-loading {
       display: flex;
       align-items: center;
@@ -709,7 +615,6 @@ function injectLoadingStyles() {
       animation: spin 1s linear infinite;
     }
 
-    /* Animations */
     @keyframes fadeIn {
       from { opacity: 0; transform: scale(0.9); }
       to { opacity: 1; transform: scale(1); }
@@ -751,7 +656,6 @@ function injectLoadingStyles() {
       to { transform: rotate(360deg); }
     }
 
-    /* Mobile Responsiveness */
     @media (max-width: 480px) {
       .loading-content {
         padding: 1.5rem;
@@ -808,5 +712,4 @@ function injectLoadingStyles() {
   document.head.appendChild(style);
 }
 
-// Initialize loading styles when module loads
 injectLoadingStyles();

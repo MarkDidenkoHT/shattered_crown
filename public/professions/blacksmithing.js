@@ -43,7 +43,7 @@ export async function startCraftingSession(ctx) {
       selectedPowder: null,
       selectedItemType: null,
       barProperties: [],
-      bonusAssignments: [0, 0, 0],
+      bonusAssignments: [0, 0, 0], // Count of bonuses assigned to each property
       maxBonuses: 0,
       totalAssigned: 0,
       isCraftingStarted: false,
@@ -64,34 +64,74 @@ export async function startCraftingSession(ctx) {
 }
 
 async function enrichIngredients(bankItems) {
-  if (!bankItems.length) return [];
+  console.log('=== DEBUGGING INGREDIENT ENRICHMENT ===');
+  console.log('Bank items received:', bankItems);
+  
+  if (!bankItems.length) {
+    console.log('No bank items found');
+    return [];
+  }
   
   const itemNames = bankItems.map(item => item.item);
+  console.log('All item names:', itemNames);
+  
   const uniqueNames = [...new Set(itemNames)];
+  console.log('Unique item names:', uniqueNames);
+  
   const namesQuery = uniqueNames.map(name => encodeURIComponent(name)).join(',');
+  console.log('Query string:', namesQuery);
   
   try {
     const apiUrl = `/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`;
-    const response = await context.apiCall(apiUrl);
-    const ingredients = await response.json();
+    console.log('API URL:', apiUrl);
     
+    const response = await context.apiCall(apiUrl);
+    console.log('Raw response status:', response.status);
+    console.log('Raw response headers:', response.headers);
+    
+    const ingredients = await response.json();
+    console.log('API response:', ingredients);
+    console.log('API response type:', typeof ingredients);
+    console.log('API response length:', ingredients?.length);
+    
+    // Let's also try to fetch all ingredients to see what's actually in the table
+    const allIngredientsResponse = await context.apiCall('/api/supabase/rest/v1/ingridients?select=name,properties,sprite');
+    const allIngredients = await allIngredientsResponse.json();
+    console.log('ALL INGREDIENTS in table:', allIngredients);
+    
+    // Create a map for quick lookups
     const ingredientMap = new Map();
     ingredients.forEach(ingredient => {
       ingredientMap.set(ingredient.name, ingredient);
     });
+    console.log('Ingredient map:', ingredientMap);
     
+    // Enrich all bank items
     const enriched = [];
     for (const item of bankItems) {
       const ingredient = ingredientMap.get(item.item);
+      console.log(`Processing ${item.item}:`, ingredient ? 'FOUND' : 'NOT FOUND');
       if (ingredient) {
-        enriched.push({
+        const enrichedItem = {
           name: item.item,
           amount: item.amount,
           properties: ingredient.properties,
           sprite: ingredient.sprite,
-        });
+        };
+        console.log('Enriched item:', enrichedItem);
+        enriched.push(enrichedItem);
+      } else {
+        // Let's see if there's a case-sensitive issue
+        const matchingNames = allIngredients.filter(ing => 
+          ing.name.toLowerCase() === item.item.toLowerCase()
+        );
+        console.log(`Case-insensitive matches for ${item.item}:`, matchingNames);
       }
     }
+    
+    console.log('Final enriched array:', enriched);
+    console.log('Bars found:', enriched.filter(item => item.name.includes('Bar')));
+    console.log('Powders found:', enriched.filter(item => item.name.includes('Powder')));
     
     return enriched;
     
@@ -105,50 +145,53 @@ function renderBlacksmithingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content blacksmith-modal">
-      <div id="craft-result" class="craft-status">Select materials and item type to begin forging</div>
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+      <h2>Blacksmithing: Forge of Creation</h2>
+                
+      <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select materials and item type to begin forging</div>
       
-      <div id="bonus-counter" class="bonus-display" style="display: none;">
+      <div id="bonus-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #FFD700; display: none;">
         Bonuses: <span id="bonus-assigned">0</span>/<span id="bonus-total">0</span> assigned
       </div>
       
-      <div class="materials-section">
-        <div class="material-group">
-          <h3>Item Types</h3>
-          <div id="item-types" class="material-scroller">
-            ${renderItemTypesHTML()}
-          </div>
-        </div>
-        
-        <div class="material-group">
-          <h3>Metal Bars</h3>
-          <div id="available-bars" class="material-scroller">
-            ${renderBarsHTML()}
-          </div>
-        </div>
-        
-        <div class="material-group">
-          <h3>Enhancement Powders</h3>
-          <div id="available-powders" class="material-scroller">
-            ${renderPowdersHTML()}
-          </div>
+      <div id="item-type-selection" style="margin: 1.5rem 0;">
+        <h3>Select Item Type</h3>
+        <div id="item-types" style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 1rem;">
+          ${renderItemTypesHTML()}
         </div>
       </div>
       
-      <div id="forging-area" class="forge-section" style="display: block;">
-        <div class="forge-workspace">
-          <div class="forge-fire"></div>
-          <div id="property-rows">
+      <div id="forging-area" style="margin: 1.5rem 0; display: none;">
+        <div class="forge-workspace" style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%); border: 3px solid #654321; border-radius: 20px; padding: 1.5rem; position: relative; box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);">
+          <div class="forge-fire" style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 60px; height: 20px; background: linear-gradient(45deg, #FF4500, #FFA500, #FFD700); border-radius: 50%; box-shadow: 0 0 20px rgba(255,69,0,0.6); animation: flicker 2s infinite ease-in-out;"></div>
+          
+          <div id="property-rows" style="margin: 1rem 0;">
             ${[0,1,2].map(i => createPropertyRowHTML(i)).join('')}
           </div>
         </div>
       </div>
       
-      <div class="button-group">
-        <button class="fantasy-button message-ok-btn">Close</button>
-        <button id="craft-btn" class="fantasy-button" disabled>Forge</button>
-        <button id="finish-btn" class="fantasy-button" disabled style="display: none;">Finish</button>
-        <button id="claim-btn" class="fantasy-button" style="display: none;">Claim</button>
+      <div class="materials-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <h3>Metal Bars</h3>
+          <div id="available-bars" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
+            ${renderBarsHTML()}
+          </div>
+        </div>
+        
+        <div>
+          <h3>Enhancement Powders</h3>
+          <div id="available-powders" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
+            ${renderPowdersHTML()}
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: flex; justify-content: center; gap: 0.5rem;">
+        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
+        <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Forge</button>
+        <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
+        <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
       </div>
     </div>
   `;
@@ -158,52 +201,54 @@ function renderBlacksmithingModal() {
 
 function renderItemTypesHTML() {
   return ITEM_TYPES.map((itemType, idx) => `
-    <div class="material-item item-type-card" data-index="${idx}">
-      <img src="assets/art/items/${itemType.sprite}.png" alt="${itemType.name}">
-      <div class="item-label">${itemType.name}</div>
+    <div class="item-type-card" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 2px solid transparent; min-width: 70px; text-align: center; transition: all 0.2s ease;">
+      <img src="assets/art/items/${itemType.sprite}.png" title="${itemType.name}" style="width: 48px; height: 48px;">
+      <div style="font-size: 0.8rem; color: #c4975a; font-weight: bold; margin-top: 4px;">${itemType.name}</div>
     </div>
   `).join('');
 }
 
 function renderBarsHTML() {
   if (!forgingState.availableBars.length) {
-    return '<div class="empty-message">No bars available</div>';
+    return '<div style="color: #666; font-style: italic; padding: 1rem;">No bars available</div>';
   }
   
   return forgingState.availableBars.map((bar, idx) => `
-    <div class="material-item bar" data-index="${idx}">
-      <img src="assets/art/ingridients/${bar.sprite}.png" alt="${bar.name}">
-      <div class="item-count">x${bar.amount}</div>
-      <div class="info-icon" data-bar="${idx}">i</div>
+    <div class="material-item bar" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05); border: 2px solid transparent;">
+      <img src="assets/art/ingridients/${bar.sprite}.png" title="${bar.name} (${bar.amount})" style="width: 48px; height: 48px;">
+      <div style="font-size: 0.8rem;">x${bar.amount}</div>
+      <div class="info-icon" data-bar="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
 }
 
 function renderPowdersHTML() {
   if (!forgingState.availablePowders.length) {
-    return '<div class="empty-message">No powders available</div>';
+    return '<div style="color: #666; font-style: italic; padding: 1rem;">No powders available</div>';
   }
   
   return forgingState.availablePowders.map((powder, idx) => `
-    <div class="material-item powder" data-index="${idx}">
-      <img src="assets/art/ingridients/${powder.sprite}.png" alt="${powder.name}">
-      <div class="item-count">x${powder.amount}</div>
-      <div class="rarity-indicator" style="background: ${RARITY_LEVELS[powder.name]?.color || '#666'};"></div>
-      <div class="info-icon" data-powder="${idx}">i</div>
+    <div class="material-item powder" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05); border: 2px solid transparent;">
+      <img src="assets/art/ingridients/${powder.sprite}.png" title="${powder.name} (${powder.amount})" style="width: 48px; height: 48px;">
+      <div style="font-size: 0.8rem;">x${powder.amount}</div>
+      <div class="rarity-indicator" style="position: absolute; top: -2px; left: -2px; width: 12px; height: 12px; background: ${RARITY_LEVELS[powder.name]?.color || '#666'}; border-radius: 50%; border: 1px solid #fff;"></div>
+      <div class="info-icon" data-powder="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
 }
 
 function createPropertyRowHTML(rowIndex) {
   return `
-    <div class="property-row" data-row="${rowIndex}">
-      <div class="property-display">
-        <div class="property-slot prop-left">-</div>
-        <div class="property-slot prop-center clickable" data-row="${rowIndex}">
+    <div class="property-row" data-row="${rowIndex}" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; justify-content: center;">
+      <div class="property-display" style="width: 320px; height: 60px; background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%); border: 2px solid #543528; border-radius: 12px; display: flex; align-items: center; position: relative; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);">
+        <div class="property-slot prop-left" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 80px; height: 40px; border: 2px solid #8B4513; border-radius: 6px; background: rgba(139,69,19,0.6); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold;">-</div>
+
+        <div class="property-slot prop-center clickable" data-row="${rowIndex}" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 80px; height: 40px; border: 3px solid #FFD700; border-radius: 6px; background: linear-gradient(135deg, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.6) 100%); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; cursor: pointer; transition: all 0.2s ease; position: relative;">
           -
-          <div class="bonus-counter">0</div>
+          <div class="bonus-counter" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #FF4500; border-radius: 50%; color: white; font-size: 0.7rem; display: none; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff;">0</div>
         </div>
-        <div class="property-slot prop-right">-</div>
+
+        <div class="property-slot prop-right" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 80px; height: 40px; border: 2px solid #8B4513; border-radius: 6px; background: rgba(139,69,19,0.6); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold;">-</div>
       </div>
     </div>
   `;
@@ -212,6 +257,8 @@ function createPropertyRowHTML(rowIndex) {
 function setupBlacksmithingEventListeners(modal) {
   const craftBtn = modal.querySelector('#craft-btn');
   const finishBtn = modal.querySelector('#finish-btn');
+  const resultDiv = modal.querySelector('#craft-result');
+  const bonusCounter = modal.querySelector('#bonus-counter');
 
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
@@ -219,7 +266,8 @@ function setupBlacksmithingEventListeners(modal) {
   });
 
   // Item type selection
-  modal.querySelector('#item-types').addEventListener('click', (e) => {
+  const itemTypesContainer = modal.querySelector('#item-types');
+  itemTypesContainer.addEventListener('click', (e) => {
     const itemCard = e.target.closest('.item-type-card');
     if (itemCard && !forgingState.isCraftingStarted) {
       const idx = parseInt(itemCard.dataset.index);
@@ -228,7 +276,8 @@ function setupBlacksmithingEventListeners(modal) {
   });
 
   // Material selection
-  modal.querySelector('#available-bars').addEventListener('click', (e) => {
+  const barsContainer = modal.querySelector('#available-bars');
+  barsContainer.addEventListener('click', (e) => {
     const materialItem = e.target.closest('.material-item');
     const infoIcon = e.target.closest('.info-icon');
     
@@ -244,7 +293,8 @@ function setupBlacksmithingEventListeners(modal) {
     }
   });
 
-  modal.querySelector('#available-powders').addEventListener('click', (e) => {
+  const powdersContainer = modal.querySelector('#available-powders');
+  powdersContainer.addEventListener('click', (e) => {
     const materialItem = e.target.closest('.material-item');
     const infoIcon = e.target.closest('.info-icon');
     
@@ -260,8 +310,9 @@ function setupBlacksmithingEventListeners(modal) {
     }
   });
 
-  // Property slot clicking
-  modal.querySelector('#forging-area').addEventListener('click', (e) => {
+  // Property slot clicking for bonus assignment
+  const forgingArea = modal.querySelector('#forging-area');
+  forgingArea.addEventListener('click', (e) => {
     const centerSlot = e.target.closest('.prop-center.clickable');
     if (centerSlot && forgingState.isCraftingStarted) {
       const rowIdx = parseInt(centerSlot.dataset.row);
@@ -275,29 +326,49 @@ function setupBlacksmithingEventListeners(modal) {
 
   finishBtn.addEventListener('click', async () => {
     finishBtn.disabled = true;
-    await finishForging(modal.querySelector('#craft-result'));
+    await finishForging(resultDiv);
   });
 }
 
 function selectItemType(typeIndex, modal) {
-  modal.querySelectorAll('.item-type-card').forEach(card => card.classList.remove('selected'));
-  modal.querySelector(`#item-types [data-index="${typeIndex}"]`).classList.add('selected');
+  // Clear previous selection
+  modal.querySelectorAll('.item-type-card').forEach(card => {
+    card.style.border = '2px solid transparent';
+    card.style.background = 'rgba(139,69,19,0.2)';
+  });
+
+  // Highlight selected
+  const selectedCard = modal.querySelector(`[data-index="${typeIndex}"]`);
+  selectedCard.style.border = '2px solid #FFD700';
+  selectedCard.style.background = 'rgba(255,215,0,0.2)';
 
   forgingState.selectedItemType = ITEM_TYPES[typeIndex];
   updateCraftButtonState(modal);
 }
 
 function selectBar(barIndex, modal) {
-  modal.querySelectorAll('.bar').forEach(item => item.classList.remove('selected'));
-  modal.querySelector(`#available-bars [data-index="${barIndex}"]`).classList.add('selected');
+  // Clear previous selection
+  modal.querySelectorAll('.bar').forEach(item => {
+    item.style.border = '2px solid transparent';
+  });
+
+  // Highlight selected
+  const selectedBar = modal.querySelector(`.bar[data-index="${barIndex}"]`);
+  selectedBar.style.border = '2px solid #FFD700';
 
   forgingState.selectedBar = forgingState.availableBars[barIndex];
   updateCraftButtonState(modal);
 }
 
 function selectPowder(powderIndex, modal) {
-  modal.querySelectorAll('.powder').forEach(item => item.classList.remove('selected'));
-  modal.querySelector(`#available-powders [data-index="${powderIndex}"]`).classList.add('selected');
+  // Clear previous selection
+  modal.querySelectorAll('.powder').forEach(item => {
+    item.style.border = '2px solid transparent';
+  });
+
+  // Highlight selected
+  const selectedPowder = modal.querySelector(`.powder[data-index="${powderIndex}"]`);
+  selectedPowder.style.border = '2px solid #FFD700';
 
   forgingState.selectedPowder = forgingState.availablePowders[powderIndex];
   
@@ -362,9 +433,11 @@ async function startForging(modal) {
     forgingState.sessionId = reserveJson.session_id;
     forgingState.barProperties = reserveJson.bar_properties;
 
+    // Show forging area and populate properties
     forgingArea.style.display = 'block';
     await animateForgeHeatup(modal);
 
+    // Show bonus counter
     bonusCounter.style.display = 'block';
     modal.querySelector('#bonus-total').textContent = forgingState.maxBonuses;
 
@@ -376,28 +449,37 @@ async function startForging(modal) {
       'Basic item ready - click Finish to complete!';
 
     // Disable material selection
-    const materialScrollers = modal.querySelectorAll('.material-scroller');
-    materialScrollers.forEach(scroller => {
-      scroller.style.opacity = '0.5';
-      scroller.style.pointerEvents = 'none';
-    });
+    modal.querySelector('#available-bars').style.opacity = '0.5';
+    modal.querySelector('#available-bars').style.pointerEvents = 'none';
+    modal.querySelector('#available-powders').style.opacity = '0.5';
+    modal.querySelector('#available-powders').style.pointerEvents = 'none';
+    modal.querySelector('#item-types').style.opacity = '0.5';
+    modal.querySelector('#item-types').style.pointerEvents = 'none';
 
   } catch (error) {
-    modal.querySelector('#craft-result').textContent = 'Forge malfunction! Please try again.';
+    const resultDiv = modal.querySelector('#craft-result');
+    resultDiv.textContent = 'Forge malfunction! Please try again.';
   }
 }
 
 async function animateForgeHeatup(modal) {
+  console.log('=== ANIMATE FORGE HEATUP DEBUG ===');
   const rows = modal.querySelectorAll('.property-row');
+  console.log('Rows found:', rows.length);
   
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const slots = row.querySelectorAll('.property-slot');
     const properties = forgingState.barProperties[i];
     
+    console.log(`Row ${i} properties:`, properties);
+    
+    // Animate heating effect
     createSparkEffect(row);
+    
     await new Promise(resolve => setTimeout(resolve, 300));
     
+    // Populate properties with animation
     if (typeof gsap !== 'undefined') {
       gsap.to(slots, {
         opacity: 1,
@@ -412,43 +494,131 @@ async function animateForgeHeatup(modal) {
         }
       });
     } else {
+      // Fallback without GSAP
       slots[0].textContent = properties[0];
       slots[1].textContent = properties[1];
       slots[2].textContent = properties[2];
     }
     
+    // Enable center slot if bonuses available
     if (forgingState.maxBonuses > 0) {
       const centerSlot = row.querySelector('.prop-center');
-      const bonusCounter = centerSlot?.querySelector('.bonus-counter');
-      if (bonusCounter) {
-        bonusCounter.style.display = 'flex';
+      console.log(`Row ${i} center slot:`, centerSlot);
+      
+      if (centerSlot) {
+        centerSlot.classList.add('clickable');
+        
+        // ENSURE THE BONUS COUNTER EXISTS
+        let bonusCounter = centerSlot.querySelector('.bonus-counter');
+        console.log(`Row ${i} existing bonus counter:`, bonusCounter);
+        
+        if (!bonusCounter) {
+          console.log(`Creating bonus counter for row ${i}`);
+          bonusCounter = document.createElement('div');
+          bonusCounter.className = 'bonus-counter';
+          bonusCounter.style.cssText = `
+            position: absolute; 
+            top: -8px; 
+            right: -8px; 
+            width: 20px; 
+            height: 20px; 
+            background: #FF4500; 
+            border-radius: 50%; 
+            color: white; 
+            font-size: 0.7rem; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            border: 2px solid #fff;
+          `;
+          bonusCounter.textContent = '0';
+          centerSlot.appendChild(bonusCounter);
+        } else {
+          bonusCounter.style.display = 'flex';
+        }
+        
+        console.log(`Row ${i} final bonus counter:`, bonusCounter);
       }
     }
   }
+  console.log('=== END ANIMATE FORGE HEATUP DEBUG ===');
 }
 
 function assignBonus(rowIdx, modal) {
-  if (forgingState.totalAssigned >= forgingState.maxBonuses) return;
+  console.log('=== ASSIGN BONUS DEBUG ===');
+  console.log('rowIdx:', rowIdx);
+  console.log('forgingState.totalAssigned:', forgingState.totalAssigned);
+  console.log('forgingState.maxBonuses:', forgingState.maxBonuses);
+  
+  if (forgingState.totalAssigned >= forgingState.maxBonuses) {
+    console.log('Max bonuses reached, returning');
+    return;
+  }
 
   forgingState.bonusAssignments[rowIdx]++;
   forgingState.totalAssigned++;
 
   const row = modal.querySelector(`[data-row="${rowIdx}"]`);
-  const centerSlot = row?.querySelector('.prop-center');
-  const bonusCounterEl = centerSlot?.querySelector('.bonus-counter');
+  console.log('Row found:', row);
   
+  const centerSlot = row?.querySelector('.prop-center');
+  console.log('Center slot found:', centerSlot);
+  
+  const bonusCounterEl = centerSlot?.querySelector('.bonus-counter');
+  console.log('Bonus counter element found:', bonusCounterEl);
+  console.log('Center slot HTML:', centerSlot?.innerHTML);
+  
+  // Update bonus counter display - ADD NULL CHECK
   if (bonusCounterEl) {
     bonusCounterEl.textContent = forgingState.bonusAssignments[rowIdx];
+  } else {
+    console.error('Bonus counter element not found! Creating it...');
+    // Create the bonus counter if it doesn't exist
+    if (centerSlot) {
+      const newBonusCounter = document.createElement('div');
+      newBonusCounter.className = 'bonus-counter';
+      newBonusCounter.style.cssText = `
+        position: absolute; 
+        top: -8px; 
+        right: -8px; 
+        width: 20px; 
+        height: 20px; 
+        background: #FF4500; 
+        border-radius: 50%; 
+        color: white; 
+        font-size: 0.7rem; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-weight: bold; 
+        border: 2px solid #fff;
+      `;
+      newBonusCounter.textContent = forgingState.bonusAssignments[rowIdx];
+      centerSlot.appendChild(newBonusCounter);
+    }
   }
   
+  // Update total counter with null checks
   const bonusAssignedEl = modal.querySelector('#bonus-assigned');
+  const bonusTotalEl = modal.querySelector('#bonus-total');
+  
+  console.log('Bonus assigned element:', bonusAssignedEl);
+  console.log('Bonus total element:', bonusTotalEl);
+  
   if (bonusAssignedEl) {
     bonusAssignedEl.textContent = forgingState.totalAssigned;
   }
   
+  if (bonusTotalEl) {
+    bonusTotalEl.textContent = forgingState.maxBonuses;
+  }
+  
+  // Visual feedback
   if (centerSlot) {
     createHammerStrike(centerSlot);
     
+    // Animation with fallback
     if (typeof gsap !== 'undefined') {
       gsap.to(centerSlot, {
         backgroundColor: 'rgba(255,69,0,0.6)',
@@ -457,9 +627,15 @@ function assignBonus(rowIdx, modal) {
         yoyo: true,
         repeat: 1
       });
+    } else {
+      centerSlot.style.backgroundColor = 'rgba(255,69,0,0.6)';
+      setTimeout(() => {
+        centerSlot.style.backgroundColor = '';
+      }, 400);
     }
   }
   
+  // Update result text
   const resultDiv = modal.querySelector('#craft-result');
   if (resultDiv) {
     const remaining = forgingState.maxBonuses - forgingState.totalAssigned;
@@ -469,6 +645,8 @@ function assignBonus(rowIdx, modal) {
       resultDiv.textContent = 'All bonuses assigned! Click Finish to complete your masterwork!';
     }
   }
+  
+  console.log('=== END ASSIGN BONUS DEBUG ===');
 }
 
 function createSparkEffect(row) {
@@ -478,28 +656,34 @@ function createSparkEffect(row) {
   
   for (let i = 0; i < 8; i++) {
     const spark = document.createElement('div');
-    spark.className = 'spark-effect';
-    spark.style.left = `${centerX}px`;
-    spark.style.top = `${centerY}px`;
+    spark.style.cssText = `
+      position: fixed;
+      width: 3px;
+      height: 10px;
+      background: linear-gradient(to bottom, #FFD700, #FFA500);
+      left: ${centerX}px;
+      top: ${centerY}px;
+      pointer-events: none;
+      z-index: 1000;
+      border-radius: 2px;
+    `;
     
     document.body.appendChild(spark);
     
     const angle = (i / 8) * Math.PI * 2;
     const distance = Math.random() * 30 + 20;
+    const finalX = centerX + Math.cos(angle) * distance;
+    const finalY = centerY + Math.sin(angle) * distance;
     
-    if (typeof gsap !== 'undefined') {
-      gsap.to(spark, {
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        rotation: Math.random() * 180,
-        opacity: 0,
-        duration: Math.random() * 0.8 + 0.5,
-        ease: "power2.out",
-        onComplete: () => spark.remove()
-      });
-    } else {
-      setTimeout(() => spark.remove(), 1000);
-    }
+    gsap.to(spark, {
+      x: finalX - centerX,
+      y: finalY - centerY,
+      rotation: Math.random() * 180,
+      opacity: 0,
+      duration: Math.random() * 0.8 + 0.5,
+      ease: "power2.out",
+      onComplete: () => spark.remove()
+    });
   }
 }
 
@@ -508,27 +692,41 @@ function createHammerStrike(element) {
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
   
+  // Create impact effect
   for (let i = 0; i < 5; i++) {
     const impact = document.createElement('div');
-    impact.className = 'impact-effect';
-    impact.style.left = `${centerX}px`;
-    impact.style.top = `${centerY}px`;
+    impact.style.cssText = `
+      position: fixed;
+      width: 4px;
+      height: 4px;
+      background: #FF4500;
+      border-radius: 50%;
+      left: ${centerX}px;
+      top: ${centerY}px;
+      pointer-events: none;
+      z-index: 1001;
+    `;
     
     document.body.appendChild(impact);
     
-    if (typeof gsap !== 'undefined') {
-      gsap.to(impact, {
-        x: (Math.random() - 0.5) * 30,
-        y: (Math.random() - 0.5) * 30,
-        opacity: 0,
-        duration: 0.5,
-        ease: "power2.out",
-        onComplete: () => impact.remove()
-      });
-    } else {
-      setTimeout(() => impact.remove(), 500);
-    }
+    gsap.to(impact, {
+      x: (Math.random() - 0.5) * 30,
+      y: (Math.random() - 0.5) * 30,
+      opacity: 0,
+      duration: 0.5,
+      ease: "power2.out",
+      onComplete: () => impact.remove()
+    });
   }
+  
+  // Shake effect
+  gsap.to(element, {
+    y: '+=2',
+    duration: 0.1,
+    ease: "power2.inOut",
+    yoyo: true,
+    repeat: 3
+  });
 }
 
 async function finishForging(resultDiv) {
@@ -560,6 +758,7 @@ async function finishForging(resultDiv) {
 
     const claimBtn = document.querySelector('#claim-btn');
     const finishBtn = document.querySelector('#finish-btn');
+    const craftBtn = document.querySelector('#craft-btn');
 
     if (json.success) {
       forgingState.result = json.crafted.name;
@@ -582,10 +781,54 @@ async function finishForging(resultDiv) {
         });
       }
     } else {
-      resultDiv.innerHTML = `<span style="color:red;">💥 Forging failed — materials ruined.</span>`;
+      forgingState.result = 'Failed';
+      resultDiv.innerHTML = `
+        <span style="color:red;">💥 Forging failed — materials ruined.</span>
+        <br><small style="color:#999;">${json.message || 'Something went wrong in the forge'}</small>
+      `;
+
+      animateFailedForging();
+
+      if (finishBtn) finishBtn.style.display = 'none';
+      if (claimBtn) claimBtn.style.display = 'none';
+      
+      if (craftBtn) {
+        craftBtn.style.display = 'block';
+        craftBtn.textContent = 'Forge Again';
+        craftBtn.disabled = false;
+        
+        const newCraftBtn = craftBtn.cloneNode(true);
+        craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+        
+        newCraftBtn.addEventListener('click', () => {
+          document.querySelector('.custom-message-box')?.remove();
+          startCraftingSession(context);
+        });
+      }
     }
   } catch (err) {
     resultDiv.innerHTML = '<span style="color:red;">⚠️ Forge malfunction. Try again later.</span>';
+    
+    const finishBtn = document.querySelector('#finish-btn');
+    const claimBtn = document.querySelector('#claim-btn');
+    const craftBtn = document.querySelector('#craft-btn');
+    
+    if (finishBtn) finishBtn.style.display = 'none';
+    if (claimBtn) claimBtn.style.display = 'none';
+    
+    if (craftBtn) {
+      craftBtn.style.display = 'block';
+      craftBtn.textContent = 'Try Again';
+      craftBtn.disabled = false;
+      
+      const newCraftBtn = craftBtn.cloneNode(true);
+      craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+      
+      newCraftBtn.addEventListener('click', () => {
+        document.querySelector('.custom-message-box')?.remove();
+        startCraftingSession(context);
+      });
+    }
   }
 }
 
@@ -593,18 +836,102 @@ function animateSuccessfulForging() {
   document.querySelectorAll('.prop-center').forEach((slot, index) => {
     setTimeout(() => {
       createSuccessGlow(slot);
+      createGoldenSparks(slot);
     }, index * 200);
+  });
+  
+  const forgeWorkspace = document.querySelector('.forge-workspace');
+  if (forgeWorkspace) {
+    gsap.to(forgeWorkspace, {
+      boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 24px rgba(255,215,0,0.4)',
+      duration: 1,
+      ease: "power2.out"
+    });
+  }
+}
+
+function animateFailedForging() {
+  document.querySelectorAll('.property-row').forEach((row, index) => {
+    setTimeout(() => {
+      gsap.to(row, {
+        x: '+=5',
+        duration: 0.1,
+        ease: "power2.inOut",
+        yoyo: true,
+        repeat: 5
+      });
+      createSmokeEffect(row);
+    }, index * 100);
   });
 }
 
 function createSuccessGlow(element) {
-  if (typeof gsap !== 'undefined') {
-    gsap.to(element, {
-      boxShadow: '0 0 30px rgba(255,215,0,0.8)',
-      duration: 1,
+  gsap.to(element, {
+    boxShadow: '0 0 30px rgba(255,215,0,0.8), inset 0 0 15px rgba(255,215,0,0.3)',
+    duration: 1,
+    ease: "power2.out",
+    yoyo: true,
+    repeat: 2
+  });
+}
+
+function createGoldenSparks(element) {
+  for (let i = 0; i < 12; i++) {
+    const spark = document.createElement('div');
+    spark.style.cssText = `
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: linear-gradient(45deg, #FFD700, #FFA500);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      pointer-events: none;
+      z-index: 30;
+    `;
+    
+    element.appendChild(spark);
+    
+    const angle = (i / 12) * Math.PI * 2;
+    const distance = 50;
+    
+    gsap.to(spark, {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance,
+      opacity: 0,
+      scale: 0,
+      duration: 1.2,
       ease: "power2.out",
-      yoyo: true,
-      repeat: 2
+      onComplete: () => spark.remove()
+    });
+  }
+}
+
+function createSmokeEffect(row) {
+  for (let i = 0; i < 6; i++) {
+    const smoke = document.createElement('div');
+    smoke.style.cssText = `
+      position: absolute;
+      width: ${Math.random() * 8 + 4}px;
+      height: ${Math.random() * 8 + 4}px;
+      background: rgba(64,64,64,0.7);
+      border-radius: 50%;
+      top: 50%;
+      left: ${Math.random() * 100}%;
+      pointer-events: none;
+      z-index: 25;
+    `;
+    
+    row.appendChild(smoke);
+    
+    gsap.to(smoke, {
+      y: -40,
+      x: `+=${Math.random() * 40 - 20}`,
+      opacity: 0,
+      scale: Math.random() * 1.5 + 0.5,
+      duration: Math.random() * 2 + 1.5,
+      ease: "power1.out",
+      onComplete: () => smoke.remove()
     });
   }
 }
@@ -618,51 +945,54 @@ function showMaterialProperties(material) {
   if (typeof material.properties === 'object' && material.properties !== null) {
     if (Array.isArray(material.properties)) {
       propertiesDisplay = material.properties.map((prop, idx) => 
-        `<div class="property-item">
+        `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
           <strong>Property ${idx + 1}:</strong> ${prop}
         </div>`
       ).join('');
     } else {
       propertiesDisplay = Object.entries(material.properties).map(([key, value]) => 
-        `<div class="property-item">
+        `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
           <strong>${key.toUpperCase()}:</strong> ${value}
         </div>`
       ).join('');
     }
   } else {
-    propertiesDisplay = '<div class="no-props">No properties available</div>';
+    propertiesDisplay = '<div style="color: #999; font-style: italic;">No properties available</div>';
   }
   
+  // Add rarity info for powders
   let rarityInfo = '';
   if (material.name.includes('Powder')) {
     const rarity = RARITY_LEVELS[material.name];
     if (rarity) {
       rarityInfo = `
-        <div class="rarity-info" style="background: ${rarity.color}20; border-color: ${rarity.color}; color: ${rarity.color};">
-          <div class="rarity-name">${rarity.name} Quality</div>
-          <div class="rarity-bonus">Grants ${rarity.bonuses} bonus stat${rarity.bonuses !== 1 ? 's' : ''}</div>
+        <div style="background: ${rarity.color}20; border: 1px solid ${rarity.color}; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
+          <div style="color: ${rarity.color}; font-weight: bold; font-size: 1.1rem;">${rarity.name} Quality</div>
+          <div style="color: #fff; font-size: 0.9rem; margin-top: 0.5rem;">
+            Grants ${rarity.bonuses} bonus stat${rarity.bonuses !== 1 ? 's' : ''}
+          </div>
         </div>
       `;
     }
   }
   
   propsModal.innerHTML = `
-    <div class="message-content material-props-modal">
-      <h3>${material.name}</h3>
-      <img src="assets/art/ingridients/${material.sprite}.png" alt="${material.name}">
+    <div class="message-content" style="max-width: 350px; text-align: center; scrollbar-width:none;">
+      <h3 style="color: #8B4513; margin-bottom: 1rem;">${material.name}</h3>
+      <img src="assets/art/ingridients/${material.sprite}.png" alt="${material.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
       
       ${rarityInfo}
       
-      <div class="properties-container">
-        <h4>Properties:</h4>
+      <div style="background: rgba(139,69,19,0.3); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
+        <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Properties:</h4>
         ${propertiesDisplay}
       </div>
       
-      <div class="material-amount">
+      <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 0.6rem; margin-bottom: 1rem; font-size: 0.9rem;">
         <strong>Available:</strong> ${material.amount} units
       </div>
       
-      <button class="fantasy-button close-props-btn">Close</button>
+      <button class="fantasy-button close-props-btn" style="width: 100%;">Close</button>
     </div>
   `;
   
@@ -678,79 +1008,23 @@ function injectBlacksmithingCSS() {
   if (document.getElementById('blacksmithing-css')) return;
   
   const css = `
-    .blacksmith-modal {
-      width: 95vw;
-      max-width: 800px !important;
-      max-height: 95vh;
-      overflow-y: auto;
-      text-align: center;
-      scrollbar-width: none;
+    @keyframes flicker {
+      0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+      50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
     }
 
-    .blacksmith-modal::-webkit-scrollbar {
-      display: none;
+    @keyframes forge-glow {
+      0%, 100% { box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2); }
+      50% { box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 20px rgba(255,69,0,0.3); }
     }
 
-    .craft-status {
-      font-weight: bold;
-      min-height: 1.5rem;
+    .forge-workspace {
+      animation: forge-glow 4s infinite ease-in-out;
     }
 
-    .bonus-display {
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-      color: #FFD700;
-    }
-
-    .materials-section {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin: 1.5rem 0;
-    }
-
-    .material-group h3 {
-      margin: 0 0 0.5rem 0;
-      font-size: 1rem;
-    }
-
-    .material-scroller {
-      display: flex;
-      overflow-x: auto;
-      gap: 0.5rem;
-      padding: 3px;
-      border: 1px solid #444;
-      border-radius: 8px;
-      background: rgba(139,69,19,0.1);
-      min-height: 80px;
-      scrollbar-width: none;
-    }
-
-    .material-scroller::-webkit-scrollbar {
-      height: 4px;
-    }
-
-    .material-scroller::-webkit-scrollbar-track {
-      background: rgba(139,69,19,0.1);
-      border-radius: 2px;
-    }
-
-    .material-scroller::-webkit-scrollbar-thumb {
-      background: rgba(139,69,19,0.5);
-      border-radius: 2px;
-    }
-
-    .material-item {
-      flex: 0 0 auto;
-      position: relative;
-      cursor: pointer;
-      border-radius: 6px;
-      padding: 6px;
-      background: rgba(139,69,19,0.05);
-      border: 2px solid transparent;
-      min-width: 64px;
-      text-align: center;
-      transition: all 0.2s ease;
+    .item-type-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(139,69,19,0.3);
     }
 
     .material-item:hover {
@@ -758,298 +1032,18 @@ function injectBlacksmithingCSS() {
       box-shadow: 0 4px 8px rgba(139,69,19,0.3);
     }
 
-    .material-item.selected {
-      border-color: #FFD700;
-      background: rgba(255,215,0,0.2);
-    }
-
-    .material-item img {
-      width: 48px;
-      height: 48px;
-      display: block;
-      margin: 0 auto;
-    }
-
-    .item-label, .item-count {
-      font-size: 0.8rem;
-      margin-top: 4px;
-      color: #c4975a;
-      font-weight: bold;
-    }
-
-    .info-icon {
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      width: 16px;
-      height: 16px;
-      background: #8B4513;
-      border-radius: 50%;
-      color: white;
-      font-size: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    .rarity-indicator {
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 1px solid #fff;
-      animation: rarity-glow 2s infinite ease-in-out;
-    }
-
-    .empty-message {
-      color: #666;
-      font-style: italic;
-      padding: 1rem;
-      text-align: center;
-    }
-
-    .forge-section {
-      margin: 0.5rem 0;
-    }
-
-    .forge-workspace {
-      background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%);
-      border: 3px solid #654321;
-      border-radius: 20px;
-      padding: 1.5rem;
-      position: relative;
-      box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);
-      animation: forge-glow 4s infinite ease-in-out;
-    }
-
-    .forge-fire {
-      position: absolute;
-      top: -10px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 60px;
-      height: 20px;
-      background: linear-gradient(45deg, #FF4500, #FFA500, #FFD700);
-      border-radius: 50%;
-      box-shadow: 0 0 20px rgba(255,69,0,0.6);
-      animation: flicker 2s infinite ease-in-out;
-    }
-
-    .property-row {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 1rem;
-    }
-
-    .property-display {
-      width: 280px;
-      height: 50px;
-      background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%);
-      border: 2px solid #543528;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      position: relative;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
-    }
-
-    .property-slot {
-      position: absolute;
-      width: 70px;
-      height: 35px;
-      border: 2px solid #8B4513;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      color: #FFD700;
-      font-weight: bold;
-      top: 50%;
-      transform: translateY(-50%);
-      transition: all 0.3s ease;
-    }
-
-    .prop-left {
-      left: 15px;
-      background: rgba(139,69,19,0.6);
-    }
-
-    .prop-center {
-      left: 50%;
-      transform: translate(-50%, -50%);
-      border-color: #FFD700;
-      background: linear-gradient(135deg, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.6) 100%);
-      color: #8B4513;
-      position: relative;
-    }
-
-    .prop-center.clickable {
-      cursor: pointer;
-    }
-
     .prop-center.clickable:hover {
       background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%);
       transform: translate(-50%, -50%) scale(1.05);
+      cursor: pointer;
     }
 
     .prop-center.clickable:active {
       transform: translate(-50%, -50%) scale(0.95);
     }
 
-    .prop-right {
-      right: 15px;
-      background: rgba(139,69,19,0.6);
-    }
-
     .bonus-counter {
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      width: 18px;
-      height: 18px;
-      background: #FF4500;
-      border-radius: 50%;
-      color: white;
-      font-size: 0.7rem;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      border: 2px solid #fff;
       animation: pulse 2s infinite ease-in-out;
-    }
-
-    .button-group {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .button-group .fantasy-button {
-      flex: 1;
-      min-width: 80px;
-      max-width: 120px;
-    }
-
-    .spark-effect {
-      position: fixed;
-      width: 3px;
-      height: 10px;
-      background: linear-gradient(to bottom, #FFD700, #FFA500);
-      pointer-events: none;
-      z-index: 1000;
-      border-radius: 2px;
-    }
-
-    .impact-effect {
-      position: fixed;
-      width: 4px;
-      height: 4px;
-      background: #FF4500;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 1001;
-    }
-
-    .material-props-modal {
-      max-width: 350px;
-      text-align: center;
-    }
-
-    .material-props-modal h3 {
-      color: #8B4513;
-      margin-bottom: 1rem;
-    }
-
-    .material-props-modal img {
-      width: 80px;
-      height: 80px;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-    }
-
-    .rarity-info {
-      border: 1px solid;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
-
-    .rarity-name {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-
-    .rarity-bonus {
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-      opacity: 0.9;
-    }
-
-    .properties-container {
-      background: rgba(139,69,19,0.3);
-      border: 1px solid #8B4513;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      text-align: left;
-    }
-
-    .properties-container h4 {
-      color: #FFD700;
-      margin-bottom: 0.8rem;
-      text-align: center;
-    }
-
-    .property-item {
-      background: rgba(139,69,19,0.2);
-      padding: 0.5rem;
-      border-radius: 4px;
-      margin-bottom: 0.3rem;
-    }
-
-    .no-props {
-      color: #999;
-      font-style: italic;
-    }
-
-    .material-amount {
-      background: rgba(255,255,255,0.1);
-      border-radius: 6px;
-      padding: 0.6rem;
-      margin-bottom: 1rem;
-      font-size: 0.9rem;
-    }
-
-    @keyframes flicker {
-      0%, 100% { 
-        opacity: 0.8; 
-        transform: translateX(-50%) scale(1); 
-      }
-      50% { 
-        opacity: 1; 
-        transform: translateX(-50%) scale(1.1); 
-      }
-    }
-
-    @keyframes forge-glow {
-      0%, 100% { 
-        box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2); 
-      }
-      50% { 
-        box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 20px rgba(255,69,0,0.3); 
-      }
-    }
-
-    @keyframes rarity-glow {
-      0%, 100% { opacity: 0.8; }
-      50% { opacity: 1; }
     }
 
     @keyframes pulse {
@@ -1057,37 +1051,43 @@ function injectBlacksmithingCSS() {
       50% { transform: scale(1.1); }
     }
 
-    @media (max-width: 480px) {
+    .property-slot {
+      transition: all 0.3s ease;
+      will-change: transform, background-color;
+    }
 
+    .rarity-indicator {
+      animation: rarity-glow 2s infinite ease-in-out;
+    }
+
+    @keyframes rarity-glow {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+      .materials-section {
+        grid-template-columns: 1fr !important;
+      }
+      
       .property-display {
-        width: 240px;
-        height: 45px;
+        width: 280px !important;
+        height: 50px !important;
       }
-
+      
       .property-slot {
-        width: 60px;
-        height: 30px;
-        font-size: 0.7rem;
+        width: 70px !important;
+        height: 35px !important;
+        font-size: 0.7rem !important;
       }
-
-      .bonus-counter {
-        width: 16px;
-        height: 16px;
-        font-size: 0.6rem;
+      
+      .item-type-card {
+        min-width: 60px !important;
       }
-
-      .material-item img {
-        width: 40px;
-        height: 40px;
-      }
-
-      .material-item {
-        min-width: 56px;
-      }
-
-      .button-group .fantasy-button {
-        min-width: 70px;
-        font-size: 0.9rem;
+      
+      .item-type-card img {
+        width: 40px !important;
+        height: 40px !important;
       }
     }
   `;
