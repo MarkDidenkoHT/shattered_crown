@@ -692,7 +692,6 @@ function injectBlacksmithingCSS() {
     }
 
     .craft-status {
-      margin: 1rem 0;
       font-weight: bold;
       min-height: 1.5rem;
     }
@@ -719,12 +718,12 @@ function injectBlacksmithingCSS() {
       display: flex;
       overflow-x: auto;
       gap: 0.5rem;
-      padding: 8px;
+      padding: 3px;
       border: 1px solid #444;
       border-radius: 8px;
       background: rgba(139,69,19,0.1);
       min-height: 80px;
-      scrollbar-width: thin;
+      scrollbar-width: none;
     }
 
     .material-scroller::-webkit-scrollbar {
@@ -813,7 +812,7 @@ function injectBlacksmithingCSS() {
     }
 
     .forge-section {
-      margin: 1.5rem 0;
+      margin: 0.5rem 0;
     }
 
     .forge-workspace {
