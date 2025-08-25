@@ -1,47 +1,59 @@
 let context = null;
-let miningState = null;
-let oreCache = new Map();
+let forgingState = null;
+
+const ITEM_TYPES = [
+  { name: 'Armor', type: 'Armor', sprite: 'armor' },
+  { name: 'Boots', type: 'Armor', sprite: 'boots' },
+  { name: 'Gloves', type: 'Armor', sprite: 'gloves' },
+  { name: 'Helmet', type: 'Armor', sprite: 'helmet' },
+  { name: 'Sword', type: 'Weapon', sprite: 'sword' },
+  { name: 'Axe', type: 'Weapon', sprite: 'axe' },
+  { name: 'Mace', type: 'Weapon', sprite: 'mace' }
+];
+
+const RARITY_LEVELS = {
+  'Clay Powder': { name: 'Basic', bonuses: 0, color: '#8B7355' },
+  'Sand Powder': { name: 'Uncommon', bonuses: 1, color: '#4CAF50' },
+  'Coarse Powder': { name: 'Rare', bonuses: 2, color: '#2196F3' },
+  'Limestone Powder': { name: 'Epic', bonuses: 3, color: '#9C27B0' },
+  'Mystic Powder': { name: 'Legendary', bonuses: 4, color: '#FF9800' }
+};
 
 export async function startCraftingSession(ctx) {
   context = ctx;
   const { loadingModal, loadingStartTime, updateLoadingProgress, finishLoading } = context;
   
   try {
-    updateLoadingProgress(loadingModal, "Accessing your ore vault...", "Loading bank items and recipes...");
+    updateLoadingProgress(loadingModal, "Accessing your forge materials...", "Loading bars and powders...");
     
-    const [bankResponse, recipesPromise] = await Promise.all([
-      context.apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`),
-      context.fetchRecipes(context.professionId)
-    ]);
+    const bankResponse = await context.apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`);
     
     const bankItems = await bankResponse.json();
-    updateLoadingProgress(loadingModal, "Analyzing mineral properties...", "Processing ore data...");
+    updateLoadingProgress(loadingModal, "Analyzing metal properties...", "Processing materials...");
     
-    const enriched = await batchEnrichOres(bankItems);
-    const recipes = await recipesPromise;
-    updateLoadingProgress(loadingModal, "Setting up mining equipment...", "Preparing interface...");
+    const enriched = await enrichIngredients(bankItems);
+    updateLoadingProgress(loadingModal, "Heating the forge...", "Preparing interface...");
     
-    miningState = {
+    forgingState = {
       professionId: context.professionId,
       professionName: context.professionName,
-      availableOres: enriched,
-      selectedOres: [null, null, null],
-      randomizedProperties: [[], [], []],
-      originalProperties: [[], [], []],
-      currentAdjustedRow: null,
+      availableBars: enriched.filter(item => item.name.includes('Bar')),
+      availablePowders: enriched.filter(item => item.name.includes('Powder')),
+      selectedBar: null,
+      selectedPowder: null,
+      selectedItemType: null,
+      barProperties: [],
+      bonusAssignments: [0, 0, 0],
+      maxBonuses: 0,
+      totalAssigned: 0,
       isCraftingStarted: false,
-      result: null,
-      adjustmentCount: 0,
-      maxAdjustments: 2,
-      enrichedOres: null,
-      recipes: recipes,
       sessionId: null
     };
     
     await finishLoading(loadingModal, loadingStartTime, 2000);
     
-    renderCraftingModal();
-    injectMiningAnimationsCSS();
+    renderBlacksmithingModal();
+    injectBlacksmithingCSS();
     
   } catch (error) {
     if (finishLoading && loadingModal) {
@@ -51,535 +63,249 @@ export async function startCraftingSession(ctx) {
   }
 }
 
-async function batchEnrichOres(bankItems) {
+async function enrichIngredients(bankItems) {
   if (!bankItems.length) return [];
   
-  const oreNames = bankItems.map(item => item.item);
-  const uniqueNames = [...new Set(oreNames)];
-  const uncachedNames = uniqueNames.filter(name => !oreCache.has(name));
+  const itemNames = bankItems.map(item => item.item);
+  const uniqueNames = [...new Set(itemNames)];
+  const namesQuery = uniqueNames.map(name => encodeURIComponent(name)).join(',');
   
-  if (uncachedNames.length > 0) {
-    const namesQuery = uncachedNames.map(name => encodeURIComponent(name)).join(',');
+  try {
+    const apiUrl = `/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`;
+    const response = await context.apiCall(apiUrl);
+    const ingredients = await response.json();
     
-    try {
-      const response = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`);
-      const ores = await response.json();
-      ores.forEach(ore => oreCache.set(ore.name, ore));
-    } catch (error) {
-      return await fallbackEnrichOres(bankItems);
-    }
-  }
-  
-  const enriched = [];
-  for (const item of bankItems) {
-    const cachedOre = oreCache.get(item.item);
-    if (cachedOre) {
-      enriched.push({
-        name: item.item,
-        amount: item.amount,
-        properties: cachedOre.properties,
-        sprite: cachedOre.sprite,
-      });
-    }
-  }
-  
-  return enriched;
-}
-
-async function fallbackEnrichOres(bankItems) {
-  const enriched = [];
-  const BATCH_SIZE = 5;
-  
-  for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-    const batch = bankItems.slice(i, i + BATCH_SIZE);
-    
-    const batchPromises = batch.map(async (item) => {
-      try {
-        const res = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`);
-        const [ore] = await res.json();
-        
-        if (ore) {
-          return {
-            name: item.item,
-            amount: item.amount,
-            properties: ore.properties,
-            sprite: ore.sprite,
-          };
-        }
-      } catch (error) {
-        // Silently continue on error
-      }
-      return null;
+    const ingredientMap = new Map();
+    ingredients.forEach(ingredient => {
+      ingredientMap.set(ingredient.name, ingredient);
     });
     
-    const batchResults = await Promise.all(batchPromises);
-    enriched.push(...batchResults.filter(Boolean));
-    
-    if (i + BATCH_SIZE < bankItems.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
+    const enriched = [];
+    for (const item of bankItems) {
+      const ingredient = ingredientMap.get(item.item);
+      if (ingredient) {
+        enriched.push({
+          name: item.item,
+          amount: item.amount,
+          properties: ingredient.properties,
+          sprite: ingredient.sprite,
+        });
+      }
     }
+    
+    return enriched;
+    
+  } catch (error) {
+    console.error('Error enriching ingredients:', error);
+    return [];
   }
-  
-  return enriched;
 }
 
-function createSingleMiningRowHTML() {
-  return `
-    <div class="single-mining-row" style="display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; justify-content: center; position: relative; padding: 1rem; background: rgba(139,69,19,0.1); border: 2px solid #8B4513; border-radius: 15px;">
-      
-      <!-- Left adjustment button -->
-      <div class="adjustment-controls">
-        <button class="fantasy-button adjust-left" style="padding: 0.4rem 0.8rem; font-size: 1.4rem; opacity: 0.3; background: rgba(139,69,19,0.6); border: 2px solid #654321;" disabled>←</button>
-      </div>
-      
-      <!-- Mining stations (3 ore slots in horizontal layout) -->
-      <div class="mining-stations" style="display: flex; gap: 1rem; align-items: center;">
-        
-        <!-- Station 1 -->
-        <div class="mining-station" data-station="0" style="text-align: center;">
-          <div class="ore-input-slot" data-row="0" style="width: 80px; height: 80px; border: 2px dashed #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,215,0,0.15); transition: all 0.5s ease; margin-bottom: 0.5rem; cursor: pointer;">
-            <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore 1</span>
-          </div>
-          <div class="center-property" data-row="0" style="width: 80px; height: 45px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8);">-</div>
-        </div>
-        
-        <!-- Station 2 -->
-        <div class="mining-station" data-station="1" style="text-align: center;">
-          <div class="ore-input-slot" data-row="1" style="width: 80px; height: 80px; border: 2px dashed #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,215,0,0.15); transition: all 0.5s ease; margin-bottom: 0.5rem; cursor: pointer;">
-            <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore 2</span>
-          </div>
-          <div class="center-property" data-row="1" style="width: 80px; height: 45px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8);">-</div>
-        </div>
-        
-        <!-- Station 3 -->
-        <div class="mining-station" data-station="2" style="text-align: center;">
-          <div class="ore-input-slot" data-row="2" style="width: 80px; height: 80px; border: 2px dashed #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,215,0,0.15); transition: all 0.5s ease; margin-bottom: 0.5rem; cursor: pointer;">
-            <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore 3</span>
-          </div>
-          <div class="center-property" data-row="2" style="width: 80px; height: 45px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: scale(0.8);">-</div>
-        </div>
-        
-      </div>
-      
-      <!-- Right adjustment button -->
-      <div class="adjustment-controls">
-        <button class="fantasy-button adjust-right" style="padding: 0.4rem 0.8rem; font-size: 1.4rem; opacity: 0.3; background: rgba(139,69,19,0.6); border: 2px solid #654321;" disabled>→</button>
-      </div>
-      
-    </div>
-  `;
-}
-
-function renderCraftingModal() {
+function renderBlacksmithingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 900px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
-      <h2>Crafting: ${miningState.professionName}</h2>
-                
-      <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select 3 ores to start mining</div>
+    <div class="message-content blacksmith-modal">
+      <div id="craft-result" class="craft-status">Select materials and item type to begin forging</div>
       
-      <div id="adjustment-counter" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666; display: none;">
-        Adjustments: ${miningState.adjustmentCount}/${miningState.maxAdjustments}
+      <div id="bonus-counter" class="bonus-display" style="display: none;">
+        Bonuses: <span id="bonus-assigned">0</span>/<span id="bonus-total">0</span> assigned
       </div>
       
-      <div id="alignment-status" style="margin-top: 0.5rem; font-size: 0.9rem; color: #FFD700; display: none;">
-        <span id="alignment-text">Align all properties for successful extraction!</span>
+      <div class="materials-section">
+        <div class="material-group">
+          <h3>Item Types</h3>
+          <div id="item-types" class="material-scroller">
+            ${renderItemTypesHTML()}
+          </div>
+        </div>
+        
+        <div class="material-group">
+          <h3>Metal Bars</h3>
+          <div id="available-bars" class="material-scroller">
+            ${renderBarsHTML()}
+          </div>
+        </div>
+        
+        <div class="material-group">
+          <h3>Enhancement Powders</h3>
+          <div id="available-powders" class="material-scroller">
+            ${renderPowdersHTML()}
+          </div>
+        </div>
       </div>
       
-      <div id="mining-area" style="margin: 1rem 0;">
-        ${createSingleMiningRowHTML()}
+      <div id="forging-area" class="forge-section" style="display: none;">
+        <div class="forge-workspace">
+          <div class="forge-fire"></div>
+          <div id="property-rows">
+            ${[0,1,2].map(i => createPropertyRowHTML(i)).join('')}
+          </div>
+        </div>
       </div>
       
-      <h3>Available Ores</h3>
-      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
-        ${renderOresHTML()}
-      </div>
-      
-      <h3>Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
-        ${renderRecipesHTML()}
-      </div>
-      
-      <div style="display: flex; justify-content: center; gap: 0.5rem;">
-        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
-        <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Mine</button>
-        <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Extract</button>
-        <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
+      <div class="button-group">
+        <button class="fantasy-button message-ok-btn">Close</button>
+        <button id="craft-btn" class="fantasy-button" disabled>Forge</button>
+        <button id="finish-btn" class="fantasy-button" disabled style="display: none;">Finish</button>
+        <button id="claim-btn" class="fantasy-button" style="display: none;">Claim</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  setupModalEventListeners(modal);
+  setupBlacksmithingEventListeners(modal);
 }
 
-function renderOresHTML() {
-  return miningState.availableOres.map((ore, idx) => `
-    <div class="ore" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05);">
-      <img src="assets/art/ingridients/${ore.sprite}.png" title="${ore.name} (${ore.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size: 0.8rem;">x${ore.amount}</div>
-      <div class="info-icon" data-ore="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+function renderItemTypesHTML() {
+  return ITEM_TYPES.map((itemType, idx) => `
+    <div class="material-item item-type-card" data-index="${idx}">
+      <img src="assets/art/items/${itemType.sprite}.png" alt="${itemType.name}">
+      <div class="item-label">${itemType.name}</div>
     </div>
   `).join('');
 }
 
-function renderRecipesHTML() {
-  if (!miningState.recipes || miningState.recipes.length === 0) {
-    return '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes available</div>';
+function renderBarsHTML() {
+  if (!forgingState.availableBars.length) {
+    return '<div class="empty-message">No bars available</div>';
   }
   
-  return miningState.recipes.map((recipe, idx) => `
-    <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
-      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
-      <div style="font-size: 0.8rem; color: #c4975a; font-weight: bold;">${recipe.name}</div>
-      <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+  return forgingState.availableBars.map((bar, idx) => `
+    <div class="material-item bar" data-index="${idx}">
+      <img src="assets/art/ingridients/${bar.sprite}.png" alt="${bar.name}">
+      <div class="item-count">x${bar.amount}</div>
+      <div class="info-icon" data-bar="${idx}">i</div>
     </div>
   `).join('');
 }
 
-function findOresWithProperty(targetProperty) {
-  if (!miningState?.availableOres) return [];
-
-  const matchingOres = [];
+function renderPowdersHTML() {
+  if (!forgingState.availablePowders.length) {
+    return '<div class="empty-message">No powders available</div>';
+  }
   
-  miningState.availableOres.forEach(ore => {
-    if (!ore.properties) return;
-    
-    let oreProperties = [];
-    
-    if (Array.isArray(ore.properties)) {
-      oreProperties = ore.properties;
-    } else if (typeof ore.properties === 'object') {
-      oreProperties = Object.values(ore.properties);
-    } else if (typeof ore.properties === 'string') {
-      try {
-        const parsed = JSON.parse(ore.properties);
-        if (Array.isArray(parsed)) {
-          oreProperties = parsed;
-        }
-      } catch (e) {
-        oreProperties = ore.properties.split(',').map(p => p.trim());
-      }
-    }
-    
-    const hasProperty = oreProperties.some(prop => {
-      return prop && prop.toString().toLowerCase().trim() === targetProperty.toLowerCase().trim();
-    });
-    
-    if (hasProperty && ore.amount > 0) {
-      matchingOres.push({
-        name: ore.name,
-        sprite: ore.sprite,
-        amount: ore.amount,
-        properties: oreProperties
-      });
-    }
-  });
-
-  matchingOres.sort((a, b) => b.amount - a.amount);
-  return matchingOres;
+  return forgingState.availablePowders.map((powder, idx) => `
+    <div class="material-item powder" data-index="${idx}">
+      <img src="assets/art/ingridients/${powder.sprite}.png" alt="${powder.name}">
+      <div class="item-count">x${powder.amount}</div>
+      <div class="rarity-indicator" style="background: ${RARITY_LEVELS[powder.name]?.color || '#666'};"></div>
+      <div class="info-icon" data-powder="${idx}">i</div>
+    </div>
+  `).join('');
 }
 
-function generateIngredientMatching(recipe) {
-  if (!miningState?.availableOres || !recipe.ingridients) {
-    return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">Ingredient matching unavailable</div>';
-  }
-
-  let requiredProperties = [];
-  if (Array.isArray(recipe.ingridients)) {
-    requiredProperties = recipe.ingridients;
-  } else if (typeof recipe.ingridients === 'object') {
-    requiredProperties = Object.values(recipe.ingridients);
-  } else if (typeof recipe.ingridients === 'string') {
-    requiredProperties = recipe.ingridients.split(',').map(prop => prop.trim());
-  }
-
-  if (requiredProperties.length === 0) {
-    return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">No properties specified for this recipe</div>';
-  }
-
-  const matchingResults = requiredProperties.map((requiredProp, index) => {
-    const matchingOres = findOresWithProperty(requiredProp);
-    return {
-      property: requiredProp,
-      position: index + 1,
-      matchingOres: matchingOres
-    };
-  });
-
-  let matchingHTML = `
-    <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-      <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Ore Matching Guide</h4>
-      <div style="font-size: 0.85rem; color: #ccc; text-align: center; margin-bottom: 1rem; font-style: italic;">
-        Find ores with these properties (all three must align horizontally):
-      </div>
-  `;
-
-  matchingResults.forEach((result) => {
-    const hasMatches = result.matchingOres.length > 0;
-    const borderColor = hasMatches ? '#8B4513' : '#ff6b6b';
-    const bgColor = hasMatches ? 'rgba(139,69,19,0.1)' : 'rgba(255,107,107,0.1)';
-    
-    matchingHTML += `
-      <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem;">
-        <div style="color: #FFD700; font-weight: bold; margin-bottom: 0.5rem;">
-          Property ${result.position}: "${result.property}"
+function createPropertyRowHTML(rowIndex) {
+  return `
+    <div class="property-row" data-row="${rowIndex}">
+      <div class="property-display">
+        <div class="property-slot prop-left">-</div>
+        <div class="property-slot prop-center clickable" data-row="${rowIndex}">
+          -
+          <div class="bonus-counter">0</div>
         </div>
-    `;
-
-    if (hasMatches) {
-      matchingHTML += `
-        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-          <span style="color: #8B4513; font-size: 0.8rem; margin-right: 0.5rem;">Available ores:</span>
-      `;
-      
-      result.matchingOres.forEach((ore) => {
-        matchingHTML += `
-          <div style="display: flex; align-items: center; background: rgba(139,69,19,0.2); border-radius: 4px; padding: 0.3rem 0.5rem; gap: 0.3rem;">
-            <img src="assets/art/ingridients/${ore.sprite}.png" style="width: 20px; height: 20px;" title="${ore.name}">
-            <span style="font-size: 0.75rem; color: #fff;">${ore.name}</span>
-            <span style="font-size: 0.7rem; color: #999;">(${ore.amount})</span>
-          </div>
-        `;
-      });
-      
-      matchingHTML += '</div>';
-    } else {
-      matchingHTML += `
-        <div style="color: #ff6b6b; font-size: 0.8rem; font-style: italic;">
-          ❌ No available ores have this property
-        </div>
-      `;
-    }
-
-    matchingHTML += '</div>';
-  });
-
-  matchingHTML += `
-    <div style="background: rgba(255,215,0,0.1); border: 1px solid #FFD700; border-radius: 6px; padding: 0.6rem; margin-top: 1rem;">
-      <div style="color: #FFD700; font-size: 0.8rem; text-align: center;">
-        ⛏️ <strong>Mining Tip:</strong> Use adjustments to align all three <strong>properties</strong> horizontally for successful extraction!
+        <div class="property-slot prop-right">-</div>
       </div>
     </div>
   `;
-
-  matchingHTML += '</div>';
-  return matchingHTML;
 }
 
-function showRecipeDetails(recipe) {
-  const detailsModal = document.createElement('div');
-  detailsModal.className = 'custom-message-box';
-  detailsModal.style.zIndex = '10001';
-  
-  let ingredientsList = '';
-  if (Array.isArray(recipe.ingridients)) {
-    ingredientsList = recipe.ingridients.join(', ');
-  } else if (typeof recipe.ingridients === 'object') {
-    ingredientsList = Object.values(recipe.ingridients).join(', ');
-  } else {
-    ingredientsList = recipe.ingridients || 'Unknown ingredients';
-  }
-  
-  const ingredientMatchingHTML = generateIngredientMatching(recipe);
-  
-  detailsModal.innerHTML = `
-    <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto; scrollbar-width:none;">
-      <h3 style="color: #FFD700; margin-bottom: 1rem;">${recipe.name}</h3>
-      <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
-      
-      <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: #FFD700; margin-bottom: 0.5rem;">Required Properties:</h4>
-        <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${ingredientsList}</div>
-      </div>
-      
-      ${ingredientMatchingHTML}
-      
-      ${recipe.description ? `
-        <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem; font-style: italic; color: #ccc; font-size: 0.85rem;">
-          ${recipe.description}
-        </div>
-      ` : ''}
-      
-      <button class="fantasy-button close-details-btn" style="width: 100%;">Close</button>
-    </div>
-  `;
-  
-  document.body.appendChild(detailsModal);
-  
-  detailsModal.querySelector('.close-details-btn').addEventListener('click', () => detailsModal.remove());
-  detailsModal.addEventListener('click', (e) => {
-    if (e.target === detailsModal) detailsModal.remove();
-  });
-}
-
-function showOreProperties(oreIndex) {
-  const ore = miningState.availableOres[oreIndex];
-  const propsModal = document.createElement('div');
-  propsModal.className = 'custom-message-box';
-  propsModal.style.zIndex = '10001';
-  
-  let propertiesDisplay = '';
-  if (typeof ore.properties === 'object' && ore.properties !== null) {
-    if (Array.isArray(ore.properties)) {
-      propertiesDisplay = ore.properties.map((prop, idx) => 
-        `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
-          <strong>Property ${idx + 1}:</strong> ${prop}
-        </div>`
-      ).join('');
-    } else {
-      propertiesDisplay = Object.entries(ore.properties).map(([key, value]) => 
-        `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
-          <strong>${key.toUpperCase()}:</strong> ${value}
-        </div>`
-      ).join('');
-    }
-  } else {
-    propertiesDisplay = '<div style="color: #999; font-style: italic;">No properties available</div>';
-  }
-  
-  propsModal.innerHTML = `
-    <div class="message-content" style="max-width: 350px; text-align: center; scrollbar-width:none;">
-      <h3 style="color: #8B4513; margin-bottom: 1rem;">${ore.name}</h3>
-      <img src="assets/art/ingridients/${ore.sprite}.png" alt="${ore.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
-      
-      <div style="background: rgba(139,69,19,0.3); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Properties:</h4>
-        ${propertiesDisplay}
-      </div>
-      
-      <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 0.6rem; margin-bottom: 1rem; font-size: 0.9rem;">
-        <strong>Available:</strong> ${ore.amount} units
-      </div>
-      
-      <button class="fantasy-button close-props-btn" style="width: 100%;">Close</button>
-    </div>
-  `;
-  
-  document.body.appendChild(propsModal);
-  
-  propsModal.querySelector('.close-props-btn').addEventListener('click', () => propsModal.remove());
-  propsModal.addEventListener('click', (e) => {
-    if (e.target === propsModal) propsModal.remove();
-  });
-}
-
-function setupModalEventListeners(modal) {
+function setupBlacksmithingEventListeners(modal) {
   const craftBtn = modal.querySelector('#craft-btn');
   const finishBtn = modal.querySelector('#finish-btn');
-  const resultDiv = modal.querySelector('#craft-result');
-  const adjustmentCounter = modal.querySelector('#adjustment-counter');
 
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
-    miningState = null;
-    oreCache.clear();
+    forgingState = null;
   });
 
-  const oresContainer = modal.querySelector('#available-ores');
-  oresContainer.addEventListener('click', (e) => {
-    const oreEl = e.target.closest('.ore');
+  // Item type selection
+  modal.querySelector('#item-types').addEventListener('click', (e) => {
+    const itemCard = e.target.closest('.item-type-card');
+    if (itemCard && !forgingState.isCraftingStarted) {
+      const idx = parseInt(itemCard.dataset.index);
+      selectItemType(idx, modal);
+    }
+  });
+
+  // Material selection
+  modal.querySelector('#available-bars').addEventListener('click', (e) => {
+    const materialItem = e.target.closest('.material-item');
     const infoIcon = e.target.closest('.info-icon');
     
-    if (infoIcon?.dataset.ore) {
+    if (infoIcon?.dataset.bar) {
       e.stopPropagation();
-      showOreProperties(parseInt(infoIcon.dataset.ore));
+      showMaterialProperties(forgingState.availableBars[parseInt(infoIcon.dataset.bar)]);
       return;
     }
     
-    if (oreEl && !miningState.isCraftingStarted) {
-      const idx = parseInt(oreEl.dataset.index);
-      const ore = miningState.availableOres[idx];
-      handleOreSelection(ore, modal);
+    if (materialItem && !forgingState.isCraftingStarted) {
+      const idx = parseInt(materialItem.dataset.index);
+      selectBar(idx, modal);
     }
   });
 
-  const recipesContainer = modal.querySelector('#available-recipes');
-  recipesContainer.addEventListener('click', (e) => {
-    const recipeCard = e.target.closest('.recipe-card');
+  modal.querySelector('#available-powders').addEventListener('click', (e) => {
+    const materialItem = e.target.closest('.material-item');
     const infoIcon = e.target.closest('.info-icon');
     
-    if (infoIcon?.dataset.recipe) {
+    if (infoIcon?.dataset.powder) {
       e.stopPropagation();
-      const recipeIdx = parseInt(infoIcon.dataset.recipe);
-      showRecipeDetails(miningState.recipes[recipeIdx]);
+      showMaterialProperties(forgingState.availablePowders[parseInt(infoIcon.dataset.powder)]);
       return;
     }
     
-    if (recipeCard) {
-      const recipeIdx = parseInt(recipeCard.dataset.recipe);
-      showRecipeDetails(miningState.recipes[recipeIdx]);
+    if (materialItem && !forgingState.isCraftingStarted) {
+      const idx = parseInt(materialItem.dataset.index);
+      selectPowder(idx, modal);
     }
   });
 
-  craftBtn.addEventListener('click', () => {
-    miningState.isCraftingStarted = true;
-    resultDiv.textContent = 'Starting mining operation...';
-    craftBtn.style.display = 'none';
-    finishBtn.style.display = 'block';
-    finishBtn.disabled = false;
-    adjustmentCounter.style.display = 'block';
+  // Property slot clicking
+  modal.querySelector('#forging-area').addEventListener('click', (e) => {
+    const centerSlot = e.target.closest('.prop-center.clickable');
+    if (centerSlot && forgingState.isCraftingStarted) {
+      const rowIdx = parseInt(centerSlot.dataset.row);
+      assignBonus(rowIdx, modal);
+    }
+  });
 
-    oresContainer.style.opacity = '0.5';
-    oresContainer.style.pointerEvents = 'none';
-
-    startMiningAnimation(resultDiv, modal);
+  craftBtn.addEventListener('click', async () => {
+    await startForging(modal);
   });
 
   finishBtn.addEventListener('click', async () => {
     finishBtn.disabled = true;
-    await patchAndSendCraftRequest(resultDiv, context.apiCall);
-  });
-
-  // Handle ore slot clicks and adjustment buttons
-  const miningArea = modal.querySelector('#mining-area');
-  miningArea.addEventListener('click', (e) => {
-    const adjustBtn = e.target.closest('.adjust-left, .adjust-right');
-    if (adjustBtn && !adjustBtn.disabled) {
-      const direction = adjustBtn.classList.contains('adjust-left') ? 'left' : 'right';
-      handleGlobalAdjustment(direction, resultDiv);
-    }
-    
-    const oreInputSlot = e.target.closest('.ore-input-slot');
-    if (oreInputSlot && !miningState.isCraftingStarted) {
-      const rowIdx = parseInt(oreInputSlot.dataset.row);
-      
-      const oreImg = oreInputSlot.querySelector('img');
-      if (oreImg) {
-        removeOreFromSlot(rowIdx, modal);
-      }
-    }
+    await finishForging(modal.querySelector('#craft-result'));
   });
 }
 
-function handleOreSelection(ore, modal) {
-  const slotIdx = miningState.selectedOres.findIndex(s => s === null);
-  if (slotIdx === -1) return;
+function selectItemType(typeIndex, modal) {
+  modal.querySelectorAll('.item-type-card').forEach(card => card.classList.remove('selected'));
+  modal.querySelector(`#item-types [data-index="${typeIndex}"]`).classList.add('selected');
 
-  miningState.selectedOres[slotIdx] = ore;
-  
-  const station = modal.querySelector(`[data-station="${slotIdx}"]`);
-  const oreInputSlot = station.querySelector('.ore-input-slot');
-  
-  oreInputSlot.innerHTML = `<img src="assets/art/ingridients/${ore.sprite}.png" style="width:70px;height:70px;cursor:pointer;" title="Click to remove ${ore.name}">`;
-  oreInputSlot.style.border = '2px solid #8B4513';
-  oreInputSlot.style.background = 'rgba(139,69,19,0.4)';
-  
-  animateOreIntegration(station, ore);
+  forgingState.selectedItemType = ITEM_TYPES[typeIndex];
   updateCraftButtonState(modal);
 }
 
-function removeOreFromSlot(slotIdx, modal) {
-  miningState.selectedOres[slotIdx] = null;
+function selectBar(barIndex, modal) {
+  modal.querySelectorAll('.bar').forEach(item => item.classList.remove('selected'));
+  modal.querySelector(`#available-bars [data-index="${barIndex}"]`).classList.add('selected');
+
+  forgingState.selectedBar = forgingState.availableBars[barIndex];
+  updateCraftButtonState(modal);
+}
+
+function selectPowder(powderIndex, modal) {
+  modal.querySelectorAll('.powder').forEach(item => item.classList.remove('selected'));
+  modal.querySelector(`#available-powders [data-index="${powderIndex}"]`).classList.add('selected');
+
+  forgingState.selectedPowder = forgingState.availablePowders[powderIndex];
   
-  const station = modal.querySelector(`[data-station="${slotIdx}"]`);
-  const oreInputSlot = station.querySelector('.ore-input-slot');
+  const rarity = RARITY_LEVELS[forgingState.selectedPowder.name];
+  if (rarity) {
+    forgingState.maxBonuses = rarity.bonuses;
+  }
   
-  oreInputSlot.innerHTML = `<span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore ${slotIdx + 1}</span>`;
-  oreInputSlot.style.border = '2px dashed #FFD700';
-  oreInputSlot.style.background = 'rgba(255,215,0,0.15)';
-  
-  animateStationClear(station);
   updateCraftButtonState(modal);
 }
 
@@ -587,253 +313,234 @@ function updateCraftButtonState(modal) {
   const craftBtn = modal.querySelector('#craft-btn');
   const resultDiv = modal.querySelector('#craft-result');
   
-  if (miningState.selectedOres.every(o => o !== null)) {
+  if (forgingState.selectedItemType && forgingState.selectedBar && forgingState.selectedPowder) {
     craftBtn.disabled = false;
-    resultDiv.textContent = 'Ready to mine!';
+    const rarity = RARITY_LEVELS[forgingState.selectedPowder.name];
+    resultDiv.textContent = `Ready to forge ${rarity.name} ${forgingState.selectedBar.name.replace(' Bar', '')} ${forgingState.selectedItemType.name}!`;
   } else {
     craftBtn.disabled = true;
-    resultDiv.textContent = 'Select 3 ores to start mining';
+    const missing = [];
+    if (!forgingState.selectedItemType) missing.push('item type');
+    if (!forgingState.selectedBar) missing.push('metal bar');
+    if (!forgingState.selectedPowder) missing.push('powder');
+    resultDiv.textContent = `Select ${missing.join(', ')} to begin forging`;
   }
 }
 
-function animateOreIntegration(station, ore) {
-  const oreInputSlot = station.querySelector('.ore-input-slot');
-  const oreColor = getOreColor(ore.name);
-  
-  gsap.to(station, {
-    backgroundColor: `rgba(139,69,19,0.2)`,
-    borderColor: oreColor,
-    duration: 1.0,
-    ease: "power2.out"
-  });
-  
-  gsap.to(oreInputSlot, {
-    boxShadow: '0 0 20px rgba(255,215,0,0.8), inset 0 0 10px rgba(255,215,0,0.3)',
-    duration: 0.8,
-    ease: "power2.out"
-  });
-}
-
-function animateStationClear(station) {
-  gsap.to(station, {
-    backgroundColor: 'transparent',
-    borderColor: '#8B4513',
-    duration: 0.8,
-    ease: "power2.out"
-  });
-  
-  const oreInputSlot = station.querySelector('.ore-input-slot');
-  gsap.to(oreInputSlot, { boxShadow: 'none', duration: 0.6, ease: "power2.out" });
-}
-
-async function startMiningAnimation(resultDiv, modal) {
-  const miningArea = modal.querySelector('#mining-area');
-  resultDiv.textContent = 'Analyzing ore composition...';
-
-  const selectedOreNames = miningState.selectedOres.map(o => o.name);
-
+async function startForging(modal) {
   try {
-    const reserveRes = await context.apiCall('/functions/v1/reserve_ingredients', {
+    forgingState.isCraftingStarted = true;
+    
+    const craftBtn = modal.querySelector('#craft-btn');
+    const finishBtn = modal.querySelector('#finish-btn');
+    const resultDiv = modal.querySelector('#craft-result');
+    const bonusCounter = modal.querySelector('#bonus-counter');
+    const forgingArea = modal.querySelector('#forging-area');
+    
+    craftBtn.style.display = 'none';
+    resultDiv.textContent = 'Heating materials in the forge...';
+
+    // Reserve ingredients
+    const reserveRes = await context.apiCall('/functions/v1/reserve_blacksmith_ingredients', {
       method: 'POST',
       body: {
         player_id: context.profile.id,
-        profession_id: miningState.professionId,
-        selected_ingredients: selectedOreNames,
+        profession_id: forgingState.professionId,
+        selected_bar: forgingState.selectedBar.name,
+        selected_powder: forgingState.selectedPowder.name,
+        item_type: forgingState.selectedItemType.name
       }
     });
 
     const reserveJson = await reserveRes.json();
     
-    if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
-      resultDiv.textContent = `Ore verification failed: ${reserveJson?.error || 'Unknown error'}`;
+    if (!reserveRes.ok || !reserveJson.success) {
+      resultDiv.textContent = `Material verification failed: ${reserveJson?.error || 'Unknown error'}`;
       return;
     }
 
-    miningState.sessionId = reserveJson.session_id;
-    miningState.enrichedOres = reserveJson.herbs;
+    forgingState.sessionId = reserveJson.session_id;
+    forgingState.barProperties = reserveJson.bar_properties;
 
-    // Animate each ore station breaking and revealing properties
-    for (let idx = 0; idx < miningState.enrichedOres.length; idx++) {
-      const ore = miningState.enrichedOres[idx];
-      const station = miningArea.querySelector(`[data-station="${idx}"]`);
-      const props = ore.properties;
-      
-      await animateOreBreaking(station, props, idx);
-    }
+    forgingArea.style.display = 'block';
+    await animateForgeHeatup(modal);
 
-    setTimeout(() => {
-      resultDiv.textContent = 'You may now apply adjustments to all properties.';
-    }, 1000);
+    bonusCounter.style.display = 'block';
+    modal.querySelector('#bonus-total').textContent = forgingState.maxBonuses;
 
-    // Store all three properties for each ore (we'll use the center one [1] for crafting)
-    miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
-    miningState.originalProperties = miningState.randomizedProperties.map(p => [...p]);
-
-    // Initialize global adjustment tracking
-    miningState.globalAdjustments = { left: 0, right: 0 };
+    finishBtn.style.display = 'block';
+    finishBtn.disabled = false;
     
-    // Also maintain individual adjustments for API compatibility
-    miningState.adjustments = {};
-    for (let i = 0; i < 3; i++) {
-      miningState.adjustments[i] = { left: 0, right: 0 };
-    }
+    resultDiv.textContent = forgingState.maxBonuses > 0 ? 
+      'Click center properties to assign bonus stats!' : 
+      'Basic item ready - click Finish to complete!';
 
-  } catch (err) {
-    resultDiv.textContent = 'Server error while verifying ores.';
-  }
-}
-
-async function animateOreBreaking(station, properties, stationIndex) {
-  const oreInputSlot = station.querySelector('.ore-input-slot');
-  const centerProperty = station.querySelector('.center-property');
-  const adjustButtons = document.querySelectorAll('.adjust-left, .adjust-right');
-  
-  createOreBreakingEffect(oreInputSlot);
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Hide ore and show property
-  gsap.to(oreInputSlot, {
-    scale: 0.8,
-    opacity: 0,
-    duration: 0.5,
-    ease: "power2.in"
-  });
-  
-  gsap.to(centerProperty, {
-    opacity: 1,
-    scale: 1,
-    duration: 0.8,
-    ease: "back.out(1.4)",
-    delay: 0.3,
-    onStart: () => {
-      // Show the center property (index 1)
-      centerProperty.textContent = properties[1];
-    }
-  });
-  
-  // Enable adjustment buttons after all stations are processed
-  if (stationIndex === 2) { // Last station
-    gsap.to(adjustButtons, {
-      opacity: 1,
-      duration: 0.6,
-      delay: 0.8,
-      onStart: () => {
-        adjustButtons.forEach(btn => btn.disabled = false);
-      }
+    // Disable material selection
+    const materialScrollers = modal.querySelectorAll('.material-scroller');
+    materialScrollers.forEach(scroller => {
+      scroller.style.opacity = '0.5';
+      scroller.style.pointerEvents = 'none';
     });
-  }
 
-  createStationDustEffect(station);
+  } catch (error) {
+    modal.querySelector('#craft-result').textContent = 'Forge malfunction! Please try again.';
+  }
 }
 
-function createOreBreakingEffect(oreInputSlot) {
-  const rect = oreInputSlot.getBoundingClientRect();
+async function animateForgeHeatup(modal) {
+  const rows = modal.querySelectorAll('.property-row');
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const slots = row.querySelectorAll('.property-slot');
+    const properties = forgingState.barProperties[i];
+    
+    createSparkEffect(row);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    if (typeof gsap !== 'undefined') {
+      gsap.to(slots, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "back.out(1.2)",
+        onStart: () => {
+          slots[0].textContent = properties[0];
+          slots[1].textContent = properties[1];
+          slots[2].textContent = properties[2];
+        }
+      });
+    } else {
+      slots[0].textContent = properties[0];
+      slots[1].textContent = properties[1];
+      slots[2].textContent = properties[2];
+    }
+    
+    if (forgingState.maxBonuses > 0) {
+      const centerSlot = row.querySelector('.prop-center');
+      const bonusCounter = centerSlot?.querySelector('.bonus-counter');
+      if (bonusCounter) {
+        bonusCounter.style.display = 'flex';
+      }
+    }
+  }
+}
+
+function assignBonus(rowIdx, modal) {
+  if (forgingState.totalAssigned >= forgingState.maxBonuses) return;
+
+  forgingState.bonusAssignments[rowIdx]++;
+  forgingState.totalAssigned++;
+
+  const row = modal.querySelector(`[data-row="${rowIdx}"]`);
+  const centerSlot = row?.querySelector('.prop-center');
+  const bonusCounterEl = centerSlot?.querySelector('.bonus-counter');
+  
+  if (bonusCounterEl) {
+    bonusCounterEl.textContent = forgingState.bonusAssignments[rowIdx];
+  }
+  
+  const bonusAssignedEl = modal.querySelector('#bonus-assigned');
+  if (bonusAssignedEl) {
+    bonusAssignedEl.textContent = forgingState.totalAssigned;
+  }
+  
+  if (centerSlot) {
+    createHammerStrike(centerSlot);
+    
+    if (typeof gsap !== 'undefined') {
+      gsap.to(centerSlot, {
+        backgroundColor: 'rgba(255,69,0,0.6)',
+        duration: 0.2,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 1
+      });
+    }
+  }
+  
+  const resultDiv = modal.querySelector('#craft-result');
+  if (resultDiv) {
+    const remaining = forgingState.maxBonuses - forgingState.totalAssigned;
+    if (remaining > 0) {
+      resultDiv.textContent = `${remaining} bonus${remaining !== 1 ? 'es' : ''} remaining - keep clicking center properties!`;
+    } else {
+      resultDiv.textContent = 'All bonuses assigned! Click Finish to complete your masterwork!';
+    }
+  }
+}
+
+function createSparkEffect(row) {
+  const rect = row.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
   
   for (let i = 0; i < 8; i++) {
-    const particle = document.createElement('div');
-    particle.style.cssText = `
-      position: fixed;
-      width: ${Math.random() * 6 + 3}px;
-      height: ${Math.random() * 6 + 3}px;
-      background: rgba(139,115,85,0.9);
-      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
-      left: ${centerX}px;
-      top: ${centerY}px;
-      pointer-events: none;
-      z-index: 1000;
-      transform-origin: center;
-    `;
+    const spark = document.createElement('div');
+    spark.className = 'spark-effect';
+    spark.style.left = `${centerX}px`;
+    spark.style.top = `${centerY}px`;
     
-    document.body.appendChild(particle);
+    document.body.appendChild(spark);
     
     const angle = (i / 8) * Math.PI * 2;
-    const distance = Math.random() * 60 + 30;
-    const finalX = centerX + Math.cos(angle) * distance;
-    const finalY = centerY + Math.sin(angle) * distance;
+    const distance = Math.random() * 30 + 20;
     
-    gsap.to(particle, {
-      x: finalX - centerX,
-      y: finalY - centerY,
-      rotation: Math.random() * 360,
-      opacity: 0,
-      scale: Math.random() * 0.5 + 0.5,
-      duration: Math.random() * 1.2 + 0.8,
-      ease: "power2.out",
-      onComplete: () => particle.remove()
-    });
-  }
-  
-  gsap.to(oreInputSlot, {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    duration: 0.1,
-    ease: "power2.out",
-    yoyo: true,
-    repeat: 3
-  });
-}
-
-function createStationDustEffect(station) {
-  function createDustParticle() {
-    const particle = document.createElement('div');
-    particle.style.cssText = `
-      position: absolute;
-      width: ${Math.random() * 3 + 1}px;
-      height: ${Math.random() * 3 + 1}px;
-      background: rgba(139,115,85,0.7);
-      border-radius: 50%;
-      top: ${Math.random() * 80}px;
-      left: ${Math.random() * 80}px;
-      pointer-events: none;
-      z-index: 20;
-    `;
-    
-    station.appendChild(particle);
-    
-    gsap.to(particle, {
-      y: -20,
-      x: `+=${Math.random() * 20 - 10}`,
-      opacity: 0,
-      duration: Math.random() * 2 + 1,
-      ease: "power1.out",
-      onComplete: () => particle.remove()
-    });
-  }
-  
-  const dustInterval = setInterval(() => {
-    if (document.contains(station)) {
-      createDustParticle();
+    if (typeof gsap !== 'undefined') {
+      gsap.to(spark, {
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        rotation: Math.random() * 180,
+        opacity: 0,
+        duration: Math.random() * 0.8 + 0.5,
+        ease: "power2.out",
+        onComplete: () => spark.remove()
+      });
     } else {
-      clearInterval(dustInterval);
+      setTimeout(() => spark.remove(), 1000);
     }
-  }, Math.random() * 600 + 300);
-  
-  return dustInterval;
+  }
 }
 
-async function patchAndSendCraftRequest(resultDiv, apiCall) {
-  try {
-    const adjustments = [];
+function createHammerStrike(element) {
+  const rect = element.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  for (let i = 0; i < 5; i++) {
+    const impact = document.createElement('div');
+    impact.className = 'impact-effect';
+    impact.style.left = `${centerX}px`;
+    impact.style.top = `${centerY}px`;
     
-    // Convert global adjustments to individual row adjustments for API compatibility
-    for (let i = 0; i < 3; i++) {
-      if (miningState.adjustments[i].left > 0) {
-        adjustments.push({ bottle: i, direction: 'up', count: miningState.adjustments[i].left });
-      }
-      if (miningState.adjustments[i].right > 0) {
-        adjustments.push({ bottle: i, direction: 'down', count: miningState.adjustments[i].right });
-      }
+    document.body.appendChild(impact);
+    
+    if (typeof gsap !== 'undefined') {
+      gsap.to(impact, {
+        x: (Math.random() - 0.5) * 30,
+        y: (Math.random() - 0.5) * 30,
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.out",
+        onComplete: () => impact.remove()
+      });
+    } else {
+      setTimeout(() => impact.remove(), 500);
     }
+  }
+}
 
+async function finishForging(resultDiv) {
+  try {
     const payload = {
       player_id: context.profile.id,
-      profession_id: miningState.professionId,
-      session_id: miningState.sessionId,
-      adjustments
+      profession_id: forgingState.professionId,
+      session_id: forgingState.sessionId,
+      bonus_assignments: forgingState.bonusAssignments
     };
     
-    const res = await apiCall('/functions/v1/craft_alchemy', {
+    const res = await context.apiCall('/functions/v1/craft_blacksmith', {
       method: 'POST',
       body: payload
     });
@@ -842,7 +549,7 @@ async function patchAndSendCraftRequest(resultDiv, apiCall) {
     
     if (!res.ok) {
       resultDiv.innerHTML = `
-        <span style="color:red;">💥 Server Error (${res.status})</span>
+        <span style="color:red;">🔥 Forging Error (${res.status})</span>
         <br><small style="color:#999;">${json.error || json.message || 'Unknown server error'}</small>
       `;
       
@@ -853,13 +560,12 @@ async function patchAndSendCraftRequest(resultDiv, apiCall) {
 
     const claimBtn = document.querySelector('#claim-btn');
     const finishBtn = document.querySelector('#finish-btn');
-    const craftBtn = document.querySelector('#craft-btn');
 
     if (json.success) {
-      miningState.result = json.crafted.name;
-      resultDiv.innerHTML = `<span style="color:lime;">⛏️ Successfully extracted: <strong>${json.crafted.name}</strong>!</span>`;
+      forgingState.result = json.crafted.name;
+      resultDiv.innerHTML = `<span style="color:lime;">🔨 Successfully forged: <strong>${json.crafted.name}</strong>!</span>`;
 
-      animateMiningSuccess();
+      animateSuccessfulForging();
 
       if (finishBtn) finishBtn.style.display = 'none';
       if (claimBtn) {
@@ -872,487 +578,527 @@ async function patchAndSendCraftRequest(resultDiv, apiCall) {
         newClaimBtn.addEventListener('click', () => {
           context.displayMessage(`${json.crafted.name} added to your bank!`);
           document.querySelector('.custom-message-box')?.remove();
-          miningState = null;
+          forgingState = null;
         });
       }
     } else {
-      miningState.result = 'Failed';
-      resultDiv.innerHTML = `
-        <span style="color:red;">💥 Mining failed — ores crumbled to dust.</span>
-        <br><small style="color:#999;">${json.message || 'Properties not properly aligned'}</small>
-      `;
-
-      animateMiningFailure();
-
-      if (finishBtn) finishBtn.style.display = 'none';
-      if (claimBtn) claimBtn.style.display = 'none';
-      
-      if (craftBtn) {
-        craftBtn.style.display = 'block';
-        craftBtn.textContent = 'Mine Again';
-        craftBtn.disabled = false;
-        
-        const newCraftBtn = craftBtn.cloneNode(true);
-        craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-        
-        newCraftBtn.addEventListener('click', () => {
-          document.querySelector('.custom-message-box')?.remove();
-          startCraftingSession(context);
-        });
-      }
+      resultDiv.innerHTML = `<span style="color:red;">💥 Forging failed — materials ruined.</span>`;
     }
   } catch (err) {
-    resultDiv.innerHTML = '<span style="color:red;">⚠️ Mining operation failed. Try again later.</span>';
-    
-    const finishBtn = document.querySelector('#finish-btn');
-    const claimBtn = document.querySelector('#claim-btn');
-    const craftBtn = document.querySelector('#craft-btn');
-    
-    if (finishBtn) finishBtn.style.display = 'none';
-    if (claimBtn) claimBtn.style.display = 'none';
-    
-    if (craftBtn) {
-      craftBtn.style.display = 'block';
-      craftBtn.textContent = 'Try Again';
-      craftBtn.disabled = false;
-      
-      const newCraftBtn = craftBtn.cloneNode(true);
-      craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-      
-      newCraftBtn.addEventListener('click', () => {
-        document.querySelector('.custom-message-box')?.remove();
-        startCraftingSession(context);
-      });
-    }
+    resultDiv.innerHTML = '<span style="color:red;">⚠️ Forge malfunction. Try again later.</span>';
   }
 }
 
-function handleGlobalAdjustment(direction, resultDiv) {
-  if (miningState.adjustmentCount >= miningState.maxAdjustments) {
-    resultDiv.textContent = `No more adjustments available (${miningState.maxAdjustments}/${miningState.maxAdjustments}).`;
-    return;
-  }
-
-  // Apply adjustment to all three ore properties simultaneously
-  for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
-    const props = miningState.randomizedProperties[rowIdx];
-
-    if (!miningState.adjustments[rowIdx]) {
-      miningState.adjustments[rowIdx] = { left: 0, right: 0 };
-    }
-
-    if (direction === 'left') {
-      props.push(props.shift());
-      miningState.adjustments[rowIdx].left++;
-    } else if (direction === 'right') {
-      props.unshift(props.pop());
-      miningState.adjustments[rowIdx].right++;
-    }
-  }
-
-  // Update global adjustment counter
-  if (direction === 'left') {
-    miningState.globalAdjustments.left++;
-  } else {
-    miningState.globalAdjustments.right++;
-  }
-
-  updateAllMiningStations();
-  miningState.adjustmentCount++;
-  updateAdjustmentCounter();
-
-  if (miningState.adjustmentCount >= miningState.maxAdjustments) {
-    disableAdjustmentButtons();
-  }
-}
-
-function updateAllMiningStations() {
-  const stations = document.querySelectorAll('.mining-station');
-  
-  stations.forEach((station, idx) => {
-    const props = miningState.randomizedProperties[idx];
-    const centerProperty = station.querySelector('.center-property');
-    
-    gsap.to(centerProperty, {
-      x: '+=15',
-      duration: 0.15,
-      ease: "power2.out",
-      yoyo: true,
-      repeat: 1,
-      onComplete: () => {
-        // Update to show center property (index 1)
-        centerProperty.textContent = props[1];
-      }
-    });
-    
-    gsap.to(station, {
-      y: '+=2',
-      duration: 0.1,
-      ease: "power2.inOut",
-      yoyo: true,
-      repeat: 3
-    });
-    
-    createImpactParticles(station);
-    
-    gsap.to(centerProperty, {
-      backgroundColor: 'rgba(255,215,0,0.5)',
-      duration: 0.2,
-      ease: "power2.out",
-      yoyo: true,
-      repeat: 1
-    });
-  });
-}
-
-function createImpactParticles(station) {
-  for (let i = 0; i < 3; i++) {
+function animateSuccessfulForging() {
+  document.querySelectorAll('.prop-center').forEach((slot, index) => {
     setTimeout(() => {
-      const particle = document.createElement('div');
-      particle.style.cssText = `
-        position: absolute;
-        width: ${Math.random() * 4 + 2}px;
-        height: ${Math.random() * 4 + 2}px;
-        background: rgba(255,215,0,0.8);
-        border-radius: 50%;
-        top: 40px;
-        left: ${Math.random() * 40 + 20}px;
-        pointer-events: none;
-        z-index: 25;
-      `;
-      
-      station.appendChild(particle);
-      
-      gsap.to(particle, {
-        y: Math.random() * 30 - 15,
-        x: Math.random() * 40 - 20,
-        opacity: 0,
-        duration: Math.random() * 0.8 + 0.5,
-        ease: "power2.out",
-        onComplete: () => particle.remove()
-      });
-    }, i * 50);
-  }
-}
-
-function animateMiningSuccess() {
-  document.querySelectorAll('.center-property').forEach((slot, index) => {
-    setTimeout(() => createSuccessSparkles(slot), index * 200);
+      createSuccessGlow(slot);
+    }, index * 200);
   });
 }
 
-function animateMiningFailure() {
-  document.querySelectorAll('.mining-station').forEach((station, index) => {
-    setTimeout(() => {
-      gsap.to(station, {
-        x: '+=5',
-        duration: 0.1,
-        ease: "power2.inOut",
-        yoyo: true,
-        repeat: 5
-      });
-      createDebrisParticles(station);
-    }, index * 100);
-  });
-}
-
-function createSuccessSparkles(element) {
-  for (let i = 0; i < 8; i++) {
-    const sparkle = document.createElement('div');
-    sparkle.style.cssText = `
-      position: absolute;
-      width: 6px;
-      height: 6px;
-      background: #FFD700;
-      border-radius: 50%;
-      top: 50%;
-      left: 50%;
-      pointer-events: none;
-      z-index: 30;
-    `;
-    
-    element.appendChild(sparkle);
-    
-    const angle = (i / 8) * Math.PI * 2;
-    const distance = 40;
-    
-    gsap.to(sparkle, {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-      opacity: 0,
-      scale: 0,
+function createSuccessGlow(element) {
+  if (typeof gsap !== 'undefined') {
+    gsap.to(element, {
+      boxShadow: '0 0 30px rgba(255,215,0,0.8)',
       duration: 1,
       ease: "power2.out",
-      onComplete: () => sparkle.remove()
+      yoyo: true,
+      repeat: 2
     });
   }
 }
 
-function createDebrisParticles(station) {
-  for (let i = 0; i < 6; i++) {
-    const debris = document.createElement('div');
-    debris.style.cssText = `
-      position: absolute;
-      width: ${Math.random() * 6 + 3}px;
-      height: ${Math.random() * 6 + 3}px;
-      background: #8B7355;
-      border-radius: ${Math.random() * 2}px;
-      top: ${Math.random() * 80}px;
-      left: ${Math.random() * 80}px;
-      pointer-events: none;
-      z-index: 25;
-    `;
-    
-    station.appendChild(debris);
-    
-    gsap.to(debris, {
-      y: Math.random() * 50 + 20,
-      x: Math.random() * 60 - 30,
-      rotation: Math.random() * 360,
-      opacity: 0,
-      duration: Math.random() * 1.5 + 1,
-      ease: "power2.out",
-      onComplete: () => debris.remove()
-    });
+function showMaterialProperties(material) {
+  const propsModal = document.createElement('div');
+  propsModal.className = 'custom-message-box';
+  propsModal.style.zIndex = '10001';
+  
+  let propertiesDisplay = '';
+  if (typeof material.properties === 'object' && material.properties !== null) {
+    if (Array.isArray(material.properties)) {
+      propertiesDisplay = material.properties.map((prop, idx) => 
+        `<div class="property-item">
+          <strong>Property ${idx + 1}:</strong> ${prop}
+        </div>`
+      ).join('');
+    } else {
+      propertiesDisplay = Object.entries(material.properties).map(([key, value]) => 
+        `<div class="property-item">
+          <strong>${key.toUpperCase()}:</strong> ${value}
+        </div>`
+      ).join('');
+    }
+  } else {
+    propertiesDisplay = '<div class="no-props">No properties available</div>';
   }
-}
-
-function updateAdjustmentCounter() {
-  const counter = document.querySelector('#adjustment-counter');
-  if (counter) {
-    counter.textContent = `Adjustments: ${miningState.adjustmentCount}/${miningState.maxAdjustments}`;
-    if (miningState.adjustmentCount >= miningState.maxAdjustments) {
-      counter.style.color = '#ff6b6b';
+  
+  let rarityInfo = '';
+  if (material.name.includes('Powder')) {
+    const rarity = RARITY_LEVELS[material.name];
+    if (rarity) {
+      rarityInfo = `
+        <div class="rarity-info" style="background: ${rarity.color}20; border-color: ${rarity.color}; color: ${rarity.color};">
+          <div class="rarity-name">${rarity.name} Quality</div>
+          <div class="rarity-bonus">Grants ${rarity.bonuses} bonus stat${rarity.bonuses !== 1 ? 's' : ''}</div>
+        </div>
+      `;
     }
   }
-}
-
-function disableAdjustmentButtons() {
-  const buttons = document.querySelectorAll('.adjust-left, .adjust-right');
-  buttons.forEach(btn => {
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.style.cursor = 'not-allowed';
+  
+  propsModal.innerHTML = `
+    <div class="message-content material-props-modal">
+      <h3>${material.name}</h3>
+      <img src="assets/art/ingridients/${material.sprite}.png" alt="${material.name}">
+      
+      ${rarityInfo}
+      
+      <div class="properties-container">
+        <h4>Properties:</h4>
+        ${propertiesDisplay}
+      </div>
+      
+      <div class="material-amount">
+        <strong>Available:</strong> ${material.amount} units
+      </div>
+      
+      <button class="fantasy-button close-props-btn">Close</button>
+    </div>
+  `;
+  
+  document.body.appendChild(propsModal);
+  
+  propsModal.querySelector('.close-props-btn').addEventListener('click', () => propsModal.remove());
+  propsModal.addEventListener('click', (e) => {
+    if (e.target === propsModal) propsModal.remove();
   });
 }
 
-function getOreColor(oreName) {
-  const colors = {
-    'Iron Ore': 'rgba(139, 69, 19, 1)',
-    'Copper Ore': 'rgba(184, 115, 51, 1)',
-    'Silver Ore': 'rgba(192, 192, 192, 1)',
-    'Gold Ore': 'rgba(255, 215, 0, 1)',
-    'Coal': 'rgba(64, 64, 64, 1)',
-    'Gemstone': 'rgba(138, 43, 226, 1)',
-    'default': 'rgba(139, 115, 85, 1)'
-  };
-
-  const oreKey = Object.keys(colors).find(key => oreName.toLowerCase().includes(key.toLowerCase()));
-  return oreKey ? colors[oreKey] : colors.default;
-}
-
-function injectMiningAnimationsCSS() {
-  if (document.getElementById('mining-animations-css')) return;
+function injectBlacksmithingCSS() {
+  if (document.getElementById('blacksmithing-css')) return;
   
-  const additionalCSS = `
-    @keyframes station-pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.02); }
+  const css = `
+    .blacksmith-modal {
+      width: 95vw;
+      max-width: 800px;
+      max-height: 95vh;
+      overflow-y: auto;
+      text-align: center;
+      scrollbar-width: none;
     }
 
-    @keyframes mining-shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-2px); }
-      75% { transform: translateX(2px); }
+    .blacksmith-modal::-webkit-scrollbar {
+      display: none;
     }
 
-    @keyframes border-glow {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+    .craft-status {
+      font-weight: bold;
+      min-height: 1.5rem;
     }
 
-    .single-mining-row {
-      transition: all 0.3s ease;
-      will-change: transform, box-shadow;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 2px 8px rgba(139,69,19,0.2);
+    .bonus-display {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #FFD700;
     }
 
-    .mining-station {
-      transition: all 0.3s ease;
-      will-change: transform, border-color;
-      border: 2px solid transparent;
-      border-radius: 12px;
-      padding: 0.5rem;
+    .materials-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 1.5rem 0;
     }
 
-    .mining-station:hover {
-      animation: station-pulse 2s infinite ease-in-out;
+    .material-group h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1rem;
     }
 
-    .ore-input-slot {
-      will-change: transform, opacity, scale;
-      transition: all 0.5s ease;
+    .material-scroller {
+      display: flex;
+      overflow-x: auto;
+      gap: 0.5rem;
+      padding: 3px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      background: rgba(139,69,19,0.1);
+      min-height: 80px;
+      scrollbar-width: none;
     }
 
-    .center-property {
-      will-change: transform, box-shadow, opacity;
-      transition: all 0.3s ease;
-      transform-origin: center;
+    .material-scroller::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .material-scroller::-webkit-scrollbar-track {
+      background: rgba(139,69,19,0.1);
+      border-radius: 2px;
+    }
+
+    .material-scroller::-webkit-scrollbar-thumb {
+      background: rgba(139,69,19,0.5);
+      border-radius: 2px;
+    }
+
+    .material-item {
+      flex: 0 0 auto;
       position: relative;
-      overflow: visible;
-    }
-
-    .center-property::after {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 6px;
+      background: rgba(139,69,19,0.05);
       border: 2px solid transparent;
-      border-radius: 10px;
-      background: linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
-      background-size: 200% 200%;
-      animation: border-glow 2s linear infinite;
-      z-index: -1;
-    }
-
-    .ore {
+      min-width: 64px;
+      text-align: center;
       transition: all 0.2s ease;
     }
 
-    .ore:hover {
+    .material-item:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(139,69,19,0.3);
     }
 
-    .fantasy-button:disabled {
-      opacity: 0.5 !important;
-      cursor: not-allowed !important;
-      pointer-events: none;
+    .material-item.selected {
+      border-color: #FFD700;
+      background: rgba(255,215,0,0.2);
     }
 
-    .adjust-left:not(:disabled):hover,
-    .adjust-right:not(:disabled):hover {
-      background: rgba(255,215,0,0.3) !important;
-      border-color: #FFD700 !important;
-      transform: scale(1.05);
+    .material-item img {
+      width: 48px;
+      height: 48px;
+      display: block;
+      margin: 0 auto;
     }
 
-    .adjust-left, .adjust-right {
-      will-change: transform, background-color;
-      transition: all 0.2s ease;
-      min-width: 50px;
+    .item-label, .item-count {
+      font-size: 0.8rem;
+      margin-top: 4px;
+      color: #c4975a;
+      font-weight: bold;
     }
 
-    .adjust-left:active, .adjust-right:active {
-      transform: scale(0.95);
+    .info-icon {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 16px;
+      height: 16px;
+      background: #8B4513;
+      border-radius: 50%;
+      color: white;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
 
-    .ore-input-slot img {
+    .rarity-indicator {
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid #fff;
+      animation: rarity-glow 2s infinite ease-in-out;
+    }
+
+    .empty-message {
+      color: #666;
+      font-style: italic;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .forge-section {
+      margin: 0.5rem 0;
+    }
+
+    .forge-workspace {
+      background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%);
+      border: 3px solid #654321;
+      border-radius: 20px;
+      padding: 1.5rem;
+      position: relative;
+      box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);
+      animation: forge-glow 4s infinite ease-in-out;
+    }
+
+    .forge-fire {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 20px;
+      background: linear-gradient(45deg, #FF4500, #FFA500, #FFD700);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(255,69,0,0.6);
+      animation: flicker 2s infinite ease-in-out;
+    }
+
+    .property-row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .property-display {
+      width: 280px;
+      height: 50px;
+      background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%);
+      border: 2px solid #543528;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      position: relative;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .property-slot {
+      position: absolute;
+      width: 70px;
+      height: 35px;
+      border: 2px solid #8B4513;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: #FFD700;
+      font-weight: bold;
+      top: 50%;
+      transform: translateY(-50%);
       transition: all 0.3s ease;
     }
 
-    .ore-input-slot:hover img {
-      transform: scale(1.05);
-      filter: brightness(1.1);
+    .prop-left {
+      left: 15px;
+      background: rgba(139,69,19,0.6);
     }
 
-    .aligned-center {
-      box-shadow: 0 0 20px rgba(76,175,80,0.8), inset 0 0 10px rgba(76,175,80,0.3) !important;
-      border-color: #4CAF50 !important;
+    .prop-center {
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-color: #FFD700;
+      background: linear-gradient(135deg, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.6) 100%);
+      color: #8B4513;
+      position: relative;
     }
 
-    .adjustment-controls {
-      display: flex;
-      flex-direction: column;
+    .prop-center.clickable {
+      cursor: pointer;
+    }
+
+    .prop-center.clickable:hover {
+      background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%);
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+
+    .prop-center.clickable:active {
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+
+    .prop-right {
+      right: 15px;
+      background: rgba(139,69,19,0.6);
+    }
+
+    .bonus-counter {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 18px;
+      height: 18px;
+      background: #FF4500;
+      border-radius: 50%;
+      color: white;
+      font-size: 0.7rem;
+      display: none;
       align-items: center;
       justify-content: center;
+      font-weight: bold;
+      border: 2px solid #fff;
+      animation: pulse 2s infinite ease-in-out;
     }
 
-    @media (max-width: 768px) {
-      .single-mining-row { 
-        flex-direction: column; 
-        gap: 1rem; 
-        padding: 1rem 0.5rem;
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .button-group .fantasy-button {
+      flex: 1;
+      min-width: 80px;
+      max-width: 120px;
+    }
+
+    .spark-effect {
+      position: fixed;
+      width: 3px;
+      height: 10px;
+      background: linear-gradient(to bottom, #FFD700, #FFA500);
+      pointer-events: none;
+      z-index: 1000;
+      border-radius: 2px;
+    }
+
+    .impact-effect {
+      position: fixed;
+      width: 4px;
+      height: 4px;
+      background: #FF4500;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1001;
+    }
+
+    .material-props-modal {
+      max-width: 350px;
+      text-align: center;
+    }
+
+    .material-props-modal h3 {
+      color: #8B4513;
+      margin-bottom: 1rem;
+    }
+
+    .material-props-modal img {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .rarity-info {
+      border: 1px solid;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .rarity-name {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .rarity-bonus {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      opacity: 0.9;
+    }
+
+    .properties-container {
+      background: rgba(139,69,19,0.3);
+      border: 1px solid #8B4513;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+
+    .properties-container h4 {
+      color: #FFD700;
+      margin-bottom: 0.8rem;
+      text-align: center;
+    }
+
+    .property-item {
+      background: rgba(139,69,19,0.2);
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.3rem;
+    }
+
+    .no-props {
+      color: #999;
+      font-style: italic;
+    }
+
+    .material-amount {
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+
+    @keyframes flicker {
+      0%, 100% { 
+        opacity: 0.8; 
+        transform: translateX(-50%) scale(1); 
       }
-      .mining-stations { 
-        flex-direction: row; 
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
+      50% { 
+        opacity: 1; 
+        transform: translateX(-50%) scale(1.1); 
       }
-      .mining-station {
-        flex: 0 0 auto;
+    }
+
+    @keyframes forge-glow {
+      0%, 100% { 
+        box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2); 
       }
-      .ore-input-slot { 
-        width: 70px; 
-        height: 70px; 
+      50% { 
+        box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 20px rgba(255,69,0,0.3); 
       }
-      .center-property { 
-        width: 70px; 
-        height: 40px; 
-        font-size: 0.7rem; 
-      }
-      .adjust-left, .adjust-right { 
-        padding: 0.3rem 0.6rem !important; 
-        font-size: 1.2rem !important; 
-        min-width: 45px;
-      }
-      .adjustment-controls {
-        flex-direction: row;
-        gap: 1rem;
-      }
+    }
+
+    @keyframes rarity-glow {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
     }
 
     @media (max-width: 480px) {
-      .mining-stations {
-        flex-direction: column;
-        gap: 0.8rem;
+      .blacksmith-modal {
+        width: 98vw;
+        max-height: 98vh;
+        padding: 1rem;
       }
-      .ore-input-slot { 
-        width: 60px; 
-        height: 60px; 
+
+      .property-display {
+        width: 240px;
+        height: 45px;
       }
-      .center-property { 
-        width: 60px; 
-        height: 35px; 
-        font-size: 0.6rem; 
+
+      .property-slot {
+        width: 60px;
+        height: 30px;
+        font-size: 0.7rem;
       }
-    }
 
-    #available-ores::-webkit-scrollbar,
-    #available-recipes::-webkit-scrollbar { height: 6px; }
+      .bonus-counter {
+        width: 16px;
+        height: 16px;
+        font-size: 0.6rem;
+      }
 
-    #available-ores::-webkit-scrollbar-track,
-    #available-recipes::-webkit-scrollbar-track {
-      background: rgba(139,69,19,0.1);
-      border-radius: 3px;
-    }
+      .material-item img {
+        width: 40px;
+        height: 40px;
+      }
 
-    #available-ores::-webkit-scrollbar-thumb,
-    #available-recipes::-webkit-scrollbar-thumb {
-      background: rgba(139,69,19,0.5);
-      border-radius: 3px;
-    }
+      .material-item {
+        min-width: 56px;
+      }
 
-    #available-ores::-webkit-scrollbar-thumb:hover,
-    #available-recipes::-webkit-scrollbar-thumb:hover {
-      background: rgba(139,69,19,0.7);
+      .button-group .fantasy-button {
+        min-width: 70px;
+        font-size: 0.9rem;
+      }
     }
   `;
 
   const style = document.createElement('style');
-  style.id = 'mining-animations-css';
-  style.textContent = additionalCSS;
+  style.id = 'blacksmithing-css';
+  style.textContent = css;
   document.head.appendChild(style);
-}
-
-export function clearOreCache() {
-  oreCache.clear();
-}
-
-export function preloadOres(oreNames) {
-  return batchEnrichOres(oreNames.map(name => ({ item: name, amount: 1 })));
 }
