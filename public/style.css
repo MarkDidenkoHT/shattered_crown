@@ -331,32 +331,6 @@
         0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
-    /* Mobile responsiveness */
-    @media (max-width: 480px) {
-      .art-header h1 {
-        font-size: 2rem;
-      }
-      
-      .login-section {
-        padding: 1.5rem;
-      }
-      
-      .fantasy-button {
-        padding: 0.875rem 2rem;
-        font-size: 1rem;
-      }
-    }
-
-    @media (max-width: 360px) {
-      .button-container {
-        flex-direction: column;
-      }
-      
-      .fantasy-button {
-        margin-bottom: 0.5rem;
-      }
-    }
-
             /* General Layout for Character Creation */
         .character-creation-section {
             height: 100%;

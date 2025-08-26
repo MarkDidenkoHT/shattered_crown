@@ -307,9 +307,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
-      <h2 style="margin: 0.4rem 0; color: #228B22; font-size: 1.3rem;">🌱 Crafting: ${herbalismState.professionName}</h2>
-            
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">        
       <div id="craft-result" style="margin: 0.4rem 0; font-weight: bold; min-height: 16px; font-size: 0.9rem;">Set up your garden to start growing</div>
       
       <div>
@@ -413,7 +411,7 @@ function renderRecipesHTML() {
   return herbalismState.recipes.map((recipe, idx) => `
     <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 55px; text-align: center; position: relative;">
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 2px;" onerror="this.src='assets/art/recipes/default.png'">
-      <div style="font-size: 0.6rem; color: #c4975a; font-weight: bold;">${recipe.name}</div>
+      <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold;">${recipe.name}</div>
       <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #4CAF50; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
@@ -1102,11 +1100,11 @@ function showRecipeDetails(recipe) {
   
   detailsModal.innerHTML = `
     <div class="message-content" style="max-width: 400px; text-align: center; max-height: 75vh; overflow-y: auto; scrollbar-width:none;">
-      <h3 style="color: #c4975a; margin-bottom: 0.8rem; font-size: 1.1rem;">📜 ${recipe.name}</h3>
+      <h3 style="color: #FFD700; margin-bottom: 0.8rem; font-size: 1.1rem;">📜 ${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 70px; height: 70px; border-radius: 6px; margin-bottom: 0.8rem;" onerror="this.src='assets/art/recipes/default.png'">
       
       <div style="background: rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem; text-align: left;">
-        <h4 style="color: #c4975a; margin-bottom: 0.4rem; font-size: 0.9rem;">Required Combination:</h4>
+        <h4 style="color: #FFD700; margin-bottom: 0.4rem; font-size: 0.9rem;">Required Combination:</h4>
         <div style="color: #fff; font-size: 0.8rem; line-height: 1.3;">${ingredientsList}</div>
       </div>
       

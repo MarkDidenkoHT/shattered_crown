@@ -233,7 +233,7 @@ function renderRecipesHTML() {
   return miningState.recipes.map((recipe, idx) => `
     <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
-      <div style="font-size: 0.8rem; color: #c4975a; font-weight: bold;">${recipe.name}</div>
+      <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold;">${recipe.name}</div>
       <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
@@ -1338,13 +1338,6 @@ function injectMiningAnimationsCSS() {
       .ore-input-slot { width: 60px; height: 60px; }
       .property-slot { width: 50px; height: 45px; font-size: 0.7rem; }
       .mining-row { gap: 0.3rem; }
-    }
-
-    @media (max-width: 480px) {
-      .rock-formation { width: 280px; height: 60px; }
-      .ore-input-slot { width: 50px; height: 50px; }
-      .property-slot { width: 40px; height: 35px; font-size: 0.6rem; }
-      .adjust-left, .adjust-right { padding: 0.2rem 0.4rem !important; font-size: 1rem !important; }
     }
 
     #available-ores::-webkit-scrollbar,

@@ -223,7 +223,7 @@ function renderItemTypesHTML() {
   return ITEM_TYPES.map((itemType, idx) => `
     <div class="item-type-card" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 2px solid transparent; min-width: 70px; text-align: center; transition: all 0.2s ease;">
       <img src="assets/art/items/${itemType.sprite}.png" title="${itemType.name}" style="width: 48px; height: 48px;">
-      <div style="font-size: 0.8rem; color: #c4975a; font-weight: bold; margin-top: 4px;">${itemType.name}</div>
+      <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-top: 4px;">${itemType.name}</div>
     </div>
   `).join('');
 }
