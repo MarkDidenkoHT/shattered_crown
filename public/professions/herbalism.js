@@ -310,38 +310,52 @@ function renderCraftingModal() {
     <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2 style="margin: 0.4rem 0; color: #228B22; font-size: 1.3rem;">🌱 Crafting: ${herbalismState.professionName}</h2>
             
-      <!-- Result display -->
       <div id="craft-result" style="margin: 0.4rem 0; font-weight: bold; min-height: 16px; font-size: 0.9rem;">Set up your garden to start growing</div>
       
-      <!-- Main garden grid -->
       <div>
         ${createGardenGridHTML()}
       </div>
       
-      <!-- Seeds row -->
       <h3 style="margin: 0.4rem 0 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Seeds</h3>
       <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
         ${renderSeedsHTML()}
       </div>
       
-      <!-- Fertilizers row -->
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #228B22;">Available Fertilizers</h3>
       <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 85px;">
         ${renderFertilizersHTML()}
       </div>
       
-      <!-- Recipes row -->
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #4CAF50;">Recipes</h3>
       <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
         ${renderRecipesHTML()}
       </div>
       
-      <!-- Button row -->
       <div style="display: flex; justify-content: center; gap: 0.3rem;">
         <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem;">Close</button>
         <button id="grow-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem;">Grow</button>
         <button id="claim-all-btn" class="fantasy-button" style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem; display: none;">Claim All</button>
       </div>
+    </div>
+
+    <button id="helpBtn" class="help-tutorial-fantasy-button">?</button>
+
+    <div id="helpModal" class="help-tutorial-modal">
+        <div class="help-tutorial-modal-content">
+            <span class="help-tutorial-close-btn">&times;</span>
+            <h3 class="help-tutorial-modal-title">Tutorial</h3>
+            <div class="help-tutorial-modal-body">
+                <p class="mb-4">
+                    Text
+                </p>
+                <p class="mb-4">
+                    Text
+                </p>
+                <p>
+                    Text
+                </p>
+            </div>
+        </div>
     </div>
   `;
   document.body.appendChild(modal);
@@ -409,6 +423,48 @@ function setupModalEventListeners(modal) {
   const growBtn = modal.querySelector('#grow-btn');
   const claimAllBtn = modal.querySelector('#claim-all-btn');
   const resultDiv = modal.querySelector('#craft-result');
+
+    // Help modal elements
+  const helpModal = modal.querySelector('#helpModal');
+  const helpBtn = modal.querySelector('#helpBtn');
+  const closeBtn = modal.querySelector('.help-tutorial-close-btn');
+
+  // Help modal functions
+  function openHelpModal() {
+    helpModal.style.display = 'flex';
+    setTimeout(() => {
+      helpModal.classList.add('open');
+    }, 10);
+  }
+
+  function closeHelpModal() {
+    helpModal.classList.remove('open');
+    setTimeout(() => {
+      helpModal.style.display = 'none';
+    }, 300);
+  }
+
+  // Help modal event listeners
+  if (helpBtn) {
+    helpBtn.addEventListener('click', openHelpModal);
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeHelpModal);
+  }
+
+  // Close help modal when clicking outside or pressing Escape
+  window.addEventListener('click', (event) => {
+    if (event.target === helpModal) {
+      closeHelpModal();
+    }
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && helpModal && helpModal.style.display === 'flex') {
+      closeHelpModal();
+    }
+  });
 
   // Close button
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {

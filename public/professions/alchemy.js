@@ -222,38 +222,52 @@ function renderCraftingModal() {
     <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2>Crafting: ${alchemyState.professionName}</h2>
             
-      <!-- Result display with reserved space to prevent CLS -->
       <div id="craft-result" style="margin: 0.5rem 0; font-weight: bold; min-height: 20px;">Select 3 herbs to start crafting</div>
       
-      <!-- Adjustment counter with reserved space to prevent CLS -->
       <div id="adjustment-counter" style="margin: 0.3rem 0; font-size: 0.85rem; color: #666; min-height: 16px; visibility: hidden;">
         Adjustments: ${alchemyState.adjustmentCount}/${alchemyState.maxAdjustments}
       </div>
       
-      <!-- Main crafting area - MADE MORE COMPACT -->
       <div id="crafting-slots" style="display: flex; justify-content: center; gap: 0.8rem;">
         ${[0,1,2].map(i => createCraftingSlotHTML(i)).join('')}
       </div>
       
-      <!-- Bank row (horizontal scrollable) - MADE SMALLER -->
       <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem;">Available Herbs</h3>
       <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 85px;">
         ${renderHerbsHTML()}
       </div>
       
-      <!-- Recipes row (horizontal scrollable) - MADE SMALLER -->
       <h3 style="margin: 0.3rem 0; font-size: 1rem;">Recipes</h3>
       <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
         ${renderRecipesHTML()}
       </div>
       
-      <!-- Button row - all buttons stay here -->
       <div style="display: flex; justify-content: center; gap: 0.4rem;">
         <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 80px; padding: 0.4rem;">Close</button>
         <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.4rem;">Craft</button>
         <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.4rem; display: none;">Finish</button>
         <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 80px; padding: 0.4rem; display: none;">Claim</button>
       </div>
+    </div>
+
+    <button id="helpBtn" class="help-tutorial-fantasy-button">?</button>
+
+    <div id="helpModal" class="help-tutorial-modal">
+        <div class="help-tutorial-modal-content">
+            <span class="help-tutorial-close-btn">&times;</span>
+            <h3 class="help-tutorial-modal-title">Tutorial</h3>
+            <div class="help-tutorial-modal-body">
+                <p class="mb-4">
+                    Text
+                </p>
+                <p class="mb-4">
+                    Text
+                </p>
+                <p>
+                    Text
+                </p>
+            </div>
+        </div>
     </div>
   `;
   document.body.appendChild(modal);
@@ -546,6 +560,48 @@ function setupModalEventListeners(modal) {
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
   const adjustmentCounter = modal.querySelector('#adjustment-counter');
+
+    // Help modal elements
+  const helpModal = modal.querySelector('#helpModal');
+  const helpBtn = modal.querySelector('#helpBtn');
+  const closeBtn = modal.querySelector('.help-tutorial-close-btn');
+
+  // Help modal functions
+  function openHelpModal() {
+    helpModal.style.display = 'flex';
+    setTimeout(() => {
+      helpModal.classList.add('open');
+    }, 10);
+  }
+
+  function closeHelpModal() {
+    helpModal.classList.remove('open');
+    setTimeout(() => {
+      helpModal.style.display = 'none';
+    }, 300);
+  }
+
+  // Help modal event listeners
+  if (helpBtn) {
+    helpBtn.addEventListener('click', openHelpModal);
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeHelpModal);
+  }
+
+  // Close help modal when clicking outside or pressing Escape
+  window.addEventListener('click', (event) => {
+    if (event.target === helpModal) {
+      closeHelpModal();
+    }
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && helpModal && helpModal.style.display === 'flex') {
+      closeHelpModal();
+    }
+  });
 
   // Close button
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {

@@ -189,6 +189,26 @@ function renderCraftingModal() {
         <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
       </div>
     </div>
+
+    <button id="helpBtn" class="help-tutorial-fantasy-button">?</button>
+
+    <div id="helpModal" class="help-tutorial-modal">
+        <div class="help-tutorial-modal-content">
+            <span class="help-tutorial-close-btn">&times;</span>
+            <h3 class="help-tutorial-modal-title">Tutorial</h3>
+            <div class="help-tutorial-modal-body">
+                <p class="mb-4">
+                    Text
+                </p>
+                <p class="mb-4">
+                    Text
+                </p>
+                <p>
+                    Text
+                </p>
+            </div>
+        </div>
+    </div>
   `;
   document.body.appendChild(modal);
   setupModalEventListeners(modal);
@@ -450,6 +470,48 @@ function setupModalEventListeners(modal) {
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
   const adjustmentCounter = modal.querySelector('#adjustment-counter');
+
+    // Help modal elements
+  const helpModal = modal.querySelector('#helpModal');
+  const helpBtn = modal.querySelector('#helpBtn');
+  const closeBtn = modal.querySelector('.help-tutorial-close-btn');
+
+  // Help modal functions
+  function openHelpModal() {
+    helpModal.style.display = 'flex';
+    setTimeout(() => {
+      helpModal.classList.add('open');
+    }, 10);
+  }
+
+  function closeHelpModal() {
+    helpModal.classList.remove('open');
+    setTimeout(() => {
+      helpModal.style.display = 'none';
+    }, 300);
+  }
+
+  // Help modal event listeners
+  if (helpBtn) {
+    helpBtn.addEventListener('click', openHelpModal);
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeHelpModal);
+  }
+
+  // Close help modal when clicking outside or pressing Escape
+  window.addEventListener('click', (event) => {
+    if (event.target === helpModal) {
+      closeHelpModal();
+    }
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && helpModal && helpModal.style.display === 'flex') {
+      closeHelpModal();
+    }
+  });
 
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
