@@ -12,6 +12,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
+    setBankHeaderBackground;
 
     _profile = _getCurrentProfile();
     if (!_profile) {
@@ -703,6 +704,13 @@ function closeMessageBox() {
     if (existing) existing.remove();
 }
 
+function setBankHeaderBackground() {
+  const header = document.querySelector('.bank-header');
+  if (header) {
+    header.style.backgroundImage = "url('assets/art/castle/main_auction.png')";
+  }
+}
+
 function addAuctionStyles() {
     const styleId = 'auction-styles-refactored';
     if (document.getElementById(styleId)) return;
@@ -719,10 +727,6 @@ function addAuctionStyles() {
             flex-direction: column;
             background-color: #1a150e;
             overflow: hidden;
-        }
-
-        .bank-header {
-            background-image: url('assets/art/castle/main_auction.png');
         }
 
         .bank-title {
