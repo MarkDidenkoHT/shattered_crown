@@ -173,12 +173,12 @@ function renderCraftingModal() {
       </div>
       
       <h3>Available Ores</h3>
-      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
+      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderOresHTML()}
       </div>
       
       <h3>Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderRecipesHTML()}
       </div>
       

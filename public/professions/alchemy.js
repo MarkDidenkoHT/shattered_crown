@@ -233,12 +233,12 @@ function renderCraftingModal() {
       </div>
       
       <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem;">Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 85px; min-height: 85px;">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #8B4513; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderHerbsHTML()}
       </div>
       
       <h3 style="margin: 0.3rem 0; font-size: 1rem;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #8B4513; border-radius: 6px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderRecipesHTML()}
       </div>
       

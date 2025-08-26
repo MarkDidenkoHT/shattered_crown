@@ -317,17 +317,17 @@ function renderCraftingModal() {
       </div>
       
       <h3 style="margin: 0.4rem 0 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Seeds</h3>
-      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
+      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderSeedsHTML()}
       </div>
       
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Fertilizers</h3>
-      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
+      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderFertilizersHTML()}
       </div>
       
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 95px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderRecipesHTML()}
       </div>
       
