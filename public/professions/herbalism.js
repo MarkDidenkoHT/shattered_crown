@@ -307,7 +307,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2 style="margin: 0.4rem 0; color: #228B22; font-size: 1.3rem;">🌱 Crafting: ${herbalismState.professionName}</h2>
             
       <div id="craft-result" style="margin: 0.4rem 0; font-weight: bold; min-height: 16px; font-size: 0.9rem;">Set up your garden to start growing</div>
@@ -361,6 +361,7 @@ function renderCraftingModal() {
   document.body.appendChild(modal);
 
   setupModalEventListeners(modal);
+  setBackground(modal);
 }
 
 // Render seeds HTML - Made smaller
@@ -418,6 +419,26 @@ function renderRecipesHTML() {
   `).join('');
 }
 
+function setBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = 'cover';
+    messageContent.style.backgroundPosition = 'center';
+    messageContent.style.backgroundRepeat = 'no-repeat';
+    messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_blacksmith.png)';
+  }
+}
+
+function removeBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = '';
+    messageContent.style.backgroundPosition = '';
+    messageContent.style.backgroundRepeat = '';
+    messageContent.style.backgroundImage = '';
+  }
+}
+
 // Setup modal event listeners
 function setupModalEventListeners(modal) {
   const growBtn = modal.querySelector('#grow-btn');
@@ -468,6 +489,7 @@ function setupModalEventListeners(modal) {
 
   // Close button
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+    removeBackground(modal);
     modal.remove();
     herbalismState = null;
     ingredientCache.clear();

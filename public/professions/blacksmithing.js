@@ -215,7 +215,7 @@ function renderBlacksmithingModal() {
   `;
   document.body.appendChild(modal);
   setupBlacksmithingEventListeners(modal);
-  setBlacksmithBackground(modal); 
+  setBackground(modal); 
 }
 
 function renderItemTypesHTML() {
@@ -265,7 +265,7 @@ function createPropertyRowHTML(rowIndex) {
   `;
 }
 
-function setBlacksmithBackground(modal) {
+function setBackground(modal) {
   const messageContent = modal.querySelector('.message-content');
   if (messageContent) {
     messageContent.style.backgroundSize = 'cover';
@@ -275,7 +275,7 @@ function setBlacksmithBackground(modal) {
   }
 }
 
-function removeBlacksmithBackground(modal) {
+function removeBackground(modal) {
   const messageContent = modal.querySelector('.message-content');
   if (messageContent) {
     messageContent.style.backgroundSize = '';
@@ -335,7 +335,7 @@ function setupBlacksmithingEventListeners(modal) {
 
   // Existing event listeners
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
-    removeBlacksmithBackground(modal);
+    removeBackground(modal);
     modal.remove();
     forgingState = null;
   });

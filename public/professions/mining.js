@@ -155,7 +155,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2>Crafting: ${miningState.professionName}</h2>
                 
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select 3 ores to start mining</div>
@@ -212,6 +212,7 @@ function renderCraftingModal() {
   `;
   document.body.appendChild(modal);
   setupModalEventListeners(modal);
+  setBackground(modal);
 }
 
 function renderOresHTML() {
@@ -465,6 +466,26 @@ function showOreProperties(oreIndex) {
   });
 }
 
+function setBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = 'cover';
+    messageContent.style.backgroundPosition = 'center';
+    messageContent.style.backgroundRepeat = 'no-repeat';
+    messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_blacksmith.png)';
+  }
+}
+
+function removeBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = '';
+    messageContent.style.backgroundPosition = '';
+    messageContent.style.backgroundRepeat = '';
+    messageContent.style.backgroundImage = '';
+  }
+}
+
 function setupModalEventListeners(modal) {
   const craftBtn = modal.querySelector('#craft-btn');
   const finishBtn = modal.querySelector('#finish-btn');
@@ -514,6 +535,7 @@ function setupModalEventListeners(modal) {
   });
 
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+    removeBackground(modal);
     modal.remove();
     miningState = null;
     oreCache.clear();

@@ -219,7 +219,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2>Crafting: ${alchemyState.professionName}</h2>
             
       <div id="craft-result" style="margin: 0.5rem 0; font-weight: bold; min-height: 20px;">Select 3 herbs to start crafting</div>
@@ -273,6 +273,7 @@ function renderCraftingModal() {
   document.body.appendChild(modal);
 
   setupModalEventListeners(modal);
+  setBackground(modal);
 }
 
 // Pre-render herbs HTML to avoid DOM manipulation during render - MADE SMALLER
@@ -554,7 +555,26 @@ function showHerbProperties(herbIndex) {
   });
 }
 
-// Optimized event listeners setup with event delegation
+function setBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = 'cover';
+    messageContent.style.backgroundPosition = 'center';
+    messageContent.style.backgroundRepeat = 'no-repeat';
+    messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_alchemy.png)';
+  }
+}
+
+function removeBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = '';
+    messageContent.style.backgroundPosition = '';
+    messageContent.style.backgroundRepeat = '';
+    messageContent.style.backgroundImage = '';
+  }
+}
+
 function setupModalEventListeners(modal) {
   const craftBtn = modal.querySelector('#craft-btn');
   const finishBtn = modal.querySelector('#finish-btn');
@@ -605,6 +625,7 @@ function setupModalEventListeners(modal) {
 
   // Close button
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+    removeBackground(modal);
     modal.remove();
     alchemyState = null;
     ingredientCache.clear(); // Clear cache when closing
