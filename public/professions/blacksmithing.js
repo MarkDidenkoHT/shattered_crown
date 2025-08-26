@@ -166,21 +166,21 @@ function renderBlacksmithingModal() {
       <div class="materials-section" style="margin-bottom: 1rem;">
         <div>
           <h3>Item Types</h3>
-          <div id="item-types" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
+          <div id="item-types" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
             ${renderItemTypesHTML()}
           </div>
         </div>
         
         <div>
           <h3>Metal Bars</h3>
-          <div id="available-bars" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
+          <div id="available-bars" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
             ${renderBarsHTML()}
           </div>
         </div>
         
         <div>
           <h3>Enhancement Powders</h3>
-          <div id="available-powders" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 100px;">
+          <div id="available-powders" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 8px; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
             ${renderPowdersHTML()}
           </div>
         </div>

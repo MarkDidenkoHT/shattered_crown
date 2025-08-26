@@ -173,7 +173,7 @@ function createCraftingSlotHTML(slotIndex) {
       </div>
       
       <!-- Enhanced Properties Bottle - MADE SMALLER -->
-      <div class="properties-bottle" style="width: 50px; height: 90px; border: 2px solid #8B4513; border-radius: 8px 8px 16px 16px; background: linear-gradient(to bottom, rgba(139,69,19,0.1) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative; overflow: hidden;">
+      <div class="properties-bottle" style="width: 50px; height: 90px; border: 2px solid #8B4513; border-radius: 8px 8px 16px 16px; background: linear-gradient(to bottom, rgba(139,69,19,0.5) 0%, rgba(139,69,19,0.3) 100%); display: flex; flex-direction: column; justify-content: space-around; align-items: center; position: relative; overflow: hidden;">
         
         <!-- Enhanced Bottle Cork/Top - SMALLER -->
         <div class="bottle-cork" style="position: absolute; top: -10px; width: 20px; height: 16px; background: linear-gradient(135deg, #D2691E 0%, #8B4513 50%, #654321 100%); border-radius: 5px 5px 2px 2px; border: 1px solid #654321; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 10;">
@@ -233,12 +233,12 @@ function renderCraftingModal() {
       </div>
       
       <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem;">Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 85px;">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #444; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 85px; min-height: 85px;">
         ${renderHerbsHTML()}
       </div>
       
       <h3 style="margin: 0.3rem 0; font-size: 1rem;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; margin-bottom: 0.8rem; border: 1px solid #444; border-radius: 6px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -469,7 +469,7 @@ function showRecipeDetails(recipe) {
       <h3 style="color: #c4975a; margin-bottom: 1rem;">${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
       
-      <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
+      <div style="background: rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
         <h4 style="color: #c4975a; margin-bottom: 0.5rem;">Required Properties:</h4>
         <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${ingredientsList}</div>
       </div>

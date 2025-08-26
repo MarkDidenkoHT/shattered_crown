@@ -317,17 +317,17 @@ function renderCraftingModal() {
       </div>
       
       <h3 style="margin: 0.4rem 0 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Seeds</h3>
-      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
+      <div id="available-seeds" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
         ${renderSeedsHTML()}
       </div>
       
-      <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #228B22;">Available Fertilizers</h3>
-      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.1); scrollbar-width: none; max-height: 85px;">
+      <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Available Fertilizers</h3>
+      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
         ${renderFertilizersHTML()}
       </div>
       
-      <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #4CAF50;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
+      <h3 style="margin: 0.3rem 0; font-size: 0.9rem; color: #8B4513;">Recipes</h3>
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #444; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 95px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -375,7 +375,7 @@ function renderSeedsHTML() {
   return herbalismState.availableSeeds.map((seed, idx) => {
     console.log('[HERBALISM] Rendering seed:', seed.name, 'sprite:', seed.sprite);
     return `
-      <div class="seed-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(139,69,19,0.1);">
+      <div class="seed-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(139,69,19,0.5);">
         <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:48px;height:48px;" onerror="this.src='assets/art/ingridients/default.png'">
         <div style="font-size:0.6rem; color: #8B4513;">x${seed.amount}</div>
         <div class="info-icon" data-seed="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #8B4513; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
@@ -1105,7 +1105,7 @@ function showRecipeDetails(recipe) {
       <h3 style="color: #c4975a; margin-bottom: 0.8rem; font-size: 1.1rem;">📜 ${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 70px; height: 70px; border-radius: 6px; margin-bottom: 0.8rem;" onerror="this.src='assets/art/recipes/default.png'">
       
-      <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem; text-align: left;">
+      <div style="background: rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem; text-align: left;">
         <h4 style="color: #c4975a; margin-bottom: 0.4rem; font-size: 0.9rem;">Required Combination:</h4>
         <div style="color: #fff; font-size: 0.8rem; line-height: 1.3;">${ingredientsList}</div>
       </div>

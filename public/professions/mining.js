@@ -173,12 +173,12 @@ function renderCraftingModal() {
       </div>
       
       <h3>Available Ores</h3>
-      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 85px;">
+      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
         ${renderOresHTML()}
       </div>
       
       <h3>Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.1); scrollbar-width: none; max-height: 95px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #444; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 85px; min-height: 85px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -310,7 +310,7 @@ function generateIngredientMatching(recipe) {
   });
 
   let matchingHTML = `
-    <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
+    <div style="background: rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
       <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Ore Matching Guide</h4>
       <div style="font-size: 0.85rem; color: #ccc; text-align: center; margin-bottom: 1rem; font-style: italic;">
         Find ores with these properties (all three must align vertically in the center):
@@ -320,7 +320,7 @@ function generateIngredientMatching(recipe) {
   matchingResults.forEach((result) => {
     const hasMatches = result.matchingOres.length > 0;
     const borderColor = hasMatches ? '#8B4513' : '#ff6b6b';
-    const bgColor = hasMatches ? 'rgba(139,69,19,0.1)' : 'rgba(255,107,107,0.1)';
+    const bgColor = hasMatches ? 'rgba(139,69,19,0.5)' : 'rgba(255,107,107,0.1)';
     
     matchingHTML += `
       <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem;">
@@ -390,7 +390,7 @@ function showRecipeDetails(recipe) {
       <h3 style="color: #FFD700; margin-bottom: 1rem;">${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
       
-      <div style="background: rgba(139,69,19,0.1); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
+      <div style="background:rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
         <h4 style="color: #FFD700; margin-bottom: 0.5rem;">Required Properties:</h4>
         <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${ingredientsList}</div>
       </div>
@@ -1352,7 +1352,7 @@ function injectMiningAnimationsCSS() {
 
     #available-ores::-webkit-scrollbar-track,
     #available-recipes::-webkit-scrollbar-track {
-      background: rgba(139,69,19,0.1);
+      background: rgba(139,69,19,0.5);
       border-radius: 3px;
     }
 
