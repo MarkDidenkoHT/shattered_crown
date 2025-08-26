@@ -8,7 +8,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
-  setBankHeaderBackground;
+  setBankHeaderBackground();
 
   _profile = _getCurrentProfile();
   if (!_profile) {
