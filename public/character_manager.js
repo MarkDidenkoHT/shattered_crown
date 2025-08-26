@@ -233,57 +233,127 @@ function setupDragSlider() {
   const slider = _main.querySelector('#charactersSlider');
   if (!slider) return;
 
+  const cards = slider.querySelectorAll('.character-card');
+  if (cards.length === 0) return;
+
+  let currentIndex = 0;
   let isDragging = false;
   let startX = 0;
+  let currentX = 0;
   let scrollLeft = 0;
+  let dragThreshold = 50;
 
-  // Mouse events
-  slider.addEventListener('mousedown', (e) => {
+  function getCardWidth() {
+    const card = cards[0];
+    const cardRect = card.getBoundingClientRect();
+    const sliderStyles = window.getComputedStyle(slider);
+    const gap = parseInt(sliderStyles.gap) || 24;
+    return cardRect.width + gap;
+  }
+
+  function snapToCard(index) {
+    const cardWidth = getCardWidth();
+    const targetScroll = index * cardWidth;
+    
+    slider.style.scrollBehavior = 'smooth';
+    slider.scrollLeft = targetScroll;
+    
+    setTimeout(() => {
+      slider.style.scrollBehavior = '';
+    }, 300);
+    
+    currentIndex = Math.max(0, Math.min(index, cards.length - 1));
+  }
+
+  function handleStart(clientX) {
     isDragging = true;
-    slider.style.cursor = 'grabbing';
-    startX = e.pageX - slider.offsetLeft;
+    startX = clientX - slider.offsetLeft;
+    currentX = clientX;
     scrollLeft = slider.scrollLeft;
+    slider.style.cursor = 'grabbing';
+    slider.style.scrollBehavior = '';
+  }
+
+  function handleMove(clientX) {
+    if (!isDragging) return;
+    
+    const x = clientX - slider.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    slider.scrollLeft = scrollLeft - walk;
+    currentX = clientX;
+  }
+
+  function handleEnd() {
+    if (!isDragging) return;
+    
+    isDragging = false;
+    slider.style.cursor = 'grab';
+    
+    const dragDistance = currentX - (startX + slider.offsetLeft);
+    
+    if (Math.abs(dragDistance) > dragThreshold) {
+      if (dragDistance > 0 && currentIndex > 0) {
+        snapToCard(currentIndex - 1);
+      } else if (dragDistance < 0 && currentIndex < cards.length - 1) {
+        snapToCard(currentIndex + 1);
+      } else {
+        snapToCard(currentIndex);
+      }
+    } else {
+      snapToCard(currentIndex);
+    }
+  }
+
+  slider.addEventListener('mousedown', (e) => {
     e.preventDefault();
-  });
-
-  slider.addEventListener('mouseleave', () => {
-    isDragging = false;
-    slider.style.cursor = 'grab';
-  });
-
-  slider.addEventListener('mouseup', () => {
-    isDragging = false;
-    slider.style.cursor = 'grab';
+    handleStart(e.clientX);
   });
 
   slider.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const x = e.pageX - slider.offsetLeft;
-    const walk = (x - startX) * 2;
-    slider.scrollLeft = scrollLeft - walk;
+    handleMove(e.clientX);
   });
 
-  // Touch events for mobile
+  slider.addEventListener('mouseup', handleEnd);
+  slider.addEventListener('mouseleave', handleEnd);
+
   slider.addEventListener('touchstart', (e) => {
-    isDragging = true;
-    startX = e.touches[0].pageX - slider.offsetLeft;
-    scrollLeft = slider.scrollLeft;
+    handleStart(e.touches[0].clientX);
   }, { passive: true });
 
   slider.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-    const x = e.touches[0].pageX - slider.offsetLeft;
-    const walk = (x - startX) * 2;
-    slider.scrollLeft = scrollLeft - walk;
+    handleMove(e.touches[0].clientX);
   }, { passive: true });
 
-  slider.addEventListener('touchend', () => {
-    isDragging = false;
+  slider.addEventListener('touchend', handleEnd);
+
+  slider.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' && currentIndex > 0) {
+      e.preventDefault();
+      snapToCard(currentIndex - 1);
+    } else if (e.key === 'ArrowRight' && currentIndex < cards.length - 1) {
+      e.preventDefault();
+      snapToCard(currentIndex + 1);
+    }
   });
 
-  // Set initial cursor
+  slider.tabIndex = 0;
+
+  let scrollTimeout;
+  slider.addEventListener('scroll', () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      if (!isDragging) {
+        const cardWidth = getCardWidth();
+        const newIndex = Math.round(slider.scrollLeft / cardWidth);
+        if (newIndex !== currentIndex) {
+          currentIndex = Math.max(0, Math.min(newIndex, cards.length - 1));
+        }
+      }
+    }, 100);
+  });
+
   slider.style.cursor = 'grab';
+  setTimeout(() => snapToCard(0), 100);
 }
 
 function setupEquipmentClickHandlers(section, characters) {
@@ -695,6 +765,7 @@ styleEl.textContent = `
     padding: 1rem;
     scroll-behavior: smooth;
     scrollbar-width: none;
+    scroll-snap-type: x mandatory;
     -ms-overflow-style: none;
     user-select: none;
 }
@@ -703,7 +774,6 @@ styleEl.textContent = `
     display: none;
 }
 
-/* Character Card */
 .character-card {
     background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
     border: 2px solid #3d2914;
@@ -713,7 +783,9 @@ styleEl.textContent = `
     backdrop-filter: blur(3px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     padding: 1rem;
-    min-width: 100%;
+    min-width: calc(100% - 2rem);
+    max-width: calc(100% - 2rem);
+    scroll-snap-align: start;
     flex-shrink: 0;
     user-select: none;
 }
