@@ -8,6 +8,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
   _main = main;
   _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
+  setBankHeaderBackground;
 
   _profile = _getCurrentProfile();
   if (!_profile) {
@@ -50,12 +51,10 @@ function renderEmbarkScreen() {
     </div>
   `;
 
-  // Return button handler
   section.querySelector('.return-btn').addEventListener('click', () => {
     window.gameAuth.loadModule('castle');
   });
 
-  // Embark buttons handler
   section.querySelectorAll('.embark-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const mode = e.currentTarget.dataset.mode;
@@ -65,16 +64,12 @@ function renderEmbarkScreen() {
     });
   });
 
-  // Safe image error handling (no inline onerror)
   section.querySelectorAll('.card-art').forEach(img => {
     img.addEventListener('error', () => {
       console.warn(`[EMBARK] Failed to load image: ${img.src}, using placeholder.`);
       img.src = 'assets/art/placeholder.png';
     });
   });
-
-  // Apply custom styles
-  addBankStyles();
 }
 
 function createEmbarkCard(title, mode, imgSrc) {
@@ -127,16 +122,9 @@ function displayMessage(message) {
   });
 }
 
-function addBankStyles() {
-  const styleId = 'bank-styles';
-  if (document.getElementById(styleId)) return;
-
-  const style = document.createElement('style');
-  style.id = styleId;
-  style.textContent = `
-    .bank-header {
-      background-image: url('assets/art/castle/main_embark.png');
-    }
-  `;
-  document.head.appendChild(style);
+function setBankHeaderBackground() {
+  const header = document.querySelector('.bank-header');
+  if (header) {
+    header.style.backgroundImage = "url('assets/art/castle/main_embark.png')";
+  }
 }
