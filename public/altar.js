@@ -24,7 +24,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
       
       <div class="bank-header">
         <div class="top-right-buttons">
-          <button class="fantasy-button return-btn">Return to Castle</button>
+          <button class="fantasy-button return-btn">Return</button>
         </div>
       </div>
         
@@ -287,7 +287,6 @@ styleEl.textContent = `
     height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
     padding: 2rem;
     position: relative;
