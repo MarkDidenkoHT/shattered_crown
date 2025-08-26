@@ -145,7 +145,7 @@ function renderBlacksmithingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
       <h2>Blacksmithing</h2>
                 
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select materials and item type to begin forging</div>
@@ -154,8 +154,8 @@ function renderBlacksmithingModal() {
         Bonuses: <span id="bonus-assigned">0</span>/<span id="bonus-total">0</span> assigned
       </div>
       
-      <div id="forging-area" style="margin: 1.5rem 0;">
-        <div class="forge-workspace" style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #CD853F 100%); border: 3px solid #654321; border-radius: 20px; position: relative; box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2);">
+      <div id="forging-area" style="margin: 2 rem 0;">
+        <div class="forge-workspace">
           <div id="property-rows" style="margin: 1rem 0; display: flex; gap: 1rem; justify-content: center;">
             ${[0,1,2].map(i => createPropertyRowHTML(i)).join('')}
           </div>
@@ -198,7 +198,7 @@ function renderBlacksmithingModal() {
     <div id="helpModal" class="help-tutorial-modal">
         <div class="help-tutorial-modal-content">
             <span class="help-tutorial-close-btn">&times;</span>
-            <h3 class="help-tutorial-modal-title">Tutorial and Explanations</h3>
+            <h3 class="help-tutorial-modal-title">Tutorial</h3>
             <div class="help-tutorial-modal-body">
                 <p class="mb-4">
                     Text
@@ -215,6 +215,7 @@ function renderBlacksmithingModal() {
   `;
   document.body.appendChild(modal);
   setupBlacksmithingEventListeners(modal);
+  setBlacksmithBackground(modal); 
 }
 
 function renderItemTypesHTML() {
@@ -262,6 +263,26 @@ function createPropertyRowHTML(rowIndex) {
       <div class="bonus-counter" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #FF4500; border-radius: 50%; color: white; font-size: 0.7rem; display: none; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff;">0</div>
     </div>
   `;
+}
+
+function setBlacksmithBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = 'cover';
+    messageContent.style.backgroundPosition = 'center';
+    messageContent.style.backgroundRepeat = 'no-repeat';
+    messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_blacksmith.png)';
+  }
+}
+
+function removeBlacksmithBackground(modal) {
+  const messageContent = modal.querySelector('.message-content');
+  if (messageContent) {
+    messageContent.style.backgroundSize = '';
+    messageContent.style.backgroundPosition = '';
+    messageContent.style.backgroundRepeat = '';
+    messageContent.style.backgroundImage = '';
+  }
 }
 
 function setupBlacksmithingEventListeners(modal) {
@@ -314,6 +335,7 @@ function setupBlacksmithingEventListeners(modal) {
 
   // Existing event listeners
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+    removeBlacksmithBackground(modal);
     modal.remove();
     forgingState = null;
   });
@@ -1067,15 +1089,6 @@ function injectBlacksmithingCSS() {
   if (document.getElementById('blacksmithing-css')) return;
   
   const css = `
-    .forge-workspace {
-      animation: forge-glow 4s infinite ease-in-out;
-    }
-
-    @keyframes forge-glow {
-      0%, 100% { box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2); }
-      50% { box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 8px 20px rgba(255,69,0,0.3); }
-    }
-
     .property-display:active {
       transform: scale(0.95);
     }
