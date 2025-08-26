@@ -10,6 +10,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
+    setBankHeaderBackground;
 
     _profile = _getCurrentProfile();
     if (!_profile) {
@@ -233,6 +234,13 @@ function createParticles() {
     }
 }
 
+function setBankHeaderBackground() {
+  const header = document.querySelector('.bank-header');
+  if (header) {
+    header.style.backgroundImage = "url('assets/art/castle/main_bank.png')";
+  }
+}
+
 function displayMessage(message) {
     const existing = document.querySelector('.custom-message-box');
     if (existing) existing.remove();
@@ -272,10 +280,6 @@ function addBankStyles() {
             flex-direction: column;
             background-color: #1a150e;
             overflow: hidden;
-        }
-
-        .bank-header {
-            background-image: url('assets/art/castle/main_bank.png');
         }
 
         .bank-title {
