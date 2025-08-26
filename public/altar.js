@@ -21,10 +21,12 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     <div class="main-app-container">
       <div class="altar-particles"></div>
       <div class="altar-section">
-        <div class="altar-header">
-          <h1>Sacred Altar</h1>
-          <p class="subtitle">Enter sacred codes bestowed by the gods to receive their blessings</p>
+      
+      <div class="bank-header">
+        <div class="top-right-buttons">
+          <button class="fantasy-button return-btn">Return to Castle</button>
         </div>
+      </div>
         
         <div class="altar-content">
           <div class="offering-panel">
@@ -59,9 +61,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
           </div>
         </div>
         
-        <div class="altar-actions">
-          <button class="fantasy-button return-btn">Return to Castle</button>
-        </div>
       </div>
     </div>
   `;
@@ -295,27 +294,6 @@ styleEl.textContent = `
     z-index: 2;
     background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(15px);
-  }
-
-  .altar-header {
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .altar-header h1 {
-    font-family: 'Cinzel', serif;
-    font-size: 2.5rem;
-    color: #c4975a;
-    margin-bottom: 0.5rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-    letter-spacing: 2px;
-  }
-
-  .altar-header .subtitle {
-    font-size: 1rem;
-    color: #b8b3a8;
-    opacity: 0.9;
-    font-style: italic;
   }
 
   .altar-content {
@@ -555,10 +533,6 @@ styleEl.textContent = `
   @media (max-width: 768px) {
     .offering-panel {
       padding: 1.5rem;
-    }
-    
-    .altar-header h1 {
-      font-size: 2rem;
     }
   }
 
