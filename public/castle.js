@@ -136,8 +136,7 @@ function setupInteractions() {
             } else if (action === 'crafting') {
                 window.gameAuth.loadModule('crafting_manager');
             } else if (action === 'altar-nav') {
-                displayMessage('Altar functionality coming soon!');
-                // window.gameAuth.loadModule('altar_scene');
+                window.gameAuth.loadModule('altar');
             } else {
                 displayMessage(`${action.charAt(0).toUpperCase() + action.slice(1)} functionality coming soon!`);
             }
