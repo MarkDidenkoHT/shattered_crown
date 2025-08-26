@@ -3,12 +3,13 @@ let forgingState = null;
 
 const ITEM_TYPES = [
   { name: 'Armor', type: 'Armor', sprite: 'armor' },
-  { name: 'Boots', type: 'Armor', sprite: 'boots' },
-  { name: 'Gloves', type: 'Armor', sprite: 'gloves' },
-  { name: 'Helmet', type: 'Armor', sprite: 'helmet' },
+  { name: 'Boots', type: 'Boots', sprite: 'boots' },
+  { name: 'Gloves', type: 'Gloves', sprite: 'gloves' },
+  { name: 'Helmet', type: 'Helmet', sprite: 'helmet' },
   { name: 'Sword', type: 'Weapon', sprite: 'sword' },
   { name: 'Axe', type: 'Weapon', sprite: 'axe' },
-  { name: 'Mace', type: 'Weapon', sprite: 'mace' }
+  { name: 'Mace', type: 'Weapon', sprite: 'mace' },
+  { name: 'Shield', type: 'Offhand', sprite: 'mace' }
 ];
 
 const RARITY_LEVELS = {
@@ -493,7 +494,8 @@ async function startForging(modal) {
         profession_id: forgingState.professionId,
         selected_bar: forgingState.selectedBar.name,
         selected_powder: forgingState.selectedPowder.name,
-        item_type: forgingState.selectedItemType.name
+        item_name: forgingState.selectedItemType.name,
+        item_type: forgingState.selectedItemType.type 
       }
     });
 
