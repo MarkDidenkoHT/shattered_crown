@@ -65,17 +65,29 @@
   object-fit: contain;
 }
 
-    .top-right-buttons {
-        position: absolute;
-        top: 1rem;
-        display: flex;
-        gap: 0.5rem;
-        z-index: 10; /* Ensure buttons are above other content */
-    }
-    .top-right-buttons .fantasy-button {
-        padding: 0.6rem 1rem;
-        font-size: 0.8rem;
-    }
+.top-right-buttons {
+  position: absolute;
+  top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+/* One button → stay top-right */
+.top-right-buttons:has(:only-child) {
+  right: 1rem;
+}
+
+/* Multiple buttons → center */
+.top-right-buttons:has(:not(:only-child)) {
+  right: unset !important;
+}
+
+.top-right-buttons .fantasy-button {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+}
+
 /* end */
     body, html {
       height: 100%;
