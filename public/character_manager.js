@@ -160,8 +160,8 @@ function characterCardHTML(character) {
   // Parse equipped items from JSONB column
   const equippedItems = character.equipped_items || {};
   const equipmentData = [
-    { label: 'Weapon 1', value: equippedItems.equipped_weapon1 || 'None', slot: 'equipped_weapon1', type: 'Weapon' },
-    { label: 'Weapon 2', value: equippedItems.equipped_weapon2 || 'None', slot: 'equipped_weapon2', type: 'Weapon' },
+    { label: 'Weapon', value: equippedItems.equipped_weapon || 'None', slot: 'equipped_weapon', type: 'Weapon' },
+    { label: 'Offhand', value: equippedItems.equipped_offhand || 'None', slot: 'equipped_offhand', type: 'Offhand' },
     { label: 'Armor', value: equippedItems.equipped_armor || 'None', slot: 'equipped_armor', type: 'Armor' },
     { label: 'Helmet', value: equippedItems.equipped_helmet || 'None', slot: 'equipped_helmet', type: 'Helmet' },
     { label: 'Trinket', value: equippedItems.equipped_trinket || 'None', slot: 'equipped_trinket', type: 'Trinket' },
