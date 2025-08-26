@@ -23,28 +23,12 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
       <div class="altar-section">
         <div class="altar-header">
           <h1>Sacred Altar</h1>
-          <p class="subtitle">Commune with the divine and redeem sacred offerings</p>
+          <p class="subtitle">Enter sacred codes bestowed by the gods to receive their blessings</p>
         </div>
         
         <div class="altar-content">
-          <!-- Central Altar Visual -->
-          <div class="altar-visual">
-            <div class="altar-flame">🔥</div>
-            <div class="altar-glow"></div>
-            <div class="runes-circle">
-              <div class="rune">⚡</div>
-              <div class="rune">❄️</div>
-              <div class="rune">🌿</div>
-              <div class="rune">🗡️</div>
-              <div class="rune">🛡️</div>
-              <div class="rune">💎</div>
-            </div>
-          </div>
-          
-          <!-- Promo Code Section -->
           <div class="offering-panel">
             <h2>Divine Offerings</h2>
-            <p class="offering-desc">Enter sacred codes bestowed by the gods to receive their blessings</p>
             
             <div class="promo-input-section">
               <div class="input-container">
@@ -68,7 +52,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
               </div>
             </div>
             
-            <!-- Recent Blessings -->
             <div class="recent-blessings" id="recentBlessings" style="display: none;">
               <h3>Recent Divine Blessings</h3>
               <div class="blessings-list" id="blessingsList"></div>
@@ -90,17 +73,14 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 }
 
 function setupEventHandlers() {
-  // Return button
   const returnBtn = _main.querySelector('.return-btn');
   returnBtn.addEventListener('click', () => {
     window.gameAuth.loadModule('castle');
   });
 
-  // Promo code input
   const promoInput = _main.querySelector('#promoCodeInput');
   const redeemBtn = _main.querySelector('#redeemBtn');
   
-  // Enable/disable redeem button based on input
   promoInput.addEventListener('input', () => {
     const code = promoInput.value.trim();
     redeemBtn.disabled = code.length === 0;
@@ -112,17 +92,13 @@ function setupEventHandlers() {
     }
   });
 
-  // Handle Enter key in input
   promoInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !redeemBtn.disabled) {
       handlePromoRedeem();
     }
   });
 
-  // Redeem button click
   redeemBtn.addEventListener('click', handlePromoRedeem);
-  
-  // Initial state
   redeemBtn.disabled = true;
 }
 
@@ -133,7 +109,6 @@ async function handlePromoRedeem() {
   
   if (!code) return;
   
-  // Show loading state
   setButtonLoading(redeemBtn, true);
   hideStatus();
   
@@ -151,18 +126,14 @@ async function handlePromoRedeem() {
     const result = await response.json();
     
     if (response.ok && result.success) {
-      // Success
       showStatus('success', result.message, result.rewards);
       promoInput.value = '';
-      animateAltarBlessing();
       
-      // Refresh recent blessings after a short delay
       setTimeout(() => {
         loadRecentBlessings();
       }, 1000);
       
     } else {
-      // Error from server
       const errorMessage = result.error || 'Failed to redeem code';
       showStatus('error', errorMessage);
       shakeInput();
@@ -192,7 +163,6 @@ function setButtonLoading(button, loading) {
     btnText.textContent = 'Offer Code';
     btnIcon.textContent = '⚡';
     
-    // Re-check if input has value
     const promoInput = _main.querySelector('#promoCodeInput');
     if (promoInput.value.trim().length === 0) {
       button.disabled = true;
@@ -240,47 +210,13 @@ function shakeInput() {
   }, 500);
 }
 
-function animateAltarBlessing() {
-  const flame = _main.querySelector('.altar-flame');
-  const glow = _main.querySelector('.altar-glow');
-  const runes = _main.querySelectorAll('.rune');
-  
-  // Animate flame
-  flame.style.transform = 'scale(1.5)';
-  flame.style.filter = 'brightness(2)';
-  
-  // Animate glow
-  glow.style.opacity = '0.8';
-  glow.style.transform = 'scale(1.2)';
-  
-  // Animate runes
-  runes.forEach((rune, index) => {
-    setTimeout(() => {
-      rune.style.animation = 'runeGlow 1s ease-out';
-    }, index * 100);
-  });
-  
-  // Reset after animation
-  setTimeout(() => {
-    flame.style.transform = '';
-    flame.style.filter = '';
-    glow.style.opacity = '';
-    glow.style.transform = '';
-    
-    runes.forEach(rune => {
-      rune.style.animation = '';
-    });
-  }, 2000);
-}
-
 async function loadRecentBlessings() {
   try {
-    // Get profile to check recent promo usage
     const response = await _apiCall(`/api/supabase/rest/v1/profiles?id=eq.${_profile.id}&select=promos_used`);
     const profiles = await response.json();
     
     if (profiles && profiles.length > 0 && profiles[0].promos_used) {
-      const recentPromos = profiles[0].promos_used.slice(-3).reverse(); // Last 3, most recent first
+      const recentPromos = profiles[0].promos_used.slice(-3).reverse();
       
       if (recentPromos.length > 0) {
         displayRecentBlessings(recentPromos);
@@ -317,7 +253,6 @@ function createAltarParticles() {
     const particle = document.createElement('div');
     particle.className = 'altar-particle';
     
-    // Random particle type
     const types = ['✨', '⭐', '💫', '🌟'];
     particle.textContent = types[Math.floor(Math.random() * types.length)];
     
@@ -347,7 +282,6 @@ function displayMessage(message) {
   });
 }
 
-// Add styles
 const styleEl = document.createElement('style');
 styleEl.textContent = `
   .altar-section {
@@ -387,64 +321,10 @@ styleEl.textContent = `
   .altar-content {
     display: flex;
     align-items: center;
-    gap: 3rem;
-    max-width: 900px;
+    max-width: 600px;
     width: 100%;
   }
 
-  /* Altar Visual */
-  .altar-visual {
-    position: relative;
-    width: 200px;
-    height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .altar-flame {
-    font-size: 3rem;
-    z-index: 3;
-    position: relative;
-    animation: flicker 2s ease-in-out infinite;
-    filter: drop-shadow(0 0 10px rgba(255, 165, 0, 0.6));
-    transition: all 0.3s ease;
-  }
-
-  .altar-glow {
-    position: absolute;
-    inset: -20px;
-    background: radial-gradient(circle, rgba(196, 151, 90, 0.3) 0%, rgba(196, 151, 90, 0.1) 50%, transparent 80%);
-    border-radius: 50%;
-    opacity: 0.4;
-    animation: pulse 3s ease-in-out infinite;
-    transition: all 0.3s ease;
-  }
-
-  .runes-circle {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    animation: rotate 20s linear infinite;
-  }
-
-  .rune {
-    position: absolute;
-    font-size: 1.2rem;
-    color: #c4975a;
-    filter: drop-shadow(0 0 5px rgba(196, 151, 90, 0.5));
-    transition: all 0.3s ease;
-  }
-
-  .rune:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
-  .rune:nth-child(2) { top: 25%; right: 0; transform: translateY(-50%); }
-  .rune:nth-child(3) { bottom: 25%; right: 0; transform: translateY(50%); }
-  .rune:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); }
-  .rune:nth-child(5) { bottom: 25%; left: 0; transform: translateY(50%); }
-  .rune:nth-child(6) { top: 25%; left: 0; transform: translateY(-50%); }
-
-  /* Offering Panel */
   .offering-panel {
     flex: 1;
     background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
@@ -462,16 +342,8 @@ styleEl.textContent = `
     color: #c4975a;
     font-size: 1.8rem;
     text-align: center;
-    margin-bottom: 0.5rem;
-    letter-spacing: 1px;
-  }
-
-  .offering-desc {
-    color: #b8b3a8;
-    text-align: center;
     margin-bottom: 2rem;
-    opacity: 0.9;
-    line-height: 1.4;
+    letter-spacing: 1px;
   }
 
   .promo-input-section {
@@ -556,7 +428,6 @@ styleEl.textContent = `
     animation: buttonPulse 1.5s ease-in-out infinite;
   }
 
-  /* Blessing Status */
   .blessing-status {
     padding: 1.5rem;
     border-radius: 10px;
@@ -593,7 +464,6 @@ styleEl.textContent = `
     flex: 1;
   }
 
-  /* Recent Blessings */
   .recent-blessings {
     margin-top: 2rem;
     padding-top: 1.5rem;
@@ -639,7 +509,6 @@ styleEl.textContent = `
     margin-top: 2rem;
   }
 
-  /* Particles */
   .altar-particles {
     position: absolute;
     inset: 0;
@@ -654,30 +523,6 @@ styleEl.textContent = `
     animation: floatUp linear infinite;
     opacity: 0.7;
     filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5));
-  }
-
-  /* Animations */
-  @keyframes flicker {
-    0%, 100% { transform: scale(1) rotate(0deg); }
-    25% { transform: scale(1.05) rotate(-1deg); }
-    50% { transform: scale(0.95) rotate(1deg); }
-    75% { transform: scale(1.02) rotate(-0.5deg); }
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 0.4; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.1); }
-  }
-
-  @keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  @keyframes runeGlow {
-    0% { filter: drop-shadow(0 0 5px rgba(196, 151, 90, 0.5)); }
-    50% { filter: drop-shadow(0 0 15px rgba(196, 151, 90, 1)) brightness(1.5) scale(1.2); }
-    100% { filter: drop-shadow(0 0 5px rgba(196, 151, 90, 0.5)); }
   }
 
   @keyframes fadeInScale {
@@ -707,22 +552,7 @@ styleEl.textContent = `
     }
   }
 
-  /* Responsive */
   @media (max-width: 768px) {
-    .altar-content {
-      flex-direction: column;
-      gap: 2rem;
-    }
-    
-    .altar-visual {
-      width: 150px;
-      height: 150px;
-    }
-    
-    .altar-flame {
-      font-size: 2.5rem;
-    }
-    
     .offering-panel {
       padding: 1.5rem;
     }
