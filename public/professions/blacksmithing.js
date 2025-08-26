@@ -192,10 +192,65 @@ function renderBlacksmithingModal() {
         <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
       </div>
     </div>
+
+    <button id="helpBtn" class="help-tutorial-fantasy-button">?</button>
+
+    <div id="helpModal" class="help-tutorial-modal">
+        <div class="help-tutorial-modal-content">
+            <span class="help-tutorial-close-btn">&times;</span>
+            <h3 class="help-tutorial-modal-title">Tutorial and Explanations</h3>
+            <div class="help-tutorial-modal-body">
+                <p class="mb-4">
+                    Text
+                </p>
+                <p class="mb-4">
+                    Text
+                </p>
+                <p>
+                    Text
+                </p>
+            </div>
+        </div>
+    </div>
   `;
   document.body.appendChild(modal);
   setupBlacksmithingEventListeners(modal);
 }
+
+  document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('helpModal');
+      const helpBtn = document.getElementById('helpBtn');
+      const closeBtn = document.querySelector('.help-tutorial-close-btn');
+
+      function openModal() {
+          modal.style.display = 'flex';
+          setTimeout(() => {
+              modal.classList.add('open');
+          }, 10);
+      }
+
+      function closeModal() {
+          modal.classList.remove('open');
+          setTimeout(() => {
+              modal.style.display = 'none';
+          }, 300);
+      }
+
+      helpBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+
+      window.addEventListener('click', (event) => {
+          if (event.target === modal) {
+              closeModal();
+          }
+      });
+
+      window.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+              closeModal();
+          }
+      });
+  });
 
 function renderItemTypesHTML() {
   return ITEM_TYPES.map((itemType, idx) => `
