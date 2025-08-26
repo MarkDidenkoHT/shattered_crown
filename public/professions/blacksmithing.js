@@ -217,41 +217,6 @@ function renderBlacksmithingModal() {
   setupBlacksmithingEventListeners(modal);
 }
 
-  document.addEventListener('DOMContentLoaded', () => {
-      const modal = document.getElementById('helpModal');
-      const helpBtn = document.getElementById('helpBtn');
-      const closeBtn = document.querySelector('.help-tutorial-close-btn');
-
-      function openModal() {
-          modal.style.display = 'flex';
-          setTimeout(() => {
-              modal.classList.add('open');
-          }, 10);
-      }
-
-      function closeModal() {
-          modal.classList.remove('open');
-          setTimeout(() => {
-              modal.style.display = 'none';
-          }, 300);
-      }
-
-      helpBtn.addEventListener('click', openModal);
-      closeBtn.addEventListener('click', closeModal);
-
-      window.addEventListener('click', (event) => {
-          if (event.target === modal) {
-              closeModal();
-          }
-      });
-
-      window.addEventListener('keydown', (event) => {
-          if (event.key === 'Escape') {
-              closeModal();
-          }
-      });
-  });
-
 function renderItemTypesHTML() {
   return ITEM_TYPES.map((itemType, idx) => `
     <div class="item-type-card" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 2px solid transparent; min-width: 70px; text-align: center; transition: all 0.2s ease;">
@@ -304,7 +269,50 @@ function setupBlacksmithingEventListeners(modal) {
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
   const bonusCounter = modal.querySelector('#bonus-counter');
+  
+  // Help modal elements
+  const helpModal = modal.querySelector('#helpModal');
+  const helpBtn = modal.querySelector('#helpBtn');
+  const closeBtn = modal.querySelector('.help-tutorial-close-btn');
 
+  // Help modal functions
+  function openHelpModal() {
+    helpModal.style.display = 'flex';
+    setTimeout(() => {
+      helpModal.classList.add('open');
+    }, 10);
+  }
+
+  function closeHelpModal() {
+    helpModal.classList.remove('open');
+    setTimeout(() => {
+      helpModal.style.display = 'none';
+    }, 300);
+  }
+
+  // Help modal event listeners
+  if (helpBtn) {
+    helpBtn.addEventListener('click', openHelpModal);
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeHelpModal);
+  }
+
+  // Close help modal when clicking outside or pressing Escape
+  window.addEventListener('click', (event) => {
+    if (event.target === helpModal) {
+      closeHelpModal();
+    }
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && helpModal && helpModal.style.display === 'flex') {
+      closeHelpModal();
+    }
+  });
+
+  // Existing event listeners
   modal.querySelector('.message-ok-btn').addEventListener('click', () => {
     modal.remove();
     forgingState = null;
