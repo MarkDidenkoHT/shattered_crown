@@ -241,14 +241,14 @@ function createGardenGridHTML() {
       <!-- Top Row: Seed1, Seed2, Fertilizer1 -->
       <div class="seed-plot" data-position="0" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
+          <span style="color: #D2B48C; font-size: 0.8rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
       </div>
       
       <div class="seed-plot" data-position="1" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
+          <span style="color: #D2B48C; font-size: 0.8rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
       </div>
@@ -263,14 +263,14 @@ function createGardenGridHTML() {
       <!-- Middle Row: Seed3, Seed4, Fertilizer2 -->
       <div class="seed-plot" data-position="2" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
+          <span style="color: #D2B48C; font-size: 0.8rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
       </div>
       
       <div class="seed-plot" data-position="3" style="width: 60px; height: 60px; border: 2px dashed #8B4513; border-radius: 6px; background: linear-gradient(to bottom, #654321 0%, #8B4513 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
         <div class="seed-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>
+          <span style="color: #D2B48C; font-size: 0.8rem;">Drop Seed</span>
         </div>
         <div class="growth-animation" style="position: absolute; inset: 0; border-radius: 4px; overflow: hidden; opacity: 0;"></div>
       </div>
@@ -285,13 +285,13 @@ function createGardenGridHTML() {
       <!-- Bottom Row: Sun/Shade toggles and Empty -->
       <div class="sun-shade-toggle" data-column="0" style="width: 60px; height: 60px; border: 2px solid #FFA500; border-radius: 6px; background: linear-gradient(to bottom, rgba(255,165,0,0.2) 0%, rgba(255,165,0,0.4) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
         <div class="toggle-icon" style="font-size: 1.2rem; margin-bottom: 1px;">☀️</div>
-        <div class="toggle-text" style="font-size: 0.55rem; color: #FFA500; font-weight: bold;">Sun</div>
+        <div class="toggle-text" style="font-size: 0.rem; color: #FFA500; font-weight: bold;">Sun</div>
         <div class="column-label" style="display: none; font-size: 0.5rem; color: #999; position: absolute; bottom: 1px;">Col 1</div>
       </div>
       
       <div class="sun-shade-toggle" data-column="1" style="width: 60px; height: 60px; border: 2px solid #FFA500; border-radius: 6px; background: linear-gradient(to bottom, rgba(255,165,0,0.2) 0%, rgba(255,165,0,0.4) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
         <div class="toggle-icon" style="font-size: 1.2rem; margin-bottom: 1px;">☀️</div>
-        <div class="toggle-text" style="font-size: 0.55rem; color: #FFA500; font-weight: bold;">Sun</div>
+        <div class="toggle-text" style="font-size: 0.8rem; color: #FFA500; font-weight: bold;">Sun</div>
         <div class="column-label" style="display: none;  font-size: 0.5rem; color: #999; position: absolute; bottom: 1px;">Col 2</div>
       </div>
       
@@ -320,7 +320,7 @@ function renderCraftingModal() {
       </div>
       
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem;">Available Fertilizers</h3>
-      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #228B22; border-radius: 4px; background: rgba(34,139,34,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
+      <div id="available-fertilizers" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.4rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderFertilizersHTML()}
       </div>
       
@@ -375,7 +375,7 @@ function renderSeedsHTML() {
     return `
       <div class="seed-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(139,69,19,0.5);">
         <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:48px;height:48px;" onerror="this.src='assets/art/ingridients/default.png'">
-        <div style="font-size:0.6rem;">x${seed.amount}</div>
+        <div style="font-size:0.8rem;">x${seed.amount}</div>
         <div class="info-icon" data-seed="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #8B4513; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
     `;
@@ -395,7 +395,7 @@ function renderFertilizersHTML() {
     return `
       <div class="fertilizer-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(34,139,34,0.1);">
         <img src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" style="width:48px;height:48px;" onerror="this.src='assets/art/ingridients/default.png'">
-        <div style="font-size:0.6rem; color: #228B22;">x${fertilizer.amount}</div>
+        <div style="font-size:0.8rem; color: #FFD700;">x${fertilizer.amount}</div>
         <div class="info-icon" data-fertilizer="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #228B22; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
     `;
@@ -652,7 +652,7 @@ function removeSeedFromPlot(position) {
   const plot = document.querySelector(`.seed-plot[data-position="${position}"]`);
   const content = plot.querySelector('.seed-content');
   
-  content.innerHTML = '<span style="color: #D2B48C; font-size: 0.55rem;">Drop Seed</span>';
+  content.innerHTML = '<span style="color: #D2B48C; font-size: 0.8rem;">Drop Seed</span>';
   plot.style.border = '2px dashed #8B4513';
   plot.style.background = 'linear-gradient(to bottom, #654321 0%, #8B4513 100%)';
   plot.classList.remove('has-seed');
