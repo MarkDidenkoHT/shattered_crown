@@ -288,7 +288,6 @@ styleEl.textContent = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem;
     position: relative;
     z-index: 2;
     background: rgba(0, 0, 0, 0.3);
@@ -307,7 +306,7 @@ styleEl.textContent = `
     background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
     border: 2px solid #3d2914;
     border-radius: 15px;
-    padding: 2rem;
+    padding: 1rem;
     backdrop-filter: blur(5px);
     box-shadow: 
       inset 0 1px 0 rgba(196, 151, 90, 0.2),
@@ -526,22 +525,6 @@ styleEl.textContent = `
     to {
       transform: translateY(-20px) scale(0.5);
       opacity: 0;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .offering-panel {
-      padding: 1.5rem;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .altar-section {
-      padding: 1rem;
-    }
-    
-    .offering-panel {
-      padding: 1rem;
     }
   }
 `;
