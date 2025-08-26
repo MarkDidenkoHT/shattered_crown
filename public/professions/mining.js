@@ -332,7 +332,7 @@ function generateIngredientMatching(recipe) {
     if (hasMatches) {
       matchingHTML += `
         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-          <span style="color: #8B4513; font-size: 0.8rem; margin-right: 0.5rem;">Available ores:</span>
+          <span style="font-size: 0.8rem; margin-right: 0.5rem;">Available ores:</span>
       `;
       
       result.matchingOres.forEach((ore) => {
@@ -442,7 +442,7 @@ function showOreProperties(oreIndex) {
   
   propsModal.innerHTML = `
     <div class="message-content" style="max-width: 350px; text-align: center; scrollbar-width:none;">
-      <h3 style="color: #8B4513; margin-bottom: 1rem;">${ore.name}</h3>
+      <h3 style="margin-bottom: 1rem;">${ore.name}</h3>
       <img src="assets/art/ingridients/${ore.sprite}.png" alt="${ore.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
       
       <div style="background: rgba(139,69,19,0.3); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">

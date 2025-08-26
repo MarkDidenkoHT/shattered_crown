@@ -1061,7 +1061,7 @@ function showMaterialProperties(material) {
   
   propsModal.innerHTML = `
     <div class="message-content" style="max-width: 350px; text-align: center; scrollbar-width:none;">
-      <h3 style="color: #8B4513; margin-bottom: 1rem;">${material.name}</h3>
+      <h3 style="margin-bottom: 1rem;">${material.name}</h3>
       <img src="assets/art/ingridients/${material.sprite}.png" alt="${material.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
       
       ${rarityInfo}
@@ -1116,29 +1116,6 @@ function injectBlacksmithingCSS() {
     @keyframes rarity-glow {
       0%, 100% { opacity: 0.8; }
       50% { opacity: 1; }
-    }
-
-    @media (max-width: 768px) {
-      .materials-section {
-        grid-template-columns: 1fr !important;
-      }
-      
-      .property-text {
-        font-size: 0.7rem !important;
-      }
-      
-      .item-type-card {
-        min-width: 60px !important;
-      }
-      
-      .item-type-card img {
-        width: 40px !important;
-        height: 40px !important;
-      }
-
-      .material-item {
-        min-width: 70px !important;
-      }
     }
   `;
 
