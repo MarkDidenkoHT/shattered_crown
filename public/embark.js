@@ -36,7 +36,9 @@ function renderEmbarkScreen() {
 
   section.innerHTML = `
     <div class="bank-header">
-      <h1>Choose Your Adventure</h1> 
+          <div class="top-right-buttons">
+            <button class="fantasy-button return-btn">Return</button>
+          </div>
     </div>
     <div class="selection-section">
       <div class="selection-grid">
@@ -45,9 +47,6 @@ function renderEmbarkScreen() {
         ${createEmbarkCard('Dungeon', 'Dungeon', 'assets/art/embark/dungeon.png')}
         ${createEmbarkCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.png')}
       </div>
-    </div>
-    <div class="top-right-buttons">
-      <button class="fantasy-button return-btn">Return</button>
     </div>
   `;
 
@@ -137,16 +136,6 @@ function addBankStyles() {
   style.textContent = `
     .bank-header {
       background-image: url('assets/art/castle/main_embark.png');
-      background-size: cover;
-      background-position: center;
-      height: 200px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .bank-header h1 {
-      color: #fff;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
     }
   `;
   document.head.appendChild(style);
