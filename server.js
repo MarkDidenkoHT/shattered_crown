@@ -951,6 +951,240 @@ app.get('/api/crafting/materials/:playerId/:professionId', async (req, res) => {
     }
 });
 
+// Enrich ingredients with properties and sprites
+app.post('/api/crafting/enrich-ingredients', async (req, res) => {
+    try {
+        const { itemNames } = req.body;
+        
+        // Validate input
+        if (!Array.isArray(itemNames) || itemNames.length === 0) {
+            return res.status(400).json({ error: 'itemNames array is required' });
+        }
+
+        // Sanitize item names
+        const sanitizedNames = itemNames
+            .filter(name => name && typeof name === 'string')
+            .map(name => name.trim())
+            .filter(name => name.length > 0);
+
+        if (sanitizedNames.length === 0) {
+            return res.status(400).json({ error: 'No valid item names provided' });
+        }
+
+        const uniqueNames = [...new Set(sanitizedNames)];
+        const namesQuery = uniqueNames.map(name => `"${name}"`).join(',');
+        
+        // Fetch ingredient data
+        const ingredientsResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        if (!ingredientsResponse.ok) {
+            throw new Error(`Ingredients query failed: ${ingredientsResponse.status}`);
+        }
+
+        const ingredients = await ingredientsResponse.json();
+        
+        // Create ingredient map for quick lookups
+        const ingredientMap = {};
+        ingredients.forEach(ingredient => {
+            ingredientMap[ingredient.name] = ingredient;
+        });
+        
+        res.json({
+            ingredientMap,
+            foundCount: ingredients.length,
+            requestedCount: uniqueNames.length
+        });
+        
+    } catch (error) {
+        console.error('[ENRICH INGREDIENTS]', error);
+        res.status(500).json({ error: 'Failed to enrich ingredients', details: error.message });
+    }
+});
+
+app.post('/api/crafting/reserve-blacksmith-ingredients', async (req, res) => {
+    try {
+        const { player_id, profession_id, selected_bar, selected_powder, item_name, item_type } = req.body;
+        
+        // Validate required fields
+        if (!player_id || !profession_id || !selected_bar || !selected_powder || !item_name || !item_type) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing required fields' 
+            });
+        }
+
+        // Validate player ID format
+        if (!player_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Invalid player ID format' 
+            });
+        }
+
+        // Call the Supabase edge function
+        const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/reserve_blacksmith_ingredients`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                player_id,
+                profession_id,
+                selected_bar,
+                selected_powder,
+                item_name,
+                item_type
+            })
+        });
+
+        // Handle both JSON and text responses
+        const contentType = response.headers.get('content-type');
+        let responseData;
+        
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+        } else {
+            const textData = await response.text();
+            try {
+                responseData = JSON.parse(textData);
+            } catch (parseError) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Invalid response from crafting service'
+                });
+            }
+        }
+
+        if (!response.ok) {
+            return res.status(response.status).json({
+                success: false,
+                error: responseData.error || 'Failed to reserve ingredients'
+            });
+        }
+
+        res.json(responseData);
+        
+    } catch (error) {
+        console.error('[RESERVE BLACKSMITH INGREDIENTS]', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to reserve ingredients', 
+            details: error.message 
+        });
+    }
+});
+
+
+async function finishForging(resultDiv) {
+  try {
+    const payload = {
+      player_id: context.profile.id,
+      profession_id: forgingState.professionId,
+      session_id: forgingState.sessionId,
+      bonus_assignments: forgingState.bonusAssignments
+    };
+    
+    const res = await context.apiCall('/functions/v1/craft_blacksmith', {
+      method: 'POST',
+      body: payload
+    });
+
+    const json = await res.json();
+    
+    if (!res.ok) {
+      resultDiv.innerHTML = `
+        <span style="color:red;">🔥 Forging Error (${res.status})</span>
+        <br><small style="color:#999;">${json.error || json.message || 'Unknown server error'}</small>
+      `;
+      
+      const finishBtn = document.querySelector('#finish-btn');
+      if (finishBtn) finishBtn.disabled = false;
+      return; 
+    }
+
+    const claimBtn = document.querySelector('#claim-btn');
+    const finishBtn = document.querySelector('#finish-btn');
+    const craftBtn = document.querySelector('#craft-btn');
+
+    if (json.success) {
+      forgingState.result = json.crafted.name;
+      resultDiv.innerHTML = `<span style="color:lime;">🔨 Successfully forged: <strong>${json.crafted.name}</strong>!</span>`;
+
+      animateSuccessfulForging();
+
+      if (finishBtn) finishBtn.style.display = 'none';
+      if (claimBtn) {
+        claimBtn.style.display = 'block';
+        claimBtn.disabled = false;
+        
+        const newClaimBtn = claimBtn.cloneNode(true);
+        claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
+        
+        newClaimBtn.addEventListener('click', () => {
+          context.displayMessage(`${json.crafted.name} added to your bank!`);
+          document.querySelector('.custom-message-box')?.remove();
+          forgingState = null;
+        });
+      }
+    } else {
+      forgingState.result = 'Failed';
+      resultDiv.innerHTML = `
+        <span style="color:red;">💥 Forging failed — materials ruined.</span>
+        <br><small style="color:#999;">${json.message || 'Something went wrong in the forge'}</small>
+      `;
+
+      animateFailedForging();
+
+      if (finishBtn) finishBtn.style.display = 'none';
+      if (claimBtn) claimBtn.style.display = 'none';
+      
+      if (craftBtn) {
+        craftBtn.style.display = 'block';
+        craftBtn.textContent = 'Forge Again';
+        craftBtn.disabled = false;
+        
+        const newCraftBtn = craftBtn.cloneNode(true);
+        craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+        
+        newCraftBtn.addEventListener('click', () => {
+          document.querySelector('.custom-message-box')?.remove();
+          startCraftingSession(context);
+        });
+      }
+    }
+  } catch (err) {
+    resultDiv.innerHTML = '<span style="color:red;">⚠️ Forge malfunction. Try again later.</span>';
+    
+    const finishBtn = document.querySelector('#finish-btn');
+    const claimBtn = document.querySelector('#claim-btn');
+    const craftBtn = document.querySelector('#craft-btn');
+    
+    if (finishBtn) finishBtn.style.display = 'none';
+    if (claimBtn) claimBtn.style.display = 'none';
+    
+    if (craftBtn) {
+      craftBtn.style.display = 'block';
+      craftBtn.textContent = 'Try Again';
+      craftBtn.disabled = false;
+      
+      const newCraftBtn = craftBtn.cloneNode(true);
+      craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+      
+      newCraftBtn.addEventListener('click', () => {
+        document.querySelector('.custom-message-box')?.remove();
+        startCraftingSession(context);
+      });
+    }
+  }
+}
+
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

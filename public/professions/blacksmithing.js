@@ -89,38 +89,33 @@ async function enrichIngredients(bankItems) {
   const uniqueNames = [...new Set(itemNames)];
   console.log('Unique item names:', uniqueNames);
   
-  const namesQuery = uniqueNames.map(name => encodeURIComponent(name)).join(',');
-  console.log('Query string:', namesQuery);
-  
   try {
-    const apiUrl = `/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`;
-    console.log('API URL:', apiUrl);
-    
-    const response = await context.apiCall(apiUrl);
-    console.log('Raw response status:', response.status);
-    console.log('Raw response headers:', response.headers);
-    
-    const ingredients = await response.json();
-    console.log('API response:', ingredients);
-    console.log('API response type:', typeof ingredients);
-    console.log('API response length:', ingredients?.length);
-    
-    // Let's also try to fetch all ingredients to see what's actually in the table
-    const allIngredientsResponse = await context.apiCall('/api/supabase/rest/v1/ingridients?select=name,properties,sprite');
-    const allIngredients = await allIngredientsResponse.json();
-    console.log('ALL INGREDIENTS in table:', allIngredients);
-    
-    // Create a map for quick lookups
-    const ingredientMap = new Map();
-    ingredients.forEach(ingredient => {
-      ingredientMap.set(ingredient.name, ingredient);
+    // Use secure backend endpoint instead of direct API call
+    const response = await fetch('/api/crafting/enrich-ingredients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        itemNames: uniqueNames
+      })
     });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('API response:', data);
+    
+    const { ingredientMap, foundCount, requestedCount } = data;
+    console.log(`Found ${foundCount} ingredients out of ${requestedCount} requested`);
     console.log('Ingredient map:', ingredientMap);
     
     // Enrich all bank items
     const enriched = [];
     for (const item of bankItems) {
-      const ingredient = ingredientMap.get(item.item);
+      const ingredient = ingredientMap[item.item];
       console.log(`Processing ${item.item}:`, ingredient ? 'FOUND' : 'NOT FOUND');
       if (ingredient) {
         const enrichedItem = {
@@ -131,12 +126,6 @@ async function enrichIngredients(bankItems) {
         };
         console.log('Enriched item:', enrichedItem);
         enriched.push(enrichedItem);
-      } else {
-        // Let's see if there's a case-sensitive issue
-        const matchingNames = allIngredients.filter(ing => 
-          ing.name.toLowerCase() === item.item.toLowerCase()
-        );
-        console.log(`Case-insensitive matches for ${item.item}:`, matchingNames);
       }
     }
     
@@ -495,22 +484,31 @@ async function startForging(modal) {
     craftBtn.style.display = 'none';
     resultDiv.textContent = 'Heating materials in the forge...';
 
-    // Reserve ingredients
-    const reserveRes = await context.apiCall('/functions/v1/reserve_blacksmith_ingredients', {
+    // Reserve ingredients using secure backend endpoint
+    const response = await fetch('/api/crafting/reserve-blacksmith-ingredients', {
       method: 'POST',
-      body: {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         player_id: context.profile.id,
         profession_id: forgingState.professionId,
         selected_bar: forgingState.selectedBar.name,
         selected_powder: forgingState.selectedPowder.name,
         item_name: forgingState.selectedItemType.name,
         item_type: forgingState.selectedItemType.type 
-      }
+      })
     });
 
-    const reserveJson = await reserveRes.json();
+    if (!response.ok) {
+      const errorData = await response.json();
+      resultDiv.textContent = `Material verification failed: ${errorData?.error || 'Unknown error'}`;
+      return;
+    }
+
+    const reserveJson = await response.json();
     
-    if (!reserveRes.ok || !reserveJson.success) {
+    if (!reserveJson.success) {
       resultDiv.textContent = `Material verification failed: ${reserveJson?.error || 'Unknown error'}`;
       return;
     }
@@ -818,9 +816,12 @@ async function finishForging(resultDiv) {
       bonus_assignments: forgingState.bonusAssignments
     };
     
-    const res = await context.apiCall('/functions/v1/craft_blacksmith', {
+    const res = await fetch('/api/crafting/finish-forging', {
       method: 'POST',
-      body: payload
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
     });
 
     const json = await res.json();
