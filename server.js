@@ -808,12 +808,22 @@ app.get('/api/bank/items/:playerId', async (req, res) => {
         const bankItems = await bankResponse.json();
 
         // Get unequipped gear from craft_sessions table
-        const gearResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?player_id=eq.${playerId}&equipped_by=is.null&result=not.is.null&select=id,result,sprite,type,result_stats`, {
-            headers: {
+        const gearResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/craft_sessions
+            ?player_id=eq.${playerId}
+            &equipped_by=is.null
+            &result=not.is.null
+            &sprite=not.is.null
+            &select=id,result,sprite,type,result_stats`
+            .replace(/\s+/g, ''), // clean up spaces/newlines
+            {
+                headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
             }
-        });
+            );
+
 
         if (!gearResponse.ok) {
             throw new Error(`Gear query failed: ${gearResponse.status}`);
