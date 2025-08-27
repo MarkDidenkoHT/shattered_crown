@@ -1068,7 +1068,8 @@ app.post('/api/crafting/reserve-blacksmith-ingredients', async (req, res) => {
                 error: responseData.error || 'Failed to reserve ingredients'
             });
         }
-
+        
+        console.log('Edge function responseData:', responseData);
         res.json(responseData);
         
     } catch (error) {
