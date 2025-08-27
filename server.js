@@ -1163,6 +1163,85 @@ app.post('/api/crafting/blacksmith', async (req, res) => {
     }
 });
 
+// Herbalism crafting
+app.post('/api/crafting/herbalism', async (req, res) => {
+    try {
+        const { player_id, profession_id, seed_name, environment, fertilizer_name } = req.body;
+
+        if (!player_id || !profession_id || !seed_name || !environment) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields'
+            });
+        }
+
+        // Verify player exists
+        const playerResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+        const players = await playerResponse.json();
+        if (!Array.isArray(players) || players.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Player not found'
+            });
+        }
+
+        // Forward to herbalism edge function
+        const craftResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/craft_herbalism`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                player_id,
+                profession_id,
+                seed_name,
+                environment,
+                fertilizer_name
+            })
+        });
+
+        const contentType = craftResponse.headers.get('content-type');
+        let responseData;
+
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await craftResponse.json();
+        } else {
+            const textData = await craftResponse.text();
+            try {
+                responseData = JSON.parse(textData);
+            } catch {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Invalid response from herbalism service'
+                });
+            }
+        }
+
+        res.status(craftResponse.status).json(responseData);
+
+    } catch (err) {
+        console.error('[HERBALISM CRAFT]', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            details: err.message
+        });
+    }
+});
+
+
+
+
+
+
+
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

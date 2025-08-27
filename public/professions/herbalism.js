@@ -98,98 +98,61 @@ export async function startCraftingSession(ctx) {
 // Fixed batch ingredient enrichment
 async function batchEnrichIngredients(bankItems) {
   console.log('[HERBALISM] Batch enriching ingredients:', bankItems);
-  
+
   if (!bankItems.length) {
     console.log('[HERBALISM] No items to enrich');
     return [];
   }
-  
+
   const ingredientNames = bankItems.map(item => item.item);
   const uniqueNames = [...new Set(ingredientNames)];
-  
   console.log('[HERBALISM] Unique ingredient names:', uniqueNames);
-  
-  // Check cache first
-  const uncachedNames = uniqueNames.filter(name => !ingredientCache.has(name));
-  console.log('[HERBALISM] Uncached names:', uncachedNames);
-  
-  if (uncachedNames.length > 0) {
-    const namesQuery = uncachedNames.map(name => encodeURIComponent(name)).join(',');
-    console.log('[HERBALISM] Fetching ingredients with query:', namesQuery);
-    
-    try {
-      const response = await context.apiCall(
-        `/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`
-      );
-      
-      if (!response.ok) {
-        console.error('[HERBALISM] API response not OK:', response.status);
-        return await fallbackEnrichIngredients(bankItems);
-      }
-      
-      const ingredients = await response.json();
-      console.log('[HERBALISM] Fetched ingredients:', ingredients);
-      
-      // Cache the results
-      ingredients.forEach(ingredient => {
-        ingredientCache.set(ingredient.name, ingredient);
-        console.log('[HERBALISM] Cached ingredient:', ingredient.name);
-      });
-      
-    } catch (error) {
-      console.warn('[HERBALISM] Batch ingredient fetch failed, falling back to individual requests:', error);
-      return await fallbackEnrichIngredients(bankItems);
+
+  try {
+    // ✅ Call existing server route
+    const response = await fetch('/api/crafting/enrich-ingredients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemNames: uniqueNames })
+    });
+
+    if (!response.ok) {
+      console.error('[HERBALISM] Enrich API failed:', response.status);
+      return fallbackEnrichIngredients(bankItems);
     }
-  }
-  
-  // Build enriched array from cache
-  const enriched = [];
-  for (const item of bankItems) {
-    const cachedIngredient = ingredientCache.get(item.item);
-    if (cachedIngredient) {
-      enriched.push({
-        name: item.item,
-        amount: item.amount,
-        properties: cachedIngredient.properties,
-        sprite: cachedIngredient.sprite,
-      });
-      console.log('[HERBALISM] Enriched item:', item.item);
-    } else {
-      console.warn('[HERBALISM] No cached ingredient found for:', item.item);
-      // Try to enrich this single item
-      try {
-        const singleRes = await context.apiCall(
-          `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
-        );
-        if (singleRes.ok) {
-          const [singleIngredient] = await singleRes.json();
-          if (singleIngredient) {
-            enriched.push({
-              name: item.item,
-              amount: item.amount,
-              properties: singleIngredient.properties,
-              sprite: singleIngredient.sprite,
-            });
-            // Cache it for future use
-            ingredientCache.set(item.item, singleIngredient);
-            console.log('[HERBALISM] Single-fetched and enriched:', item.item);
-          }
-        }
-      } catch (singleError) {
-        console.warn('[HERBALISM] Failed to single-fetch ingredient:', item.item, singleError);
-        // Add item without enrichment as fallback
-        enriched.push({
+
+    const { ingredientMap } = await response.json();
+
+    // Cache results
+    Object.values(ingredientMap).forEach(ingredient => {
+      ingredientCache.set(ingredient.name, ingredient);
+      console.log('[HERBALISM] Cached ingredient:', ingredient.name);
+    });
+
+    // Build enriched array
+    return bankItems.map(item => {
+      const enriched = ingredientCache.get(item.item);
+      if (enriched) {
+        return {
+          name: item.item,
+          amount: item.amount,
+          properties: enriched.properties,
+          sprite: enriched.sprite,
+        };
+      } else {
+        return {
           name: item.item,
           amount: item.amount,
           properties: null,
-          sprite: 'default', // Use default sprite if fetch fails
-        });
+          sprite: 'default',
+        };
       }
-    }
+    });
+
+  } catch (err) {
+    console.warn('[HERBALISM] Batch enrichment failed:', err);
+    return fallbackEnrichIngredients(bankItems);
   }
-  
-  console.log('[HERBALISM] Final enriched result:', enriched);
-  return enriched;
 }
 
 // Fallback method for individual ingredient requests
@@ -934,47 +897,45 @@ async function processSeedCrafting() {
   await Promise.all(craftingPromises);
 }
 
-// Craft individual seed with its modifiers
 async function craftIndividualSeed(position) {
   const seed = herbalismState.selectedSeeds[position];
   if (!seed) return;
-  
-  // Determine modifiers for this seed
-  const column = position % 2; // 0 or 1
-  const row = Math.floor(position / 2); // 0 or 1
-  
+
+  const column = position % 2; 
+  const row = Math.floor(position / 2);
+
   const environment = herbalismState.sunShadeSettings[column]; // 'sun' or 'shade'
   const fertilizerModifier = herbalismState.selectedFertilizers[row];
-  
-  // Build the craft request
+
   const craftRequest = {
     player_id: context.profile.id,
     profession_id: herbalismState.professionId,
     seed_name: seed.name,
-    environment: environment
+    environment
   };
-  
-  // Add fertilizer if available
+
   if (fertilizerModifier) {
     craftRequest.fertilizer_name = fertilizerModifier.name;
   }
-  
-  console.log(`[HERBALISM] Crafting seed at position ${position}:`, craftRequest);
-  
-  try {
-    // Call the herbalism-specific craft function
-    const craftRes = await context.apiCall('/functions/v1/craft_herbalism', 'POST', craftRequest);
 
-    const craftJson = await craftRes.json();
+  console.log(`[HERBALISM] Crafting seed at position ${position}:`, craftRequest);
+
+  try {
+    const res = await fetch('/api/crafting/herbalism', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(craftRequest)
+    });
+
+    const craftJson = await res.json();
     herbalismState.results[position] = craftJson;
-    
+
   } catch (error) {
     console.error(`[HERBALISM] Error crafting seed at position ${position}:`, error);
     herbalismState.results[position] = { success: false, error: 'Crafting failed' };
   }
 }
 
-// Display final results
 function displayFinalResults(resultDiv) {
   const results = herbalismState.results.filter(r => r !== null);
   const successes = results.filter(r => r.success);
