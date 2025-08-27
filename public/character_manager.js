@@ -466,22 +466,8 @@ function positionSpellTooltip(e) {
 
 async function showEquipmentModal(character, slot, type) {
   try {
-    let availableItems = [];
-    
-    if (type === 'Consumable') {
-      const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
-      availableItems = await response.json();
-    } else {
-      const response = await _apiCall(`/api/supabase/rest/v1/crafting_sessions?player_id=eq.${_profile.id}&item_type=eq.${type}&equipped_character_id=is.null&select=item_name,item_type,id,equipped_character_id`);
-      const craftedItems = await response.json();
-      
-      availableItems = craftedItems.map(item => ({
-        item: item.item_name,
-        amount: 1,
-        type: item.item_type,
-        crafting_session_id: item.id
-      }));
-    }
+    const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
+    const availableItems = await response.json();
     
     const currentItem = character.equipped_items?.[slot] || 'None';
     
