@@ -27,9 +27,19 @@ export async function startCraftingSession(ctx) {
   try {
     updateLoadingProgress(loadingModal, "Accessing your forge materials...", "Loading bars and powders...");
     
-    const bankResponse = await context.apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`);
+    // Use secure backend endpoint instead of direct API call
+    const response = await fetch(`/api/crafting/materials/${context.profile.id}/${context.professionId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
     
-    const bankItems = await bankResponse.json();
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const bankItems = await response.json();
     updateLoadingProgress(loadingModal, "Analyzing metal properties...", "Processing materials...");
     
     const enriched = await enrichIngredients(bankItems);

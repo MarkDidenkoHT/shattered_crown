@@ -14,11 +14,18 @@ export async function startCraftingSession(ctx) {
     updateLoadingProgress(loadingModal, "Accessing your ingredient vault...", "Loading bank items and recipes...");
     
     const [bankResponse, recipesPromise] = await Promise.all([
-      context.apiCall(
-        `/api/supabase/rest/v1/bank?player_id=eq.${context.profile.id}&profession_id=eq.${context.professionId}&select=item,amount`
-      ),
+      fetch(`/api/crafting/materials/${context.profile.id}/${context.professionId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }),
       context.fetchRecipes(context.professionId) // Start recipe loading in parallel
     ]);
+    
+    if (!bankResponse.ok) {
+      throw new Error(`HTTP error! status: ${bankResponse.status}`);
+    }
     
     const bankItems = await bankResponse.json();
     

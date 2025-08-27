@@ -116,7 +116,7 @@ function renderBankItems() {
     itemsList.innerHTML = _filteredItems.map(item => `
         <div class="bank-item" data-item-id="${item.id}" data-type="${item.type || 'consumable'}">
             <div class="item-icon">
-                <img src="${getItemIcon(item)}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
+                <img src="${getItemIcon(item)}" alt="${item.item}">
                 ${item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
             </div>
             
