@@ -812,6 +812,7 @@ async function finishForging(resultDiv) {
     const payload = {
       player_id: context.profile.id,
       profession_id: forgingState.professionId,
+      session_id: forgingState.sessionId, // This is required by the edge function
       bonus_assignments: forgingState.bonusAssignments
     };
     
