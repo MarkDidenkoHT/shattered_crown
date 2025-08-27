@@ -637,12 +637,56 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   }
 
   // =================================================================
-  // LEGACY SUPABASE DIRECT CALLS - DEPRECATED, USE SERVER ENDPOINTS
+  // LEGACY SUPABASE DIRECT CALLS - TODO: REMOVE AFTER MIGRATION
   // =================================================================
-  console.warn('[API] Using deprecated direct Supabase calls. Migrate to /api/ endpoints.');
-  
-  // This will fail if supabaseConfig is not available (which is now secure)
-  throw new Error('Direct Supabase calls are disabled for security. Use /api/ endpoints instead.');
+  if (!supabaseConfig?.SUPABASE_ANON_KEY) {
+    throw new Error('No Supabase configuration available');
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${supabaseConfig.SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
+  let options = { headers };
+
+  // Handle different parameter patterns
+  if (typeof methodOrOptions === 'string') {
+    options.method = methodOrOptions;
+    if (bodyData) {
+      options.body = JSON.stringify(bodyData);
+    }
+  } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
+    options = {
+      ...options,
+      ...methodOrOptions
+    };
+    if (options.body && typeof options.body !== 'string') {
+      options.body = JSON.stringify(options.body);
+    }
+  } else {
+    options.method = 'GET';
+  }
+
+  console.log(`[API DEBUG] Legacy Supabase: ${options.method} request to: ${url}`);
+
+  const response = await fetch(url, options);
+
+  if (response.status === 401) {
+    console.error(`[API] 401 Unauthorized for ${url}`);
+    clearSession();
+    window.location.href = "/";
+    throw new Error(`Unauthorized access to ${url}`);
+  }
+
+  if (!response.ok) {
+    console.error(`[API] HTTP error ${response.status} for ${url}`);
+    const errorText = await response.text();
+    console.error(`[API] Error response:`, errorText);
+    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+  }
+
+  return response;
 }
 
 // Global API for modules - Initialize with null, will be set after config loads
