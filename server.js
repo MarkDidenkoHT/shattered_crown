@@ -1084,9 +1084,10 @@ app.post('/api/crafting/reserve-blacksmith-ingredients', async (req, res) => {
 
 app.post('/api/crafting/blacksmith', async (req, res) => {
     try {
-        const { player_id, profession_id, bonus_assignments } = req.body;
+        const { player_id, profession_id, session_id, bonus_assignments } = req.body;
         
-        if (!player_id || !profession_id) {
+        // Validate required fields
+        if (!player_id || !profession_id || !session_id) {
             return res.status(400).json({ 
                 success: false,
                 error: 'Missing required fields' 
@@ -1094,12 +1095,15 @@ app.post('/api/crafting/blacksmith', async (req, res) => {
         }
 
         // Verify player exists by checking profiles table
-        const playerResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        const playerResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
             }
-        });
+        );
 
         const players = await playerResponse.json();
         if (players.length === 0) {
@@ -1109,24 +1113,30 @@ app.post('/api/crafting/blacksmith', async (req, res) => {
             });
         }
 
-        // Call the edge function (it will handle getting session_id)
-        const craftResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/craft_blacksmith`, {
-            method: 'POST',
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                player_id,
-                profession_id,
-                bonus_assignments: bonus_assignments || {}
-            })
-        });
+        // Call the edge function with session_id + array bonus_assignments
+        const craftResponse = await fetch(
+            `${process.env.SUPABASE_URL}/functions/v1/craft_blacksmith`,
+            {
+                method: 'POST',
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    player_id,
+                    profession_id,
+                    session_id,
+                    bonus_assignments: Array.isArray(bonus_assignments) 
+                        ? bonus_assignments 
+                        : []
+                })
+            }
+        );
 
         const contentType = craftResponse.headers.get('content-type');
         let responseData;
-        
+
         if (contentType && contentType.includes('application/json')) {
             responseData = await craftResponse.json();
         } else {
@@ -1142,7 +1152,7 @@ app.post('/api/crafting/blacksmith', async (req, res) => {
         }
 
         res.status(craftResponse.status).json(responseData);
-        
+
     } catch (error) {
         console.error('[BLACKSMITH CRAFT]', error);
         res.status(500).json({ 
@@ -1152,7 +1162,6 @@ app.post('/api/crafting/blacksmith', async (req, res) => {
         });
     }
 });
-
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
