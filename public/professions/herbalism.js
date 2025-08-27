@@ -423,7 +423,7 @@ function setBackground(modal) {
     messageContent.style.backgroundSize = 'cover';
     messageContent.style.backgroundPosition = 'center';
     messageContent.style.backgroundRepeat = 'no-repeat';
-    messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_blacksmith.png)';
+    messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_herbalism.png)';
   }
 }
 
