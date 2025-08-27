@@ -1081,109 +1081,76 @@ app.post('/api/crafting/reserve-blacksmith-ingredients', async (req, res) => {
     }
 });
 
-
-async function finishForging(resultDiv) {
-  try {
-    const payload = {
-      player_id: context.profile.id,
-      profession_id: forgingState.professionId,
-      session_id: forgingState.sessionId,
-      bonus_assignments: forgingState.bonusAssignments
-    };
-    
-    const res = await context.apiCall('/functions/v1/craft_blacksmith', {
-      method: 'POST',
-      body: payload
-    });
-
-    const json = await res.json();
-    
-    if (!res.ok) {
-      resultDiv.innerHTML = `
-        <span style="color:red;">🔥 Forging Error (${res.status})</span>
-        <br><small style="color:#999;">${json.error || json.message || 'Unknown server error'}</small>
-      `;
-      
-      const finishBtn = document.querySelector('#finish-btn');
-      if (finishBtn) finishBtn.disabled = false;
-      return; 
-    }
-
-    const claimBtn = document.querySelector('#claim-btn');
-    const finishBtn = document.querySelector('#finish-btn');
-    const craftBtn = document.querySelector('#craft-btn');
-
-    if (json.success) {
-      forgingState.result = json.crafted.name;
-      resultDiv.innerHTML = `<span style="color:lime;">🔨 Successfully forged: <strong>${json.crafted.name}</strong>!</span>`;
-
-      animateSuccessfulForging();
-
-      if (finishBtn) finishBtn.style.display = 'none';
-      if (claimBtn) {
-        claimBtn.style.display = 'block';
-        claimBtn.disabled = false;
+app.post('/api/crafting/blacksmith', async (req, res) => {
+    try {
+        const { player_id, profession_id, bonus_assignments } = req.body;
         
-        const newClaimBtn = claimBtn.cloneNode(true);
-        claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
-        
-        newClaimBtn.addEventListener('click', () => {
-          context.displayMessage(`${json.crafted.name} added to your bank!`);
-          document.querySelector('.custom-message-box')?.remove();
-          forgingState = null;
+        if (!player_id || !profession_id) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Missing required fields' 
+            });
+        }
+
+        // Verify player exists by checking profiles table
+        const playerResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
         });
-      }
-    } else {
-      forgingState.result = 'Failed';
-      resultDiv.innerHTML = `
-        <span style="color:red;">💥 Forging failed — materials ruined.</span>
-        <br><small style="color:#999;">${json.message || 'Something went wrong in the forge'}</small>
-      `;
 
-      animateFailedForging();
+        const players = await playerResponse.json();
+        if (players.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Player not found' 
+            });
+        }
 
-      if (finishBtn) finishBtn.style.display = 'none';
-      if (claimBtn) claimBtn.style.display = 'none';
-      
-      if (craftBtn) {
-        craftBtn.style.display = 'block';
-        craftBtn.textContent = 'Forge Again';
-        craftBtn.disabled = false;
-        
-        const newCraftBtn = craftBtn.cloneNode(true);
-        craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-        
-        newCraftBtn.addEventListener('click', () => {
-          document.querySelector('.custom-message-box')?.remove();
-          startCraftingSession(context);
+        // Call the edge function (it will handle getting session_id)
+        const craftResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/craft_blacksmith`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                player_id,
+                profession_id,
+                bonus_assignments: bonus_assignments || {}
+            })
         });
-      }
+
+        const contentType = craftResponse.headers.get('content-type');
+        let responseData;
+        
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await craftResponse.json();
+        } else {
+            const textData = await craftResponse.text();
+            try {
+                responseData = JSON.parse(textData);
+            } catch (parseError) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Invalid response from crafting service'
+                });
+            }
+        }
+
+        res.status(craftResponse.status).json(responseData);
+        
+    } catch (error) {
+        console.error('[BLACKSMITH CRAFT]', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Internal server error',
+            details: error.message 
+        });
     }
-  } catch (err) {
-    resultDiv.innerHTML = '<span style="color:red;">⚠️ Forge malfunction. Try again later.</span>';
-    
-    const finishBtn = document.querySelector('#finish-btn');
-    const claimBtn = document.querySelector('#claim-btn');
-    const craftBtn = document.querySelector('#craft-btn');
-    
-    if (finishBtn) finishBtn.style.display = 'none';
-    if (claimBtn) claimBtn.style.display = 'none';
-    
-    if (craftBtn) {
-      craftBtn.style.display = 'block';
-      craftBtn.textContent = 'Try Again';
-      craftBtn.disabled = false;
-      
-      const newCraftBtn = craftBtn.cloneNode(true);
-      craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-      
-      newCraftBtn.addEventListener('click', () => {
-        document.querySelector('.custom-message-box')?.remove();
-        startCraftingSession(context);
-      });
-    }
-  }
-}
+});
 
 
 app.get('*', (req, res) => {

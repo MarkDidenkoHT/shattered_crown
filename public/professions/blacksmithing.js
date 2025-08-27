@@ -812,11 +812,10 @@ async function finishForging(resultDiv) {
     const payload = {
       player_id: context.profile.id,
       profession_id: forgingState.professionId,
-      session_id: forgingState.sessionId,
       bonus_assignments: forgingState.bonusAssignments
     };
     
-    const res = await fetch('/api/crafting/finish-forging', {
+    const res = await fetch('/api/crafting/blacksmith', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
