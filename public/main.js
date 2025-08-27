@@ -583,6 +583,64 @@ function logout() {
 }
 
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
+  // =================================================================
+  // NEW SECURE SERVER ENDPOINTS
+  // =================================================================
+  if (url.startsWith('/api/')) {
+    // For server endpoints, use session token for authentication
+    const token = localStorage.getItem('supabase.auth.token') || 
+                  sessionStorage.getItem('supabase.auth.token') ||
+                  getCurrentUserToken(); // You'll need to implement this function
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+
+    let options = { headers };
+
+    // Handle different parameter patterns
+    if (typeof methodOrOptions === 'string') {
+      options.method = methodOrOptions;
+      if (bodyData) {
+        options.body = JSON.stringify(bodyData);
+      }
+    } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
+      options = {
+        ...options,
+        ...methodOrOptions
+      };
+      if (options.body && typeof options.body !== 'string') {
+        options.body = JSON.stringify(options.body);
+      }
+    } else {
+      options.method = 'GET';
+    }
+
+    console.log(`[API DEBUG] Server endpoint: ${options.method} ${url}`);
+    
+    const response = await fetch(url, options);
+
+    if (response.status === 401) {
+      console.error(`[API] 401 Unauthorized for ${url}`);
+      clearSession();
+      window.location.href = "/";
+      throw new Error(`Unauthorized access to ${url}`);
+    }
+
+    if (!response.ok) {
+      console.error(`[API] HTTP error ${response.status} for ${url}`);
+      const errorText = await response.text();
+      console.error(`[API] Error response:`, errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    return response;
+  }
+
+  // =================================================================
+  // LEGACY SUPABASE DIRECT CALLS - TODO: REMOVE AFTER MIGRATION
+  // =================================================================
   if (!supabaseConfig?.SUPABASE_ANON_KEY) {
     throw new Error('No Supabase configuration available');
   }
@@ -616,7 +674,7 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   }
 
   // Debug logging
-  console.log(`[API DEBUG] Making ${options.method} request to: ${url}`);
+  console.log(`[API DEBUG] Legacy Supabase: ${options.method} request to: ${url}`);
   console.log(`[API DEBUG] Headers:`, options.headers);
   if (options.body) {
     console.log(`[API DEBUG] Body:`, options.body);
