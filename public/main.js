@@ -584,17 +584,15 @@ function logout() {
 
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   // =================================================================
-  // NEW SECURE SERVER ENDPOINTS
+  // SECURE SERVER ENDPOINTS
   // =================================================================
   if (url.startsWith('/api/')) {
-    // For server endpoints, use session token for authentication
-    const token = localStorage.getItem('supabase.auth.token') || 
-                  sessionStorage.getItem('supabase.auth.token') ||
-                  getCurrentUserToken(); // You'll need to implement this function
-    
+    // For server endpoints, only send user identification
+    const chatId = localStorage.getItem('chatId');
     const headers = {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      // Include chatId for user identification
+      ...(chatId && { 'X-Chat-Id': chatId })
     };
 
     let options = { headers };
@@ -639,68 +637,12 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   }
 
   // =================================================================
-  // LEGACY SUPABASE DIRECT CALLS - TODO: REMOVE AFTER MIGRATION
+  // LEGACY SUPABASE DIRECT CALLS - DEPRECATED, USE SERVER ENDPOINTS
   // =================================================================
-  if (!supabaseConfig?.SUPABASE_ANON_KEY) {
-    throw new Error('No Supabase configuration available');
-  }
-
-  const headers = {
-    'Authorization': `Bearer ${supabaseConfig.SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json',
-  };
-
-  let options = { headers };
-
-  // Handle different parameter patterns
-  if (typeof methodOrOptions === 'string') {
-    // Case 1: apiCall(url, 'POST', { body })
-    options.method = methodOrOptions;
-    if (bodyData) {
-      options.body = JSON.stringify(bodyData);
-    }
-  } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
-    // Case 2: apiCall(url, { options object })
-    options = {
-      ...options, // Keep default headers
-      ...methodOrOptions // Overwrite or add new properties
-    };
-    if (options.body && typeof options.body !== 'string') {
-      options.body = JSON.stringify(options.body);
-    }
-  } else {
-    // Case 3: apiCall(url) - default to GET
-    options.method = 'GET';
-  }
-
-  // Debug logging
-  console.log(`[API DEBUG] Legacy Supabase: ${options.method} request to: ${url}`);
-  console.log(`[API DEBUG] Headers:`, options.headers);
-  if (options.body) {
-    console.log(`[API DEBUG] Body:`, options.body);
-  }
-
-  const response = await fetch(url, options);
-
-  if (response.status === 401) {
-    console.error(`[API] 401 Unauthorized for ${url}`);
-    const errorText = await response.text();
-    console.error(`[API] Response:`, errorText);
-    
-    // For 401 errors, clear session and redirect to auth
-    clearSession();
-    window.location.href = "/";
-    throw new Error(`Unauthorized access to ${url}`);
-  }
-
-  if (!response.ok) {
-    console.error(`[API] HTTP error ${response.status} for ${url}`);
-    const errorText = await response.text();
-    console.error(`[API] Error response:`, errorText);
-    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-  }
-
-  return response;
+  console.warn('[API] Using deprecated direct Supabase calls. Migrate to /api/ endpoints.');
+  
+  // This will fail if supabaseConfig is not available (which is now secure)
+  throw new Error('Direct Supabase calls are disabled for security. Use /api/ endpoints instead.');
 }
 
 // Global API for modules - Initialize with null, will be set after config loads
