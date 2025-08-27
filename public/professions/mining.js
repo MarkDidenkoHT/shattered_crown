@@ -155,8 +155,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
-      <h2>Crafting: ${miningState.professionName}</h2>
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
                 
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select 3 ores to start mining</div>
       
@@ -168,7 +167,7 @@ function renderCraftingModal() {
         <span id="alignment-text">Align center column for successful extraction!</span>
       </div>
       
-      <div id="mining-rows" style="margin: 1.5rem 0;">
+      <div id="mining-rows">
         ${[0,1,2].map(i => createMiningRowHTML(i)).join('')}
       </div>
       

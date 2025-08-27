@@ -1081,3 +1081,66 @@
         transition: color 0.2s ease;
         font-family: sans-serif;
     }
+
+    /* bank and aution styles */
+        .bank-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #1a150e;
+            overflow: hidden;
+        }
+
+        .bank-items-list {
+            height: 100%;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        
+        .bank-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .bank-items-container {
+            height: 99%;
+            background: rgba(29,20,12,0.3);
+            border: 2px solid #3d2914;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .bank-items-list {
+            height: 100%;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .bank-items-list::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .bank-items-list::-webkit-scrollbar-track {
+            background: rgba(29,20,12,0.5);
+            border-radius: 6px;
+        }
+
+        .bank-items-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(145deg, #c4975a, #a25612);
+            border-radius: 6px;
+        }
+
+        .bank-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(145deg, rgba(29,20,12,0.8), rgba(42,31,22,0.6));
+            border: 2px solid #3d2914;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }

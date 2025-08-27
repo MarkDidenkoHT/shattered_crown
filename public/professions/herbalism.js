@@ -256,7 +256,7 @@ function createGardenGridHTML() {
       <div class="fertilizer-slot" data-row="0" style="width: 60px; height: 60px; border: 2px dashed #228B22; border-radius: 6px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
         
         <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #90EE90; font-size: 0.5rem;">Drop Fertilizer</span>
+          <span style="color: #90EE90; font-size: 0.8rem;">Drop Fertilizer</span>
         </div>
       </div>
 
@@ -278,7 +278,7 @@ function createGardenGridHTML() {
       <div class="fertilizer-slot" data-row="1" style="width: 60px; height: 60px; border: 2px dashed #228B22; border-radius: 6px; background: linear-gradient(to bottom, rgba(34,139,34,0.2) 0%, rgba(34,139,34,0.4) 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
       
         <div class="fertilizer-content" style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #90EE90; font-size: 0.5rem;">Drop Fertilizer</span>
+          <span style="color: #90EE90; font-size: 0.8rem;">Drop Fertilizer</span>
         </div>
       </div>
 
@@ -307,7 +307,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 95vh; height: 95vh; overflow-y: auto; text-align: center; scrollbar-width:none;">        
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">        
       <div id="craft-result" style="margin: 0.4rem 0; font-weight: bold; min-height: 16px; font-size: 0.9rem;">Set up your garden to start growing</div>
       
       <div>
@@ -330,9 +330,9 @@ function renderCraftingModal() {
       </div>
       
       <div style="display: flex; justify-content: center; gap: 0.3rem;">
-        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem;">Close</button>
-        <button id="grow-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem;">Grow</button>
-        <button id="claim-all-btn" class="fantasy-button" style="flex: 1; max-width: 80px; padding: 0.3rem; font-size: 0.8rem; display: none;">Claim All</button>
+        <button class="fantasy-button message-ok-btn">Close</button>
+        <button id="grow-btn" class="fantasy-button" disabled>Grow</button>
+        <button id="claim-all-btn" class="fantasy-button" style="display: none;">Claim All</button>
       </div>
     </div>
 

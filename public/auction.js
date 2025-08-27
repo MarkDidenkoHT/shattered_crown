@@ -21,7 +21,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     }
 
     _main.innerHTML = `
-        <div class="main-app-container auction-container">
+        <div class="main-app-container bank-container">
             <div class="particles"></div>
             
             <!-- Top Header -->
@@ -718,71 +718,6 @@ function addAuctionStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        /* Base Container - Using Bank Styles */
-        .auction-container {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background-color: #1a150e;
-            overflow: hidden;
-        }
-
-        .bank-title {
-            font-family: 'Cinzel', serif;
-            font-size: 1.8rem;
-            color: #c4975a;
-            text-shadow: 2px 2px 0px #3d2914;
-            margin: 0;
-        }
-
-        .bank-content {
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .bank-items-container {
-            height: 99%;
-            background: rgba(29,20,12,0.3);
-            border: 2px solid #3d2914;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .bank-items-list {
-            height: 100%;
-            overflow-y: auto;
-            padding: 0.5rem;
-        }
-
-        /* Custom Scrollbar */
-        .bank-items-list::-webkit-scrollbar {
-            width: 12px;
-        }
-
-        .bank-items-list::-webkit-scrollbar-track {
-            background: rgba(29,20,12,0.5);
-            border-radius: 6px;
-        }
-
-        .bank-items-list::-webkit-scrollbar-thumb {
-            background: linear-gradient(145deg, #c4975a, #a25612);
-            border-radius: 6px;
-        }
-
-        .bank-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(145deg, rgba(29,20,12,0.8), rgba(42,31,22,0.6));
-            border: 2px solid #3d2914;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-
         /* Auction-specific item states */
         .auction-item {
             border-left: 4px solid #2a5a2a;
@@ -1211,12 +1146,7 @@ function addAuctionStyles() {
             cursor: not-allowed;
         }
 
-        /* Mobile Responsiveness */
         @media (max-width: 768px) {
-            .bank-title {
-                font-size: 1.4rem;
-            }
-
             .filter-tab {
                 font-size: 0.8rem;
                 padding: 0.4rem 0.8rem;
