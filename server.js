@@ -781,6 +781,139 @@ async function addItemsToBank(playerId, itemName, amount, itemType) {
     }
 }
 
+// Add these endpoints to your existing server.js file
+
+// Get player's bank items (consumables, ingredients, and unequipped gear)
+app.get('/api/bank/items/:playerId', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        
+        // Validate playerId format (basic UUID check)
+        if (!playerId || !playerId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return res.status(400).json({ error: 'Invalid player ID format' });
+        }
+
+        // Get consumables and ingredients from bank table
+        const bankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&select=*,professions(name)`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        if (!bankResponse.ok) {
+            throw new Error(`Bank query failed: ${bankResponse.status}`);
+        }
+
+        const bankItems = await bankResponse.json();
+
+        // Get unequipped gear from craft_sessions table
+        const gearResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?player_id=eq.${playerId}&equipped_by=is.null&result=not.is.null&select=id,result,sprite,type,result_stats`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        if (!gearResponse.ok) {
+            throw new Error(`Gear query failed: ${gearResponse.status}`);
+        }
+
+        const gearItems = await gearResponse.json();
+
+        // Get all unique item names for sprite lookup
+        const allItemNames = [
+            ...bankItems.map(item => item.item),
+            ...gearItems.map(item => item.result)
+        ].filter(name => name);
+
+        const uniqueItemNames = [...new Set(allItemNames)];
+
+        // Build sprite path map
+        let spritePathMap = {};
+
+        if (uniqueItemNames.length > 0) {
+            const itemNameQuery = uniqueItemNames.map(name => `"${name}"`).join(',');
+            
+            // Check ingredients table
+            try {
+                const ingredientsResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`, {
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                if (ingredientsResponse.ok) {
+                    const ingredients = await ingredientsResponse.json();
+                    ingredients.forEach(item => {
+                        if (item.sprite) {
+                            const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+                            spritePathMap[item.name] = `assets/art/ingridients/${fileName}`;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('Failed to fetch ingredients sprites:', error);
+            }
+            
+            // Check recipes table
+            try {
+                const recipesResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`, {
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                if (recipesResponse.ok) {
+                    const recipes = await recipesResponse.json();
+                    recipes.forEach(item => {
+                        if (item.sprite) {
+                            const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+                            spritePathMap[item.name] = `assets/art/recipes/${fileName}`;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('Failed to fetch recipes sprites:', error);
+            }
+        }
+
+        // Format bank items (consumables/ingredients)
+        const formattedBankItems = bankItems.map(item => ({
+            id: item.id,
+            item: item.item,
+            amount: item.amount || 1,
+            type: item.type || 'consumable',
+            profession_name: item.professions?.name || null,
+            sprite_path: spritePathMap[item.item] || null,
+            source: 'bank'
+        }));
+
+        // Format gear items (from craft_sessions)
+        const formattedGearItems = gearItems.map(item => ({
+            id: item.id,
+            item: item.result,
+            amount: 1,
+            type: item.type || 'equipment',
+            profession_name: null,
+            sprite_path: item.sprite ? `assets/art/recipes/${item.sprite.endsWith('.png') ? item.sprite : item.sprite + '.png'}` : spritePathMap[item.result] || null,
+            source: 'craft_sessions',
+            stats: item.result_stats
+        }));
+
+        // Combine all items
+        const allItems = [...formattedBankItems, ...formattedGearItems];
+
+        res.json(allItems);
+    } catch (error) {
+        console.error('[BANK ITEMS]', error);
+        res.status(500).json({ error: 'Failed to fetch bank items', details: error.message });
+    }
+});
+
+
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
