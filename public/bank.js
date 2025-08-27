@@ -29,7 +29,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
                     <button class="fantasy-button back-btn">Return</button>
                 </div>
                 
-                <!-- Filter Tabs -->
+                <!-- Filter Tabs - will be populated dynamically -->
                 <div class="filter-tabs" id="filterTabs">
                     <!-- Dynamic filter tabs will be inserted here -->
                 </div>
@@ -57,21 +57,52 @@ async function fetchBankItems() {
     try {
         displayMessage('Loading bank items...');
         
-        // Use the secure server endpoint
-        const response = await _apiCall('/api/bank/items');
-        const result = await response.json();
+        // First get the bank items
+        const bankResponse = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=*,professions(name)`);
+        const bankItems = await bankResponse.json();
         
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to fetch bank items');
+        // Get all unique item names from bank items
+        const allItemNames = [...new Set(bankItems.map(item => item.item))];
+        
+        // Build combined sprite lookup with full paths
+        let spritePathMap = {};
+        
+        if (allItemNames.length > 0) {
+            const itemNameQuery = allItemNames.map(name => `"${name}"`).join(',');
+            
+            // Fetch from ingredients table and build paths
+            const ingredientsResponse = await _apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`);
+            const ingredients = await ingredientsResponse.json();
+            
+            ingredients.forEach(item => {
+                if (item.sprite) {
+                    const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+                    spritePathMap[item.name] = `assets/art/ingridients/${fileName}`;
+                }
+            });
+            
+            // Fetch from recipes table and build paths
+            const recipesResponse = await _apiCall(`/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`);
+            const recipes = await recipesResponse.json();
+            
+            recipes.forEach(item => {
+                if (item.sprite) {
+                    const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+                    spritePathMap[item.name] = `assets/art/recipes/${fileName}`;
+                }
+            });
         }
         
-        _bankItems = result.data || [];
-        _filteredItems = [..._bankItems];
+        // Merge sprite paths into bank items
+        _bankItems = bankItems.map(item => ({
+            ...item,
+            spritePath: spritePathMap[item.item] || null
+        }));
         
+        _filteredItems = [..._bankItems];
         createDynamicFilters();
         renderBankItems();
         closeMessageBox();
-        
     } catch (error) {
         console.error('Failed to fetch bank items:', error);
         displayMessage('Failed to load bank items. Please try again.');
@@ -85,8 +116,10 @@ async function fetchBankItems() {
 function createDynamicFilters() {
     const filterTabs = document.getElementById('filterTabs');
     
-    // Get unique types from loaded items
+    // Get unique types from player's items
     const uniqueTypes = [...new Set(_bankItems.map(item => item.type).filter(type => type))];
+    
+    // Always include "All Items" first
     const filters = ['all', ...uniqueTypes.sort()];
     
     filterTabs.innerHTML = filters.map(filter => `
@@ -111,7 +144,7 @@ function renderBankItems() {
     }
 
     itemsList.innerHTML = _filteredItems.map(item => `
-        <div class="bank-item" data-item-id="${item.id}" data-source="${item.source}" data-type="${item.type || 'recipe'}">
+        <div class="bank-item" data-item-id="${item.id}" data-type="${item.type || 'recipe'}">
             <div class="item-icon">
                 <img src="${getItemIcon(item)}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
                 ${item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
@@ -122,23 +155,21 @@ function renderBankItems() {
                 <div class="item-details">
                     <span class="item-type">${item.type || 'recipe'}</span>
                     ${item.professions ? `<span class="item-profession">• ${item.professions.name}</span>` : ''}
-                    <span class="item-source">• ${item.source === 'gear' ? 'Gear' : 'Bank'}</span>
                 </div>
             </div>
             
-            ${item.source === 'gear' ? `
-                <div class="item-actions">
-                    <button class="action-btn equip-btn" data-action="equip" data-item-id="${item.id}">
-                        <span class="btn-icon">⚔️</span>
-                        Equip
-                    </button>
-                </div>
-            ` : ''}
+            <div class="item-actions">
+                <button class="action-btn auction-btn" data-action="auction" data-item-id="${item.id}">
+                    <span class="btn-icon">🏛️</span>
+                    Auction
+                </button>
+            </div>
         </div>
     `).join('');
 }
 
 function getItemIcon(item) {
+    // Use the pre-built sprite path, or fallback to default
     return item.spritePath || 'assets/art/recipes/default_item.png';
 }
 
@@ -148,7 +179,7 @@ function setupBankInteractions() {
         window.gameAuth.loadModule('castle');
     });
 
-    // Filter tabs
+    // Filter tabs (using event delegation)
     _main.querySelector('#filterTabs').addEventListener('click', (e) => {
         if (e.target.classList.contains('filter-tab')) {
             // Update active tab
@@ -167,19 +198,22 @@ function setupBankInteractions() {
         }
     });
 
-    // Equip button
+    // Item action buttons (using event delegation)
     _main.querySelector('#bankItemsList').addEventListener('click', async (e) => {
-        if (e.target.classList.contains('equip-btn') || e.target.closest('.equip-btn')) {
-            const btn = e.target.classList.contains('equip-btn') ? e.target : e.target.closest('.equip-btn');
+        if (e.target.classList.contains('auction-btn') || e.target.closest('.auction-btn')) {
+            const btn = e.target.classList.contains('auction-btn') ? e.target : e.target.closest('.auction-btn');
             const itemId = btn.dataset.itemId;
-            await handleEquipItem(itemId);
+            await handleAuctionItem(itemId);
         }
     });
 }
 
-async function handleEquipItem(itemId) {
-    // Placeholder for equipment functionality
-    displayMessage('Equipment system coming soon! This will allow you to equip gear to your characters.');
+async function handleAuctionItem(itemId) {
+    const item = _bankItems.find(i => i.id == itemId);
+    if (!item) return;
+
+    // Placeholder for auction functionality
+    displayMessage(`Auction system coming soon! ${item.item} will be available for player trading.`);
 }
 
 function createParticles() {
@@ -201,10 +235,10 @@ function createParticles() {
 }
 
 function setBankHeaderBackground() {
-    const header = document.querySelector('.bank-header');
-    if (header) {
-        header.style.backgroundImage = "url('assets/art/castle/main_bank.png')";
-    }
+  const header = document.querySelector('.bank-header');
+  if (header) {
+    header.style.backgroundImage = "url('assets/art/castle/main_bank.png')";
+  }
 }
 
 function displayMessage(message) {
@@ -301,16 +335,6 @@ function addBankStyles() {
             color: #9a8566;
         }
 
-        .item-source {
-            color: #7a6b5a;
-            font-style: italic;
-        }
-
-        .item-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
         .action-btn {
             background: linear-gradient(145deg, #2a1f16, #1d140c);
             border: 2px solid #3d2914;
@@ -326,10 +350,10 @@ function addBankStyles() {
             gap: 0.3rem;
         }
 
-        .equip-btn:hover {
-            border-color: #d4751a;
-            color: #d4751a;
-            background: linear-gradient(145deg, #3a2a1a, #2a1e0a);
+        .auction-btn:hover {
+            border-color: #6f42c1;
+            color: #6f42c1;
+            background: linear-gradient(145deg, #3a2a4a, #2a1e3a);
         }
 
         .btn-icon {
@@ -359,8 +383,23 @@ function addBankStyles() {
             color: #c4975a;
         }
 
+        .bank-stats {
+            display: flex;
+            gap: 2rem;
+            font-family: 'Cinzel', serif;
+            color: #c4975a;
+            align-items: center;
+        }
+
+        .auction-note {
+            color: #8b7355;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
+
             .filter-tab {
                 font-size: 0.8rem;
                 padding: 0.4rem 0.8rem;
@@ -374,6 +413,13 @@ function addBankStyles() {
             .action-btn {
                 padding: 0.3rem 0.6rem;
                 font-size: 0.7rem;
+            }
+
+            .bank-stats {
+                gap: 1rem;
+                font-size: 0.9rem;
+                flex-direction: column;
+                text-align: center;
             }
         }
     `;

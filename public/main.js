@@ -583,62 +583,6 @@ function logout() {
 }
 
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
-  // =================================================================
-  // SECURE SERVER ENDPOINTS
-  // =================================================================
-  if (url.startsWith('/api/')) {
-    // For server endpoints, only send user identification
-    const chatId = localStorage.getItem('chatId');
-    const headers = {
-      'Content-Type': 'application/json',
-      // Include chatId for user identification
-      ...(chatId && { 'X-Chat-Id': chatId })
-    };
-
-    let options = { headers };
-
-    // Handle different parameter patterns
-    if (typeof methodOrOptions === 'string') {
-      options.method = methodOrOptions;
-      if (bodyData) {
-        options.body = JSON.stringify(bodyData);
-      }
-    } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
-      options = {
-        ...options,
-        ...methodOrOptions
-      };
-      if (options.body && typeof options.body !== 'string') {
-        options.body = JSON.stringify(options.body);
-      }
-    } else {
-      options.method = 'GET';
-    }
-
-    console.log(`[API DEBUG] Server endpoint: ${options.method} ${url}`);
-    
-    const response = await fetch(url, options);
-
-    if (response.status === 401) {
-      console.error(`[API] 401 Unauthorized for ${url}`);
-      clearSession();
-      window.location.href = "/";
-      throw new Error(`Unauthorized access to ${url}`);
-    }
-
-    if (!response.ok) {
-      console.error(`[API] HTTP error ${response.status} for ${url}`);
-      const errorText = await response.text();
-      console.error(`[API] Error response:`, errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-
-    return response;
-  }
-
-  // =================================================================
-  // LEGACY SUPABASE DIRECT CALLS - TODO: REMOVE AFTER MIGRATION
-  // =================================================================
   if (!supabaseConfig?.SUPABASE_ANON_KEY) {
     throw new Error('No Supabase configuration available');
   }
@@ -652,28 +596,40 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
 
   // Handle different parameter patterns
   if (typeof methodOrOptions === 'string') {
+    // Case 1: apiCall(url, 'POST', { body })
     options.method = methodOrOptions;
     if (bodyData) {
       options.body = JSON.stringify(bodyData);
     }
   } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
+    // Case 2: apiCall(url, { options object })
     options = {
-      ...options,
-      ...methodOrOptions
+      ...options, // Keep default headers
+      ...methodOrOptions // Overwrite or add new properties
     };
     if (options.body && typeof options.body !== 'string') {
       options.body = JSON.stringify(options.body);
     }
   } else {
+    // Case 3: apiCall(url) - default to GET
     options.method = 'GET';
   }
 
-  console.log(`[API DEBUG] Legacy Supabase: ${options.method} request to: ${url}`);
+  // Debug logging
+  console.log(`[API DEBUG] Making ${options.method} request to: ${url}`);
+  console.log(`[API DEBUG] Headers:`, options.headers);
+  if (options.body) {
+    console.log(`[API DEBUG] Body:`, options.body);
+  }
 
   const response = await fetch(url, options);
 
   if (response.status === 401) {
     console.error(`[API] 401 Unauthorized for ${url}`);
+    const errorText = await response.text();
+    console.error(`[API] Response:`, errorText);
+    
+    // For 401 errors, clear session and redirect to auth
     clearSession();
     window.location.href = "/";
     throw new Error(`Unauthorized access to ${url}`);
