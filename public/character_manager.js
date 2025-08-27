@@ -466,8 +466,27 @@ function positionSpellTooltip(e) {
 
 async function showEquipmentModal(character, slot, type) {
   try {
-    const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
-    const availableItems = await response.json();
+    let availableItems = [];
+    
+    // Fetch items based on type
+    if (type === 'Consumable') {
+      // Consumables come from bank
+      const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
+      const bankItems = await response.json();
+      availableItems = bankItems.filter(item => item.amount > 0);
+    } else {
+      // All other gear comes from craft_sessions
+      const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
+      const craftedItems = await response.json();
+      // Transform craft_sessions data to match expected format
+      availableItems = craftedItems.map(item => ({
+        id: item.id,
+        item: item.result,
+        type: item.type,
+        stats: item.result_stats,
+        crafting_session_id: item.id
+      }));
+    }
     
     const currentItem = character.equipped_items?.[slot] || 'None';
     
@@ -496,21 +515,27 @@ async function showEquipmentModal(character, slot, type) {
         ${availableItems.length === 0 
           ? '<p style="color: #999; font-style: italic; text-align: center; padding: 2rem;">No items of this type available</p>'
           : availableItems.map(item => {
+              const isConsumable = type === 'Consumable';
+              const isAvailable = isConsumable ? item.amount > 0 : true;
+              const itemName = item.item || item.result;
+              
               return `
-                <div class="equipment-option ${item.item === currentItem ? 'selected' : ''}" 
-                     data-item="${item.item}"
+                <div class="equipment-option ${itemName === currentItem ? 'selected' : ''}" 
+                     data-item="${itemName}"
                      data-crafting-session-id="${item.crafting_session_id || ''}"
-                     data-is-consumable="${type === 'Consumable'}"
-                     ${(type !== 'Consumable' && item.amount <= 0) ? 'data-disabled="true"' : ''}
-                     style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${item.item === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${(type !== 'Consumable' && item.amount <= 0) ? 'not-allowed' : 'pointer'}; opacity: ${(type !== 'Consumable' && item.amount <= 0) ? '0.5' : '1'};">
-                     <img src="assets/art/recipes/${item.item.replace(/\s+/g, '')}.png"
-                       style="width: 48px; height: 48px; border-radius: 4px;"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                     data-is-consumable="${isConsumable}"
+                     ${!isAvailable ? 'data-disabled="true"' : ''}
+                     style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${itemName === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
+                  <img src="assets/art/recipes/${itemName.replace(/\s+/g, '')}.png"
+                    style="width: 48px; height: 48px; border-radius: 4px;"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                   <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
                     ${type.toUpperCase()}
                   </div>
                   <div style="flex: 1;">
-                    <strong style="color: #4CAF50;">${item.item}</strong>
+                    <strong style="color: #4CAF50;">${itemName}</strong>
+                    ${isConsumable ? `<br><span style="color: #999; font-size: 0.8rem;">Qty: ${item.amount}</span>` : ''}
+                    ${item.stats ? `<br><span style="color: #b8b3a8; font-size: 0.8rem;">${Object.entries(item.stats).map(([key, value]) => `${key}: ${value}`).join(', ')}</span>` : ''}
                   </div>
                 </div>
               `;
@@ -587,7 +612,6 @@ async function showEquipmentModal(character, slot, type) {
     displayMessage('Failed to load equipment options. Please try again.');
   }
 }
-
 async function equipItem(character, slot, itemName, craftingSessionId = null, isConsumable = false) {
   try {
     const response = await _apiCall('/api/supabase/functions/v1/equip_item', {
