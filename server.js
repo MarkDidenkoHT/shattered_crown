@@ -923,8 +923,6 @@ app.get('/api/bank/items/:playerId', async (req, res) => {
     }
 });
 
-
-// Get crafting materials for a specific profession
 app.get('/api/crafting/materials/:playerId/:professionId', async (req, res) => {
     try {
         const { playerId, professionId } = req.params;
@@ -933,27 +931,32 @@ app.get('/api/crafting/materials/:playerId/:professionId', async (req, res) => {
         if (!playerId || !playerId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
             return res.status(400).json({ error: 'Invalid player ID format' });
         }
-
         if (!professionId || isNaN(parseInt(professionId))) {
             return res.status(400).json({ error: 'Invalid profession ID format' });
         }
-
-        // Get bank items for the specific profession
-        const bankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&profession_id=eq.${professionId}&select=item,amount`, {
+        
+        // Get bank items for the specific profession, excluding consumables
+        // We need to join with items table to filter by type
+        const bankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&profession_id=eq.${professionId}&select=item,amount,items!inner(type)&items.type=neq.Consumable`, {
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
             }
         });
-
+        
         if (!bankResponse.ok) {
             throw new Error(`Bank query failed: ${bankResponse.status}`);
         }
-
         const bankItems = await bankResponse.json();
         
-        // Return the raw bank items - let frontend handle enrichment
-        res.json(bankItems);
+        // Clean up the response to remove the nested items data (we only used it for filtering)
+        const cleanedItems = bankItems.map(bankItem => ({
+            item: bankItem.item,
+            amount: bankItem.amount
+        }));
+        
+        // Return the cleaned bank items - let frontend handle enrichment
+        res.json(cleanedItems);
         
     } catch (error) {
         console.error('[CRAFTING MATERIALS]', error);
