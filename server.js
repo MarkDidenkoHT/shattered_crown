@@ -1536,7 +1536,8 @@ app.get('/api/characters/count/:playerId', async (req, res) => {
     }
 });
 
-app.patch('/api/profile/select-god', requireAuth, async (req, res) => {
+// Update profile with selected god
+app.patch('/api/profile/select-god', async (req, res) => {
   try {
     const { profileId, godId } = req.body;
 
@@ -1569,7 +1570,7 @@ app.patch('/api/profile/select-god', requireAuth, async (req, res) => {
 });
 
 // Get list of gods (with id, name, description, image)
-app.get('/api/gods', requireAuth, async (req, res) => {
+app.get('/api/gods', async (req, res) => {
   try {
     const url = `${process.env.SUPABASE_URL}/rest/v1/gods?select=id,name,description,image`;
     const response = await fetch(url, {
@@ -1590,6 +1591,7 @@ app.get('/api/gods', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 

@@ -2,13 +2,9 @@ export async function loadModule(main, { getCurrentProfile, apiCall }) {
 
   let gods = [];
   console.log('Attempting to load gods from the database...');
-  try {
+try {
   console.log('Making secure request to /api/gods...');
-  const response = await fetch('/api/gods', {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-    }
-  });
+  const response = await fetch('/api/gods');
 
   if (!response.ok) {
     const error = await response.json();
@@ -27,7 +23,6 @@ export async function loadModule(main, { getCurrentProfile, apiCall }) {
   console.log('--- loadModule function aborted due to error ---');
   return;
 }
-
 
   // Console log before rendering the HTML content
   console.log('Constructing HTML content with loaded gods data...');
