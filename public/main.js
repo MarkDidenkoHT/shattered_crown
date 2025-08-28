@@ -26,20 +26,22 @@ function switchLanguage(langCode) {
 
 async function updateProfileLanguageSetting(language) {
   try {
-    const currentSettings = currentProfile.settings || {};
-    const updatedSettings = {
-      ...currentSettings,
-      language: language
-    };
-
-    const response = await apiCall(`/api/supabase/rest/v1/profiles?id=eq.${currentProfile.id}`, 'PATCH', {
-      settings: updatedSettings
+    const response = await fetch(`/api/profile/language/${currentProfile.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language })
     });
 
     if (response.ok) {
-      currentProfile.settings = updatedSettings;
+      currentProfile.settings = {
+        ...(currentProfile.settings || {}),
+        language
+      };
       localStorage.setItem('profile', JSON.stringify(currentProfile));
       console.log('[LANGUAGE] Profile language setting updated');
+    } else {
+      const error = await response.json();
+      console.error('[LANGUAGE] Server error:', error);
     }
   } catch (error) {
     console.error('[LANGUAGE] Failed to update profile language setting:', error);
@@ -478,10 +480,16 @@ async function redirectToGame() {
 async function getPlayerCharacterCount(playerId) {
   console.log(`[CHARACTERS] Fetching character count for playerId: ${playerId}`);
   try {
-    const response = await apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=id`);
-    const characters = await response.json();
-    console.log(`[CHARACTERS] Characters fetched:`, characters);
-    return characters.length;
+    const response = await fetch(`/api/characters/count/${playerId}`);
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log(`[CHARACTERS] Character count:`, data.count);
+      return data.count;
+    } else {
+      console.error('[CHARACTERS] Server error:', data.error);
+      return 0;
+    }
   } catch (error) {
     console.error('[CHARACTERS] Error fetching character count:', error);
     throw error;
@@ -596,13 +604,11 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
 
   // Handle different parameter patterns
   if (typeof methodOrOptions === 'string') {
-    // Case 1: apiCall(url, 'POST', { body })
     options.method = methodOrOptions;
     if (bodyData) {
       options.body = JSON.stringify(bodyData);
     }
   } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
-    // Case 2: apiCall(url, { options object })
     options = {
       ...options, // Keep default headers
       ...methodOrOptions // Overwrite or add new properties
@@ -611,7 +617,6 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
       options.body = JSON.stringify(options.body);
     }
   } else {
-    // Case 3: apiCall(url) - default to GET
     options.method = 'GET';
   }
 
