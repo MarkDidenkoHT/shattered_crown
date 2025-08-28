@@ -1,12 +1,10 @@
 let _main;
-let _apiCall;
 let _getCurrentProfile;
 let _profile;
 
-export async function loadModule(main, { apiCall, getCurrentProfile }) {
+export async function loadModule(main, { getCurrentProfile }) {
   console.log('[ALTAR] --- Starting loadModule for Altar ---');
   _main = main;
-  _apiCall = apiCall;
   _getCurrentProfile = getCurrentProfile;
 
   _profile = _getCurrentProfile();

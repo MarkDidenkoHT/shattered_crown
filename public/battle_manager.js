@@ -17,30 +17,6 @@ let _battleId = null;
 let _unsubscribeFromBattle = null;
 let _isProcessingAITurn = false;
 
-function formatCharacter(raw) {
-    const rawStats = typeof raw.stats === 'string' ? JSON.parse(raw.stats) : raw.stats;
-    const stats = {};
-    for (const [key, value] of Object.entries(rawStats)) {
-        stats[key.toLowerCase()] = value;
-    }
-    const maxHp = stats.vitality * 10;
-    return {
-        id: raw.id,
-        name: raw.name,
-        type: raw.player_id ? 'player' : 'enemy',
-        spriteName: raw.sprite_name,
-        position: null,
-        stats: {
-            ...stats,
-            hp: maxHp,
-            maxHp: maxHp
-        },
-        abilities: typeof raw.learned_abilities === 'string'
-            ? JSON.parse(raw.learned_abilities)
-            : raw.learned_abilities || []
-    };
-}
-
 function getSupabaseClient(config) {
     if (_supabaseClient) {
         return _supabaseClient;

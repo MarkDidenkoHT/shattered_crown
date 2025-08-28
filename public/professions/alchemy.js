@@ -92,7 +92,7 @@ async function batchEnrichIngredients(bankItems) {
       
       if (!response.ok) {
         console.error('[ALCHEMY] Enrich API failed:', response.status);
-        return await fallbackEnrichIngredients(bankItems);
+        // return await fallbackEnrichIngredients(bankItems);
       }
 
       const { ingredientMap } = await response.json();
@@ -104,7 +104,7 @@ async function batchEnrichIngredients(bankItems) {
       
     } catch (error) {
       console.warn('[ALCHEMY] Batch ingredient fetch failed, falling back to individual requests:', error);
-      return await fallbackEnrichIngredients(bankItems);
+      // return await fallbackEnrichIngredients(bankItems);
     }
   }
   
@@ -130,45 +130,45 @@ async function batchEnrichIngredients(bankItems) {
 }
 
 // Fallback method for individual ingredient requests (with concurrency control)
-async function fallbackEnrichIngredients(bankItems) {
-  const enriched = [];
-  const BATCH_SIZE = 5; // Process 5 ingredients at a time
+// async function fallbackEnrichIngredients(bankItems) {
+//   const enriched = [];
+//   const BATCH_SIZE = 5; // Process 5 ingredients at a time
   
-  for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-    const batch = bankItems.slice(i, i + BATCH_SIZE);
+//   for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
+//     const batch = bankItems.slice(i, i + BATCH_SIZE);
     
-    const batchPromises = batch.map(async (item) => {
-      try {
-        const res = await context.apiCall(
-          `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
-        );
-        const [ingredient] = await res.json();
+//     const batchPromises = batch.map(async (item) => {
+//       try {
+//         const res = await context.apiCall(
+//           `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
+//         );
+//         const [ingredient] = await res.json();
         
-        if (ingredient) {
-          return {
-            name: item.item,
-            amount: item.amount,
-            properties: ingredient.properties,
-            sprite: ingredient.sprite,
-          };
-        }
-      } catch (error) {
-        console.warn(`[ALCHEMY] Failed to fetch ingredient ${item.item}:`, error);
-      }
-      return null;
-    });
+//         if (ingredient) {
+//           return {
+//             name: item.item,
+//             amount: item.amount,
+//             properties: ingredient.properties,
+//             sprite: ingredient.sprite,
+//           };
+//         }
+//       } catch (error) {
+//         console.warn(`[ALCHEMY] Failed to fetch ingredient ${item.item}:`, error);
+//       }
+//       return null;
+//     });
     
-    const batchResults = await Promise.all(batchPromises);
-    enriched.push(...batchResults.filter(Boolean));
+//     const batchResults = await Promise.all(batchPromises);
+//     enriched.push(...batchResults.filter(Boolean));
     
-    // Small delay between batches to avoid overwhelming the API
-    if (i + BATCH_SIZE < bankItems.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-  }
+//     // Small delay between batches to avoid overwhelming the API
+//     if (i + BATCH_SIZE < bankItems.length) {
+//       await new Promise(resolve => setTimeout(resolve, 50));
+//     }
+//   }
   
-  return enriched;
-}
+//   return enriched;
+// }
 
 // Enhanced bottle HTML with liquid and bubble elements - MADE SMALLER
 function createCraftingSlotHTML(slotIndex) {
