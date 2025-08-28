@@ -1319,6 +1319,73 @@ app.post('/api/crafting/alchemy', async (req, res) => {
     }
 });
 
+// Reserve ores/ingredients for mining (alchemy start)
+app.post('/api/crafting/reserve-alchemy-ingredients', async (req, res) => {
+  try {
+    const { player_id, profession_id, selected_ingredients } = req.body;
+
+    if (!player_id || !profession_id || !Array.isArray(selected_ingredients) || selected_ingredients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+
+    // Verify player exists
+    const playerResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`, {
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+      }
+    });
+
+    const players = await playerResponse.json();
+    if (!Array.isArray(players) || players.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Player not found'
+      });
+    }
+
+    // Forward to Supabase Edge function
+    const reserveResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/reserve_ingredients`, {
+      method: 'POST',
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ player_id, profession_id, selected_ingredients })
+    });
+
+    const contentType = reserveResponse.headers.get('content-type');
+    let responseData;
+
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await reserveResponse.json();
+    } else {
+      const textData = await reserveResponse.text();
+      try {
+        responseData = JSON.parse(textData);
+      } catch {
+        return res.status(500).json({
+          success: false,
+          error: 'Invalid response from reserve service'
+        });
+      }
+    }
+
+    res.status(reserveResponse.status).json(responseData);
+
+  } catch (err) {
+    console.error('[RESERVE ALCHEMY INGREDIENTS]', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: err.message
+    });
+  }
+});
 
 
 
