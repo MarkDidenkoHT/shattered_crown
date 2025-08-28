@@ -1246,6 +1246,78 @@ app.post('/api/crafting/herbalism', async (req, res) => {
     }
 });
 
+// Mining / Alchemy crafting
+app.post('/api/crafting/alchemy', async (req, res) => {
+    try {
+        const { player_id, profession_id, session_id, adjustments } = req.body;
+
+        if (!player_id || !profession_id || !session_id || !Array.isArray(adjustments)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing or invalid required fields'
+            });
+        }
+
+        // Verify player exists
+        const playerResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+
+        const players = await playerResponse.json();
+        if (!Array.isArray(players) || players.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Player not found'
+            });
+        }
+
+        // Forward to Supabase Edge Function
+        const craftResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/craft_alchemy`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                player_id,
+                profession_id,
+                session_id,
+                adjustments
+            })
+        });
+
+        const contentType = craftResponse.headers.get('content-type');
+        let responseData;
+
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await craftResponse.json();
+        } else {
+            const textData = await craftResponse.text();
+            try {
+                responseData = JSON.parse(textData);
+            } catch {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Invalid response from alchemy service'
+                });
+            }
+        }
+
+        res.status(craftResponse.status).json(responseData);
+
+    } catch (err) {
+        console.error('[ALCHEMY CRAFT]', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            details: err.message
+        });
+    }
+});
 
 
 
