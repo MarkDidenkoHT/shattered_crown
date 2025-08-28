@@ -1445,6 +1445,62 @@ app.get('/api/promo/recent/:playerId', async (req, res) => {
     }
 });
 
+// Update profile language setting
+app.patch('/api/profile/language/:playerId', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        const { language } = req.body;
+
+        if (!playerId || !language) {
+            return res.status(400).json({ error: 'Missing playerId or language' });
+        }
+
+        // Fetch current profile to preserve existing settings
+        const fetchResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}&select=settings`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
+            }
+        );
+
+        if (!fetchResponse.ok) {
+            return res.status(fetchResponse.status).json({ error: 'Failed to load current settings' });
+        }
+
+        const profiles = await fetchResponse.json();
+        const currentSettings = (profiles[0] && profiles[0].settings) || {};
+
+        const updatedSettings = {
+            ...currentSettings,
+            language
+        };
+
+        // Update settings in Supabase
+        const updateResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ settings: updatedSettings })
+            }
+        );
+
+        const result = await updateResponse.json();
+        res.status(updateResponse.status).json(result);
+
+    } catch (error) {
+        console.error('[PROFILE LANGUAGE UPDATE]', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 
 
