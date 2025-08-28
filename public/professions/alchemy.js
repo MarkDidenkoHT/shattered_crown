@@ -176,7 +176,7 @@ function createCraftingSlotHTML(slotIndex) {
     <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
       <!-- Herb Slot -->
       <div class="herb-slot" style="width: 60px; height: 60px; border: 2px dashed #aaa; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
-        <span style="color: #666; font-size: 0.7rem;">Drop Herb</span>
+        <span style="color: #FFD700; font-size: 0.7rem;">Drop Herb</span>
       </div>
       
       <!-- Up Arrow -->
@@ -244,7 +244,7 @@ function renderCraftingModal() {
       </div>
       
       <h3 style="margin: 0.5rem 0 0.3rem 0; font-size: 1rem;">Available Herbs</h3>
-      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #8B4513; border-radius: 6px; background: rgba(0,0,0,0.1); scrollbar-width: none; max-height: 100px; min-height: 100px;">
+      <div id="available-herbs" style="display: flex; overflow-x: auto; gap: 0.4rem; padding: 4px; border: 1px solid #8B4513; border-radius: 6px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderHerbsHTML()}
       </div>
       
@@ -292,7 +292,7 @@ function renderHerbsHTML() {
   return alchemyState.availableHerbs.map((herb, idx) => `
     <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 3px; background: rgba(255,255,255,0.05); text-align: center; min-width: 60px;">
       <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
-      <div style="font-size:0.65rem; color: #c4975a; font-weight: bold; margin-top: 2px; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${herb.name}">${herb.name}</div>
+      <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; max-width: 54px; white-space: nowrap;" title="${herb.name}">${herb.name}</div>
       <div style="font-size:0.7rem;">x${herb.amount}</div>
       <div class="info-icon" data-herb="${idx}" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #4CAF50; border-radius: 50%; color: white; font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
