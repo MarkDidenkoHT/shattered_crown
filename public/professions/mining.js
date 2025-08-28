@@ -62,37 +62,52 @@ export async function startCraftingSession(ctx) {
 
 async function batchEnrichOres(bankItems) {
   if (!bankItems.length) return [];
-  
+
   const oreNames = bankItems.map(item => item.item);
   const uniqueNames = [...new Set(oreNames)];
   const uncachedNames = uniqueNames.filter(name => !oreCache.has(name));
-  
+
   if (uncachedNames.length > 0) {
-    const namesQuery = uncachedNames.map(name => encodeURIComponent(name)).join(',');
-    
     try {
-      const response = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`);
-      const ores = await response.json();
-      ores.forEach(ore => oreCache.set(ore.name, ore));
-    } catch (error) {
-      return await fallbackEnrichOres(bankItems);
+      const response = await fetch('/api/crafting/enrich-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemNames: uncachedNames })
+      });
+
+      if (!response.ok) {
+        console.error('[ORES] Enrich API failed:', response.status);
+        return fallbackEnrichOres(bankItems);
+      }
+
+      const { ingredientMap } = await response.json();
+      Object.values(ingredientMap).forEach(ore => oreCache.set(ore.name, ore));
+
+    } catch (err) {
+      console.warn('[ORES] Batch enrichment failed:', err);
+      return fallbackEnrichOres(bankItems);
     }
   }
-  
-  const enriched = [];
-  for (const item of bankItems) {
+
+  // Build enriched ores from cache
+  return bankItems.map(item => {
     const cachedOre = oreCache.get(item.item);
     if (cachedOre) {
-      enriched.push({
+      return {
         name: item.item,
         amount: item.amount,
         properties: cachedOre.properties,
         sprite: cachedOre.sprite,
-      });
+      };
+    } else {
+      return {
+        name: item.item,
+        amount: item.amount,
+        properties: null,
+        sprite: 'default'
+      };
     }
-  }
-  
-  return enriched;
+  });
 }
 
 async function fallbackEnrichOres(bankItems) {
@@ -898,10 +913,10 @@ function createRockDustEffect(row) {
   return dustInterval;
 }
 
-async function patchAndSendCraftRequest(resultDiv, apiCall) {
+async function patchAndSendCraftRequest(resultDiv) {
   try {
     const adjustments = [];
-    
+
     for (const [rowIdx, adj] of Object.entries(miningState.adjustments || {})) {
       if (adj.left > 0) {
         adjustments.push({ bottle: Number(rowIdx), direction: 'up', count: adj.left });
@@ -917,14 +932,16 @@ async function patchAndSendCraftRequest(resultDiv, apiCall) {
       session_id: miningState.sessionId,
       adjustments
     };
-    
-    const res = await apiCall('/functions/v1/craft_alchemy', {
+
+    // ✅ Secure server endpoint instead of apiCall
+    const res = await fetch('/api/crafting/alchemy', {
       method: 'POST',
-      body: payload
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
     const json = await res.json();
-    
+
     if (!res.ok) {
       resultDiv.innerHTML = `
         <span style="color:red;">💥 Server Error (${res.status})</span>
@@ -950,10 +967,10 @@ async function patchAndSendCraftRequest(resultDiv, apiCall) {
       if (claimBtn) {
         claimBtn.style.display = 'block';
         claimBtn.disabled = false;
-        
+
         const newClaimBtn = claimBtn.cloneNode(true);
         claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
-        
+
         newClaimBtn.addEventListener('click', () => {
           context.displayMessage(`${json.crafted.name} added to your bank!`);
           document.querySelector('.custom-message-box')?.remove();
@@ -971,15 +988,15 @@ async function patchAndSendCraftRequest(resultDiv, apiCall) {
 
       if (finishBtn) finishBtn.style.display = 'none';
       if (claimBtn) claimBtn.style.display = 'none';
-      
+
       if (craftBtn) {
         craftBtn.style.display = 'block';
         craftBtn.textContent = 'Mine Again';
         craftBtn.disabled = false;
-        
+
         const newCraftBtn = craftBtn.cloneNode(true);
         craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-        
+
         newCraftBtn.addEventListener('click', () => {
           document.querySelector('.custom-message-box')?.remove();
           startCraftingSession(context);
@@ -988,22 +1005,22 @@ async function patchAndSendCraftRequest(resultDiv, apiCall) {
     }
   } catch (err) {
     resultDiv.innerHTML = '<span style="color:red;">⚠️ Mining operation failed. Try again later.</span>';
-    
+
     const finishBtn = document.querySelector('#finish-btn');
     const claimBtn = document.querySelector('#claim-btn');
     const craftBtn = document.querySelector('#craft-btn');
-    
+
     if (finishBtn) finishBtn.style.display = 'none';
     if (claimBtn) claimBtn.style.display = 'none';
-    
+
     if (craftBtn) {
       craftBtn.style.display = 'block';
       craftBtn.textContent = 'Try Again';
       craftBtn.disabled = false;
-      
+
       const newCraftBtn = craftBtn.cloneNode(true);
       craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-      
+
       newCraftBtn.addEventListener('click', () => {
         document.querySelector('.custom-message-box')?.remove();
         startCraftingSession(context);
