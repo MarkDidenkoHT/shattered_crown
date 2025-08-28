@@ -1411,6 +1411,39 @@ app.post('/api/promo/redeem', async (req, res) => {
     }
 });
 
+// Get recent blessings for a player
+app.get('/api/promo/recent/:playerId', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+
+        if (!playerId) {
+            return res.status(400).json({ error: 'Missing playerId' });
+        }
+
+        const response = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}&select=promos_used`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('[PROMO RECENT] Supabase error:', text);
+            return res.status(response.status).json({ error: 'Failed to fetch recent blessings' });
+        }
+
+        const profiles = await response.json();
+        res.json(profiles);
+
+    } catch (error) {
+        console.error('[PROMO RECENT]', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 
 
