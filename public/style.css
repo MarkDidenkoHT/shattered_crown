@@ -1017,7 +1017,7 @@
         transition: all 0.3s ease;
         text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.2);
         position: fixed;
-        top: 2px;
+        bottom: 2px;
         left: 2px;
     }
 
