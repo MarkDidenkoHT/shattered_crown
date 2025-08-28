@@ -1383,6 +1383,40 @@ app.post('/api/crafting/reserve-alchemy-ingredients', async (req, res) => {
   }
 });
 
+// Secure promo redeem (server-side only)
+app.post('/api/promo/redeem', async (req, res) => {
+    try {
+        const { code, player_id } = req.body;
+
+        if (!code || !player_id) {
+            return res.status(400).json({ success: false, error: 'Missing code or player_id' });
+        }
+
+        // Forward request to Supabase Edge Function
+        const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/redeem_promo`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code, player_id })
+        });
+
+        const data = await response.json();
+        res.status(response.status).json(data);
+
+    } catch (error) {
+        console.error('[PROMO REDEEM]', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+
+
+
+
+
 
 
 
