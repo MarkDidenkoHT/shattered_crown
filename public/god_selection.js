@@ -1,31 +1,25 @@
 export async function loadModule(main, { getCurrentProfile }) {
-
   let gods = [];
-  console.log('Attempting to load gods from the database...');
-try {
-  console.log('Making secure request to /api/gods...');
-  const response = await fetch('/api/gods');
+  
+  try {
+    const response = await fetch('/api/gods');
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to load gods');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to load gods');
+    }
+
+    gods = await response.json();
+
+    if (gods.length === 0) {
+      console.warn('No gods found in the database');
+    }
+  } catch (error) {
+    console.error('Error loading gods:', error);
+    alert('Failed to load gods. Please try again.');
+    return;
   }
 
-  gods = await response.json();
-  console.log('Gods data loaded:', gods);
-
-  if (gods.length === 0) {
-    console.warn('No gods found in the database. The display might be empty.');
-  }
-} catch (error) {
-  console.error('Error loading gods:', error);
-  alert('Failed to load gods. Please try again.');
-  console.log('--- loadModule function aborted due to error ---');
-  return;
-}
-
-  // Console log before rendering the HTML content
-  console.log('Constructing HTML content with loaded gods data...');
   main.innerHTML = `
     <div class="main-app-container">
       <div class="particles"></div>
@@ -35,27 +29,7 @@ try {
       </div>
       
       <div class="god-selection-section">
-        <div class="gods-container desktop-view">
-          ${gods.map(god => `
-            <div class="god-card" data-god-id="${god.id}">
-              <div class="god-art-block">
-                <img src="assets/art/gods/${god.image}.png" 
-                     alt="${god.name}" 
-                     class="god-art"
-                     onerror="this.src='assets/art/placeholder.jpg'">
-              </div>
-              <div class="god-info-block">
-                <h3 class="god-name">${god.name}</h3>
-                <p class="god-description">${god.description}</p>
-                <button class="fantasy-button select-god-btn" data-god-id="${god.id}">
-                  Choose ${god.name}
-                </button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="gods-slider mobile-view">
+        <div class="gods-slider">
           <div class="slider-container">
             <div class="slider-track" style="transform: translateX(0%)">
               ${gods.map((god, index) => `
@@ -78,58 +52,56 @@ try {
             </div>
           </div>
           
-          <div class="slider-controls">
-            <button class="slider-btn prev-btn" aria-label="Previous god">&lt;</button>
-            <div class="slider-dots">
-              ${gods.map((_, index) => `
-                <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-              `).join('')}
-            </div>
-            <button class="slider-btn next-btn" aria-label="Next god">&gt;</button>
+          <div class="slider-dots">
+            ${gods.map((_, index) => `
+              <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+            `).join('')}
           </div>
         </div>
       </div>
     </div>
   `;
-  // Console log after HTML content has been set
-  console.log('HTML content rendered to main element.');
 
-  // Add god selection styles
-  console.log('Adding god selection styles to document head...');
+  // Add compact mobile-first styles
   const style = document.createElement('style');
   style.textContent = `
     .god-selection-section {
-      height: 90%;
+      height: 90vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 2rem;
+      padding: 0.5rem;
       position: relative;
       z-index: 2;
       background: rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(10px);
     }
 
-    /* Desktop View */
-    .desktop-view {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
+    .gods-slider {
       width: 100%;
-      max-width: 1200px;
+      max-width: 100vw;
     }
 
-    .mobile-view {
-      display: none;
+    .slider-container {
+      overflow: hidden;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      touch-action: pan-y;
     }
 
-    .god-card {
-      background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-      border: 2px solid #3d2914;
+    .slider-track {
+      display: flex;
+      transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      will-change: transform;
+    }
+
+    .god-slide {
+      min-width: 100%;
+      background: linear-gradient(145deg, rgba(29, 20, 12, 0.95), rgba(42, 31, 22, 0.9));
+      border: 1px solid #3d2914;
       border-radius: 8px;
       overflow: hidden;
-      transition: all 0.3s ease;
       backdrop-filter: blur(5px);
       box-shadow: 
         inset 0 1px 0 rgba(196, 151, 90, 0.1),
@@ -138,7 +110,7 @@ try {
 
     .god-art-block {
       width: 100%;
-      height: 400px;
+      height: 60vh;
       overflow: hidden;
       position: relative;
     }
@@ -151,38 +123,38 @@ try {
     }
 
     .god-info-block {
-      padding-top: 5px;
+      padding: 0.75rem;
       text-align: center;
     }
 
     .god-name {
       font-family: 'Cinzel', serif;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 600;
       color: #c4975a;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
       text-shadow: 1px 1px 0px #3d2914;
       letter-spacing: 1px;
     }
 
     .god-description {
       color: #b8b3a8;
-      font-size: 0.9rem;
-      line-height: 1.4;
-      margin-bottom: 1.25rem;
+      font-size: 0.85rem;
+      line-height: 1.3;
+      margin-bottom: 0.75rem;
       font-style: italic;
-      min-height: 3rem;
+      min-height: 2.5rem;
     }
 
     .select-god-btn {
-      padding: 0.75rem 1.5rem;
-      font-size: 0.9rem;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.85rem;
       font-family: 'Cinzel', serif;
       font-weight: 600;
       border: 2px solid #c4975a;
       border-radius: 4px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
       position: relative;
       overflow: hidden;
       text-transform: uppercase;
@@ -193,309 +165,220 @@ try {
         inset 0 1px 0 rgba(196, 151, 90, 0.2),
         0 2px 4px rgba(0, 0, 0, 0.3);
       width: 100%;
-    }
-
-    .select-god-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(196, 151, 90, 0.1), transparent);
-      transition: left 0.6s ease;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .select-god-btn:active {
-      transform: translateY(0);
+      transform: scale(0.95);
       box-shadow: 
         inset 0 2px 4px rgba(0, 0, 0, 0.3),
         0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
-    /* Mobile View */
-    .gods-slider {
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .slider-container {
-      overflow: hidden;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
-    }
-
-    .slider-track {
-      display: flex;
-      transition: transform 0.4s ease;
-    }
-
-    .god-slide {
-      min-width: 100%;
-      background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-      border: 2px solid #3d2914;
-      border-radius: 8px;
-      overflow: hidden;
-      backdrop-filter: blur(5px);
-      box-shadow: 
-        inset 0 1px 0 rgba(196, 151, 90, 0.1),
-        0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .god-slide .god-art-block {
-      height: 400px;
-    }
-
-    .god-slide .god-info-block {
-      padding: 1.5rem;
-    }
-
-    .slider-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 1rem;
-    }
-
-    .slider-btn {
-      background: linear-gradient(145deg, #2a1f16, #1d140c);
-      border: 2px solid #c4975a;
-      color: #c4975a;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      font-size: 1.2rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-family: 'Cinzel', serif;
-      font-weight: 600;
-    }
-
     .slider-dots {
       display: flex;
-      gap: 0.5rem;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0;
     }
 
     .slider-dot {
-      width: 12px;
-      height: 12px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      border: 2px solid #3d2914;
+      border: 1px solid #3d2914;
       background: transparent;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .slider-dot.active {
       background: #c4975a;
       border-color: #c4975a;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 1024px) {
-      .desktop-view {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .desktop-view {
-        display: none;
-      }
-      
-      .mobile-view {
-        display: block;
-      }
-      
-      .god-selection-section {
-        padding: 1.5rem;
-      }
-      
+      transform: scale(1.2);
     }
 
     .art-header {
       background-image: unset;
+      padding: 0.5rem 0;
     }
 
-    @media (max-width: 480px) {
-      .god-slide .god-art-block {
-        height: 400px;
+    .art-header h1 {
+      font-size: 1.5rem;
+      margin: 0;
+      text-align: center;
+      color: #c4975a;
+      font-family: 'Cinzel', serif;
+      text-shadow: 2px 2px 0px #3d2914;
+    }
+
+    /* Particle styles */
+    .particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #c4975a;
+      border-radius: 50%;
+      opacity: 0.6;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { 
+        transform: translateY(0px) rotate(0deg); 
+        opacity: 0.6; 
       }
-      
-      .god-name {
-        font-size: 1.1rem;
-      }
-      
-      .god-description {
-        font-size: 0.85rem;
+      50% { 
+        transform: translateY(-10px) rotate(180deg); 
+        opacity: 0.3; 
       }
     }
   `;
   document.head.appendChild(style);
-  console.log('God selection styles appended to document head.');
 
-  // Create floating particles
-  console.log('Calling createParticles function...');
   createParticles();
-
-  // Initialize slider functionality
-  console.log('Calling initializeSlider function...');
   initializeSlider();
 
   // Add event listeners to god selection buttons
   const selectButtons = main.querySelectorAll('.select-god-btn');
-  console.log(`Found ${selectButtons.length} god selection buttons. Adding event listeners...`);
 
   selectButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       const godId = e.target.dataset.godId;
       const godName = gods.find(g => g.id == godId)?.name;
 
-      console.log(`God selection button clicked for God ID: ${godId}, Name: ${godName}`);
-
       if (confirm(`Are you sure you want to choose ${godName} as your deity? This choice cannot be changed later.`)) {
-        console.log(`User confirmed selection of ${godName}. Calling secure selectGod function...`);
-        
         try {
           await selectGod(godId, godName, getCurrentProfile);
         } catch (err) {
           console.error('Error in god selection:', err);
           alert('Something went wrong while selecting your deity. Please try again.');
         }
-
-      } else {
-        console.log(`User cancelled selection of ${godName}.`);
       }
     });
   });
-
-
-  // Add button click effects
-  selectButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      // Console log for visual click effect
-      console.log(`Applying visual click effect to button with God ID: ${this.dataset.godId}`);
-      this.style.transform = 'scale(0.95)';
-      setTimeout(() => {
-        this.style.transform = '';
-      }, 150);
-    });
-  });
-  console.log('--- loadModule function finished ---');
 }
 
 function initializeSlider() {
-  console.log('--- Starting initializeSlider function ---');
   const sliderTrack = document.querySelector('.slider-track');
-  const prevBtn = document.querySelector('.prev-btn');
-  const nextBtn = document.querySelector('.next-btn');
   const dots = document.querySelectorAll('.slider-dot');
   
-  if (!sliderTrack || !prevBtn || !nextBtn) {
-    console.warn('Slider elements not found. Skipping slider initialization.');
-    console.log('--- initializeSlider function aborted ---');
+  if (!sliderTrack || !dots.length) {
     return;
   }
   
   let currentSlide = 0;
   const totalSlides = dots.length;
-  console.log(`Slider initialized with ${totalSlides} slides.`);
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
+  let currentTranslate = 0;
+  let prevTranslate = 0;
   
   function updateSlider() {
     const translateX = -currentSlide * 100;
     sliderTrack.style.transform = `translateX(${translateX}%)`;
-    console.log(`Slider updated. Current slide: ${currentSlide}, translateX: ${translateX}%`);
+    currentTranslate = translateX;
+    prevTranslate = translateX;
     
     // Update dots
     dots.forEach((dot, index) => {
-      const isActive = index === currentSlide;
-      dot.classList.toggle('active', isActive);
-      // console.log(`Dot ${index} active state: ${isActive}`); // Can be too verbose, uncomment if needed
+      dot.classList.toggle('active', index === currentSlide);
     });
   }
   
-  function nextSlide() {
-    const previousSlide = currentSlide;
-    currentSlide = (currentSlide + 1) % totalSlides;
-    console.log(`Next slide triggered. Changing from ${previousSlide} to ${currentSlide}`);
+  function snapToSlide() {
+    const slideWidth = sliderTrack.offsetWidth / totalSlides;
+    const draggedDistance = Math.abs(currentTranslate - prevTranslate);
+    
+    if (draggedDistance > slideWidth * 0.2) {
+      if (currentTranslate > prevTranslate && currentSlide > 0) {
+        currentSlide--;
+      } else if (currentTranslate < prevTranslate && currentSlide < totalSlides - 1) {
+        currentSlide++;
+      }
+    }
+    
     updateSlider();
   }
   
-  function prevSlide() {
-    const previousSlide = currentSlide;
-    currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
-    console.log(`Previous slide triggered. Changing from ${previousSlide} to ${currentSlide}`);
-    updateSlider();
-  }
-  
-  // Event listeners
-  console.log('Adding event listeners for slider buttons and dots.');
-  nextBtn.addEventListener('click', nextSlide);
-  prevBtn.addEventListener('click', prevSlide);
-  
+  // Dot navigation
   dots.forEach((dot, index) => {
     dot.addEventListener('click', () => {
-      console.log(`Slider dot clicked for slide: ${index}`);
       currentSlide = index;
       updateSlider();
     });
   });
   
-  // Touch/swipe support
-  let startX = 0;
-  let isDragging = false;
-  console.log('Adding touch/swipe event listeners for slider.');
-  
+  // Touch events for swiping
   sliderTrack.addEventListener('touchstart', (e) => {
     startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
     isDragging = true;
-    console.log(`Touch start detected. startX: ${startX}`);
-  });
+    sliderTrack.style.transition = 'none';
+  }, { passive: true });
   
   sliderTrack.addEventListener('touchmove', (e) => {
     if (!isDragging) return;
-    e.preventDefault(); // Prevent scrolling while swiping
-    // console.log('Touch move detected (dragging).'); // Can be too verbose
-  });
+    
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const diffX = currentX - startX;
+    const diffY = currentY - startY;
+    
+    // Only handle horizontal swipes
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      e.preventDefault();
+      currentTranslate = prevTranslate + diffX;
+      
+      // Add resistance at boundaries
+      if (currentSlide === 0 && diffX > 0) {
+        currentTranslate = prevTranslate + diffX * 0.3;
+      } else if (currentSlide === totalSlides - 1 && diffX < 0) {
+        currentTranslate = prevTranslate + diffX * 0.3;
+      }
+      
+      sliderTrack.style.transform = `translateX(${currentTranslate}px)`;
+    }
+  }, { passive: false });
   
-  sliderTrack.addEventListener('touchend', (e) => {
+  sliderTrack.addEventListener('touchend', () => {
     if (!isDragging) return;
     isDragging = false;
     
-    const endX = e.changedTouches[0].clientX;
-    const diff = startX - endX;
-    console.log(`Touch end detected. endX: ${endX}, difference: ${diff}`);
-    
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        console.log('Swipe detected: Swiping left (next slide).');
-        nextSlide();
-      } else {
-        console.log('Swipe detected: Swiping right (previous slide).');
-        prevSlide();
-      }
-    } else {
-      console.log('Swipe difference too small, no slide change.');
-    }
+    sliderTrack.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+    snapToSlide();
+  }, { passive: true });
+  
+  // Prevent context menu on long press
+  sliderTrack.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
   });
-  console.log('--- initializeSlider function finished ---');
 }
 
 async function selectGod(godId, godName, getCurrentProfile) {
-  console.log(`--- Starting selectGod function for God ID: ${godId}, Name: ${godName} ---`);
   try {
-    // Get current profile
     const profile = getCurrentProfile();
     if (!profile) {
       throw new Error('No profile found');
     }
-    console.log('Current profile retrieved:', profile);
 
-    // Call secure backend endpoint
     const response = await fetch('/api/profile/select-god', {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`, // session token only
+        'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ profileId: profile.id, godId })
@@ -511,13 +394,10 @@ async function selectGod(godId, godName, getCurrentProfile) {
       throw new Error('Failed to update profile - no data returned');
     }
 
-    // Save updated profile
     const updatedProfile = updatedProfiles[0];
     localStorage.setItem('profile', JSON.stringify(updatedProfile));
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
-
-    // Load character creation module
     window.gameAuth.loadModule('character_creation');
     
   } catch (error) {
@@ -527,27 +407,15 @@ async function selectGod(godId, godName, getCurrentProfile) {
     } else {
       alert(`Failed to select god: ${error.message}. Please try again.`);
     }
-  } finally {
-    console.log('--- selectGod function finished ---');
   }
 }
 
-
 function createParticles() {
-  console.log('--- Starting createParticles function ---');
   const particles = document.querySelector('.particles');
-  if (!particles) {
-    console.warn('Particles container not found. Skipping particle creation.');
-    console.log('--- createParticles function aborted ---');
-    return;
-  }
+  if (!particles) return;
   
-  // Clear existing particles
   particles.innerHTML = '';
-  console.log('Cleared existing particles.');
-  
-  const particleCount = 20;
-  console.log(`Creating ${particleCount} particles...`);
+  const particleCount = 15;
   
   for (let i = 0; i < particleCount; i++) {
     const particle = document.createElement('div');
@@ -558,6 +426,4 @@ function createParticles() {
     particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
     particles.appendChild(particle);
   }
-  console.log('Particles created and appended to the DOM.');
-  console.log('--- createParticles function finished ---');
 }
