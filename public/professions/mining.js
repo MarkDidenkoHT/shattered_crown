@@ -616,7 +616,7 @@ function setupModalEventListeners(modal) {
 
   finishBtn.addEventListener('click', async () => {
     finishBtn.disabled = true;
-    await patchAndSendCraftRequest(resultDiv, context.apiCall);
+    await patchAndSendCraftRequest(resultDiv);
   });
 
   const rowsContainer = modal.querySelector('#mining-rows');
@@ -728,17 +728,19 @@ async function startMiningAnimation(resultDiv, modal) {
   const selectedOreNames = miningState.selectedOres.map(o => o.name);
 
   try {
-    const reserveRes = await context.apiCall('/functions/v1/reserve_ingredients', {
+    // ✅ Call secure server endpoint
+    const reserveRes = await fetch('/api/crafting/reserve-alchemy-ingredients', {
       method: 'POST',
-      body: {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         player_id: context.profile.id,
         profession_id: miningState.professionId,
-        selected_ingredients: selectedOreNames,
-      }
+        selected_ingredients: selectedOreNames
+      })
     });
 
     const reserveJson = await reserveRes.json();
-    
+
     if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
       resultDiv.textContent = `Ore verification failed: ${reserveJson?.error || 'Unknown error'}`;
       return;
@@ -751,7 +753,7 @@ async function startMiningAnimation(resultDiv, modal) {
       const ore = miningState.enrichedOres[idx];
       const row = rowsArea.children[idx];
       const props = ore.properties;
-      
+
       await animateOreBreaking(row, props, idx);
     }
 
@@ -769,6 +771,7 @@ async function startMiningAnimation(resultDiv, modal) {
     }
 
   } catch (err) {
+    console.error('[MINING] Reserve request failed:', err);
     resultDiv.textContent = 'Server error while verifying ores.';
   }
 }
