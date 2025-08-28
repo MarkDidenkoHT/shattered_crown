@@ -107,37 +107,35 @@ async function handlePromoRedeem() {
   const code = promoInput.value.trim().toUpperCase();
   
   if (!code) return;
-  
+
   setButtonLoading(redeemBtn, true);
   hideStatus();
-  
+
   try {
-    console.log('[ALTAR] Attempting to redeem promo code:', code);
-    
-    const response = await _apiCall('/api/supabase/functions/v1/redeem_promo', {
+    console.log('[ALTAR] Redeeming promo code:', code);
+
+    const response = await fetch('/api/promo/redeem', {
       method: 'POST',
-      body: {
-        code: code,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
         player_id: _profile.id
-      }
+      })
     });
-    
+
     const result = await response.json();
-    
+
     if (response.ok && result.success) {
       showStatus('success', result.message, result.rewards);
       promoInput.value = '';
-      
-      setTimeout(() => {
-        loadRecentBlessings();
-      }, 1000);
-      
+
+      setTimeout(() => loadRecentBlessings(), 1000);
     } else {
       const errorMessage = result.error || 'Failed to redeem code';
       showStatus('error', errorMessage);
       shakeInput();
     }
-    
+
   } catch (error) {
     console.error('[ALTAR] Error redeeming promo code:', error);
     showStatus('error', 'Connection failed. Please try again.');
@@ -211,12 +209,11 @@ function shakeInput() {
 
 async function loadRecentBlessings() {
   try {
-    const response = await _apiCall(`/api/supabase/rest/v1/profiles?id=eq.${_profile.id}&select=promos_used`);
+    const response = await fetch(`/api/promo/recent/${_profile.id}`);
     const profiles = await response.json();
-    
+
     if (profiles && profiles.length > 0 && profiles[0].promos_used) {
       const recentPromos = profiles[0].promos_used.slice(-3).reverse();
-      
       if (recentPromos.length > 0) {
         displayRecentBlessings(recentPromos);
       }
