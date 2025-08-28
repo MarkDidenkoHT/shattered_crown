@@ -175,6 +175,43 @@ function createMiningRowHTML(rowIndex) {
   `;
 }
 
+function getRecipeType(recipeName) {
+  if (recipeName.toLowerCase().includes('bars')) return 'bars';
+  if (recipeName.toLowerCase().includes('powder')) return 'powders';
+  return 'gems';
+}
+
+function filterRecipes(filterType) {
+  if (filterType === 'all') {
+    return miningState.recipes;
+  }
+  return miningState.recipes.filter(recipe => getRecipeType(recipe.name) === filterType);
+}
+
+function updateRecipeDisplay(filterType = 'all') {
+  const recipesContainer = document.querySelector('#available-recipes');
+  if (!recipesContainer) return;
+  
+  const filteredRecipes = filterRecipes(filterType);
+  
+  if (filteredRecipes.length === 0) {
+    recipesContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes in this category</div>';
+    return;
+  }
+  
+  recipesContainer.innerHTML = filteredRecipes.map((recipe, idx) => {
+    // Find original index for data-recipe attribute
+    const originalIndex = miningState.recipes.findIndex(r => r.name === recipe.name);
+    return `
+      <div class="recipe-card" data-recipe="${originalIndex}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
+        <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
+        <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold;">${recipe.name}</div>
+        <div class="info-icon" data-recipe="${originalIndex}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
@@ -200,7 +237,13 @@ function renderCraftingModal() {
         ${renderOresHTML()}
       </div>
       
-      <h3>Recipes</h3>
+     <h3>Recipes</h3>
+      <div style="display: flex; gap: 0.3rem; margin-bottom: 0.5rem; justify-content: center;">
+        <button id="filter-all" class="fantasy-button filter-btn active" data-filter="all" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">All</button>
+        <button id="filter-bars" class="fantasy-button filter-btn" data-filter="bars" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Bars</button>
+        <button id="filter-powders" class="fantasy-button filter-btn" data-filter="powders" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Powders</button>
+        <button id="filter-gems" class="fantasy-button filter-btn" data-filter="gems" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Gems</button>
+      </div>
       <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderRecipesHTML()}
       </div>
@@ -599,6 +642,18 @@ function setupModalEventListeners(modal) {
       showRecipeDetails(miningState.recipes[recipeIdx]);
     }
   });
+
+    const filterButtons = modal.querySelectorAll('.filter-btn');
+      filterButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          // Remove active class from all buttons
+          filterButtons.forEach(b => b.classList.remove('active'));
+          // Add active class to clicked button
+          e.target.classList.add('active');
+          // Update recipe display
+          updateRecipeDisplay(e.target.dataset.filter);
+        });
+      });
 
   craftBtn.addEventListener('click', () => {
     miningState.isCraftingStarted = true;
@@ -1359,6 +1414,25 @@ function injectMiningAnimationsCSS() {
     .aligned-center {
       box-shadow: 0 0 20px rgba(76,175,80,0.8), inset 0 0 10px rgba(76,175,80,0.3) !important;
       border-color: #4CAF50 !important;
+    }
+
+        .filter-btn {
+      background: rgba(139,69,19,0.3) !important;
+      border: 1px solid #8B4513 !important;
+      color: #FFD700 !important;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+      background: rgba(139,69,19,0.5) !important;
+      border-color: #FFD700 !important;
+    }
+
+    .filter-btn.active {
+      background: rgba(255,215,0,0.2) !important;
+      border-color: #FFD700 !important;
+      color: #8B4513 !important;
+      font-weight: bold;
     }
 
     @media (max-width: 768px) {
