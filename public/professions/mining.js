@@ -176,7 +176,7 @@ function createMiningRowHTML(rowIndex) {
 }
 
 function getRecipeType(recipeName) {
-  if (recipeName.toLowerCase().includes('bars')) return 'bars';
+  if (recipeName.toLowerCase().includes('bar')) return 'bars';
   if (recipeName.toLowerCase().includes('powder')) return 'powders';
   return 'gems';
 }
