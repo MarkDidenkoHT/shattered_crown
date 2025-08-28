@@ -78,50 +78,55 @@ export async function startCraftingSession(ctx) {
 async function batchEnrichIngredients(bankItems) {
   if (!bankItems.length) return [];
   
-  // Create a single API call for all ingredients
   const ingredientNames = bankItems.map(item => item.item);
-  const uniqueNames = [...new Set(ingredientNames)]; // Remove duplicates
-  
-  // Check cache first
+  const uniqueNames = [...new Set(ingredientNames)];
   const uncachedNames = uniqueNames.filter(name => !ingredientCache.has(name));
   
   if (uncachedNames.length > 0) {
-    // Build query for multiple ingredients using 'in' operator
-    const namesQuery = uncachedNames.map(name => encodeURIComponent(name)).join(',');
-    
     try {
-      const response = await context.apiCall(
-        `/api/supabase/rest/v1/ingridients?name=in.(${namesQuery})&select=name,properties,sprite`
-      );
-      const ingredients = await response.json();
+      const response = await fetch('/api/crafting/enrich-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemNames: uncachedNames })
+      });
+      
+      if (!response.ok) {
+        console.error('[ALCHEMY] Enrich API failed:', response.status);
+        return await fallbackEnrichIngredients(bankItems);
+      }
+
+      const { ingredientMap } = await response.json();
       
       // Cache the results
-      ingredients.forEach(ingredient => {
+      Object.values(ingredientMap).forEach(ingredient => {
         ingredientCache.set(ingredient.name, ingredient);
       });
       
     } catch (error) {
       console.warn('[ALCHEMY] Batch ingredient fetch failed, falling back to individual requests:', error);
-      // Fallback to individual requests if batch fails
       return await fallbackEnrichIngredients(bankItems);
     }
   }
   
   // Build enriched array from cache
-  const enriched = [];
-  for (const item of bankItems) {
+  return bankItems.map(item => {
     const cachedIngredient = ingredientCache.get(item.item);
     if (cachedIngredient) {
-      enriched.push({
+      return {
         name: item.item,
         amount: item.amount,
         properties: cachedIngredient.properties,
         sprite: cachedIngredient.sprite,
-      });
+      };
+    } else {
+      return {
+        name: item.item,
+        amount: item.amount,
+        properties: null,
+        sprite: 'default'
+      };
     }
-  }
-  
-  return enriched;
+  });
 }
 
 // Fallback method for individual ingredient requests (with concurrency control)
@@ -919,10 +924,14 @@ async function startSlotAnimation(resultDiv, modal) {
   const selectedHerbNames = alchemyState.selectedHerbs.map(h => h.name);
 
   try {
-    const reserveRes = await context.apiCall('/functions/v1/reserve_ingredients', 'POST', {
-      player_id: context.profile.id,
-      profession_id: alchemyState.professionId,
-      selected_ingredients: selectedHerbNames,
+    const reserveRes = await fetch('/api/crafting/reserve-alchemy-ingredients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        player_id: context.profile.id,
+        profession_id: alchemyState.professionId,
+        selected_ingredients: selectedHerbNames
+      })
     });
 
     const reserveJson = await reserveRes.json();
@@ -953,17 +962,14 @@ async function startSlotAnimation(resultDiv, modal) {
       
       const bottle = column.querySelector('.properties-bottle');
       
-      // Enhanced bottle activation effect
       gsap.to(bottle, {
         background: 'linear-gradient(to bottom, rgba(139,69,19,0.2) 0%, rgba(139,69,19,0.4) 100%)',
         duration: 0.8,
         ease: "power2.out"
       });
       
-      // Start bubbling effect
       createBubblingEffect(column);
       
-      // Animate property slots appearing
       gsap.fromTo(propertySlots, 
         { scale: 0, opacity: 0 },
         { 
@@ -977,11 +983,10 @@ async function startSlotAnimation(resultDiv, modal) {
       );
     });
 
-    // NEW: Reduce liquid to bottom third after properties are shown
     setTimeout(() => {
       reduceLiquidToBottomThird(slotArea);
       resultDiv.textContent = 'You may now apply adjustments.';
-    }, 1500); // Wait for animations to complete
+    }, 1500);
 
     alchemyState.randomizedProperties = alchemyState.enrichedHerbs.map(h => Object.values(h.properties));
     alchemyState.originalProperties = alchemyState.randomizedProperties.map(p => [...p]);
@@ -1090,7 +1095,6 @@ function createDrainingEffect(column) {
 
 async function patchAndSendCraftRequest(resultDiv) {
   try {
-    // Convert adjustment counts to the expected format
     const adjustments = [];
     for (const [colIdx, adj] of Object.entries(alchemyState.adjustments || {})) {
       if (adj.up > 0) {
@@ -1104,19 +1108,24 @@ async function patchAndSendCraftRequest(resultDiv) {
     const payload = {
       player_id: context.profile.id,
       profession_id: alchemyState.professionId,
-      session_id: alchemyState.sessionId,  // Use the session ID from server
+      session_id: alchemyState.sessionId,
       adjustments
     };
 
     console.log('[ALCHEMY] Sending craft request payload:', payload);
-    const res = await context.apiCall('/functions/v1/craft_alchemy', 'POST', payload);
+
+    // ✅ Use secure server endpoint instead of context.apiCall
+    const res = await fetch('/api/crafting/alchemy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
     const json = await res.json();
 
-    // Get button references
     const claimBtn = document.querySelector('#claim-btn');
     const finishBtn = document.querySelector('#finish-btn');
     const craftBtn = document.querySelector('#craft-btn');
-    const closeBtn = document.querySelector('.message-ok-btn');
 
     if (json.success) {
       alchemyState.result = json.crafted.name;
@@ -1124,16 +1133,14 @@ async function patchAndSendCraftRequest(resultDiv) {
         <span style="color:lime;">✅ You crafted: <strong>${json.crafted.name}</strong>!</span>
       `;
 
-      // Hide finish button, show claim button
       if (finishBtn) finishBtn.style.display = 'none';
       if (claimBtn) {
         claimBtn.style.display = 'block';
         claimBtn.disabled = false;
-        
-        // Remove any existing event listeners and add new one
+
         const newClaimBtn = claimBtn.cloneNode(true);
         claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
-        
+
         newClaimBtn.addEventListener('click', () => {
           context.displayMessage(`${json.crafted.name} added to your bank!`);
           document.querySelector('.custom-message-box')?.remove();
@@ -1147,20 +1154,17 @@ async function patchAndSendCraftRequest(resultDiv) {
         <br><small style="color:#999;">${json.message || 'No matching recipe found'}</small>
       `;
 
-      // Hide finish and claim buttons, show craft again option
       if (finishBtn) finishBtn.style.display = 'none';
       if (claimBtn) claimBtn.style.display = 'none';
-      
-      // Transform craft button into "Craft Again" button
+
       if (craftBtn) {
         craftBtn.style.display = 'block';
         craftBtn.textContent = 'Craft Again';
         craftBtn.disabled = false;
-        
-        // Remove any existing event listeners and add new one
+
         const newCraftBtn = craftBtn.cloneNode(true);
         craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-        
+
         newCraftBtn.addEventListener('click', () => {
           document.querySelector('.custom-message-box')?.remove();
           startCraftingSession(context);
@@ -1169,26 +1173,24 @@ async function patchAndSendCraftRequest(resultDiv) {
     }
   } catch (err) {
     console.error('[ALCHEMY] Server error:', err);
-    
-    // On error, show error message and enable craft again
+
     resultDiv.innerHTML = '<span style="color:red;">❌ Crafting failed. Try again later.</span>';
-    
+
     const finishBtn = document.querySelector('#finish-btn');
     const claimBtn = document.querySelector('#claim-btn');
     const craftBtn = document.querySelector('#craft-btn');
-    
+
     if (finishBtn) finishBtn.style.display = 'none';
     if (claimBtn) claimBtn.style.display = 'none';
-    
+
     if (craftBtn) {
       craftBtn.style.display = 'block';
       craftBtn.textContent = 'Try Again';
       craftBtn.disabled = false;
-      
-      // Remove any existing event listeners and add new one
+
       const newCraftBtn = craftBtn.cloneNode(true);
       craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-      
+
       newCraftBtn.addEventListener('click', () => {
         document.querySelector('.custom-message-box')?.remove();
         startCraftingSession(context);
