@@ -290,7 +290,7 @@ function renderCraftingModal() {
 // PATCH: Update renderHerbsHTML to include herb names in the slider
 function renderHerbsHTML() {
   return alchemyState.availableHerbs.map((herb, idx) => `
-    <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 3px; background: rgba(255,255,255,0.05); text-align: center; min-width: 60px;">
+    <div class="herb" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 6px; padding: 6px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 70px; text-align: center; position: relative;">
       <img src="assets/art/ingridients/${herb.sprite}.png" title="${herb.name} (${herb.amount})" style="width:48px;height:48px;">
       <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; max-width: 54px; white-space: nowrap;" title="${herb.name}">${herb.name}</div>
       <div style="font-size:0.7rem;">x${herb.amount}</div>
@@ -344,7 +344,6 @@ function findHerbsWithProperty(targetProperty) {
       }
     }
     
-    // Check if any of the herb's properties match the target property
     const hasProperty = herbProperties.some(prop => {
       return prop && prop.toString().toLowerCase().trim() === targetProperty.toLowerCase().trim();
     });
@@ -365,13 +364,11 @@ function findHerbsWithProperty(targetProperty) {
   return matchingHerbs;
 }
 
-// New function to generate ingredient matching display
 function generateIngredientMatching(recipe) {
   if (!alchemyState || !alchemyState.availableHerbs || !recipe.ingridients) {
     return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">Ingredient matching unavailable</div>';
   }
 
-  // Parse required properties from recipe
   let requiredProperties = [];
   if (Array.isArray(recipe.ingridients)) {
     requiredProperties = recipe.ingridients;
@@ -592,13 +589,10 @@ function setupModalEventListeners(modal) {
   const finishBtn = modal.querySelector('#finish-btn');
   const resultDiv = modal.querySelector('#craft-result');
   const adjustmentCounter = modal.querySelector('#adjustment-counter');
-
-    // Help modal elements
   const helpModal = modal.querySelector('#helpModal');
   const helpBtn = modal.querySelector('#helpBtn');
   const closeBtn = modal.querySelector('.help-tutorial-close-btn');
 
-  // Help modal functions
   function openHelpModal() {
     helpModal.style.display = 'flex';
     setTimeout(() => {
@@ -682,7 +676,6 @@ function setupModalEventListeners(modal) {
     }
   });
 
-  // Craft button
   craftBtn.addEventListener('click', () => {
     alchemyState.isCraftingStarted = true;
     resultDiv.textContent = 'Crafting...';
@@ -698,7 +691,6 @@ function setupModalEventListeners(modal) {
     startSlotAnimation(resultDiv, modal);
   });
 
-  // Finish button
   finishBtn.addEventListener('click', () => {
     finishBtn.disabled = true;
     patchAndSendCraftRequest(resultDiv);
@@ -724,7 +716,6 @@ function setupModalEventListeners(modal) {
   });
 }
 
-// Optimized herb selection handler
 function handleHerbSelection(herb, modal) {
   const slotIdx = alchemyState.selectedHerbs.findIndex(s => s === null);
   if (slotIdx === -1) return;
@@ -778,16 +769,10 @@ function animateBottleFill(column, herb) {
   const liquid = column.querySelector('.bottle-liquid');
   const surface = column.querySelector('.liquid-surface');
   const bottle = column.querySelector('.properties-bottle');
-  
-  // Get herb color based on name or use default
   const liquidColor = getHerbColor(herb.name);
   console.log('[DEBUG] liquidColor from getHerbColor:', liquidColor);
-  
-  // Convert rgba to rgb for adding custom alpha
   const rgbColor = liquidColor.replace('rgba(', 'rgb(').replace(/, 1\)$/, ')');
   console.log('[DEBUG] converted rgbColor:', rgbColor);
-  
-  // Create gradient with proper alpha values
   const gradient = `linear-gradient(to bottom, ${rgbColor.replace('rgb(', 'rgba(').replace(')', ', 0.6)')} 0%, ${rgbColor.replace('rgb(', 'rgba(').replace(')', ', 0.8)')} 100%)`;
   console.log('[DEBUG] final gradient:', gradient);
   
@@ -835,7 +820,6 @@ function animateBottleFill(column, herb) {
   });
 }
 
-// Animate bottle draining
 function animateBottleDrain(column) {
   const liquid = column.querySelector('.bottle-liquid');
   const surface = column.querySelector('.liquid-surface');
@@ -863,7 +847,6 @@ function animateBottleDrain(column) {
   });
 }
 
-// Create bubbling effect for active bottles - ADJUSTED FOR SMALLER BOTTLES
 function createBubblingEffect(column) {
   const bubbleContainer = column.querySelector('.bubble-container');
   
