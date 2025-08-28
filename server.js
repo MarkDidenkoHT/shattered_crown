@@ -936,8 +936,7 @@ app.get('/api/crafting/materials/:playerId/:professionId', async (req, res) => {
         }
         
         // Get bank items for the specific profession, excluding consumables
-        // We need to join with items table to filter by type
-        const bankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&profession_id=eq.${professionId}&select=item,amount,items!inner(type)&items.type=neq.Consumable`, {
+        const bankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&profession_id=eq.${professionId}&type=neq.Consumable&select=item,amount`, {
             headers: {
                 'apikey': process.env.SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
@@ -949,14 +948,8 @@ app.get('/api/crafting/materials/:playerId/:professionId', async (req, res) => {
         }
         const bankItems = await bankResponse.json();
         
-        // Clean up the response to remove the nested items data (we only used it for filtering)
-        const cleanedItems = bankItems.map(bankItem => ({
-            item: bankItem.item,
-            amount: bankItem.amount
-        }));
-        
-        // Return the cleaned bank items - let frontend handle enrichment
-        res.json(cleanedItems);
+        // Return the raw bank items - let frontend handle enrichment
+        res.json(bankItems);
         
     } catch (error) {
         console.error('[CRAFTING MATERIALS]', error);
