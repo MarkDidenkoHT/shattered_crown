@@ -1592,6 +1592,35 @@ app.get('/api/gods', async (req, res) => {
   }
 });
 
+// Get races for a specific god
+app.get('/api/races/:godId', async (req, res) => {
+  try {
+    const { godId } = req.params;
+
+    if (!godId || godId === 'null') {
+      return res.status(400).json({ error: 'Invalid or missing godId' });
+    }
+
+    const url = `${process.env.SUPABASE_URL}/rest/v1/races?god_id=eq.${godId}&select=id,name,description,base_stats`;
+    const response = await fetch(url, {
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+      }
+    });
+
+    const races = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to load races', details: races });
+    }
+
+    res.json(races);
+  } catch (error) {
+    console.error('[GET RACES]', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 
 

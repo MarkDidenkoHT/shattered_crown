@@ -1,4 +1,4 @@
-export async function loadModule(main, { getCurrentProfile, apiCall }) {
+export async function loadModule(main, { getCurrentProfile }) {
 
   let gods = [];
   console.log('Attempting to load gods from the database...');
@@ -32,7 +32,6 @@ try {
       
       <div class="art-header">
         <h1>Choose Your Deity</h1>
-        <p class="subtitle">Select the divine power that will guide your destiny</p>
       </div>
       
       <div class="god-selection-section">
@@ -152,7 +151,7 @@ try {
     }
 
     .god-info-block {
-      padding: 1.5rem;
+      padding-top: 5px;
       text-align: center;
     }
 
@@ -312,22 +311,15 @@ try {
         padding: 1.5rem;
       }
       
-      .art-header h1 {
-        font-size: 2rem;
-      }
     }
 
     .art-header {
-      height: 10%;
+      background-image: unset;
     }
 
     @media (max-width: 480px) {
       .god-slide .god-art-block {
         height: 400px;
-      }
-      
-      .god-slide .god-info-block {
-        padding: 1.25rem;
       }
       
       .god-name {

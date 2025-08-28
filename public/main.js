@@ -300,7 +300,7 @@ function addTutorialStyles() {
     .tutorial-slides {
       position: relative;
       width: 100%;
-      height: 350px;
+      height: 450px;
       overflow: hidden;
       border-radius: 8px;
       background: rgba(29, 20, 12, 0.8);

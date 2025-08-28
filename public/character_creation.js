@@ -5,12 +5,12 @@ let _profile;
 let _godId;
 let _races = [];
 let _classes = [];
-let _professions = []; // Новая переменная для хранения списка профессий
-let _currentCharacterIndex = 0; // 0-indexed for character 1, 2, 3
+let _professions = []; 
+let _currentCharacterIndex = 0;
 let _selectedRace = null;
 let _selectedClass = null;
-let _selectedSex = null; // Новая переменная для хранения выбранного пола
-let _selectedProfession = null; // Новая переменная для хранения выбранной профессии
+let _selectedSex = null;
+let _selectedProfession = null;
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
     console.log('[CHAR_CREATE] --- Starting loadModule for Character Creation ---');
@@ -72,35 +72,36 @@ async function startCharacterCreationFlow() {
 }
 
 async function fetchRacesAndRenderSelection() {
-    console.log(`[RACE_FETCH] Fetching races for God ID: ${_godId}...`);
-    try {
-        // FIX: Handle the query properly based on whether god_id is null or has a value
-        let queryUrl;
-        if (_godId && _godId !== null && _godId !== 'null') {
-            queryUrl = `/api/supabase/rest/v1/races?god_id=eq.${_godId}&select=id,name,description,base_stats`;
-        } else {
-            // If somehow we still have a null god_id, query for races without god restriction
-            // or redirect to god selection
-            console.error('[RACE_FETCH] God ID is null, redirecting to god selection');
-            window.gameAuth.loadModule('god_selection');
-            return;
-        }
-        
-        const response = await _apiCall(queryUrl);
-        _races = await response.json();
-        console.log('[RACE_FETCH] Races fetched:', _races);
-
-        if (_races.length === 0) {
-            console.warn(`[RACE_FETCH] No races found for God ID: ${_godId}.`);
-            displayMessage('No races available for your chosen deity. Please contact support.');
-            return;
-        }
-        renderRaceSelection();
-    } catch (error) {
-        console.error('[RACE_FETCH] Error fetching races:', error);
-        displayMessage('Failed to load races. Please try again.');
+  console.log(`[RACE_FETCH] Fetching races for God ID: ${_godId}...`);
+  try {
+    if (!_godId || _godId === null || _godId === 'null') {
+      console.error('[RACE_FETCH] God ID is null, redirecting to god selection');
+      window.gameAuth.loadModule('god_selection');
+      return;
     }
+
+    const response = await fetch(`/api/races/${_godId}`); // ✅ secure Express endpoint
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch races');
+    }
+
+    _races = await response.json();
+    console.log('[RACE_FETCH] Races fetched:', _races);
+
+    if (_races.length === 0) {
+      console.warn(`[RACE_FETCH] No races found for God ID: ${_godId}.`);
+      displayMessage('No races available for your chosen deity. Please contact support.');
+      return;
+    }
+
+    renderRaceSelection();
+  } catch (error) {
+    console.error('[RACE_FETCH] Error fetching races:', error);
+    displayMessage('Failed to load races. Please try again.');
+  }
 }
+
 
 function renderRaceSelection() {
     console.log(`[UI_RENDER] Rendering Race Selection for Character ${_currentCharacterIndex + 1}.`);
