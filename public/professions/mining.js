@@ -285,6 +285,7 @@ function renderOresHTML() {
   return miningState.availableOres.map((ore, idx) => `
     <div class="ore" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05);">
       <img src="assets/art/ingridients/${ore.sprite}.png" title="${ore.name} (${ore.amount})" style="width: 48px; height: 48px;">
+      <div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center; margin-top: 2px;">${ore.name}</div>
       <div style="font-size: 0.8rem;">x${ore.amount}</div>
       <div class="info-icon" data-ore="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
