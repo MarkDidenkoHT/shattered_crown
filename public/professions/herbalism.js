@@ -345,6 +345,7 @@ function renderSeedsHTML() {
     return `
       <div class="seed-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(139,69,19,0.5);">
         <img src="assets/art/ingridients/${seed.sprite}.png" title="${seed.name} (${seed.amount})" style="width:48px;height:48px;" onerror="this.src='assets/art/ingridients/default.png'">
+        <div style="font-size:0.65rem; color: #c4975a; font-weight: bold; margin-top: 2px; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${seed.name}">${seed.name}</div>
         <div style="font-size:0.8rem;">x${seed.amount}</div>
         <div class="info-icon" data-seed="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #8B4513; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
@@ -365,6 +366,7 @@ function renderFertilizersHTML() {
     return `
       <div class="fertilizer-item" data-index="${idx}" style="flex: 0 0 auto; cursor:pointer; position: relative; border-radius: 3px; padding: 2px; background: rgba(34,139,34,0.1);">
         <img src="assets/art/ingridients/${fertilizer.sprite}.png" title="${fertilizer.name} (${fertilizer.amount})" style="width:48px;height:48px;" onerror="this.src='assets/art/ingridients/default.png'">
+        <div style="font-size:0.65rem; color: #c4975a; font-weight: bold; margin-top: 2px; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fertilizer.name}">${fertilizer.name}</div>
         <div style="font-size:0.8rem; color: #FFD700;">x${fertilizer.amount}</div>
         <div class="info-icon" data-fertilizer="${idx}" style="position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; background: #228B22; border-radius: 50%; color: white; font-size: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
