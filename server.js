@@ -1536,6 +1536,61 @@ app.get('/api/characters/count/:playerId', async (req, res) => {
     }
 });
 
+app.patch('/api/profile/select-god', requireAuth, async (req, res) => {
+  try {
+    const { profileId, godId } = req.body;
+
+    if (!profileId || !godId) {
+      return res.status(400).json({ error: 'Missing profileId or godId' });
+    }
+
+    const url = `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${profileId}`;
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ selected_god: godId })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to update profile', details: data });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('[SELECT GOD]', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get list of gods (with id, name, description, image)
+app.get('/api/gods', requireAuth, async (req, res) => {
+  try {
+    const url = `${process.env.SUPABASE_URL}/rest/v1/gods?select=id,name,description,image`;
+    const response = await fetch(url, {
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+      }
+    });
+
+    const gods = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to load gods', details: gods });
+    }
+
+    res.json(gods);
+  } catch (error) {
+    console.error('[GET GODS]', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 
 

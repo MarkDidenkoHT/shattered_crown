@@ -218,12 +218,6 @@ function addBankStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        .bank-item:hover {
-            border-color: #c4975a;
-            transform: translateX(2px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        }
-
         .item-icon {
             position: relative;
             width: 48px;

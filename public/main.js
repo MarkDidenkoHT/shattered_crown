@@ -374,11 +374,6 @@ function addTutorialStyles() {
       backdrop-filter: blur(5px);
     }
 
-    .tutorial-btn:hover {
-      background: #3d2914;
-      border-color: #c4975a;
-    }
-
     .tutorial-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -397,12 +392,6 @@ function addTutorialStyles() {
       transition: all 0.3s ease;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
       box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-
-    .fantasy-button:hover {
-      background: linear-gradient(135deg, #d4a76a, #9b7924);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
     }
   `;
   document.head.appendChild(style);

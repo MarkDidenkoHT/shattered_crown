@@ -1330,10 +1330,6 @@ function injectMiningAnimationsCSS() {
       will-change: transform, box-shadow;
     }
 
-    .rock-formation:hover {
-      animation: rock-pulse 2s infinite ease-in-out;
-    }
-
     .ore-input-slot {
       will-change: transform, opacity, scale;
       transition: all 0.5s ease;
@@ -1372,21 +1368,10 @@ function injectMiningAnimationsCSS() {
       transition: all 0.2s ease;
     }
 
-    .ore:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(139,69,19,0.3);
-    }
-
     .fantasy-button:disabled {
       opacity: 0.5 !important;
       cursor: not-allowed !important;
       pointer-events: none;
-    }
-
-    .adjust-left:not(:disabled):hover,
-    .adjust-right:not(:disabled):hover {
-      background: rgba(255,215,0,0.2);
-      border-color: #FFD700;
     }
 
     .adjust-left, .adjust-right {
@@ -1400,11 +1385,6 @@ function injectMiningAnimationsCSS() {
 
     .ore-input-slot img {
       transition: all 0.3s ease;
-    }
-
-    .ore-input-slot:hover img {
-      transform: scale(1.05);
-      filter: brightness(1.1);
     }
 
     .rock-texture {
@@ -1422,11 +1402,6 @@ function injectMiningAnimationsCSS() {
       border: 1px solid #8B4513 !important;
       color: #FFD700 !important;
       transition: all 0.2s ease;
-    }
-
-    .filter-btn:hover {
-      background: rgba(139,69,19,0.5) !important;
-      border-color: #FFD700 !important;
     }
 
     .filter-btn.active {
@@ -1456,11 +1431,6 @@ function injectMiningAnimationsCSS() {
     #available-recipes::-webkit-scrollbar-thumb {
       background: rgba(139,69,19,0.5);
       border-radius: 3px;
-    }
-
-    #available-ores::-webkit-scrollbar-thumb:hover,
-    #available-recipes::-webkit-scrollbar-thumb:hover {
-      background: rgba(139,69,19,0.7);
     }
   `;
 

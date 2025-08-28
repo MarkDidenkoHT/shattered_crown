@@ -1,30 +1,33 @@
-export async function loadModule(main, { currentProfile, supabaseConfig, getCurrentProfile, apiCall }) {
-  // Console log to indicate the start of the module loading process
-  console.log('--- Starting loadModule function ---');
-  console.log('Parameters received by loadModule:', { main, supabaseConfig, getCurrentProfile, apiCall: typeof apiCall });
+export async function loadModule(main, { getCurrentProfile, apiCall }) {
 
-  // Load gods from database
   let gods = [];
   console.log('Attempting to load gods from the database...');
   try {
-    // Console log before the API call for gods - now including image column
-    console.log('Making API call to:', '/api/supabase/rest/v1/gods?select=id,name,description,image');
-    const response = await apiCall('/api/supabase/rest/v1/gods?select=id,name,description,image');
-    // Console log after successful API response
-    console.log('API call for gods successful. Response status:', response.status);
-    gods = await response.json();
-    // Console log the loaded gods data
-    console.log('Gods data loaded:', gods);
-    if (gods.length === 0) {
-      console.warn('No gods found in the database. The display might be empty.');
+  console.log('Making secure request to /api/gods...');
+  const response = await fetch('/api/gods', {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
     }
-  } catch (error) {
-    console.error('Error loading gods:', error);
-    alert('Failed to load gods. Please try again.');
-    // Console log that the module loading is aborted due to error
-    console.log('--- loadModule function aborted due to error ---');
-    return;
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to load gods');
   }
+
+  gods = await response.json();
+  console.log('Gods data loaded:', gods);
+
+  if (gods.length === 0) {
+    console.warn('No gods found in the database. The display might be empty.');
+  }
+} catch (error) {
+  console.error('Error loading gods:', error);
+  alert('Failed to load gods. Please try again.');
+  console.log('--- loadModule function aborted due to error ---');
+  return;
+}
+
 
   // Console log before rendering the HTML content
   console.log('Constructing HTML content with loaded gods data...');
@@ -139,14 +142,6 @@ export async function loadModule(main, { currentProfile, supabaseConfig, getCurr
         0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
-    .god-card:hover {
-      border-color: #c4975a;
-      transform: translateY(-2px);
-      box-shadow: 
-        inset 0 1px 0 rgba(196, 151, 90, 0.2),
-        0 4px 12px rgba(0, 0, 0, 0.4);
-    }
-
     .god-art-block {
       width: 100%;
       height: 400px;
@@ -159,10 +154,6 @@ export async function loadModule(main, { currentProfile, supabaseConfig, getCurr
       height: 100%;
       object-fit: cover;
       transition: transform 0.3s ease;
-    }
-
-    .god-card:hover .god-art {
-      transform: scale(1.05);
     }
 
     .god-info-block {
@@ -219,18 +210,6 @@ export async function loadModule(main, { currentProfile, supabaseConfig, getCurr
       height: 100%;
       background: linear-gradient(90deg, transparent, rgba(196, 151, 90, 0.1), transparent);
       transition: left 0.6s ease;
-    }
-
-    .select-god-btn:hover::before {
-      left: 100%;
-    }
-
-    .select-god-btn:hover {
-      background: linear-gradient(145deg, #3d2914, #2a1f16);
-      box-shadow: 
-        inset 0 1px 0 rgba(196, 151, 90, 0.3),
-        0 4px 8px rgba(0, 0, 0, 0.4);
-      transform: translateY(-1px);
     }
 
     .select-god-btn:active {
@@ -298,11 +277,6 @@ export async function loadModule(main, { currentProfile, supabaseConfig, getCurr
       font-weight: 600;
     }
 
-    .slider-btn:hover {
-      background: linear-gradient(145deg, #3d2914, #2a1f16);
-      transform: translateY(-1px);
-    }
-
     .slider-dots {
       display: flex;
       gap: 0.5rem;
@@ -320,10 +294,6 @@ export async function loadModule(main, { currentProfile, supabaseConfig, getCurr
 
     .slider-dot.active {
       background: #c4975a;
-      border-color: #c4975a;
-    }
-
-    .slider-dot:hover {
       border-color: #c4975a;
     }
 
@@ -388,21 +358,30 @@ export async function loadModule(main, { currentProfile, supabaseConfig, getCurr
   // Add event listeners to god selection buttons
   const selectButtons = main.querySelectorAll('.select-god-btn');
   console.log(`Found ${selectButtons.length} god selection buttons. Adding event listeners...`);
+
   selectButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       const godId = e.target.dataset.godId;
       const godName = gods.find(g => g.id == godId)?.name;
-      // Console log when a god selection button is clicked
+
       console.log(`God selection button clicked for God ID: ${godId}, Name: ${godName}`);
-      
+
       if (confirm(`Are you sure you want to choose ${godName} as your deity? This choice cannot be changed later.`)) {
-        console.log(`User confirmed selection of ${godName}. Calling selectGod function...`);
-        await selectGod(godId, godName, apiCall, getCurrentProfile);
+        console.log(`User confirmed selection of ${godName}. Calling secure selectGod function...`);
+        
+        try {
+          await selectGod(godId, godName, getCurrentProfile);
+        } catch (err) {
+          console.error('Error in god selection:', err);
+          alert('Something went wrong while selecting your deity. Please try again.');
+        }
+
       } else {
         console.log(`User cancelled selection of ${godName}.`);
       }
     });
   });
+
 
   // Add button click effects
   selectButtons.forEach(button => {
@@ -515,56 +494,49 @@ function initializeSlider() {
   console.log('--- initializeSlider function finished ---');
 }
 
-async function selectGod(godId, godName, apiCall, getCurrentProfile) {
+async function selectGod(godId, godName, getCurrentProfile) {
   console.log(`--- Starting selectGod function for God ID: ${godId}, Name: ${godName} ---`);
   try {
     // Get current profile
-    console.log('Attempting to get current user profile...');
     const profile = getCurrentProfile();
     if (!profile) {
       throw new Error('No profile found');
     }
     console.log('Current profile retrieved:', profile);
-    
-    // Update profile with selected god using the edge function
-    const requestBody = {
-      profileId: profile.id,
-      godId: godId
-    };
-    console.log(`Preparing to update profile via edge function. Request Body:`, requestBody);
 
-    const response = await apiCall('/functions/v1/updateProfile', {
+    // Call secure backend endpoint
+    const response = await fetch('/api/profile/select-god', {
       method: 'PATCH',
-      body: requestBody
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`, // session token only
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ profileId: profile.id, godId })
     });
 
-    console.log('API call to updateProfile edge function made. Response status:', response.status);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update profile');
+    }
+
     const updatedProfiles = await response.json();
-    console.log('API response for profile update:', updatedProfiles);
-    
     if (!updatedProfiles || updatedProfiles.length === 0) {
       throw new Error('Failed to update profile - no data returned');
     }
-    
-    // Update local storage with new profile data
+
+    // Save updated profile
     const updatedProfile = updatedProfiles[0];
-    console.log('Profile successfully updated in database. New profile data:', updatedProfile);
     localStorage.setItem('profile', JSON.stringify(updatedProfile));
-    console.log('Updated profile saved to local storage.');
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
-    
-    // Load character creation module using the global loadModule function
-    console.log('Attempting to load character_creation module...');
+
+    // Load character creation module
     window.gameAuth.loadModule('character_creation');
-    console.log('Character creation module load initiated.');
     
   } catch (error) {
     console.error('Error selecting god:', error);
-    
-    // Better error handling - don't destroy session for edge function errors
     if (error.message.includes('Unauthorized')) {
-      alert('Authentication error occurred. Please try refreshing the page and logging in again.');
+      alert('Authentication error. Please refresh and log in again.');
     } else {
       alert(`Failed to select god: ${error.message}. Please try again.`);
     }
@@ -572,6 +544,7 @@ async function selectGod(godId, godName, apiCall, getCurrentProfile) {
     console.log('--- selectGod function finished ---');
   }
 }
+
 
 function createParticles() {
   console.log('--- Starting createParticles function ---');

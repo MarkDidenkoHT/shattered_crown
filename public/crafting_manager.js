@@ -539,15 +539,6 @@ function injectLoadingStyles() {
       min-height: 80px;
     }
 
-    .profession-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 
-        inset 0 1px 0 rgba(196, 151, 90, 0.3),
-        0 8px 24px rgba(0, 0, 0, 0.6),
-        0 0 20px rgba(196, 151, 90, 0.2);
-      border-color: #e6b573;
-    }
-
     .card-icon {
       flex-shrink: 0;
       width: 64px;

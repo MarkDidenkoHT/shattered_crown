@@ -1146,20 +1146,6 @@ function injectHerbalismAnimationsCSS() {
       will-change: height, background;
     }
 
-    .sun-shade-toggle:hover {
-      transform: scale(1.05);
-    }
-
-    .seed-plot:hover, .fertilizer-slot:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
-    }
-
-    .seed-plot.has-seed:hover, .fertilizer-slot.has-fertilizer:hover {
-      cursor: pointer;
-      box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
-    }
-
     @keyframes seed-pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.05); }

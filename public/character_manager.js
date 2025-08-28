@@ -755,14 +755,6 @@ styleEl.textContent = `
     user-select: none;
 }
 
-.character-card:hover {
-    border-color: #c4975a;
-    transform: translateY(-3px);
-    box-shadow: 
-        inset 0 1px 0 rgba(196, 151, 90, 0.2),
-        0 8px 25px rgba(0, 0, 0, 0.4);
-}
-
 .card-top-row {
     display: flex;
     gap: 1rem;
@@ -785,10 +777,6 @@ styleEl.textContent = `
     object-fit: cover;
     transition: transform 0.3s ease;
     pointer-events: none;
-}
-
-.character-card:hover .card-art {
-    transform: scale(1.05);
 }
 
 .card-info {
@@ -872,11 +860,6 @@ styleEl.textContent = `
 
 .equipment-item {
     transition: color 0.2s ease;
-}
-
-.equipment-item:hover {
-    color: #c4975a !important;
-    text-shadow: 0 0 3px rgba(196, 151, 90, 0.3);
 }
 
 .character-actions {
@@ -1008,11 +991,6 @@ styleEl.textContent = `
     transition: all 0.2s ease;
 }
 
-.spell-card:hover {
-    transform: translateY(-2px);
-    box-shadow: inset 0 0 0 2px rgba(255,255,255,.1), inset 0 10px 20px rgba(255,255,255,.08), 0 15px 30px rgba(0,0,0,.3);
-}
-
 .spell-icon {
     font-size: 28px;
     user-select: none;
@@ -1047,10 +1025,6 @@ styleEl.textContent = `
     background: linear-gradient(180deg, #ffd7a1, #f0c47d);
     box-shadow: 0 6px 16px rgba(0,0,0,.25);
     transition: transform 0.2s ease;
-}
-
-.spellbook-close-btn:hover {
-    transform: translateY(-1px);
 }
 
 .spell-tooltip {

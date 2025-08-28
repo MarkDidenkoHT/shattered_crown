@@ -177,11 +177,6 @@ function addSettingsStyles() {
             min-width: 120px;
         }
 
-        .language-btn:hover {
-            background: #3d2914;
-            border-color: #c4975a;
-        }
-
         .language-btn.active {
             background: linear-gradient(135deg, #c4975a, #8b6914);
             border-color: #c4975a;

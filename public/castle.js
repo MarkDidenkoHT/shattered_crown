@@ -147,7 +147,6 @@ function setupInteractions() {
     _main.querySelectorAll('.building-hotspot').forEach(hotspot => {
         hotspot.addEventListener('mouseenter', (e) => {
             const building = e.target.dataset.building;
-            console.log(`[CASTLE_INTERACTION] Hovering over: ${building}`);
             // Add a class to light up the building visually
             e.target.classList.add('highlight');
             // Maybe show a tooltip with building name
@@ -368,7 +367,7 @@ function addCastleStyles() {
         }
 
         .building-hotspot.highlight {
-            background-color: rgba(255, 215, 0, 0.2); /* Gold highlight on hover */
+            background-color: rgba(255, 215, 0, 0.2);
             border-color: #c4975a; /* Gold border */
             box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); /* Glowing effect */
         }
@@ -543,11 +542,6 @@ function addCastleStyles() {
             transition: background-color 0.3s ease, transform 0.2s ease;
         }
 
-        .roadmap-close-btn:hover {
-            background-color: rgba(196, 151, 90, 0.2);
-            transform: rotate(90deg);
-        }
-
         .roadmap-body {
             max-height: 50vh;
             overflow-y: auto;
@@ -568,10 +562,6 @@ function addCastleStyles() {
             border-radius: 4px;
         }
 
-        .roadmap-body::-webkit-scrollbar-thumb:hover {
-            background: #d4a76a;
-        }
-
         .roadmap-item {
             display: flex;
             align-items: center;
@@ -581,11 +571,6 @@ function addCastleStyles() {
             border-radius: 8px;
             border-left: 4px solid #c4975a;
             transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .roadmap-item:hover {
-            background: rgba(42, 31, 22, 0.8);
-            transform: translateX(5px);
         }
 
         .roadmap-date {
