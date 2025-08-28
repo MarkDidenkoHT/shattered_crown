@@ -1502,7 +1502,39 @@ app.patch('/api/profile/language/:playerId', async (req, res) => {
     }
 });
 
+// Get character count for a player
+app.get('/api/characters/count/:playerId', async (req, res) => {
+    try {
+        const { playerId } = req.params;
 
+        if (!playerId) {
+            return res.status(400).json({ error: 'Missing playerId' });
+        }
+
+        const response = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${playerId}&select=id`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('[CHARACTERS COUNT] Supabase error:', text);
+            return res.status(response.status).json({ error: 'Failed to fetch character count' });
+        }
+
+        const characters = await response.json();
+        res.json({ count: characters.length });
+
+    } catch (error) {
+        console.error('[CHARACTERS COUNT]', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 
 
