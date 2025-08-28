@@ -17,7 +17,71 @@ let _battleId = null;
 let _unsubscribeFromBattle = null;
 let _isProcessingAITurn = false;
 
-import { initCharacterData } from './character_data.js';
+// Integrated character data functions
+async function loadPlayerCharacters(playerId, spawnPositions = []) {
+    const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${playerId}&select=*`);
+    const rows = await response.json();
+    const formatted = rows.map((raw, index) => {
+        const char = formatCharacter(raw);
+        char.position = spawnPositions[index] || null;
+        return char;
+    });
+    return formatted;
+}
+
+async function loadEnemiesByNames(names = [], spawnPositions = []) {
+    if (names.length === 0) return [];
+    // Get unique names for the API call
+    const uniqueNames = [...new Set(names)];
+    const filter = uniqueNames.map(n => `name.eq.${n}`).join(',');
+    const response = await _apiCall(`/api/supabase/rest/v1/enemies?select=*&or=(${filter})`);
+    
+    if (!response.ok) throw new Error(`Failed to fetch enemies. Status: ${response.status}`);
+    const rows = await response.json();
+    // Create a lookup map for faster enemy data retrieval
+    const enemyLookup = {};
+    rows.forEach(enemy => {
+        enemyLookup[enemy.name] = enemy;
+    });
+    // Process enemies in the original order from the names array
+    const result = [];
+    names.forEach((name, index) => {
+        const enemyData = enemyLookup[name];
+        if (!enemyData) {
+            console.warn(`Enemy '${name}' not found in database`);
+            return;
+        }
+        const instance = formatCharacter(enemyData);
+        // Assign position based on the original index, not result.length
+        instance.position = spawnPositions[index] || null;
+        result.push(instance);
+    });
+    return result;
+}
+
+function formatCharacter(raw) {
+    const rawStats = typeof raw.stats === 'string' ? JSON.parse(raw.stats) : raw.stats;
+    const stats = {};
+    for (const [key, value] of Object.entries(rawStats)) {
+        stats[key.toLowerCase()] = value;
+    }
+    const maxHp = stats.vitality * 10;
+    return {
+        id: raw.id,
+        name: raw.name,
+        type: raw.player_id ? 'player' : 'enemy',
+        spriteName: raw.sprite_name,
+        position: null,
+        stats: {
+            ...stats,
+            hp: maxHp,
+            maxHp: maxHp
+        },
+        abilities: typeof raw.learned_abilities === 'string'
+            ? JSON.parse(raw.learned_abilities)
+            : raw.learned_abilities || []
+    };
+}
 
 function getSupabaseClient(config) {
     if (_supabaseClient) {
@@ -47,8 +111,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         window.gameAuth.loadModule('login');
         return;
     }
-
-    initCharacterData(_apiCall, _profile);
 
     if (!selectedMode) {
         displayMessage('No mode selected. Returning to embark.');
@@ -126,10 +188,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     updateGameStateFromRealtime();
 }
 
-/**
- * Updates the game state from the latest data received from Supabase.
- * This is the main function that processes server-side changes.
- */
 function updateGameStateFromRealtime() {
     if (!_battleState) return;
 
@@ -205,9 +263,6 @@ function updateGameStateFromRealtime() {
     updateCharacterAvailability(currentTurn);
 }
 
-/**
- * Updates the turn display in the UI
- */
 function updateTurnDisplay(currentTurn, roundNumber) {
     const turnStatusEl = document.getElementById('turnStatus');
     if (turnStatusEl) {
@@ -230,9 +285,6 @@ function updateTurnDisplay(currentTurn, roundNumber) {
     }
 }
 
-/**
- * Updates which characters can be selected based on current turn
- */
 function updateCharacterAvailability(currentTurn) {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -264,9 +316,6 @@ function updateCharacterAvailability(currentTurn) {
     });
 }
 
-/**
- * Handles automatic AI turn processing
- */
 async function handleAITurn() {
     if (_isProcessingAITurn) return;
     
@@ -406,9 +455,6 @@ function renderBattleGrid(layoutJson) {
     container.appendChild(table);
 }
 
-/**
- * Renders the character tokens on the grid, including HP bars and turn indicators.
- */
 function renderCharacters() {
     const container = _main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -1005,9 +1051,6 @@ function displayMessage(msg, type = 'info') {
     }
 }
 
-/**
- * Checks if the battle has ended (victory/defeat conditions)
- */
 function checkBattleEnd() {
     if (!_characters || _characters.length === 0) return false;
     
@@ -1033,19 +1076,14 @@ function checkBattleEnd() {
     return false;
 }
 
-/**
- * Clean up function called when module is unloaded
- */
 export function cleanup() {
     console.log('[BATTLE] Cleaning up battle manager...');
     
-    // Unsubscribe from real-time updates
     if (_unsubscribeFromBattle && _supabaseClient) {
         _supabaseClient.removeChannel(_unsubscribeFromBattle);
         _unsubscribeFromBattle = null;
     }
     
-    // Reset all state variables
     _battleState = null;
     _battleId = null;
     _characters = [];
@@ -1054,10 +1092,8 @@ export function cleanup() {
     _currentTurnCharacter = null;
     _isProcessingAITurn = false;
     
-    // Clear highlights
     unhighlightAllTiles();
     
-    // Remove any existing messages
     const existingMessage = document.querySelector('.custom-message-box');
     if (existingMessage) {
         existingMessage.remove();
