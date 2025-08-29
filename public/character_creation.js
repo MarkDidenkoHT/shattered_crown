@@ -11,28 +11,33 @@ let _selectedRace = null;
 let _selectedClass = null;
 let _selectedSex = null;
 let _selectedProfession = null;
-let _usedProfessions = []; // Track used professions
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
+    console.log('[CHAR_CREATE] --- Starting loadModule for Character Creation ---');
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
 
     _profile = _getCurrentProfile();
     if (!_profile) {
+        console.error('[CHAR_CREATE] No profile found. Cannot proceed with character creation.');
         displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login');
+        window.gameAuth.loadModule('login'); // Redirect to login if no profile
         return;
     }
     
-    _godId = _profile.god;
+    _godId = _profile.god; // The god selected in the previous step
+    console.log('[CHAR_CREATE] Profile loaded:', _profile);
+    console.log('[CHAR_CREATE] Selected God ID:', _godId);
 
     if (!_godId || _godId === null || _godId === 'null') {
+        console.error('[CHAR_CREATE] No god selected or invalid god_id. Redirecting to god selection.');
         displayMessage('Please select a deity first.');
         window.gameAuth.loadModule('god_selection');
         return;
     }
 
+    // Ensure the main container is ready for content
     _main.innerHTML = `
         <div class="main-app-container">
             <div class="particles"></div>
@@ -42,18 +47,22 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 
     addCharacterCreationStyles();
     createParticles();
+
     await startCharacterCreationFlow();
+    console.log('[CHAR_CREATE] --- loadModule for Character Creation finished ---');
 }
 
 async function startCharacterCreationFlow() {
-    _selectedRace = null;
+    console.log(`[CHAR_CREATE_FLOW] Starting flow for Character ${_currentCharacterIndex + 1} of 3.`);
+    _selectedRace = null; // Reset selections for new character
     _selectedClass = null;
-    _selectedSex = null;
-    _selectedProfession = null;
+    _selectedSex = null; // Сброс выбранного пола
+    _selectedProfession = null; // Сброс выбранной профессии
 
     if (_currentCharacterIndex >= 3) {
+        console.log('[CHAR_CREATE_FLOW] All 3 characters created. Loading castle module.');
         displayMessage('All your champions are ready! Entering the Castle...');
-        window.gameAuth.loadModule('castle');
+        window.gameAuth.loadModule('castle'); // Proceed to castle module
         return;
     }
 
@@ -61,94 +70,130 @@ async function startCharacterCreationFlow() {
 }
 
 async function fetchRacesAndRenderSelection() {
-    try {
-        if (!_godId || _godId === null || _godId === 'null') {
-            window.gameAuth.loadModule('god_selection');
-            return;
-        }
-
-        const response = await fetch(`/api/races/${_godId}`);
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to fetch races');
-        }
-
-        _races = await response.json();
-
-        if (_races.length === 0) {
-            displayMessage('No races available for your chosen deity. Please contact support.');
-            return;
-        }
-
-        renderRaceSelection();
-    } catch (error) {
-        displayMessage('Failed to load races. Please try again.');
+  console.log(`[RACE_FETCH] Fetching races for God ID: ${_godId}...`);
+  try {
+    if (!_godId || _godId === null || _godId === 'null') {
+      console.error('[RACE_FETCH] God ID is null, redirecting to god selection');
+      window.gameAuth.loadModule('god_selection');
+      return;
     }
+
+    const response = await fetch(`/api/races/${_godId}`); // ✅ secure Express endpoint
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch races');
+    }
+
+    _races = await response.json();
+    console.log('[RACE_FETCH] Races fetched:', _races);
+
+    if (_races.length === 0) {
+      console.warn(`[RACE_FETCH] No races found for God ID: ${_godId}.`);
+      displayMessage('No races available for your chosen deity. Please contact support.');
+      return;
+    }
+
+    renderRaceSelection();
+  } catch (error) {
+    console.error('[RACE_FETCH] Error fetching races:', error);
+    displayMessage('Failed to load races. Please try again.');
+  }
 }
 
+
 function renderRaceSelection() {
+    console.log(`[UI_RENDER] Rendering Race Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
-        <div class="mobile-header">
-            <h1>Champion ${_currentCharacterIndex + 1} of 3</h1>
-            <h2>Choose Race</h2>
-            <p>Select your champion's lineage</p>
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Race</h1>
+            <p class="subtitle">Select the lineage that defines your champion's innate strengths.</p>
         </div>
-        
-        <div class="mobile-slider">
-            <div class="slider-container">
-                <div class="slider-track" style="transform: translateX(0%)">
-                    ${_races.map((race, index) => `
-                        <div class="mobile-card" data-id="${race.id}" data-type="race">
-                            <div class="card-image">
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    ${_races.map(race => `
+                        <div class="selection-card" data-id="${race.id}" data-type="race">
+                            <div class="card-art-block">
                                 <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${race.name}" 
-                                    class="race-art">
+                                    class="card-art">
                             </div>
-                            <div class="card-content">
-                                <h3>${race.name}</h3>
-                                <p class="description">${race.description}</p>
-                                <div class="stats">
-                                    <h4>Base Stats</h4>
-                                    <div class="stats-grid">
-                                        ${Object.entries(race.base_stats).map(([stat, value]) => `
-                                            <div class="stat-item">
-                                                <span class="stat-name">${stat}</span>
-                                                <span class="stat-value">${value}</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">${race.name}</h3>
+                                <p class="card-description">${race.description}</p>
+                                <div class="stats-block">
+                                    <h4>Base Stats:</h4>
+                                    ${Object.entries(race.base_stats).map(([stat, value]) => `
+                                        <p>${stat}: <span>${value}</span></p>
+                                    `).join('')}
                                 </div>
-                                <button class="select-button" data-id="${race.id}" data-type="race">
-                                    Select ${race.name}
-                                </button>
+                                <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
                             </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
-            
-            <div class="slider-nav">
-                <button class="nav-btn prev-btn">‹</button>
-                <div class="dots">
-                    ${_races.map((_, index) => `
-                        <button class="dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                    `).join('')}
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        ${_races.map((race, index) => `
+                            <div class="selection-slide" data-id="${race.id}" data-type="race">
+                                <div class="card-art-block">
+                                    <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                            alt="${race.name}" 
+                                            class="card-art">
+                                </div>
+                                <div class="card-info-block">
+                                    <h3 class="card-name">${race.name}</h3>
+                                    <p class="card-description">${race.description}</p>
+                                    <div class="stats-block">
+                                        <h4>Base Stats:</h4>
+                                        ${Object.entries(race.base_stats).map(([stat, value]) => `
+                                            <p>${stat}: <span>${value}</span></p>
+                                        `).join('')}
+                                    </div>
+                                    <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
-                <button class="nav-btn next-btn">›</button>
+                
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        ${_races.map((_, index) => `
+                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                        `).join('')}
+                    </div>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                </div>
             </div>
         </div>
     `;
 
-    initializeMobileSlider();
-    addRaceSelectionListeners();
+    // Initialize slider if on mobile
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    // Add event listeners to selection buttons
+    section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const raceId = parseInt(e.target.dataset.id);
+            console.log(`[UI_EVENT] Race selected: ID ${raceId}`);
+            handleRaceSelection(raceId);
+        });
+    });
 }
 
-function initializeMobileSlider() {
+function initializeSelectionSlider() {
     const sliderTrack = _main.querySelector('.slider-track');
     const prevBtn = _main.querySelector('.prev-btn');
     const nextBtn = _main.querySelector('.next-btn');
-    const dots = _main.querySelectorAll('.dot');
+    const dots = _main.querySelectorAll('.slider-dot');
     
     if (!sliderTrack || !prevBtn || !nextBtn) return;
     
@@ -159,6 +204,7 @@ function initializeMobileSlider() {
         const translateX = -currentSlide * 100;
         sliderTrack.style.transform = `translateX(${translateX}%)`;
         
+        // Update dots
         dots.forEach((dot, index) => {
             dot.classList.toggle('active', index === currentSlide);
         });
@@ -174,6 +220,7 @@ function initializeMobileSlider() {
         updateSlider();
     }
     
+    // Event listeners
     nextBtn.addEventListener('click', nextSlide);
     prevBtn.addEventListener('click', prevSlide);
     
@@ -184,7 +231,7 @@ function initializeMobileSlider() {
         });
     });
     
-    // Touch support
+    // Touch/swipe support
     let startX = 0;
     let isDragging = false;
     
@@ -215,175 +262,264 @@ function initializeMobileSlider() {
     });
 }
 
-function addRaceSelectionListeners() {
-    const section = _main.querySelector('.character-creation-section');
-    section.querySelectorAll('.select-button[data-type="race"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const raceId = parseInt(e.target.dataset.id);
-            handleRaceSelection(raceId);
-        });
-    });
-}
-
 async function handleRaceSelection(raceId) {
     _selectedRace = _races.find(r => r.id === raceId);
     if (!_selectedRace) {
+        console.error(`[RACE_SELECT] Selected race with ID ${raceId} not found.`);
         displayMessage('Selected race not found. Please try again.');
         return;
     }
+    console.log('[RACE_SELECT] Selected Race:', _selectedRace);
+
+    // After race selection, render sex selection
     renderSexSelection();
 }
 
+// --- Новые функции для выбора пола и профессий ---
+
 function renderSexSelection() {
+    console.log(`[UI_RENDER] Rendering Sex Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
-        <div class="mobile-header">
-            <h1>Champion ${_currentCharacterIndex + 1} of 3</h1>
-            <h2>Choose Gender</h2>
-            <p>Selected: ${_selectedRace.name}</p>
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Sex</h1>
+            <p class="subtitle">Decide the gender of your champion.</p>
         </div>
-        
-        <div class="gender-selection">
-            <div class="gender-options">
-                <div class="gender-card" data-sex="male">
-                    <div class="gender-image">
-                        <img src="assets/art/sex/male.png" alt="Male">
+        <div class="selected-race-summary">
+            <h3>Selected Race: ${_selectedRace.name}</h3>
+            <p>${_selectedRace.description}</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    <div class="selection-card" data-sex="male">
+                        <div class="card-art-block">
+                            <img src="assets/art/sex/male.png" 
+                                alt="Male" 
+                                class="card-art">
+                        </div>
+                        <div class="card-info-block">
+                            <h3 class="card-name">Male</h3>
+                            <p class="card-description">Strength and fortitude define this path.</p>
+                            <button class="fantasy-button select-btn" data-sex="male" data-type="sex">Select Male</button>
+                        </div>
                     </div>
-                    <h3>Male</h3>
-                    <p>Strength and fortitude</p>
-                    <button class="select-button" data-sex="male" data-type="sex">Select Male</button>
+                    <div class="selection-card" data-sex="female">
+                        <div class="card-art-block">
+                            <img src="assets/art/sex/female.png" 
+                                alt="Female" 
+                                class="card-art">
+                        </div>
+                        <div class="card-info-block">
+                            <h3 class="card-name">Female</h3>
+                            <p class="card-description">Grace and wisdom guide this journey.</p>
+                            <button class="fantasy-button select-btn" data-sex="female" data-type="sex">Select Female</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        <div class="selection-slide" data-sex="male">
+                            <div class="card-art-block">
+                                <img src="assets/art/sex/male.png" 
+                                    alt="Male" 
+                                    class="card-art">
+                            </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">Male</h3>
+                                <p class="card-description">Strength and fortitude define this path.</p>
+                                <button class="fantasy-button select-btn" data-sex="male" data-type="sex">Select Male</button>
+                            </div>
+                        </div>
+                        <div class="selection-slide" data-sex="female">
+                            <div class="card-art-block">
+                                <img src="assets/art/sex/female.png" 
+                                    alt="Female" 
+                                    class="card-art">
+                            </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">Female</h3>
+                                <p class="card-description">Grace and wisdom guide this journey.</p>
+                                <button class="fantasy-button select-btn" data-sex="female" data-type="sex">Select Female</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="gender-card" data-sex="female">
-                    <div class="gender-image">
-                        <img src="assets/art/sex/female.png" alt="Female">
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        <button class="slider-dot active" data-slide="0"></button>
+                        <button class="slider-dot" data-slide="1"></button>
                     </div>
-                    <h3>Female</h3>
-                    <p>Grace and wisdom</p>
-                    <button class="select-button" data-sex="female" data-type="sex">Select Female</button>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
                 </div>
             </div>
         </div>
-        
-        <div class="navigation-buttons">
-            <button class="back-button">← Back</button>
+        <div class="confirm-return-buttons">
+            <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
-    section.querySelectorAll('.select-button[data-type="sex"]').forEach(button => {
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    section.querySelectorAll('.select-btn[data-type="sex"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const sex = e.target.dataset.sex;
+            console.log(`[UI_EVENT] Sex selected: ${sex}`);
             handleSexSelection(sex);
         });
     });
 
-    section.querySelector('.back-button').addEventListener('click', () => {
-        _selectedSex = null;
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        console.log('[UI_EVENT] Return to Race Selection clicked from sex selection.');
+        _selectedSex = null; // Clear sex selection
         renderRaceSelection();
     });
 }
 
 function handleSexSelection(sex) {
     _selectedSex = sex;
+    console.log('[SEX_SELECT] Selected Sex:', _selectedSex);
+    // After sex selection, fetch classes
     fetchClassesAndRenderSelection();
 }
 
 async function fetchClassesAndRenderSelection() {
+    console.log(`[CLASS_FETCH] Fetching classes for Race ID: ${_selectedRace.id}...`);
     try {
         const response = await _apiCall(`/api/supabase/rest/v1/classes?race_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
         _classes = await response.json();
+        console.log('[CLASS_FETCH] Classes fetched:', _classes);
 
         if (_classes.length === 0) {
+            console.warn(`[CLASS_FETCH] No classes found for Race ID: ${_selectedRace.id}.`);
             displayMessage('No classes available for this race. Please select another race.');
-            _selectedRace = null;
+            _selectedRace = null; // Allow re-selection of race
             renderRaceSelection();
             return;
         }
         renderClassSelection();
     } catch (error) {
+        console.error('[CLASS_FETCH] Error fetching classes:', error);
         displayMessage('Failed to load classes. Please try again.');
-        _selectedRace = null;
+        _selectedRace = null; // Allow re-selection of race
         renderRaceSelection();
     }
 }
 
 function renderClassSelection() {
+    console.log(`[UI_RENDER] Rendering Class Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
-        <div class="mobile-header">
-            <h1>Champion ${_currentCharacterIndex + 1} of 3</h1>
-            <h2>Choose Class</h2>
-            <p>${_selectedSex} ${_selectedRace.name}</p>
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Class</h1>
+            <p class="subtitle">Embrace a discipline that complements your race's heritage.</p>
         </div>
-        
-        <div class="mobile-slider">
-            <div class="slider-container">
-                <div class="slider-track" style="transform: translateX(0%)">
-                    ${_classes.map((cls, index) => `
-                        <div class="mobile-card" data-id="${cls.id}" data-type="class">
-                            <div class="card-image">
+        <div class="selected-race-summary">
+            <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
+            <p>${_selectedRace.description}</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    ${_classes.map(cls => `
+                        <div class="selection-card" data-id="${cls.id}" data-type="class">
+                            <div class="card-art-block">
                                 <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${cls.name}" 
-                                    class="class-art">
+                                    class="card-art">
                             </div>
-                            <div class="card-content">
-                                <h3>${cls.name}</h3>
-                                <p class="description">${cls.description}</p>
-                                <div class="stats">
-                                    <h4>Stat Bonuses</h4>
-                                    <div class="stats-grid">
-                                        ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
-                                            <div class="stat-item">
-                                                <span class="stat-name">${stat}</span>
-                                                <span class="stat-value">+${value}</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
+                            <div class="card-info-block">
+                                <h3 class="card-name">${cls.name}</h3>
+                                <p class="card-description">${cls.description}</p>
+                                <div class="stats-block">
+                                    <h4>Stat Bonuses:</h4>
+                                    ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
+                                        <p>${stat}: <span>+${value}</span></p>
+                                    `).join('')}
                                 </div>
-                                <div class="abilities">
-                                    <h4>Starting Abilities</h4>
-                                    <div class="ability-list">
-                                        ${cls.starting_abilities.map(ability => `
-                                            <span class="ability-tag">${ability}</span>
-                                        `).join('')}
-                                    </div>
+                                <div class="abilities-block">
+                                    <h4>Starting Abilities:</h4>
+                                    <ul>
+                                        ${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
+                                    </ul>
                                 </div>
-                                <button class="select-button" data-id="${cls.id}" data-type="class">
-                                    Select ${cls.name}
-                                </button>
+                                <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
                             </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
-            
-            <div class="slider-nav">
-                <button class="nav-btn prev-btn">‹</button>
-                <div class="dots">
-                    ${_classes.map((_, index) => `
-                        <button class="dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                    `).join('')}
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        ${_classes.map((cls, index) => `
+                            <div class="selection-slide" data-id="${cls.id}" data-type="class">
+                                <div class="card-art-block">
+                                    <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                            alt="${cls.name}" 
+                                            class="card-art">
+                                </div>
+                                <div class="card-info-block">
+                                    <h3 class="card-name">${cls.name}</h3>
+                                    <p class="card-description">${cls.description}</p>
+                                    <div class="stats-block">
+                                        <h4>Stat Bonuses:</h4>
+                                        ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
+                                            <p>${stat}: <span>+${value}</span></p>
+                                        `).join('')}
+                                    </div>
+                                    <div class="abilities-block">
+                                        <h4>Starting Abilities:</h4>
+                                        <ul>
+                                            ${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                    <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
-                <button class="nav-btn next-btn">›</button>
+                
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        ${_classes.map((_, index) => `
+                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                        `).join('')}
+                    </div>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                </div>
             </div>
         </div>
-        
-        <div class="navigation-buttons">
-            <button class="back-button">← Back</button>
+        <div class="confirm-return-buttons">
+            <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
-    initializeMobileSlider();
-    
-    section.querySelectorAll('.select-button[data-type="class"]').forEach(button => {
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    section.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const classId = parseInt(e.target.dataset.id);
+            console.log(`[UI_EVENT] Class selected: ID ${classId}`);
             handleClassSelection(classId);
         });
     });
 
-    section.querySelector('.back-button').addEventListener('click', () => {
-        _selectedClass = null;
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        console.log('[UI_EVENT] Return to Sex Selection clicked from class selection.');
+        _selectedClass = null; // Clear class selection
         renderSexSelection();
     });
 }
@@ -391,97 +527,121 @@ function renderClassSelection() {
 function handleClassSelection(classId) {
     _selectedClass = _classes.find(c => c.id === classId);
     if (!_selectedClass) {
+        console.error(`[CLASS_SELECT] Selected class with ID ${classId} not found.`);
         displayMessage('Selected class not found. Please try again.');
         return;
     }
+    console.log('[CLASS_SELECT] Selected Class:', _selectedClass);
+    // After class selection, fetch professions
     fetchProfessionsAndRenderSelection();
 }
 
+
 async function fetchProfessionsAndRenderSelection() {
+    console.log('[PROFESSION_FETCH] Fetching professions...');
     try {
         const response = await _apiCall(`/api/supabase/rest/v1/professions?select=id,name,description`);
         _professions = await response.json();
+        console.log('[PROFESSION_FETCH] Professions fetched:', _professions);
 
         if (_professions.length === 0) {
+            console.warn('[PROFESSION_FETCH] No professions found.');
             displayMessage('No professions available. Please contact support.');
-            renderClassSelection();
+            renderClassSelection(); // Allow re-selection of class
             return;
         }
         renderProfessionSelection();
     } catch (error) {
+        console.error('[PROFESSION_FETCH] Error fetching professions:', error);
         displayMessage('Failed to load professions. Please try again.');
-        renderClassSelection();
+        renderClassSelection(); // Allow re-selection of class
     }
 }
 
 function renderProfessionSelection() {
-    // Filter out already used professions
-    const availableProfessions = _professions.filter(prof => !_usedProfessions.includes(prof.id));
-    
-    if (availableProfessions.length === 0) {
-        displayMessage('All professions have been selected. Please contact support.');
-        renderClassSelection();
-        return;
-    }
-
+    console.log(`[UI_RENDER] Rendering Profession Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
-        <div class="mobile-header">
-            <h1>Champion ${_currentCharacterIndex + 1} of 3</h1>
-            <h2>Choose Profession</h2>
-            <p>${_selectedSex} ${_selectedRace.name} ${_selectedClass.name}</p>
-            ${_usedProfessions.length > 0 ? `<p class="used-notice">Used: ${_usedProfessions.length} profession${_usedProfessions.length > 1 ? 's' : ''}</p>` : ''}
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Profession</h1>
+            <p class="subtitle">Select a profession that defines your champion's skills and trade.</p>
         </div>
-        
-        <div class="mobile-slider">
-            <div class="slider-container">
-                <div class="slider-track" style="transform: translateX(0%)">
-                    ${availableProfessions.map((profession, index) => `
-                        <div class="mobile-card profession-card" data-id="${profession.id}" data-type="profession">
-                            <div class="card-image">
+        <div class="selected-race-summary">
+            <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
+            <p><strong>Class:</strong> ${_selectedClass.name}</p>
+            <p>${_selectedClass.description}</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-container desktop-view">
+                <div class="selection-grid">
+                    ${_professions.map(profession => `
+                        <div class="selection-card" data-id="${profession.id}" data-type="profession">
+                            <div class="card-art-block">
                                 <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                                     alt="${profession.name}" 
-                                    class="profession-art">
+                                    class="card-art">
                             </div>
-                            <div class="card-content">
-                                <h3>${profession.name}</h3>
-                                <p class="description">${profession.description}</p>
-                                <button class="select-button" data-id="${profession.id}" data-type="profession">
-                                    Select ${profession.name}
-                                </button>
+                            <div class="card-info-block">
+                                <h3 class="card-name">${profession.name}</h3>
+                                <p class="card-description">${profession.description}</p>
+                                <button class="fantasy-button select-btn" data-id="${profession.id}" data-type="profession">Select ${profession.name}</button>
                             </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
-            
-            <div class="slider-nav">
-                <button class="nav-btn prev-btn">‹</button>
-                <div class="dots">
-                    ${availableProfessions.map((_, index) => `
-                        <button class="dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                    `).join('')}
+
+            <div class="selection-slider mobile-view">
+                <div class="slider-container">
+                    <div class="slider-track" style="transform: translateX(0%)">
+                        ${_professions.map((profession, index) => `
+                            <div class="selection-slide" data-id="${profession.id}" data-type="profession">
+                                <div class="card-art-block">
+                                    <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                                            alt="${profession.name}" 
+                                            class="card-art">
+                                </div>
+                                <div class="card-info-block">
+                                    <h3 class="card-name">${profession.name}</h3>
+                                    <p class="card-description">${profession.description}</p>
+                                    <button class="fantasy-button select-btn" data-id="${profession.id}" data-type="profession">Select ${profession.name}</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
-                <button class="nav-btn next-btn">›</button>
+                
+                <div class="slider-controls">
+                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
+                    <div class="slider-dots">
+                        ${_professions.map((_, index) => `
+                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                        `).join('')}
+                    </div>
+                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                </div>
             </div>
         </div>
-        
-        <div class="navigation-buttons">
-            <button class="back-button">← Back</button>
+        <div class="confirm-return-buttons">
+            <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
-    initializeMobileSlider();
-    
-    section.querySelectorAll('.select-button[data-type="profession"]').forEach(button => {
+    if (window.innerWidth <= 768) {
+        initializeSelectionSlider();
+    }
+
+    section.querySelectorAll('.select-btn[data-type="profession"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const professionId = parseInt(e.target.dataset.id);
+            console.log(`[UI_EVENT] Profession selected: ID ${professionId}`);
             handleProfessionSelection(professionId);
         });
     });
 
-    section.querySelector('.back-button').addEventListener('click', () => {
-        _selectedProfession = null;
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        console.log('[UI_EVENT] Return to Class Selection clicked from profession selection.');
+        _selectedProfession = null; // Clear profession selection
         renderClassSelection();
     });
 }
@@ -489,103 +649,113 @@ function renderProfessionSelection() {
 function handleProfessionSelection(professionId) {
     _selectedProfession = _professions.find(p => p.id === professionId);
     if (!_selectedProfession) {
+        console.error(`[PROFESSION_SELECT] Selected profession with ID ${professionId} not found.`);
         displayMessage('Selected profession not found. Please try again.');
         return;
     }
+    console.log('[PROFESSION_SELECT] Selected Profession:', _selectedProfession);
     renderCharacterSummary();
 }
 
 function renderCharacterSummary() {
+    console.log(`[UI_RENDER] Rendering Character Summary for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
 
     section.innerHTML = `
-        <div class="mobile-header">
-            <h1>Champion ${_currentCharacterIndex + 1} of 3</h1>
-            <h2>Summary</h2>
-            <p>Review your champion</p>
+        <div class="art-header">
+            <h1>Character ${_currentCharacterIndex + 1} of 3: Summary</h1>
+            <p class="subtitle">Review your champion's destiny before it is sealed.</p>
         </div>
-        
         <div class="summary-card">
-            <div class="summary-image">
+            <div class="summary-art-block">
                 <img src="assets/art/characters/${_selectedRace.name.toLowerCase().replace(/\s+/g, '_')}_${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}.png" 
                     alt="${_selectedRace.name} ${_selectedClass.name}" 
-                    class="champion-art">
+                    class="summary-art">
             </div>
-            
-            <div class="summary-content">
-                <h3>${_selectedSex === 'male' ? 'Male' : 'Female'} ${_selectedRace.name} ${_selectedClass.name}</h3>
-                
-                <div class="summary-section">
-                    <h4>Profession</h4>
-                    <p><strong>${_selectedProfession.name}</strong></p>
-                    <p class="small">${_selectedProfession.description}</p>
+            <div class="summary-info-block">
+                <h2>${_selectedSex === 'male' ? 'Male' : 'Female'} ${_selectedRace.name} ${_selectedClass.name}</h2>
+                <p><strong>Race Description:</strong> ${_selectedRace.description}</p>
+                <p><strong>Class Description:</strong> ${_selectedClass.description}</p>
+                <p><strong>Profession:</strong> ${_selectedProfession.name} - ${_selectedProfession.description}</p>
+                <div class="stats-block">
+                    <h4>Final Stats:</h4>
+                    ${Object.entries(finalStats).map(([stat, value]) => `
+                        <p>${stat}: <span>${value}</span></p>
+                    `).join('')}
                 </div>
-                
-                <div class="summary-section">
-                    <h4>Final Stats</h4>
-                    <div class="final-stats">
-                        ${Object.entries(finalStats).map(([stat, value]) => `
-                            <div class="stat-row">
-                                <span>${stat}</span>
-                                <span class="stat-value">${value}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <div class="summary-section">
-                    <h4>Starting Abilities</h4>
-                    <div class="ability-tags">
-                        ${_selectedClass.starting_abilities.map(ability => `
-                            <span class="ability-tag">${ability}</span>
-                        `).join('')}
-                    </div>
+                <div class="abilities-block">
+                    <h4>Starting Abilities:</h4>
+                    <ul>
+                        ${_selectedClass.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
+                    </ul>
                 </div>
             </div>
         </div>
-        
-        <div class="action-buttons">
-            <button type="button" class="confirm-button">✓ Confirm Champion</button>
-            <button type="button" class="back-button">← Back</button>
+        <div class="confirm-return-buttons">
+            <button type="button" class="fantasy-button confirm-btn">Confirm Champion</button>
+            <button type="button" class="fantasy-button return-btn">Return</button>
         </div>
     `;
 
-    section.querySelector('.confirm-button').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    // CRITICAL: Add preventDefault to button click handlers
+    section.querySelector('.confirm-btn').addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent any form submission or default behavior
+        e.stopPropagation(); // Stop event bubbling
+        console.log('[UI_EVENT] Confirm Champion clicked - preventDefault applied.');
         confirmCharacter();
     });
 
-    section.querySelector('.back-button').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    section.querySelector('.return-btn').addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent any form submission or default behavior
+        e.stopPropagation(); // Stop event bubbling
+        console.log('[UI_EVENT] Return to Profession Selection clicked from summary.');
         renderProfessionSelection();
     });
 }
 
 function calculateFinalStats(baseStats, statBonuses) {
-    const finalStats = { ...baseStats };
+    console.log('[STAT_CALC] Calculating final stats...');
+    const finalStats = { ...baseStats }; // Start with race base stats
     for (const stat in statBonuses) {
         if (finalStats.hasOwnProperty(stat)) {
             finalStats[stat] += statBonuses[stat];
         } else {
-            finalStats[stat] = statBonuses[stat];
+            finalStats[stat] = statBonuses[stat]; // Add new stats if class provides them
         }
     }
+    console.log('[STAT_CALC] Final Stats:', finalStats);
     return finalStats;
 }
 
 async function confirmCharacter() {
+    console.log(`[CHAR_SAVE] ===== STARTING CHARACTER SAVE PROCESS =====`);
+    console.log(`[CHAR_SAVE] Character ${_currentCharacterIndex + 1} save attempt initiated...`);
+    
     try {
+        // Log all current selections before saving
+        console.log('[CHAR_SAVE] Current selections:', {
+            race: _selectedRace,
+            class: _selectedClass,
+            sex: _selectedSex,
+            profession: _selectedProfession,
+            profile: _profile,
+            currentCharacterIndex: _currentCharacterIndex
+        });
+
+        // Prepare data for edge function (only send choices, not calculated stats)
         const characterCreationData = {
-            chat_id: _profile.chat_id,
+            chat_id: _profile.chat_id, // Send chat_id instead of player_id
             race_id: _selectedRace.id,
             class_id: _selectedClass.id,
             sex: _selectedSex,
             profession_id: _selectedProfession.id
         };
+        
+        console.log('[CHAR_SAVE] Character data prepared for edge function:', characterCreationData);
 
+        // Call the edge function instead of direct API
+        console.log('[CHAR_SAVE] Making edge function call to create character...');
         const response = await _apiCall(`${window.gameAuth.supabaseConfig?.SUPABASE_URL}/functions/v1/create-character`, {
             method: 'POST',
             headers: {
@@ -595,44 +765,76 @@ async function confirmCharacter() {
             body: JSON.stringify(characterCreationData)
         });
 
+        console.log('[CHAR_SAVE] Edge function response received:', response);
+        console.log('[CHAR_SAVE] Response status:', response.status);
+        console.log('[CHAR_SAVE] Response ok:', response.ok);
+
+        // Check if response is ok before trying to parse
         if (!response.ok) {
             const errorText = await response.text();
+            console.error('[CHAR_SAVE] Edge function response not ok. Status:', response.status, 'Error text:', errorText);
+            
+            // Try to parse as JSON for better error handling
             try {
                 const errorData = JSON.parse(errorText);
-                throw new Error(errorData.error || `Failed with status ${response.status}`);
+                throw new Error(errorData.error || `Edge function call failed with status ${response.status}`);
             } catch {
-                throw new Error(`Failed with status ${response.status}: ${errorText}`);
+                throw new Error(`Edge function call failed with status ${response.status}: ${errorText}`);
             }
         }
 
         const result = await response.json();
+        console.log('[CHAR_SAVE] Character created successfully via edge function:', result);
         
         if (result.success) {
-            // Add profession to used list
-            _usedProfessions.push(_selectedProfession.id);
+            displayMessage(`Character ${_currentCharacterIndex + 1} (${result.character.race} ${result.character.class}) created! (${result.characters_created}/${result.max_characters})`);
+
+            _currentCharacterIndex++; // Increment for the next character
+            console.log('[CHAR_SAVE] Character index incremented to:', _currentCharacterIndex);
+
+            console.log(`[CHAR_SAVE] ===== CHARACTER SAVE COMPLETED SUCCESSFULLY =====`);
+            console.log(`[CHAR_SAVE] About to start next character creation flow (${_currentCharacterIndex + 1})`);
             
-            displayMessage(`Champion ${_currentCharacterIndex + 1} created! (${result.characters_created}/${result.max_characters})`);
-            _currentCharacterIndex++;
-            
+            // Add a delay before starting next character to ensure all processes complete
             setTimeout(() => {
                 startCharacterCreationFlow();
             }, 1000);
         } else {
-            throw new Error(result.error || 'Unknown error occurred');
+            throw new Error(result.error || 'Unknown error occurred during character creation');
         }
 
     } catch (error) {
+        console.error('[CHAR_SAVE] ===== CHARACTER SAVE ERROR =====');
+        console.error('[CHAR_SAVE] Error details:', error);
+        console.error('[CHAR_SAVE] Error message:', error.message);
+        console.error('[CHAR_SAVE] Error stack:', error.stack);
+
+        // Extra logging for restart tracking
+        console.warn(`[CHAR_SAVE] Character creation for slot ${_currentCharacterIndex + 1} failed. Current state:`, {
+            race: _selectedRace,
+            class: _selectedClass,
+            sex: _selectedSex,
+            profession: _selectedProfession,
+            currentIndex: _currentCharacterIndex
+        });
+
         displayMessage(`Failed to save character: ${error.message}`);
+        console.log('[CHAR_SAVE] ===== CHARACTER SAVE ERROR HANDLING COMPLETE =====');
     }
 }
 
 function createParticles() {
+    console.log('[PARTICLES] Creating particles...');
     const particlesContainer = _main.querySelector('.particles');
-    if (!particlesContainer) return;
+    if (!particlesContainer) {
+        console.warn('[PARTICLES] Particles container not found.');
+        return;
+    }
 
+    // Clear existing particles if any
     particlesContainer.innerHTML = '';
-    const particleCount = 15; // Reduced for mobile performance
-    
+
+    const particleCount = 20;
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
@@ -642,570 +844,23 @@ function createParticles() {
         particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
         particlesContainer.appendChild(particle);
     }
+    console.log('[PARTICLES] Particles created and appended.');
 }
 
 function displayMessage(message) {
+    console.log(`[MESSAGE] Displaying message: "${message}"`);
     const messageBox = document.createElement('div');
-    messageBox.className = 'message-overlay';
+    messageBox.className = 'custom-message-box';
     messageBox.innerHTML = `
-        <div class="message-popup">
+        <div class="message-content">
             <p>${message}</p>
-            <button class="message-button">OK</button>
+            <button class="fantasy-button message-ok-btn">OK</button>
         </div>
     `;
     document.body.appendChild(messageBox);
 
-    messageBox.querySelector('.message-button').addEventListener('click', () => {
+    messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
         messageBox.remove();
+        console.log('[MESSAGE] Message box closed.');
     });
-}
-
-function addCharacterCreationStyles() {
-    if (document.getElementById('character-creation-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'character-creation-styles';
-    style.textContent = `
-        .main-app-container {
-            position: relative;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            overflow-x: hidden;
-        }
-
-        .particles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .particle {
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: rgba(255, 215, 0, 0.6);
-            border-radius: 50%;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
-            10%, 90% { opacity: 1; }
-            50% { transform: translateY(-20px) rotate(180deg); }
-        }
-
-        .character-creation-section {
-            position: relative;
-            z-index: 2;
-            padding: 20px 15px;
-            min-height: 100vh;
-        }
-
-        .mobile-header {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #ffffff;
-        }
-
-        .mobile-header h1 {
-            font-size: 24px;
-            margin: 0 0 5px 0;
-            color: #ffd700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .mobile-header h2 {
-            font-size: 20px;
-            margin: 0 0 10px 0;
-            color: #ffffff;
-        }
-
-        .mobile-header p {
-            font-size: 14px;
-            margin: 5px 0;
-            color: #cccccc;
-        }
-
-        .used-notice {
-            color: #ff9500 !important;
-            font-weight: bold;
-        }
-
-        .mobile-slider {
-            width: 100%;
-            overflow: hidden;
-        }
-
-        .slider-container {
-            position: relative;
-            width: 100%;
-            overflow: hidden;
-        }
-
-        .slider-track {
-            display: flex;
-            transition: transform 0.3s ease-in-out;
-            width: 100%;
-        }
-
-        .mobile-card {
-            min-width: 100%;
-            box-sizing: border-box;
-            padding: 0 10px;
-        }
-
-        .mobile-card .card-image {
-            width: 100%;
-            height: 200px;
-            border-radius: 15px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #2a2a4a, #3a3a5a);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .mobile-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 15px;
-        }
-
-        .card-content {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            color: #ffffff;
-        }
-
-        .card-content h3 {
-            font-size: 22px;
-            margin: 0 0 10px 0;
-            color: #ffd700;
-            text-align: center;
-        }
-
-        .description {
-            font-size: 14px;
-            line-height: 1.4;
-            margin-bottom: 15px;
-            color: #cccccc;
-            text-align: center;
-        }
-
-        .stats {
-            margin-bottom: 20px;
-        }
-
-        .stats h4 {
-            font-size: 16px;
-            margin: 0 0 10px 0;
-            color: #ffd700;
-            text-align: center;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-        }
-
-        .stat-name {
-            color: #cccccc;
-        }
-
-        .stat-value {
-            color: #ffd700;
-            font-weight: bold;
-        }
-
-        .abilities {
-            margin-bottom: 20px;
-        }
-
-        .abilities h4 {
-            font-size: 16px;
-            margin: 0 0 10px 0;
-            color: #ffd700;
-            text-align: center;
-        }
-
-        .ability-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-        }
-
-        .ability-tag {
-            background: rgba(255, 215, 0, 0.2);
-            color: #ffd700;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-        }
-
-        .select-button {
-            width: 100%;
-            background: linear-gradient(45deg, #ffd700, #ffed4e);
-            color: #000;
-            border: none;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .select-button:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
-        }
-
-        .slider-nav {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 20px;
-            gap: 15px;
-        }
-
-        .nav-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #ffffff;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-
-        .nav-btn:active {
-            background: rgba(255, 215, 0, 0.3);
-            transform: scale(0.95);
-        }
-
-        .dots {
-            display: flex;
-            gap: 8px;
-        }
-
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .dot.active {
-            background: #ffd700;
-            transform: scale(1.2);
-        }
-
-        .gender-selection {
-            padding: 0 10px;
-        }
-
-        .gender-options {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .gender-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            color: #ffffff;
-        }
-
-        .gender-image {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            overflow: hidden;
-            margin: 0 auto 15px auto;
-            background: linear-gradient(45deg, #2a2a4a, #3a3a5a);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .gender-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .gender-card h3 {
-            font-size: 20px;
-            margin: 0 0 8px 0;
-            color: #ffd700;
-        }
-
-        .gender-card p {
-            font-size: 14px;
-            color: #cccccc;
-            margin-bottom: 15px;
-        }
-
-        .summary-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 0 10px 30px 10px;
-            color: #ffffff;
-        }
-
-        .summary-image {
-            width: 150px;
-            height: 150px;
-            border-radius: 15px;
-            overflow: hidden;
-            margin: 0 auto 20px auto;
-            background: linear-gradient(45deg, #2a2a4a, #3a3a5a);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .summary-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .summary-content h3 {
-            font-size: 20px;
-            margin: 0 0 20px 0;
-            color: #ffd700;
-            text-align: center;
-        }
-
-        .summary-section {
-            margin-bottom: 20px;
-        }
-
-        .summary-section h4 {
-            font-size: 16px;
-            margin: 0 0 10px 0;
-            color: #ffd700;
-            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
-            padding-bottom: 5px;
-        }
-
-        .summary-section p {
-            margin: 5px 0;
-            line-height: 1.4;
-        }
-
-        .summary-section .small {
-            font-size: 13px;
-            color: #cccccc;
-            font-style: italic;
-        }
-
-        .final-stats {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 15px;
-            border-radius: 8px;
-        }
-
-        .ability-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .navigation-buttons {
-            padding: 0 15px 20px 15px;
-        }
-
-        .back-button {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #ffffff;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .back-button:active {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(1px);
-        }
-
-        .action-buttons {
-            padding: 0 15px 30px 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .confirm-button {
-            background: linear-gradient(45deg, #28a745, #20c997);
-            color: #ffffff;
-            border: none;
-            padding: 18px;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .confirm-button:active {
-            transform: translateY(2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
-        }
-
-        .message-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .message-popup {
-            background: linear-gradient(135deg, #2a2a4a, #3a3a5a);
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            color: #ffffff;
-            max-width: 350px;
-            width: 100%;
-        }
-
-        .message-popup p {
-            font-size: 16px;
-            margin: 0 0 20px 0;
-            line-height: 1.4;
-        }
-
-        .message-button {
-            background: linear-gradient(45deg, #ffd700, #ffed4e);
-            color: #000;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .message-button:active {
-            transform: translateY(1px);
-        }
-
-        .profession-card .card-content {
-            min-height: auto;
-        }
-
-        .profession-card .description {
-            margin-bottom: 20px;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 480px) {
-            .character-creation-section {
-                padding: 15px 10px;
-            }
-            
-            .mobile-header h1 {
-                font-size: 20px;
-            }
-            
-            .mobile-header h2 {
-                font-size: 18px;
-            }
-            
-            .card-content {
-                padding: 15px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Performance optimizations for mobile */
-        * {
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        .slider-track {
-            will-change: transform;
-        }
-
-        .mobile-card img {
-            will-change: auto;
-        }
-    `;
-    document.head.appendChild(style);
 }
