@@ -427,7 +427,7 @@ function generateIngredientMatching(recipe) {
   matchingHTML += `
     <div style="background: rgba(255,215,0,0.1); border: 1px solid #FFD700; border-radius: 6px; padding: 0.6rem; margin-top: 1rem;">
       <div style="color: #FFD700; font-size: 0.8rem; text-align: center;">
-        ⛏️ <strong>Mining Tip:</strong> Use adjustments to align all three <strong>center properties</strong> vertically for successful extraction!
+        <strong>Mining Tip:</strong> Use adjustments to align all three <strong>center properties</strong> vertically for successful extraction!
       </div>
     </div>
   `;
@@ -1018,7 +1018,7 @@ async function patchAndSendCraftRequest(resultDiv) {
 
     if (json.success) {
       miningState.result = json.crafted.name;
-      resultDiv.innerHTML = `<span style="color:lime;">⛏️ Successfully extracted: <strong>${json.crafted.name}</strong>!</span>`;
+      resultDiv.innerHTML = `<span style="color:lime;">Extracted: <strong>${json.crafted.name}</strong>!</span>`;
 
       animateMiningSuccess();
 
