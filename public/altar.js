@@ -297,6 +297,7 @@ styleEl.textContent = `
   }
 
   .offering-panel {
+    max-height: 65vh;
     flex: 1;
     background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
     border: 2px solid #3d2914;
@@ -313,7 +314,6 @@ styleEl.textContent = `
     color: #c4975a;
     font-size: 1.8rem;
     text-align: center;
-    margin-bottom: 2rem;
     letter-spacing: 1px;
   }
 
@@ -436,9 +436,11 @@ styleEl.textContent = `
   }
 
   .recent-blessings {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
     border-top: 1px solid rgba(196, 151, 90, 0.2);
+    overflow: auto;
+    max-height: 25vh;
   }
 
   .recent-blessings h3 {
