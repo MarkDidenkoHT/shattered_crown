@@ -129,48 +129,6 @@ async function batchEnrichIngredients(bankItems) {
   });
 }
 
-// Fallback method for individual ingredient requests (with concurrency control)
-// async function fallbackEnrichIngredients(bankItems) {
-//   const enriched = [];
-//   const BATCH_SIZE = 5; // Process 5 ingredients at a time
-  
-//   for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-//     const batch = bankItems.slice(i, i + BATCH_SIZE);
-    
-//     const batchPromises = batch.map(async (item) => {
-//       try {
-//         const res = await context.apiCall(
-//           `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
-//         );
-//         const [ingredient] = await res.json();
-        
-//         if (ingredient) {
-//           return {
-//             name: item.item,
-//             amount: item.amount,
-//             properties: ingredient.properties,
-//             sprite: ingredient.sprite,
-//           };
-//         }
-//       } catch (error) {
-//         console.warn(`[ALCHEMY] Failed to fetch ingredient ${item.item}:`, error);
-//       }
-//       return null;
-//     });
-    
-//     const batchResults = await Promise.all(batchPromises);
-//     enriched.push(...batchResults.filter(Boolean));
-    
-//     // Small delay between batches to avoid overwhelming the API
-//     if (i + BATCH_SIZE < bankItems.length) {
-//       await new Promise(resolve => setTimeout(resolve, 50));
-//     }
-//   }
-  
-//   return enriched;
-// }
-
-// Enhanced bottle HTML with liquid and bubble elements - MADE SMALLER
 function createCraftingSlotHTML(slotIndex) {
   return `
     <div class="crafting-column" data-slot="${slotIndex}" style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
@@ -1098,7 +1056,6 @@ async function patchAndSendCraftRequest(resultDiv) {
 
     console.log('[ALCHEMY] Sending craft request payload:', payload);
 
-    // ✅ Use secure server endpoint instead of context.apiCall
     const res = await fetch('/api/crafting/alchemy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -118,7 +118,7 @@ async function batchEnrichIngredients(bankItems) {
 
     if (!response.ok) {
       console.error('[HERBALISM] Enrich API failed:', response.status);
-      return fallbackEnrichIngredients(bankItems);
+      // return fallbackEnrichIngredients(bankItems);
     }
 
     const { ingredientMap } = await response.json();
@@ -151,57 +151,57 @@ async function batchEnrichIngredients(bankItems) {
 
   } catch (err) {
     console.warn('[HERBALISM] Batch enrichment failed:', err);
-    return fallbackEnrichIngredients(bankItems);
+    // return fallbackEnrichIngredients(bankItems);
   }
 }
 
 // Fallback method for individual ingredient requests
-async function fallbackEnrichIngredients(bankItems) {
-  console.log('[HERBALISM] Using fallback enrichment method');
-  const enriched = [];
-  const BATCH_SIZE = 5;
+// async function fallbackEnrichIngredients(bankItems) {
+//   console.log('[HERBALISM] Using fallback enrichment method');
+//   const enriched = [];
+//   const BATCH_SIZE = 5;
   
-  for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-    const batch = bankItems.slice(i, i + BATCH_SIZE);
+//   for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
+//     const batch = bankItems.slice(i, i + BATCH_SIZE);
     
-    const batchPromises = batch.map(async (item) => {
-      try {
-        const res = await context.apiCall(
-          `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
-        );
+//     const batchPromises = batch.map(async (item) => {
+//       try {
+//         const res = await context.apiCall(
+//           `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
+//         );
         
-        if (!res.ok) {
-          console.warn('[HERBALISM] Fallback fetch failed for:', item.item, res.status);
-          return null;
-        }
+//         if (!res.ok) {
+//           console.warn('[HERBALISM] Fallback fetch failed for:', item.item, res.status);
+//           return null;
+//         }
         
-        const [ingredient] = await res.json();
+//         const [ingredient] = await res.json();
         
-        if (ingredient) {
-          return {
-            name: item.item,
-            amount: item.amount,
-            properties: ingredient.properties,
-            sprite: ingredient.sprite,
-          };
-        }
-      } catch (error) {
-        console.warn(`[HERBALISM] Failed to fetch ingredient ${item.item}:`, error);
-      }
-      return null;
-    });
+//         if (ingredient) {
+//           return {
+//             name: item.item,
+//             amount: item.amount,
+//             properties: ingredient.properties,
+//             sprite: ingredient.sprite,
+//           };
+//         }
+//       } catch (error) {
+//         console.warn(`[HERBALISM] Failed to fetch ingredient ${item.item}:`, error);
+//       }
+//       return null;
+//     });
     
-    const batchResults = await Promise.all(batchPromises);
-    enriched.push(...batchResults.filter(Boolean));
+//     const batchResults = await Promise.all(batchPromises);
+//     enriched.push(...batchResults.filter(Boolean));
     
-    if (i + BATCH_SIZE < bankItems.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-  }
+//     if (i + BATCH_SIZE < bankItems.length) {
+//       await new Promise(resolve => setTimeout(resolve, 50));
+//     }
+//   }
   
-  console.log('[HERBALISM] Fallback enrichment result:', enriched);
-  return enriched;
-}
+//   console.log('[HERBALISM] Fallback enrichment result:', enriched);
+//   return enriched;
+// }
 
 // Create the 3x3 garden grid (with bottom-right empty) - Made smaller
 function createGardenGridHTML() {

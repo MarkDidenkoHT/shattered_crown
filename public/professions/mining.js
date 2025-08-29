@@ -77,7 +77,7 @@ async function batchEnrichOres(bankItems) {
 
       if (!response.ok) {
         console.error('[ORES] Enrich API failed:', response.status);
-        return fallbackEnrichOres(bankItems);
+        // return fallbackEnrichOres(bankItems);
       }
 
       const { ingredientMap } = await response.json();
@@ -85,7 +85,7 @@ async function batchEnrichOres(bankItems) {
 
     } catch (err) {
       console.warn('[ORES] Batch enrichment failed:', err);
-      return fallbackEnrichOres(bankItems);
+      // return fallbackEnrichOres(bankItems);
     }
   }
 
@@ -110,42 +110,42 @@ async function batchEnrichOres(bankItems) {
   });
 }
 
-async function fallbackEnrichOres(bankItems) {
-  const enriched = [];
-  const BATCH_SIZE = 5;
+// async function fallbackEnrichOres(bankItems) {
+//   const enriched = [];
+//   const BATCH_SIZE = 5;
   
-  for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-    const batch = bankItems.slice(i, i + BATCH_SIZE);
+//   for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
+//     const batch = bankItems.slice(i, i + BATCH_SIZE);
     
-    const batchPromises = batch.map(async (item) => {
-      try {
-        const res = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`);
-        const [ore] = await res.json();
+//     const batchPromises = batch.map(async (item) => {
+//       try {
+//         const res = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`);
+//         const [ore] = await res.json();
         
-        if (ore) {
-          return {
-            name: item.item,
-            amount: item.amount,
-            properties: ore.properties,
-            sprite: ore.sprite,
-          };
-        }
-      } catch (error) {
-        // Silently continue on error
-      }
-      return null;
-    });
+//         if (ore) {
+//           return {
+//             name: item.item,
+//             amount: item.amount,
+//             properties: ore.properties,
+//             sprite: ore.sprite,
+//           };
+//         }
+//       } catch (error) {
+//         // Silently continue on error
+//       }
+//       return null;
+//     });
     
-    const batchResults = await Promise.all(batchPromises);
-    enriched.push(...batchResults.filter(Boolean));
+//     const batchResults = await Promise.all(batchPromises);
+//     enriched.push(...batchResults.filter(Boolean));
     
-    if (i + BATCH_SIZE < bankItems.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-  }
+//     if (i + BATCH_SIZE < bankItems.length) {
+//       await new Promise(resolve => setTimeout(resolve, 50));
+//     }
+//   }
   
-  return enriched;
-}
+//   return enriched;
+// }
 
 function createMiningRowHTML(rowIndex) {
   return `
@@ -992,7 +992,6 @@ async function patchAndSendCraftRequest(resultDiv) {
       adjustments
     };
 
-    // ✅ Secure server endpoint instead of apiCall
     const res = await fetch('/api/crafting/alchemy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
