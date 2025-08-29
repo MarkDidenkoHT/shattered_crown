@@ -537,6 +537,7 @@ function injectLoadingStyles() {
         0 4px 16px rgba(0, 0, 0, 0.4);
       backdrop-filter: blur(5px);
       min-height: 80px;
+      max-height: 16vh;
     }
 
     .card-icon {
@@ -645,58 +646,6 @@ function injectLoadingStyles() {
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
-    }
-
-    @media (max-width: 480px) {
-      .loading-content {
-        padding: 1.5rem;
-        margin: 1rem;
-      }
-      
-      .loading-header h2 {
-        font-size: 1.2rem;
-      }
-      
-      .loading-animation {
-        width: 80px;
-        height: 80px;
-      }
-      
-      .loading-message {
-        font-size: 0.9rem;
-      }
-      
-      .progress-text {
-        font-size: 0.8rem;
-      }
-
-      .profession-card {
-        padding: 0.75rem;
-        min-height: 70px;
-      }
-
-      .card-icon {
-        width: 56px;
-        height: 56px;
-        margin-right: 0.75rem;
-      }
-
-      .card-icon img {
-        width: 40px;
-        height: 40px;
-      }
-
-      .card-name {
-        font-size: 1.1rem;
-      }
-
-      .card-description {
-        font-size: 0.85rem;
-      }
-
-      .card-hint {
-        font-size: 0.75rem;
-      }
     }
   `;
   
