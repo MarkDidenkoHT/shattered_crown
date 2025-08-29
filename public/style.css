@@ -348,9 +348,7 @@
 
         .character-creation-section .art-header {
             height: auto;
-            padding-bottom: 1rem;
             background: none;
-            border-bottom: 1px solid rgba(196, 151, 90, 0.2);
             margin-bottom: 0.5rem;
             text-align: center;
             width: 100%;
@@ -430,11 +428,14 @@
 }
 
 /* --- Condensed stats/items/consumables blocks --- */
-.stats-block, .abilities-block {
+.stats-block {
     width: 100%;
-/*     margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(196,151,90,0.08); */
+    min-height: 13vh;
+}
+
+ .abilities-block {
+    width: 100%;
+    min-height: 26vh;
 }
 
 .stats-block h4, .abilities-block h4 {
@@ -444,12 +445,14 @@
     margin-bottom: 0.3rem;
     text-align: center;
 }
+
 .stats-block p, .stats-block ul, .abilities-block p {
     color: #b8b3a8;
     font-size: 0.9rem;
     display: flex;
     justify-content: space-between;
 }
+
 .stats-block p span { color: #c4975a; font-weight: bold; }
 .abilities-block ul { list-style: none; padding: 0; margin: 0; }
 .abilities-block li {
@@ -592,7 +595,7 @@
             border-radius: 8px;
             padding: 5px;
             margin-bottom: 10px;
-            width: 100%;
+            width: 95%;
             max-width: 800px;
             text-align: center;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
