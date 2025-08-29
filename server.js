@@ -1554,7 +1554,7 @@ app.patch('/api/profile/select-god', async (req, res) => {
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       },
-      body: JSON.stringify({ selected_god: godId })
+      body: JSON.stringify({ god: godId })
     });
 
     const data = await response.json();
