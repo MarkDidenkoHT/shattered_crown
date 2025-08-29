@@ -424,7 +424,7 @@
     font-size: 0.9rem;
     line-height: 1.2;
     font-style: italic;
-    min-height: 1.5rem;
+    min-height: 43vh;
 }
 
 /* --- Condensed stats/items/consumables blocks --- */
@@ -701,7 +701,7 @@
         .selection-slide {
             min-width: 100%;
             min-height: 75vh;
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
+            background: linear-gradient(145deg, rgb(109 64 25 / 90%), rgba(42, 31, 22, 0.8));
             border: 2px solid #3d2914;
             border-radius: 8px;
             overflow: hidden;
