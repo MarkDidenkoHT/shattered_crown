@@ -201,8 +201,6 @@ function professionCardHTML(character) {
       </div>
       <div class="card-info">
         <h3 class="card-name">${profName}</h3>
-        <p class="card-description">Character: ${character.name || `Lvl ${character.level || 1} ${character.races?.name || 'Unknown'}`}</p>
-        <p class="card-hint">Click to start crafting</p>
       </div>
     </div>
   `;
