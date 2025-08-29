@@ -44,8 +44,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
             <div class="character-creation-section"></div>
         </div>
     `;
-
-    addCharacterCreationStyles();
+    
     createParticles();
 
     await startCharacterCreationFlow();
