@@ -99,7 +99,6 @@ async function fetchRacesAndRenderSelection() {
   }
 }
 
-
 function renderRaceSelection() {
     console.log(`[UI_RENDER] Rendering Race Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
@@ -108,32 +107,7 @@ function renderRaceSelection() {
             <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Race</h1>
         </div>
         <div class="selection-section">
-            <div class="selection-container desktop-view">
-                <div class="selection-grid">
-                    ${_races.map(race => `
-                        <div class="selection-card" data-id="${race.id}" data-type="race">
-                            <div class="card-art-block">
-                                <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                    alt="${race.name}" 
-                                    class="card-art">
-                            </div>
-                            <div class="card-info-block">
-                                <h3 class="card-name">${race.name}</h3>
-                                <p class="card-description">${race.description}</p>
-                                <div class="stats-block">
-                                    <h4>Base Stats:</h4>
-                                    ${Object.entries(race.base_stats).map(([stat, value]) => `
-                                        <p>${stat}: <span>${value}</span></p>
-                                    `).join('')}
-                                </div>
-                                <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <div class="selection-slider mobile-view">
+            <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track" style="transform: translateX(0%)">
                         ${_races.map((race, index) => `
@@ -172,10 +146,7 @@ function renderRaceSelection() {
         </div>
     `;
 
-    // Initialize slider if on mobile
-    if (window.innerWidth <= 768) {
-        initializeSelectionSlider();
-    }
+    initializeSelectionSlider();
 
     // Add event listeners to selection buttons
     section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
@@ -273,8 +244,6 @@ async function handleRaceSelection(raceId) {
     renderSexSelection();
 }
 
-// --- Новые функции для выбора пола и профессий ---
-
 function renderSexSelection() {
     console.log(`[UI_RENDER] Rendering Sex Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
@@ -287,36 +256,7 @@ function renderSexSelection() {
             <p>${_selectedRace.description}</p>
         </div>
         <div class="selection-section">
-            <div class="selection-container desktop-view">
-                <div class="selection-grid">
-                    <div class="selection-card" data-sex="male">
-                        <div class="card-art-block">
-                            <img src="assets/art/sex/male.png" 
-                                alt="Male" 
-                                class="card-art">
-                        </div>
-                        <div class="card-info-block">
-                            <h3 class="card-name">Male</h3>
-                            <p class="card-description">Strength and fortitude define this path.</p>
-                            <button class="fantasy-button select-btn" data-sex="male" data-type="sex">Select Male</button>
-                        </div>
-                    </div>
-                    <div class="selection-card" data-sex="female">
-                        <div class="card-art-block">
-                            <img src="assets/art/sex/female.png" 
-                                alt="Female" 
-                                class="card-art">
-                        </div>
-                        <div class="card-info-block">
-                            <h3 class="card-name">Female</h3>
-                            <p class="card-description">Grace and wisdom guide this journey.</p>
-                            <button class="fantasy-button select-btn" data-sex="female" data-type="sex">Select Female</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="selection-slider mobile-view">
+            <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track" style="transform: translateX(0%)">
                         <div class="selection-slide" data-sex="male">
@@ -361,9 +301,7 @@ function renderSexSelection() {
         </div>
     `;
 
-    if (window.innerWidth <= 768) {
-        initializeSelectionSlider();
-    }
+    initializeSelectionSlider();
 
     section.querySelectorAll('.select-btn[data-type="sex"]').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -422,38 +360,7 @@ function renderClassSelection() {
             <p>${_selectedRace.description}</p>
         </div>
         <div class="selection-section">
-            <div class="selection-container desktop-view">
-                <div class="selection-grid">
-                    ${_classes.map(cls => `
-                        <div class="selection-card" data-id="${cls.id}" data-type="class">
-                            <div class="card-art-block">
-                                <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                    alt="${cls.name}" 
-                                    class="card-art">
-                            </div>
-                            <div class="card-info-block">
-                                <h3 class="card-name">${cls.name}</h3>
-                                <p class="card-description">${cls.description}</p>
-                                <div class="stats-block">
-                                    <h4>Stat Bonuses:</h4>
-                                    ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
-                                        <p>${stat}: <span>+${value}</span></p>
-                                    `).join('')}
-                                </div>
-                                <div class="abilities-block">
-                                    <h4>Starting Abilities:</h4>
-                                    <ul>
-                                        ${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
-                                    </ul>
-                                </div>
-                                <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <div class="selection-slider mobile-view">
+            <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track" style="transform: translateX(0%)">
                         ${_classes.map((cls, index) => `
@@ -501,9 +408,7 @@ function renderClassSelection() {
         </div>
     `;
 
-    if (window.innerWidth <= 768) {
-        initializeSelectionSlider();
-    }
+    initializeSelectionSlider();
 
     section.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -531,7 +436,6 @@ function handleClassSelection(classId) {
     // After class selection, fetch professions
     fetchProfessionsAndRenderSelection();
 }
-
 
 async function fetchProfessionsAndRenderSelection() {
     console.log('[PROFESSION_FETCH] Fetching professions...');
@@ -567,26 +471,7 @@ function renderProfessionSelection() {
             <p>${_selectedClass.description}</p>
         </div>
         <div class="selection-section">
-            <div class="selection-container desktop-view">
-                <div class="selection-grid">
-                    ${_professions.map(profession => `
-                        <div class="selection-card" data-id="${profession.id}" data-type="profession">
-                            <div class="card-art-block">
-                                <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                    alt="${profession.name}" 
-                                    class="card-art">
-                            </div>
-                            <div class="card-info-block">
-                                <h3 class="card-name">${profession.name}</h3>
-                                <p class="card-description">${profession.description}</p>
-                                <button class="fantasy-button select-btn" data-id="${profession.id}" data-type="profession">Select ${profession.name}</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <div class="selection-slider mobile-view">
+            <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track" style="transform: translateX(0%)">
                         ${_professions.map((profession, index) => `
@@ -622,9 +507,7 @@ function renderProfessionSelection() {
         </div>
     `;
 
-    if (window.innerWidth <= 768) {
-        initializeSelectionSlider();
-    }
+    initializeSelectionSlider();
 
     section.querySelectorAll('.select-btn[data-type="profession"]').forEach(button => {
         button.addEventListener('click', (e) => {
