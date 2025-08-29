@@ -25,7 +25,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
         return;
     }
     
-    _godId = _profile.god_id;
+    _godId = _profile.god;
 
     if (!_godId || _godId === null || _godId === 'null') {
         displayMessage('Please select a deity first.');
