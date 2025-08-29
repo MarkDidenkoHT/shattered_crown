@@ -13,25 +13,22 @@ let _selectedSex = null;
 let _selectedProfession = null;
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
-    console.log('[CHAR_CREATE] --- Starting loadModule for Character Creation ---');
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
 
     _profile = _getCurrentProfile();
     if (!_profile) {
-        console.error('[CHAR_CREATE] No profile found. Cannot proceed with character creation.');
+        console.error('No profile found. Cannot proceed with character creation.');
         displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login'); // Redirect to login if no profile
+        window.gameAuth.loadModule('login');
         return;
     }
     
-    _godId = _profile.god; // The god selected in the previous step
-    console.log('[CHAR_CREATE] Profile loaded:', _profile);
-    console.log('[CHAR_CREATE] Selected God ID:', _godId);
+    _godId = _profile.god;
 
     if (!_godId || _godId === null || _godId === 'null') {
-        console.error('[CHAR_CREATE] No god selected or invalid god_id. Redirecting to god selection.');
+        console.error('No god selected or invalid god_id. Redirecting to god selection.');
         displayMessage('Please select a deity first.');
         window.gameAuth.loadModule('god_selection');
         return;
@@ -46,22 +43,18 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     `;
     
     createParticles();
-
     await startCharacterCreationFlow();
-    console.log('[CHAR_CREATE] --- loadModule for Character Creation finished ---');
 }
 
 async function startCharacterCreationFlow() {
-    console.log(`[CHAR_CREATE_FLOW] Starting flow for Character ${_currentCharacterIndex + 1} of 3.`);
-    _selectedRace = null; // Reset selections for new character
+    _selectedRace = null;
     _selectedClass = null;
-    _selectedSex = null; // Сброс выбранного пола
-    _selectedProfession = null; // Сброс выбранной профессии
+    _selectedSex = null;
+    _selectedProfession = null;
 
     if (_currentCharacterIndex >= 3) {
-        console.log('[CHAR_CREATE_FLOW] All 3 characters created. Loading castle module.');
         displayMessage('All your champions are ready! Entering the Castle...');
-        window.gameAuth.loadModule('castle'); // Proceed to castle module
+        window.gameAuth.loadModule('castle');
         return;
     }
 
@@ -69,38 +62,34 @@ async function startCharacterCreationFlow() {
 }
 
 async function fetchRacesAndRenderSelection() {
-  console.log(`[RACE_FETCH] Fetching races for God ID: ${_godId}...`);
-  try {
-    if (!_godId || _godId === null || _godId === 'null') {
-      console.error('[RACE_FETCH] God ID is null, redirecting to god selection');
-      window.gameAuth.loadModule('god_selection');
-      return;
+    try {
+        if (!_godId || _godId === null || _godId === 'null') {
+            console.error('God ID is null, redirecting to god selection');
+            window.gameAuth.loadModule('god_selection');
+            return;
+        }
+
+        const response = await fetch(`/api/races/${_godId}`);
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to fetch races');
+        }
+
+        _races = await response.json();
+
+        if (_races.length === 0) {
+            displayMessage('No races available for your chosen deity. Please contact support.');
+            return;
+        }
+
+        renderRaceSelection();
+    } catch (error) {
+        console.error('Error fetching races:', error);
+        displayMessage('Failed to load races. Please try again.');
     }
-
-    const response = await fetch(`/api/races/${_godId}`); // ✅ secure Express endpoint
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch races');
-    }
-
-    _races = await response.json();
-    console.log('[RACE_FETCH] Races fetched:', _races);
-
-    if (_races.length === 0) {
-      console.warn(`[RACE_FETCH] No races found for God ID: ${_godId}.`);
-      displayMessage('No races available for your chosen deity. Please contact support.');
-      return;
-    }
-
-    renderRaceSelection();
-  } catch (error) {
-    console.error('[RACE_FETCH] Error fetching races:', error);
-    displayMessage('Failed to load races. Please try again.');
-  }
 }
 
 function renderRaceSelection() {
-    console.log(`[UI_RENDER] Rendering Race Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
         <div class="art-header">
@@ -133,14 +122,10 @@ function renderRaceSelection() {
                     </div>
                 </div>
                 
-                <div class="slider-controls">
-                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
-                    <div class="slider-dots">
-                        ${_races.map((_, index) => `
-                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                        `).join('')}
-                    </div>
-                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                <div class="slider-dots">
+                    ${_races.map((_, index) => `
+                        <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                    `).join('')}
                 </div>
             </div>
         </div>
@@ -148,11 +133,9 @@ function renderRaceSelection() {
 
     initializeSelectionSlider();
 
-    // Add event listeners to selection buttons
     section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const raceId = parseInt(e.target.dataset.id);
-            console.log(`[UI_EVENT] Race selected: ID ${raceId}`);
             handleRaceSelection(raceId);
         });
     });
@@ -160,11 +143,9 @@ function renderRaceSelection() {
 
 function initializeSelectionSlider() {
     const sliderTrack = _main.querySelector('.slider-track');
-    const prevBtn = _main.querySelector('.prev-btn');
-    const nextBtn = _main.querySelector('.next-btn');
     const dots = _main.querySelectorAll('.slider-dot');
     
-    if (!sliderTrack || !prevBtn || !nextBtn) return;
+    if (!sliderTrack || !dots.length) return;
     
     let currentSlide = 0;
     const totalSlides = dots.length;
@@ -189,10 +170,7 @@ function initializeSelectionSlider() {
         updateSlider();
     }
     
-    // Event listeners
-    nextBtn.addEventListener('click', nextSlide);
-    prevBtn.addEventListener('click', prevSlide);
-    
+    // Dot click support
     dots.forEach((dot, index) => {
         dot.addEventListener('click', () => {
             currentSlide = index;
@@ -200,33 +178,114 @@ function initializeSelectionSlider() {
         });
     });
     
-    // Touch/swipe support
+    // Enhanced touch/swipe support
     let startX = 0;
+    let currentX = 0;
     let isDragging = false;
+    let startTime = 0;
     
     sliderTrack.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
+        currentX = startX;
         isDragging = true;
-    });
+        startTime = Date.now();
+        sliderTrack.style.transition = 'none'; // Disable transition during drag
+    }, { passive: true });
     
     sliderTrack.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
+        
+        currentX = e.touches[0].clientX;
+        const diffX = currentX - startX;
+        const currentTranslate = -currentSlide * 100;
+        const newTranslate = currentTranslate + (diffX / sliderTrack.offsetWidth) * 100;
+        
+        sliderTrack.style.transform = `translateX(${newTranslate}%)`;
         e.preventDefault();
-    });
+    }, { passive: false });
     
     sliderTrack.addEventListener('touchend', (e) => {
         if (!isDragging) return;
         isDragging = false;
         
         const endX = e.changedTouches[0].clientX;
-        const diff = startX - endX;
+        const diffX = startX - endX;
+        const diffTime = Date.now() - startTime;
+        const velocity = Math.abs(diffX) / diffTime;
         
-        if (Math.abs(diff) > 50) {
-            if (diff > 0) {
+        // Re-enable transition
+        sliderTrack.style.transition = 'transform 0.3s ease-out';
+        
+        // Determine if we should slide based on distance and velocity
+        const threshold = 50; // minimum distance to trigger slide
+        const velocityThreshold = 0.3; // minimum velocity for quick swipe
+        
+        if (Math.abs(diffX) > threshold || velocity > velocityThreshold) {
+            if (diffX > 0) {
                 nextSlide();
             } else {
                 prevSlide();
             }
+        } else {
+            // Snap back to current slide
+            updateSlider();
+        }
+    });
+    
+    // Mouse support for desktop testing (optional)
+    let isMouseDown = false;
+    
+    sliderTrack.addEventListener('mousedown', (e) => {
+        startX = e.clientX;
+        currentX = startX;
+        isMouseDown = true;
+        startTime = Date.now();
+        sliderTrack.style.transition = 'none';
+        e.preventDefault();
+    });
+    
+    sliderTrack.addEventListener('mousemove', (e) => {
+        if (!isMouseDown) return;
+        
+        currentX = e.clientX;
+        const diffX = currentX - startX;
+        const currentTranslate = -currentSlide * 100;
+        const newTranslate = currentTranslate + (diffX / sliderTrack.offsetWidth) * 100;
+        
+        sliderTrack.style.transform = `translateX(${newTranslate}%)`;
+        e.preventDefault();
+    });
+    
+    sliderTrack.addEventListener('mouseup', (e) => {
+        if (!isMouseDown) return;
+        isMouseDown = false;
+        
+        const endX = e.clientX;
+        const diffX = startX - endX;
+        const diffTime = Date.now() - startTime;
+        const velocity = Math.abs(diffX) / diffTime;
+        
+        sliderTrack.style.transition = 'transform 0.3s ease-out';
+        
+        const threshold = 50;
+        const velocityThreshold = 0.3;
+        
+        if (Math.abs(diffX) > threshold || velocity > velocityThreshold) {
+            if (diffX > 0) {
+                nextSlide();
+            } else {
+                prevSlide();
+            }
+        } else {
+            updateSlider();
+        }
+    });
+    
+    sliderTrack.addEventListener('mouseleave', () => {
+        if (isMouseDown) {
+            isMouseDown = false;
+            sliderTrack.style.transition = 'transform 0.3s ease-out';
+            updateSlider();
         }
     });
 }
@@ -234,18 +293,15 @@ function initializeSelectionSlider() {
 async function handleRaceSelection(raceId) {
     _selectedRace = _races.find(r => r.id === raceId);
     if (!_selectedRace) {
-        console.error(`[RACE_SELECT] Selected race with ID ${raceId} not found.`);
+        console.error(`Selected race with ID ${raceId} not found.`);
         displayMessage('Selected race not found. Please try again.');
         return;
     }
-    console.log('[RACE_SELECT] Selected Race:', _selectedRace);
 
-    // After race selection, render sex selection
     renderSexSelection();
 }
 
 function renderSexSelection() {
-    console.log(`[UI_RENDER] Rendering Sex Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
         <div class="art-header">
@@ -286,13 +342,9 @@ function renderSexSelection() {
                     </div>
                 </div>
                 
-                <div class="slider-controls">
-                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
-                    <div class="slider-dots">
-                        <button class="slider-dot active" data-slide="0"></button>
-                        <button class="slider-dot" data-slide="1"></button>
-                    </div>
-                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                <div class="slider-dots">
+                    <button class="slider-dot active" data-slide="0"></button>
+                    <button class="slider-dot" data-slide="1"></button>
                 </div>
             </div>
         </div>
@@ -306,50 +358,42 @@ function renderSexSelection() {
     section.querySelectorAll('.select-btn[data-type="sex"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const sex = e.target.dataset.sex;
-            console.log(`[UI_EVENT] Sex selected: ${sex}`);
             handleSexSelection(sex);
         });
     });
 
     section.querySelector('.return-btn').addEventListener('click', () => {
-        console.log('[UI_EVENT] Return to Race Selection clicked from sex selection.');
-        _selectedSex = null; // Clear sex selection
+        _selectedSex = null;
         renderRaceSelection();
     });
 }
 
 function handleSexSelection(sex) {
     _selectedSex = sex;
-    console.log('[SEX_SELECT] Selected Sex:', _selectedSex);
-    // After sex selection, fetch classes
     fetchClassesAndRenderSelection();
 }
 
 async function fetchClassesAndRenderSelection() {
-    console.log(`[CLASS_FETCH] Fetching classes for Race ID: ${_selectedRace.id}...`);
     try {
         const response = await _apiCall(`/api/supabase/rest/v1/classes?race_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
         _classes = await response.json();
-        console.log('[CLASS_FETCH] Classes fetched:', _classes);
 
         if (_classes.length === 0) {
-            console.warn(`[CLASS_FETCH] No classes found for Race ID: ${_selectedRace.id}.`);
             displayMessage('No classes available for this race. Please select another race.');
-            _selectedRace = null; // Allow re-selection of race
+            _selectedRace = null;
             renderRaceSelection();
             return;
         }
         renderClassSelection();
     } catch (error) {
-        console.error('[CLASS_FETCH] Error fetching classes:', error);
+        console.error('Error fetching classes:', error);
         displayMessage('Failed to load classes. Please try again.');
-        _selectedRace = null; // Allow re-selection of race
+        _selectedRace = null;
         renderRaceSelection();
     }
 }
 
 function renderClassSelection() {
-    console.log(`[UI_RENDER] Rendering Class Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
         <div class="art-header">
@@ -392,14 +436,10 @@ function renderClassSelection() {
                     </div>
                 </div>
                 
-                <div class="slider-controls">
-                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
-                    <div class="slider-dots">
-                        ${_classes.map((_, index) => `
-                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                        `).join('')}
-                    </div>
-                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                <div class="slider-dots">
+                    ${_classes.map((_, index) => `
+                        <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                    `).join('')}
                 </div>
             </div>
         </div>
@@ -413,14 +453,12 @@ function renderClassSelection() {
     section.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const classId = parseInt(e.target.dataset.id);
-            console.log(`[UI_EVENT] Class selected: ID ${classId}`);
             handleClassSelection(classId);
         });
     });
 
     section.querySelector('.return-btn').addEventListener('click', () => {
-        console.log('[UI_EVENT] Return to Sex Selection clicked from class selection.');
-        _selectedClass = null; // Clear class selection
+        _selectedClass = null;
         renderSexSelection();
     });
 }
@@ -428,38 +466,32 @@ function renderClassSelection() {
 function handleClassSelection(classId) {
     _selectedClass = _classes.find(c => c.id === classId);
     if (!_selectedClass) {
-        console.error(`[CLASS_SELECT] Selected class with ID ${classId} not found.`);
+        console.error(`Selected class with ID ${classId} not found.`);
         displayMessage('Selected class not found. Please try again.');
         return;
     }
-    console.log('[CLASS_SELECT] Selected Class:', _selectedClass);
-    // After class selection, fetch professions
     fetchProfessionsAndRenderSelection();
 }
 
 async function fetchProfessionsAndRenderSelection() {
-    console.log('[PROFESSION_FETCH] Fetching professions...');
     try {
         const response = await _apiCall(`/api/supabase/rest/v1/professions?select=id,name,description`);
         _professions = await response.json();
-        console.log('[PROFESSION_FETCH] Professions fetched:', _professions);
 
         if (_professions.length === 0) {
-            console.warn('[PROFESSION_FETCH] No professions found.');
             displayMessage('No professions available. Please contact support.');
-            renderClassSelection(); // Allow re-selection of class
+            renderClassSelection();
             return;
         }
         renderProfessionSelection();
     } catch (error) {
-        console.error('[PROFESSION_FETCH] Error fetching professions:', error);
+        console.error('Error fetching professions:', error);
         displayMessage('Failed to load professions. Please try again.');
-        renderClassSelection(); // Allow re-selection of class
+        renderClassSelection();
     }
 }
 
 function renderProfessionSelection() {
-    console.log(`[UI_RENDER] Rendering Profession Selection for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     section.innerHTML = `
         <div class="art-header">
@@ -491,14 +523,10 @@ function renderProfessionSelection() {
                     </div>
                 </div>
                 
-                <div class="slider-controls">
-                    <button class="slider-btn prev-btn" aria-label="Previous">&lt;</button>
-                    <div class="slider-dots">
-                        ${_professions.map((_, index) => `
-                            <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                        `).join('')}
-                    </div>
-                    <button class="slider-btn next-btn" aria-label="Next">&gt;</button>
+                <div class="slider-dots">
+                    ${_professions.map((_, index) => `
+                        <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
+                    `).join('')}
                 </div>
             </div>
         </div>
@@ -512,14 +540,12 @@ function renderProfessionSelection() {
     section.querySelectorAll('.select-btn[data-type="profession"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const professionId = parseInt(e.target.dataset.id);
-            console.log(`[UI_EVENT] Profession selected: ID ${professionId}`);
             handleProfessionSelection(professionId);
         });
     });
 
     section.querySelector('.return-btn').addEventListener('click', () => {
-        console.log('[UI_EVENT] Return to Class Selection clicked from profession selection.');
-        _selectedProfession = null; // Clear profession selection
+        _selectedProfession = null;
         renderClassSelection();
     });
 }
@@ -527,16 +553,14 @@ function renderProfessionSelection() {
 function handleProfessionSelection(professionId) {
     _selectedProfession = _professions.find(p => p.id === professionId);
     if (!_selectedProfession) {
-        console.error(`[PROFESSION_SELECT] Selected profession with ID ${professionId} not found.`);
+        console.error(`Selected profession with ID ${professionId} not found.`);
         displayMessage('Selected profession not found. Please try again.');
         return;
     }
-    console.log('[PROFESSION_SELECT] Selected Profession:', _selectedProfession);
     renderCharacterSummary();
 }
 
 function renderCharacterSummary() {
-    console.log(`[UI_RENDER] Rendering Character Summary for Character ${_currentCharacterIndex + 1}.`);
     const section = _main.querySelector('.character-creation-section');
     const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
 
@@ -575,64 +599,41 @@ function renderCharacterSummary() {
         </div>
     `;
 
-    // CRITICAL: Add preventDefault to button click handlers
     section.querySelector('.confirm-btn').addEventListener('click', (e) => {
-        e.preventDefault(); // Prevent any form submission or default behavior
-        e.stopPropagation(); // Stop event bubbling
-        console.log('[UI_EVENT] Confirm Champion clicked - preventDefault applied.');
+        e.preventDefault();
+        e.stopPropagation();
         confirmCharacter();
     });
 
     section.querySelector('.return-btn').addEventListener('click', (e) => {
-        e.preventDefault(); // Prevent any form submission or default behavior
-        e.stopPropagation(); // Stop event bubbling
-        console.log('[UI_EVENT] Return to Profession Selection clicked from summary.');
+        e.preventDefault();
+        e.stopPropagation();
         renderProfessionSelection();
     });
 }
 
 function calculateFinalStats(baseStats, statBonuses) {
-    console.log('[STAT_CALC] Calculating final stats...');
-    const finalStats = { ...baseStats }; // Start with race base stats
+    const finalStats = { ...baseStats };
     for (const stat in statBonuses) {
         if (finalStats.hasOwnProperty(stat)) {
             finalStats[stat] += statBonuses[stat];
         } else {
-            finalStats[stat] = statBonuses[stat]; // Add new stats if class provides them
+            finalStats[stat] = statBonuses[stat];
         }
     }
-    console.log('[STAT_CALC] Final Stats:', finalStats);
     return finalStats;
 }
 
 async function confirmCharacter() {
-    console.log(`[CHAR_SAVE] ===== STARTING CHARACTER SAVE PROCESS =====`);
-    console.log(`[CHAR_SAVE] Character ${_currentCharacterIndex + 1} save attempt initiated...`);
-    
     try {
-        // Log all current selections before saving
-        console.log('[CHAR_SAVE] Current selections:', {
-            race: _selectedRace,
-            class: _selectedClass,
-            sex: _selectedSex,
-            profession: _selectedProfession,
-            profile: _profile,
-            currentCharacterIndex: _currentCharacterIndex
-        });
-
-        // Prepare data for edge function (only send choices, not calculated stats)
         const characterCreationData = {
-            chat_id: _profile.chat_id, // Send chat_id instead of player_id
+            chat_id: _profile.chat_id,
             race_id: _selectedRace.id,
             class_id: _selectedClass.id,
             sex: _selectedSex,
             profession_id: _selectedProfession.id
         };
-        
-        console.log('[CHAR_SAVE] Character data prepared for edge function:', characterCreationData);
 
-        // Call the edge function instead of direct API
-        console.log('[CHAR_SAVE] Making edge function call to create character...');
         const response = await _apiCall(`${window.gameAuth.supabaseConfig?.SUPABASE_URL}/functions/v1/create-character`, {
             method: 'POST',
             headers: {
@@ -642,16 +643,10 @@ async function confirmCharacter() {
             body: JSON.stringify(characterCreationData)
         });
 
-        console.log('[CHAR_SAVE] Edge function response received:', response);
-        console.log('[CHAR_SAVE] Response status:', response.status);
-        console.log('[CHAR_SAVE] Response ok:', response.ok);
-
-        // Check if response is ok before trying to parse
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('[CHAR_SAVE] Edge function response not ok. Status:', response.status, 'Error text:', errorText);
+            console.error('Edge function response not ok. Status:', response.status, 'Error text:', errorText);
             
-            // Try to parse as JSON for better error handling
             try {
                 const errorData = JSON.parse(errorText);
                 throw new Error(errorData.error || `Edge function call failed with status ${response.status}`);
@@ -661,18 +656,11 @@ async function confirmCharacter() {
         }
 
         const result = await response.json();
-        console.log('[CHAR_SAVE] Character created successfully via edge function:', result);
         
         if (result.success) {
             displayMessage(`Character ${_currentCharacterIndex + 1} (${result.character.race} ${result.character.class}) created! (${result.characters_created}/${result.max_characters})`);
-
-            _currentCharacterIndex++; // Increment for the next character
-            console.log('[CHAR_SAVE] Character index incremented to:', _currentCharacterIndex);
-
-            console.log(`[CHAR_SAVE] ===== CHARACTER SAVE COMPLETED SUCCESSFULLY =====`);
-            console.log(`[CHAR_SAVE] About to start next character creation flow (${_currentCharacterIndex + 1})`);
+            _currentCharacterIndex++;
             
-            // Add a delay before starting next character to ensure all processes complete
             setTimeout(() => {
                 startCharacterCreationFlow();
             }, 1000);
@@ -681,34 +669,17 @@ async function confirmCharacter() {
         }
 
     } catch (error) {
-        console.error('[CHAR_SAVE] ===== CHARACTER SAVE ERROR =====');
-        console.error('[CHAR_SAVE] Error details:', error);
-        console.error('[CHAR_SAVE] Error message:', error.message);
-        console.error('[CHAR_SAVE] Error stack:', error.stack);
-
-        // Extra logging for restart tracking
-        console.warn(`[CHAR_SAVE] Character creation for slot ${_currentCharacterIndex + 1} failed. Current state:`, {
-            race: _selectedRace,
-            class: _selectedClass,
-            sex: _selectedSex,
-            profession: _selectedProfession,
-            currentIndex: _currentCharacterIndex
-        });
-
+        console.error('Character save error:', error);
         displayMessage(`Failed to save character: ${error.message}`);
-        console.log('[CHAR_SAVE] ===== CHARACTER SAVE ERROR HANDLING COMPLETE =====');
     }
 }
 
 function createParticles() {
-    console.log('[PARTICLES] Creating particles...');
     const particlesContainer = _main.querySelector('.particles');
     if (!particlesContainer) {
-        console.warn('[PARTICLES] Particles container not found.');
         return;
     }
 
-    // Clear existing particles if any
     particlesContainer.innerHTML = '';
 
     const particleCount = 20;
@@ -721,11 +692,9 @@ function createParticles() {
         particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
         particlesContainer.appendChild(particle);
     }
-    console.log('[PARTICLES] Particles created and appended.');
 }
 
 function displayMessage(message) {
-    console.log(`[MESSAGE] Displaying message: "${message}"`);
     const messageBox = document.createElement('div');
     messageBox.className = 'custom-message-box';
     messageBox.innerHTML = `
@@ -738,6 +707,5 @@ function displayMessage(message) {
 
     messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
         messageBox.remove();
-        console.log('[MESSAGE] Message box closed.');
     });
 }
