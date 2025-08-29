@@ -378,35 +378,30 @@ async function selectGod(godId, godName, getCurrentProfile) {
     const response = await fetch('/api/profile/select-god', {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ profileId: profile.id, godId })
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to update profile');
+      throw new Error(data.error || 'Failed to update profile');
     }
 
-    const updatedProfiles = await response.json();
-    if (!updatedProfiles || updatedProfiles.length === 0) {
+    if (!data || data.length === 0) {
       throw new Error('Failed to update profile - no data returned');
     }
 
-    const updatedProfile = updatedProfiles[0];
+    const updatedProfile = data[0];
     localStorage.setItem('profile', JSON.stringify(updatedProfile));
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
     window.gameAuth.loadModule('character_creation');
-    
+
   } catch (error) {
     console.error('Error selecting god:', error);
-    if (error.message.includes('Unauthorized')) {
-      alert('Authentication error. Please refresh and log in again.');
-    } else {
-      alert(`Failed to select god: ${error.message}. Please try again.`);
-    }
+    alert(`Failed to select god: ${error.message}. Please try again.`);
   }
 }
 
