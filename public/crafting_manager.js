@@ -562,6 +562,7 @@ function injectLoadingStyles() {
     .card-info {
       flex: 1;
       text-align: left;
+      max-height: 10vh;
     }
 
     .card-name {
