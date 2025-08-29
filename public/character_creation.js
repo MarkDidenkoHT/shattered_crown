@@ -106,7 +106,6 @@ function renderRaceSelection() {
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Race</h1>
-            <p class="subtitle">Select the lineage that defines your champion's innate strengths.</p>
         </div>
         <div class="selection-section">
             <div class="selection-container desktop-view">
@@ -282,7 +281,6 @@ function renderSexSelection() {
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Sex</h1>
-            <p class="subtitle">Decide the gender of your champion.</p>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name}</h3>
@@ -418,7 +416,6 @@ function renderClassSelection() {
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Class</h1>
-            <p class="subtitle">Embrace a discipline that complements your race's heritage.</p>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
@@ -563,7 +560,6 @@ function renderProfessionSelection() {
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Profession</h1>
-            <p class="subtitle">Select a profession that defines your champion's skills and trade.</p>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
@@ -664,7 +660,6 @@ function renderCharacterSummary() {
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${_currentCharacterIndex + 1} of 3: Summary</h1>
-            <p class="subtitle">Review your champion's destiny before it is sealed.</p>
         </div>
         <div class="summary-card">
             <div class="summary-art-block">
