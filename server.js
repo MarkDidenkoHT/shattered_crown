@@ -282,10 +282,19 @@ app.get('/api/auction/active', requireAuth, async (req, res) => {
     try {
         const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?status=eq.false&select=*,seller:seller_id(chat_id)`, {
             headers: {
-                'apikey': process.env.SERVICE_ROLE_KEY,
-                'Authorization': `Bearer ${process.env.SERVICE_ROLE_KEY}`
+                'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, // Fixed: use same key for both
+                'Content-Type': 'application/json'
             }
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Supabase response: ${response.status} ${response.statusText}`, errorText);
+            return res.status(response.status).json({ 
+                error: `Failed to fetch auctions: ${response.status}` 
+            });
+        }
 
         const auctions = await response.json();
         res.json(auctions);

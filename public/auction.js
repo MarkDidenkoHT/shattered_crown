@@ -162,19 +162,15 @@ async function loadBuyView(container) {
     displayMessage('Loading active auctions...');
     
     try {
-        // Since no JWT, just make a simple authenticated request
         const response = await fetch('/api/auction/active', {
             method: 'GET',
-            credentials: 'include', // Include cookies if using session auth
+            credentials: 'include', // Include cookies for session auth
             headers: {
                 'Content-Type': 'application/json'
             }
         });
 
         if (!response.ok) {
-            if (response.status === 401) {
-                throw new Error('Please log in to view auctions.');
-            }
             throw new Error(`Failed to fetch auctions: ${response.status}`);
         }
 
@@ -222,7 +218,7 @@ async function loadBuyView(container) {
         closeMessageBox();
     } catch (error) {
         console.error('Failed to load auctions:', error);
-        displayMessage(`Failed to load auctions: ${error.message}`);
+        displayMessage('Failed to load auctions. Please try again.');
     }
 }
 
