@@ -278,7 +278,7 @@ app.all('/functions/v1/*', requireAuth, async (req, res) => {
 });
 
 // Get all active auctions (status = false)
-app.get('/api/auction/active', requireAuth, async (req, res) => {
+app.get('/api/auction/active', async (req, res) => {
     try {
         const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?status=eq.false&select=*,seller:seller_id(chat_id)`, {
             headers: {
