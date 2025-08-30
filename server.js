@@ -282,8 +282,8 @@ app.get('/api/auction/active', requireAuth, async (req, res) => {
     try {
         const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?status=eq.false&select=*,seller:seller_id(chat_id)`, {
             headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                'apikey': process.env.SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${process.env.SERVICE_ROLE_KEY}`
             }
         });
 
