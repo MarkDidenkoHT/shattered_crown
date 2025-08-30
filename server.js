@@ -304,14 +304,13 @@ app.get('/api/auction/active', async (req, res) => {
     }
 });
 
-// Get items available for auction (bank + unequipped gear)
 app.get('/api/auction/bank/:playerId', async (req, res) => {
   const { playerId } = req.params;
 
   try {
     // Fetch bank items
     const bankResponse = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/bank_items?profile_id=eq.${playerId}&amount=gt.0&select=*,professions(name)`,
+      `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&amount=gt.0&select=*,professions(name)`,
       {
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
@@ -333,7 +332,7 @@ app.get('/api/auction/bank/:playerId', async (req, res) => {
     );
     const craftedGear = await gearResponse.json();
 
-    // Normalize crafted gear format to look like bank items
+    // Normalize crafted gear format
     const gearItems = craftedGear.map(g => ({
       id: g.id,
       item: g.result || 'Crafted Item',
