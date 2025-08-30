@@ -162,7 +162,16 @@ async function loadBuyView(container) {
     displayMessage('Loading active auctions...');
     
     try {
-        const response = await _apiCall('/api/auction/active');
+        const response = await fetch('/api/auction/active', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch auctions: ${response.status}`);
+        }
+
         _activeAuctions = await response.json();
         
         if (_activeAuctions.length === 0) {
@@ -177,7 +186,9 @@ async function loadBuyView(container) {
             container.innerHTML = _activeAuctions.map(auction => `
                 <div class="bank-item auction-item" data-auction-id="${auction.id}">
                     <div class="item-icon">
-                        <img src="${getItemIcon(auction.item_selling)}" alt="${auction.item_selling}" onerror="this.src='assets/art/recipes/default_item.png'">
+                        <img src="${getItemIcon(auction.item_selling)}" 
+                             alt="${auction.item_selling}" 
+                             onerror="this.src='assets/art/recipes/default_item.png'">
                         ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
                     </div>
                     
@@ -213,44 +224,67 @@ async function loadSellView(container) {
     displayMessage('Loading your items...');
     
     try {
-        const response = await _apiCall(`/api/auction/bank/${_profile.id}`);
+        const response = await fetch(`/api/auction/bank/${_profile.id}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch bank items: ${response.status}`);
+        }
+
         _bankItems = await response.json();
-        
-        // Get sprite paths for items
-        const itemNames = [...new Set(_bankItems.map(item => item.item))];
+
+        // Build a list of item names for sprite lookup (only non-gear)
+        const itemNames = [...new Set(
+            _bankItems.filter(item => !item.isGear).map(item => item.item)
+        )];
+
         const spriteMap = await getItemSprites(itemNames);
-        
+
+        // Normalize sprite paths
         _bankItems = _bankItems.map(item => ({
             ...item,
-            spritePath: spriteMap[item.item] || `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`
+            spritePath: item.spritePath ||
+                (item.isGear
+                    ? (item.sprite || "assets/art/recipes/default_item.png")
+                    : (spriteMap[item.item] ||
+                       `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`))
         }));
-        
+
         if (_bankItems.length === 0) {
             container.innerHTML = `
                 <div class="empty-bank">
                     <div class="empty-icon">📦</div>
                     <h3>No Items to Sell</h3>
-                    <p>You need items in your bank to create auction listings</p>
+                    <p>You need items in your bank or unequipped crafted gear to create auction listings</p>
                 </div>
             `;
         } else {
             container.innerHTML = _bankItems.map(item => `
-                <div class="bank-item" data-item-id="${item.id}">
+                <div class="bank-item ${item.isGear ? 'crafted-gear' : ''}" data-item-id="${item.id}">
                     <div class="item-icon">
                         <img src="${item.spritePath}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
-                        ${item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
+                        ${!item.isGear && item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
                     </div>
-                    
                     <div class="item-info">
                         <div class="item-name">${item.item}</div>
                         <div class="item-details">
-                            <span class="item-type">${item.type || 'recipe'}</span>
+                            ${item.isGear 
+                                ? `<span class="item-type">Crafted Gear</span>` 
+                                : `<span class="item-type">${item.type || 'recipe'}</span>`}
                             ${item.professions ? `<span class="item-profession">• ${item.professions.name}</span>` : ''}
                         </div>
+                        ${item.isGear && item.stats 
+                            ? `<pre class="gear-stats">${JSON.stringify(item.stats, null, 2)}</pre>` 
+                            : ''}
                     </div>
-                    
                     <div class="item-actions">
-                        <button class="action-btn sell-btn" data-action="sell" data-item-id="${item.id}">
+                        <button class="action-btn sell-btn" 
+                                data-action="sell" 
+                                data-item-id="${item.id}" 
+                                data-is-gear="${item.isGear}">
                             <span class="btn-icon">🏷️</span>
                             Sell
                         </button>
@@ -258,7 +292,7 @@ async function loadSellView(container) {
                 </div>
             `).join('');
         }
-        
+
         closeMessageBox();
     } catch (error) {
         console.error('Failed to load bank items:', error);
@@ -270,7 +304,16 @@ async function loadMyListingsView(container) {
     displayMessage('Loading your listings...');
     
     try {
-        const response = await _apiCall(`/api/auction/my-listings/${_profile.id}`);
+        const response = await fetch(`/api/auction/my-listings/${_profile.id}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch listings: ${response.status}`);
+        }
+
         _myListings = await response.json();
         
         if (_myListings.length === 0) {
@@ -283,10 +326,16 @@ async function loadMyListingsView(container) {
             `;
         } else {
             container.innerHTML = _myListings.map(listing => `
-                <div class="bank-item listing-item ${listing.status ? 'sold' : 'active'}" data-listing-id="${listing.id}">
+                <div class="bank-item listing-item ${listing.status ? 'sold' : 'active'}" 
+                     data-listing-id="${listing.id}">
+                     
                     <div class="item-icon">
-                        <img src="${getItemIcon(listing.item_selling)}" alt="${listing.item_selling}" onerror="this.src='assets/art/recipes/default_item.png'">
-                        ${listing.amount_selling > 1 ? `<span class="item-quantity">${listing.amount_selling}</span>` : ''}
+                        <img src="${getItemIcon(listing.item_selling)}" 
+                             alt="${listing.item_selling}" 
+                             onerror="this.src='assets/art/recipes/default_item.png'">
+                        ${listing.amount_selling > 1 
+                            ? `<span class="item-quantity">${listing.amount_selling}</span>` 
+                            : ''}
                         <div class="listing-status-badge ${listing.status ? 'sold' : 'active'}">
                             ${listing.status ? 'SOLD' : 'ACTIVE'}
                         </div>
@@ -296,7 +345,9 @@ async function loadMyListingsView(container) {
                         <div class="item-name">${listing.item_selling}</div>
                         <div class="item-details">
                             <span class="item-type">Status: ${listing.status ? 'Sold' : 'Active'}</span>
-                            <span class="item-profession">• ${listing.status ? formatTime(listing.modified_at) : formatTime(listing.created_at)}</span>
+                            <span class="item-profession">• ${listing.status 
+                                ? formatTime(listing.modified_at) 
+                                : formatTime(listing.created_at)}</span>
                         </div>
                         <div class="auction-trade-info">
                             <span class="trade-want">For: ${listing.amount_wanted}× ${listing.item_wanted}</span>
@@ -305,7 +356,9 @@ async function loadMyListingsView(container) {
                     
                     <div class="item-actions">
                         ${!listing.status ? `
-                            <button class="action-btn cancel-btn" data-action="cancel" data-listing-id="${listing.id}">
+                            <button class="action-btn cancel-btn" 
+                                    data-action="cancel" 
+                                    data-listing-id="${listing.id}">
                                 <span class="btn-icon">❌</span>
                                 Cancel
                             </button>
@@ -405,36 +458,47 @@ async function handleBuyClick(auctionId) {
         return;
     }
 
-    // Check if player has the required items
     try {
-        const response = await _apiCall(`/api/auction/bank/${_profile.id}`);
+        // Fetch player’s available items (bank + unequipped crafted gear)
+        const response = await fetch(`/api/auction/bank/${_profile.id}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch bank items: ${response.status}`);
+        }
+
         const bankItems = await response.json();
-        
+
         const requiredItem = auction.item_wanted;
         const requiredAmount = auction.amount_wanted;
+
+        // Sum up player’s amount of the required item (bank only, crafted gear not used as currency)
         const playerAmount = bankItems
-            .filter(item => item.item === requiredItem)
+            .filter(item => !item.isGear && item.item === requiredItem)
             .reduce((sum, item) => sum + item.amount, 0);
 
         // Update modal with trade details
         document.getElementById('buy-receive-icon').src = getItemIcon(auction.item_selling);
         document.getElementById('buy-receive-name').textContent = auction.item_selling;
         document.getElementById('buy-receive-amount').textContent = auction.amount_selling;
-        
+
         document.getElementById('buy-pay-icon').src = getItemIcon(auction.item_wanted);
         document.getElementById('buy-pay-name').textContent = auction.item_wanted;
         document.getElementById('buy-pay-amount').textContent = auction.amount_wanted;
         document.getElementById('buy-pay-available').textContent = playerAmount;
-        
+
         // Check if player can afford it
         const canAfford = playerAmount >= requiredAmount;
         const confirmBtn = document.querySelector('.confirm-buy');
         confirmBtn.disabled = !canAfford;
         confirmBtn.textContent = canAfford ? 'Confirm Purchase' : 'Insufficient Items';
-        
+
         // Store auction ID for confirmation
         confirmBtn.dataset.auctionId = auctionId;
-        
+
         // Show modal
         document.getElementById('buy-modal').style.display = 'block';
     } catch (error) {
@@ -448,36 +512,41 @@ async function handleSellClick(itemId) {
     if (!item) return;
 
     try {
-        // Load available items for trade
-        const response = await _apiCall('/api/auction/items');
+        // Call secure backend (no keys exposed)
+        const response = await fetch('/api/auction/items', {
+            headers: {
+                'Authorization': `Bearer ${_anonKey}` // client only sends token
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to load items');
         _availableItems = await response.json();
 
         // Update modal with item details
         document.getElementById('sell-item-icon').src = item.spritePath;
         document.getElementById('sell-item-name').textContent = item.item;
         document.getElementById('sell-item-available').textContent = item.amount;
-        
+
         const sellAmountInput = document.getElementById('sell-amount');
         sellAmountInput.max = item.amount;
         sellAmountInput.value = Math.min(1, item.amount);
-        
+
         // Populate wanted items dropdown
         const wantedSelect = document.getElementById('wanted-item');
         wantedSelect.innerHTML = '<option value="">Select item...</option>' +
-            _availableItems.map(availableItem => 
+            _availableItems.map(availableItem =>
                 `<option value="${availableItem.name}">${availableItem.name}</option>`
             ).join('');
-        
-        // Store item ID for confirmation
+
         document.querySelector('.confirm-sell').dataset.itemId = itemId;
-        
-        // Show modal
+
         document.getElementById('sell-modal').style.display = 'block';
     } catch (error) {
         console.error('Failed to load available items:', error);
         displayMessage('Failed to load available items. Please try again.');
     }
 }
+
 
 async function handleConfirmSell() {
     const itemId = document.querySelector('.confirm-sell').dataset.itemId;
@@ -495,22 +564,28 @@ async function handleConfirmSell() {
 
     try {
         displayMessage('Creating auction listing...');
-        
-        const response = await _apiCall('/api/auction/create', 'POST', {
-            seller_id: _profile.id,
-            item_selling: item.item,
-            amount_selling: sellAmount,
-            item_wanted: wantedItem,
-            amount_wanted: wantedAmount
+
+        const response = await fetch('/api/auction/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${_anonKey}` // send token, not keys
+            },
+            body: JSON.stringify({
+                seller_id: _profile.id,
+                item_selling: item.item,
+                amount_selling: sellAmount,
+                item_wanted: wantedItem,
+                amount_wanted: wantedAmount
+            })
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             displayMessage('Auction listing created successfully!');
             document.getElementById('sell-modal').style.display = 'none';
-            
-            // Refresh current view
+
             if (_currentView === 'sell') {
                 await loadSellView(document.getElementById('auctionItemsList'));
             } else if (_currentView === 'return') {
@@ -524,6 +599,7 @@ async function handleConfirmSell() {
         displayMessage('Failed to create auction listing. Please try again.');
     }
 }
+
 
 async function handleConfirmBuy() {
     const auctionId = document.querySelector('.confirm-buy').dataset.auctionId;

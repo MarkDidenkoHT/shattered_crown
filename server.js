@@ -277,8 +277,6 @@ app.all('/functions/v1/*', requireAuth, async (req, res) => {
     }
 });
 
-// Add these endpoints to your existing server.js file
-
 // Get all active auctions (status = false)
 app.get('/api/auction/active', requireAuth, async (req, res) => {
     try {
@@ -297,25 +295,54 @@ app.get('/api/auction/active', requireAuth, async (req, res) => {
     }
 });
 
-// Get player's bank items for selling
+// Get items available for auction (bank + unequipped gear)
 app.get('/api/auction/bank/:playerId', requireAuth, async (req, res) => {
-    try {
-        const { playerId } = req.params;
-        
-        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&select=*,professions(name)`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
+  const { playerId } = req.params;
 
-        const bankItems = await response.json();
-        res.json(bankItems);
-    } catch (error) {
-        console.error('[AUCTION BANK]', error);
-        res.status(500).json({ error: 'Failed to fetch bank items' });
-    }
+  try {
+    // Fetch bank items
+    const bankResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/bank_items?profile_id=eq.${playerId}&amount=gt.0&select=*,professions(name)`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+    const bankItems = await bankResponse.json();
+
+    // Fetch unequipped crafted gear
+    const gearResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/craft_sessions?player_id=eq.${playerId}&equipped_by=is.null`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+    const craftedGear = await gearResponse.json();
+
+    // Normalize crafted gear format to look like bank items
+    const gearItems = craftedGear.map(g => ({
+      id: g.id,
+      item: g.result || 'Crafted Item',
+      type: g.type || 'gear',
+      professions: { name: 'Crafting' },
+      amount: 1,
+      spritePath: g.sprite || 'assets/art/recipes/default_item.png',
+      stats: g.result_stats,
+      isGear: true
+    }));
+
+    res.json([...bankItems, ...gearItems]);
+  } catch (error) {
+    console.error('[BANK ITEMS + CRAFTED GEAR]', error);
+    res.status(500).json({ error: 'Failed to fetch items available for auction' });
+  }
 });
+
 
 // Get all unique items from recipes and ingredients for trade selection
 app.get('/api/auction/items', requireAuth, async (req, res) => {
@@ -548,20 +575,41 @@ async function sendTelegramNotification(chatId, message) {
     }
 }
 
+// Helper: transfer crafted gear from seller → buyer
+async function transferGearItem(gearId, buyerId) {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${gearId}`, {
+        method: 'PATCH',
+        headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ player_id: buyerId, equipped_by: null })
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to transfer gear: ${text}`);
+    }
+}
+
 app.post('/api/auction/buy', requireAuth, async (req, res) => {
     try {
         const { auction_id, buyer_id } = req.body;
-
         if (!auction_id || !buyer_id) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false&select=*,seller:seller_id(chat_id,account_name)`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        // Get auction with seller details
+        const auctionResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false&select=*,seller:seller_id(chat_id,account_name)`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
             }
-        });
+        );
 
         const auctions = await auctionResponse.json();
         if (auctions.length === 0) {
@@ -569,70 +617,90 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
         }
 
         const auction = auctions[0];
-        const seller = auction.seller; // Contains chat_id and account_name
+        const seller = auction.seller;
 
-        // Prevent self-purchase
+        // Prevent self-buy
         if (auction.seller_id === buyer_id) {
             return res.status(400).json({ error: 'Cannot buy your own auction' });
         }
 
-        // Get buyer's profile for notification
-        const buyerProfileResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${buyer_id}`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        // Fetch buyer profile (for notification)
+        const buyerProfileResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${buyer_id}`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
             }
-        });
+        );
         const buyerProfiles = await buyerProfileResponse.json();
         const buyerProfile = buyerProfiles.length > 0 ? buyerProfiles[0] : null;
 
-        // Check if buyer has required items
-        const buyerBankResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${buyer_id}&item=eq.${auction.item_wanted}`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
-
-        const buyerItems = await buyerBankResponse.json();
-        const buyerTotal = buyerItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-
-        if (buyerTotal < auction.amount_wanted) {
-            return res.status(400).json({ error: 'Insufficient items to complete purchase' });
-        }
-
-        // Remove items from buyer's bank
-        let remainingToRemove = auction.amount_wanted;
-        for (const bankItem of buyerItems) {
-            if (remainingToRemove <= 0) break;
-
-            const amountToTake = Math.min(remainingToRemove, bankItem.amount);
-            remainingToRemove -= amountToTake;
-
-            if (amountToTake === bankItem.amount) {
-                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
-                    method: 'DELETE',
+        // 1️⃣ Deduct wanted items from buyer
+        if (auction.item_wanted_type === 'gear') {
+            // Gear wanted: buyer must give a crafted gear
+            return res.status(400).json({ error: 'Trading gear for gear not supported yet' });
+        } else {
+            // Bank item wanted
+            const buyerBankResponse = await fetch(
+                `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${buyer_id}&item=eq.${auction.item_wanted}`,
+                {
                     headers: {
                         'apikey': process.env.SUPABASE_ANON_KEY,
                         'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
                     }
-                });
-            } else {
-                await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': process.env.SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ amount: bankItem.amount - amountToTake })
-                });
+                }
+            );
+
+            const buyerItems = await buyerBankResponse.json();
+            const buyerTotal = buyerItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+            if (buyerTotal < auction.amount_wanted) {
+                return res.status(400).json({ error: 'Insufficient items to complete purchase' });
             }
+
+            // Remove items from buyer's bank
+            let remainingToRemove = auction.amount_wanted;
+            for (const bankItem of buyerItems) {
+                if (remainingToRemove <= 0) break;
+
+                const amountToTake = Math.min(remainingToRemove, bankItem.amount);
+                remainingToRemove -= amountToTake;
+
+                if (amountToTake === bankItem.amount) {
+                    await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'apikey': process.env.SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                        }
+                    });
+                } else {
+                    await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': process.env.SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ amount: bankItem.amount - amountToTake })
+                    });
+                }
+            }
+
+            // Seller receives wanted bank items
+            await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted, auction.item_wanted_type);
         }
 
-        await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling, auction.item_selling_type);
-        await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted, auction.item_wanted_type);
+        // 2️⃣ Transfer selling item → buyer
+        if (auction.item_selling_type === 'gear') {
+            await transferGearItem(auction.item_selling_id, buyer_id); // transfer ownership in craft_sessions
+        } else {
+            await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling, auction.item_selling_type);
+        }
 
+        // 3️⃣ Update auction status
         const updateResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}`, {
             method: 'PATCH',
             headers: {
@@ -640,8 +708,8 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
                 'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 
-                status: true, 
+            body: JSON.stringify({
+                status: true,
                 buyer_id,
                 modified_at: new Date().toISOString()
             })
@@ -651,7 +719,7 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
             throw new Error('Failed to update auction status');
         }
 
-        // Send notification to seller
+        // 4️⃣ Notify seller via Telegram
         if (seller && seller.chat_id) {
             const buyerName = buyerProfile?.account_name || 'Another player';
             const message = `
@@ -661,9 +729,7 @@ app.post('/api/auction/buy', requireAuth, async (req, res) => {
 <b>Received:</b> ${auction.amount_wanted}x ${auction.item_wanted}
 <b>Buyer:</b> ${buyerName}
 
-The items have been added to your bank.
-            `;
-            
+The items have been added to your bank.`;
             await sendTelegramNotification(seller.chat_id, message);
         }
 
