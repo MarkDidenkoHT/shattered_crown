@@ -674,57 +674,34 @@ async function getItemSprites(itemNames) {
   if (itemNames.length === 0) return {};
 
   const spriteMap = {};
-  const itemNameQuery = itemNames.map(name => `"${name}"`).join(',');
 
   try {
-    // Get sprites from ingredients
-    const ingredientsResponse = await fetch(
-      `/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`
-    );
-    let ingredients = await ingredientsResponse.json();
+    // Fetch all auction items from our server
+    const response = await fetch('/api/auction/items');
+    const items = await response.json();
 
-    if (!Array.isArray(ingredients)) {
-      console.warn("Unexpected ingredients response:", ingredients);
-      ingredients = [];
-    }
-
-    ingredients.forEach(item => {
-      if (item.sprite) {
-        const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
-        spriteMap[item.name] = `assets/art/ingridients/${fileName}`;
-      }
+    // Index items by name for quick lookup
+    const itemIndex = {};
+    items.forEach(item => {
+      if (item.name) itemIndex[item.name] = item;
     });
 
-    // Get sprites from recipes
-    const recipesResponse = await fetch(
-      `/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`
-    );
-    let recipes = await recipesResponse.json();
-
-    if (!Array.isArray(recipes)) {
-      console.warn("Unexpected recipes response:", recipes);
-      recipes = [];
-    }
-
-    recipes.forEach(item => {
-      if (item.sprite) {
-        const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
-        spriteMap[item.name] = `assets/art/recipes/${fileName}`;
-      }
-    });
-
-    // Fallback for items not found in DB
+    // Map requested names to sprite paths
     itemNames.forEach(itemName => {
-      if (!spriteMap[itemName]) {
+      const dbItem = itemIndex[itemName];
+      if (dbItem && dbItem.spritePath) {
+        spriteMap[itemName] = dbItem.spritePath;
+      } else {
+        // Fallback naming convention
         const spriteName = itemNameToSpriteFormat(itemName);
         spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
       }
     });
 
   } catch (error) {
-    console.error('Failed to get item sprites from database:', error);
+    console.error('Failed to get item sprites:', error);
 
-    // Fallback: generate all sprite paths
+    // Fallback: generate all sprite paths by convention
     itemNames.forEach(itemName => {
       const spriteName = itemNameToSpriteFormat(itemName);
       spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;

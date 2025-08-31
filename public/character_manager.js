@@ -843,13 +843,13 @@ styleEl.textContent = `
 }
 
 .items-list p, .stats-list p {
-    color: #b8b3a8;
+    color: #c4975a;
     font-size: 0.8rem;
     display: flex;
     justify-content: space-between;
     margin: 0;
     padding: 0.1rem 0;
-}
+    height: 25px;
 
 .stats-list p span {
     color: #c4975a;
