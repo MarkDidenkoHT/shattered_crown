@@ -11,12 +11,12 @@
   display: none !important;   
 }
 .battle-top-bar {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 10px;
-  background: rgba(10, 5, 5, 0.85);
-  color: white;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 0;
+    gap: 4px;
+    justify-content: center;
 }
 
 .battle-entity-info {
@@ -150,14 +150,6 @@
       padding: 0.2rem 2rem !important;
     }
 
-    .battle-top-bar {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 4px 0;
-      gap: 4px;
-    }
-    
     .battle-status {
       font-size: 1rem;
       font-weight: bold;

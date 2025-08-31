@@ -298,7 +298,7 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-grid-container"></div>
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%;">
-                    <div style="width: 50%; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 97vw; height: 58vh; display: flex; align-items: center; justify-content: center;">
                         <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
                     </div>
                     <div class="info-text" style="width: 50%; padding-left: 10px; display: flex; flex-direction: column; justify-content: center;">
@@ -308,7 +308,7 @@ function renderBattleScreen(mode, level, layoutData) {
                     </div>
                 </div>
             </div>
-            <div class="battle-bottom-ui"></div>
+            <div class="battle-bottom-ui" style="display: contents; width: 97vw;"></div>
         </div>
     `;
 
