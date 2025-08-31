@@ -396,7 +396,7 @@
     font-size: 0.9rem;
     line-height: 1.2;
     font-style: italic;
-    min-height: 20vh;
+    min-height: 18vh;
 }
 
 /* --- Condensed stats/items/consumables blocks --- */
@@ -1079,6 +1079,7 @@
         /* Available Classes styling */
 .available-classes-block {
     margin: 10px 0;
+    text-align: center;
 }
 
 .class-list {
@@ -1086,16 +1087,18 @@
     flex-wrap: wrap;
     gap: 5px;
     margin-top: 5px;
+    justify-content: center;
 }
 
 .class-tag {
     background: rgba(139, 69, 19, 0.3);
     border: 1px solid #8B4513;
-    padding: 4px 8px;
+    padding: 8px;
     border-radius: 12px;
-    font-size: 0.8em;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    min-width: 100px;;
 }
 
 .class-tag:hover {
