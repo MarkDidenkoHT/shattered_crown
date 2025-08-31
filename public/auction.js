@@ -1329,11 +1329,6 @@ function addAuctionStyles() {
   transition: all 0.2s;
 }
 
-.wanted-card:hover {
-  border-color: #888;
-  background: #f1f1f1;
-}
-
 .wanted-card.selected {
   border-color: #168acd;
   background: #eaf6ff;
