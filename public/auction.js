@@ -53,7 +53,7 @@ export async function loadModule(main, { getCurrentProfile }) {
                 <h3>Create Auction Listing</h3>
                 <div class="sell-form">
 
-                  <div>
+                  <div style="display: flex; gap: 2%;">
                     <div class="form-group">
                         <label>Selling:</label>
                         <div class="selling-item">
@@ -80,7 +80,7 @@ export async function loadModule(main, { getCurrentProfile }) {
                             <option value="ingredient">Ingredients</option>
                             <option value="consumable">Consumables</option>
                         </select>
-                        <input id="wanted-search" type="text" placeholder="Search item...">
+                        <input id="wanted-search" type="text" placeholder="Search item..." style="border-radius: 4px;">
                         </div>
 
                     <div id="wanted-item-picker" class="wanted-grid"></div>
@@ -1071,10 +1071,12 @@ function addAuctionStyles() {
             border-radius: 8px;
             padding: 5px;
             max-width: 500px;
-            width: 95%;
+            width: 92%;
             max-height: 95vh;
             overflow-y: auto;
             position: relative;
+            margin: auto;
+            margin-top: 1rem;
         }
 
         .close-modal {
@@ -1107,6 +1109,7 @@ function addAuctionStyles() {
             font-family: 'Cinzel', serif;
             font-weight: 600;
             margin-bottom: 0.5rem;
+            text-align: center;
         }
 
         .selling-item {
@@ -1303,15 +1306,15 @@ function addAuctionStyles() {
         }
 
         .wanted-controls {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
 
 .wanted-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 100px);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, 97px);
+  gap: 8px;
   max-height: 300px;
   overflow-y: auto;
   padding: 5px;
