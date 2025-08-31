@@ -1036,12 +1036,12 @@ function addAuctionStyles() {
         }
 
         .modal-content {
-            background: linear-gradient(145deg, #2a1f16, #1d140c);
+            background: linear-gradient(145deg, #2a1f16, #ab5509);
             border: 2px solid #c4975a;
             border-radius: 8px;
-            padding: 2rem;
+            padding: 5px;
             max-width: 500px;
-            width: 90%;
+            width: 95%;
             max-height: 95vh;
             overflow-y: auto;
             position: relative;
@@ -1270,57 +1270,6 @@ function addAuctionStyles() {
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-        }
-
-        @media (max-width: 768px) {
-            .filter-tab {
-                font-size: 0.8rem;
-                padding: 0.4rem 0.8rem;
-            }
-
-            .bank-item {
-                gap: 0.5rem;
-                padding: 0.5rem;
-            }
-
-            .item-icon {
-                width: 40px;
-                height: 40px;
-            }
-
-            .action-btn {
-                padding: 0.3rem 0.6rem;
-                font-size: 0.7rem;
-            }
-
-            .auction-trade-info {
-                font-size: 0.7rem;
-            }
-
-            .trade-preview {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .trade-preview .trade-arrow {
-                transform: rotate(90deg);
-                font-size: 1.5rem;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 1.5rem;
-                margin: 1rem;
-            }
-
-            .form-actions {
-                flex-direction: column;
-                gap: 0.75rem;
-            }
-
-            .filter-tab {
-                flex: none;
-            }
         }
 
         .wanted-controls {

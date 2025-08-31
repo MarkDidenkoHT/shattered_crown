@@ -2,24 +2,20 @@ let _main;
 let _apiCall;
 let _getCurrentProfile;
 let _profile;
-let _playerCharacters = []; // Для хранения персонажей игрока
+let _playerCharacters = [];
 
 export async function loadModule(main, {refreshTranslations, apiCall, getCurrentProfile }) {
-    console.log('[CASTLE] loadModule called');
-    console.log('[CASTLE] refreshTranslations function:', typeof refreshTranslations);
-    
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
     
-    _profile = _getCurrentProfile(); // ← Fix this syntax error
+    _profile = _getCurrentProfile();
     if (!_profile) {
         displayMessage('User profile not found. Please log in again.');
         window.gameAuth.loadModule('login');
         return;
     }
 
-    // Ensure the main container is ready for content
     _main.innerHTML = `
         <div class="main-app-container castle-container">
             <div class="particles"></div>
@@ -50,17 +46,14 @@ export async function loadModule(main, {refreshTranslations, apiCall, getCurrent
     `;
 
     addCastleStyles();
-    createParticles(); // Reusing the particle function
+    createParticles();
 
-    await fetchPlayerCharacters(); // Fetch characters to display profession buildings
+    await fetchPlayerCharacters();
     renderCastleScene();
     setupInteractions();
 
-    console.log('[CASTLE] About to call refreshTranslations');
     if (typeof refreshTranslations === 'function') {
         refreshTranslations();
-    } else {
-        console.error('[CASTLE] refreshTranslations is not a function:', refreshTranslations);
     }
 }
 
@@ -78,9 +71,8 @@ function renderCastleScene() {
 
     buildingOverlay.querySelectorAll('.profession-hotspot').forEach(el => el.remove());
     const professionPositions = {
-        'blacksmith': { x: '50%', y: '60%', width: '10%', height: '15%' }, // Example
-        'alchemist': { x: '30%', y: '55%', width: '12%', height: '18%' }, // Example
-        // Add more professions and their positions
+        'blacksmith': { x: '50%', y: '60%', width: '10%', height: '15%' },
+        'alchemist': { x: '30%', y: '55%', width: '12%', height: '18%' },
     };
 
     _playerCharacters.forEach(character => {
@@ -91,7 +83,7 @@ function renderCastleScene() {
                 const professionHotspot = document.createElement('div');
                 professionHotspot.className = `building-hotspot profession-hotspot ${professionName}-hotspot`;
                 professionHotspot.dataset.building = professionName;
-                professionHotspot.dataset.characterId = character.id; // Link to specific character
+                professionHotspot.dataset.characterId = character.id;
                 professionHotspot.style.left = pos.x;
                 professionHotspot.style.top = pos.y;
                 professionHotspot.style.width = pos.width;
@@ -103,11 +95,9 @@ function renderCastleScene() {
 }
 
 function setupInteractions() {
-    // Top Right Buttons
     _main.querySelectorAll('.top-right-buttons .settings-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
-            console.log(`[CASTLE_INTERACTION] Top button clicked: ${action}`);
             
             if (action === 'settings') {
                 window.gameAuth.loadModule('settings');
@@ -119,11 +109,9 @@ function setupInteractions() {
         });
     });
 
-    // Bottom Navigation Buttons
     _main.querySelectorAll('.bottom-navigation .nav-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
-            console.log(`[CASTLE_INTERACTION] Navigation button clicked: ${action}`);
             
             if (action === 'characters') {
                 window.gameAuth.loadModule('character_manager'); 
@@ -143,26 +131,17 @@ function setupInteractions() {
         });
     });
 
-    // Building Hotspots Interactions
     _main.querySelectorAll('.building-hotspot').forEach(hotspot => {
         hotspot.addEventListener('mouseenter', (e) => {
-            const building = e.target.dataset.building;
-            // Add a class to light up the building visually
             e.target.classList.add('highlight');
-            // Maybe show a tooltip with building name
-            // displayTooltip(building, e.clientX, e.clientY);
         });
 
         hotspot.addEventListener('mouseleave', (e) => {
-            const building = e.target.dataset.building;
-            console.log(`[CASTLE_INTERACTION] Leaving: ${building}`);
             e.target.classList.remove('highlight');
-            // hideTooltip();
         });
 
         hotspot.addEventListener('click', (e) => {
             const building = e.target.dataset.building;
-            console.log(`[CASTLE_INTERACTION] Clicked building: ${building}`);
             let message = `You clicked the ${building} building.`;
             if (e.target.dataset.characterId) {
                 const charId = e.target.dataset.characterId;
@@ -182,7 +161,6 @@ function createParticles() {
         return;
     }
 
-    // Clear existing particles if any
     particlesContainer.innerHTML = '';
 
     const particleCount = 20;
@@ -210,7 +188,6 @@ function displayMessage(message) {
 
     messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
         messageBox.remove();
-        console.log('[MESSAGE] Message box closed.');
     });
 }
 
@@ -262,19 +239,16 @@ function showRoadmapModal() {
     
     document.body.appendChild(modal);
 
-    // Close modal functionality
     modal.querySelector('.roadmap-close-btn').addEventListener('click', () => {
         modal.remove();
     });
 
-    // Close modal when clicking outside
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
         }
     });
 
-    // Close modal with Escape key
     const handleEscape = (e) => {
         if (e.key === 'Escape') {
             modal.remove();
@@ -317,7 +291,6 @@ function addCastleStyles() {
         .castle-image {
             width: 100%;
             height: 100%;
-            /* object-fit: contain; */
             object-position: center bottom;
             display: block;
             position: absolute;
@@ -327,78 +300,71 @@ function addCastleStyles() {
 
         .bottom-navigation {
             position: absolute;
-            bottom: 0; /* Aligns to the very bottom */
+            bottom: 0;
             left: 0;
             width: 100%;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Responsive grid for buttons */
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 0.5rem;
             padding: 1rem;
-            background: linear-gradient(to top, rgba(29, 20, 12, 0.9), rgba(29, 20, 12, 0.5)); /* Gradient background */
+            background: linear-gradient(to top, rgba(29, 20, 12, 0.9), rgba(29, 20, 12, 0.5));
             box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
-            z-index: 10; /* Ensure buttons are above castle scene */
+            z-index: 10;
         }
 
         .bottom-navigation .nav-btn {
             padding: 0.8rem 0.5rem;
             font-size: 0.9rem;
-            white-space: nowrap; /* Prevent text wrapping */
-            text-overflow: ellipsis; /* Add ellipsis if text is too long */
+            white-space: nowrap;
+            text-overflow: ellipsis;
             overflow: hidden;
         }
 
-        /* Interactive Building Overlays */
         .building-overlay {
             position: absolute;
             width: 100%;
             height: 100%;
             top: 0;
             left: 0;
-            /* background-color: rgba(0,0,255,0.1); /* For debugging hotspots */
         }
 
         .building-hotspot {
             position: absolute;
-            /* background-color: rgba(255,0,0,0.2); /* For debugging hotspot areas */
             cursor: pointer;
             transition: background-color 0.3s ease;
-            border: 2px solid transparent; /* Border for highlight */
-            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+            border: 2px solid transparent;
+            box-sizing: border-box;
         }
 
         .building-hotspot.highlight {
             background-color: rgba(255, 215, 0, 0.2);
-            border-color: #c4975a; /* Gold border */
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); /* Glowing effect */
+            border-color: #c4975a;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
         }
 
-        /* Specific Hotspot Positions (Adjust these precisely based on 132.jpg) */
-        /* Inn */
         .inn-hotspot {
-            left: 10%; /* Example percentage, adjust as needed */
-            bottom: 15%; /* Example percentage, adjust as needed */
-            width: 15%; /* Example width */
-            height: 20%; /* Example height */
+            left: 10%;
+            bottom: 15%;
+            width: 15%;
+            height: 20%;
         }
         
-        /* Altar (Top right small tower building) */
         .altar-hotspot {
-            left: 70%; /* Example */
-            bottom: 40%; /* Example */
-            width: 10%; /* Example */
-            height: 25%; /* Example */
+            left: 70%;
+            bottom: 40%;
+            width: 10%;
+            height: 25%;
         }
 
-        /* Example for Profession-specific buildings (these coordinates are rough guesses from the image) */
         .blacksmith-hotspot {
-            left: 30%; /* Lower left building */
+            left: 30%;
             bottom: 10%;
             width: 12%;
             height: 15%;
         }
 
         .alchemist-hotspot {
-            left: 55%; /* Another building */
+            left: 55%;
             bottom: 20%;
             width: 10%;
             height: 13%;
@@ -412,7 +378,7 @@ function addCastleStyles() {
             left: 0;
             pointer-events: none;
             overflow: hidden;
-            z-index: 1; /* Below other content */
+            z-index: 1;
         }
 
         .particle {
@@ -442,7 +408,6 @@ function addCastleStyles() {
             }
         }
 
-        /* Custom message box styles (reused) */
         .custom-message-box {
             position: fixed;
             top: 0;
@@ -479,9 +444,7 @@ function addCastleStyles() {
             cursor: pointer;
         }
 
-        /* roadmpap styles */
-
-.roadmap-modal {
+        .roadmap-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -603,7 +566,6 @@ function addCastleStyles() {
             }
         }
 
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .roadmap-modal-content {
                 padding: 1.5rem;
@@ -624,7 +586,6 @@ function addCastleStyles() {
                 margin-right: 0;
             }
         }
-
     `;
     document.head.appendChild(style);
 }
