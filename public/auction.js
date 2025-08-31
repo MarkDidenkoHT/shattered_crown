@@ -52,6 +52,8 @@ export async function loadModule(main, { getCurrentProfile }) {
                 <span class="close-modal">&times;</span>
                 <h3>Create Auction Listing</h3>
                 <div class="sell-form">
+
+                  <div>
                     <div class="form-group">
                         <label>Selling:</label>
                         <div class="selling-item">
@@ -67,17 +69,18 @@ export async function loadModule(main, { getCurrentProfile }) {
                         <label for="sell-amount">Amount to sell:</label>
                         <input type="number" id="sell-amount" min="1" max="1">
                     </div>
+
+                  </div>  
                     
                     <div class="form-group">
                         <label for="wanted-item">Want in return:</label>
                         <div class="wanted-controls">
-                        <select id="wanted-filter" onchange="renderWantedItemPicker(_availableItems)">
+                        <select id="wanted-filter">
                             <option value="all">All</option>
                             <option value="ingredient">Ingredients</option>
                             <option value="recipe">Consumables</option>
                         </select>
-                        <input id="wanted-search" type="text" placeholder="Search item..." 
-                            oninput="renderWantedItemPicker(_availableItems)">
+                        <input id="wanted-search" type="text" placeholder="Search item...">
                         </div>
 
                     <div id="wanted-item-picker" class="wanted-grid"></div>
@@ -541,6 +544,15 @@ async function handleSellClick(itemId) {
 
         document.querySelector('.confirm-sell').dataset.itemId = itemId;
         document.getElementById('sell-modal').style.display = 'block';
+        const filterEl = document.getElementById('wanted-filter');
+        if (filterEl) {
+        filterEl.addEventListener('change', () => renderWantedItemPicker(_availableItems));
+        }
+
+        const searchEl = document.getElementById('wanted-search');
+        if (searchEl) {
+        searchEl.addEventListener('input', () => renderWantedItemPicker(_availableItems));
+        }
     } catch (error) {
         console.error('Failed to load available items:', error);
         displayMessage('Failed to load available items. Please try again.');
@@ -589,7 +601,7 @@ async function handleConfirmSell() {
     if (!item) return;
 
     const sellAmount = parseInt(document.getElementById('sell-amount').value);
-    const wantedItem = document.getElementById('wanted-item').value;
+    const wantedItem = getSelectedWantedItem();
     const wantedAmount = parseInt(document.getElementById('wanted-amount').value);
 
     if (!wantedItem || !wantedAmount || sellAmount < 1) {
@@ -1031,7 +1043,7 @@ function addAuctionStyles() {
             padding: 2rem;
             max-width: 500px;
             width: 90%;
-            max-height: 90vh;
+            max-height: 95vh;
             overflow-y: auto;
             position: relative;
         }
@@ -1076,6 +1088,8 @@ function addAuctionStyles() {
             background: rgba(42,31,22,0.5);
             border-radius: 6px;
             border: 1px solid #3d2914;
+            flex-direction: column;
+            width: 50%;
         }
 
         .selling-item img {
