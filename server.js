@@ -304,6 +304,7 @@ app.get('/api/auction/active', async (req, res) => {
     }
 });
 
+
 app.get('/api/auction/bank/:playerId', async (req, res) => {
   const { playerId } = req.params;
 
@@ -320,9 +321,9 @@ app.get('/api/auction/bank/:playerId', async (req, res) => {
     );
     const bankItems = await bankResponse.json();
 
-    // Fetch unequipped crafted gear
+    // Fetch unequipped crafted gear (exclude fail/success results)
     const gearResponse = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/craft_sessions?player_id=eq.${playerId}&equipped_by=is.null`,
+      `${process.env.SUPABASE_URL}/rest/v1/craft_sessions?player_id=eq.${playerId}&equipped_by=is.null&result=not.in.(fail,success)`,
       {
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
