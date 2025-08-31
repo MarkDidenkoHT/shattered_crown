@@ -188,7 +188,6 @@ async function loadBuyView(container) {
                     <div class="item-icon">
                         <img src="${getItemIcon(auction.item_selling)}" 
                              alt="${auction.item_selling}" 
-                             onerror="this.src='assets/art/recipes/default_item.png'">
                         ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
                     </div>
                     
@@ -265,7 +264,7 @@ async function loadSellView(container) {
             container.innerHTML = _bankItems.map(item => `
                 <div class="bank-item ${item.isGear ? 'crafted-gear' : ''}" data-item-id="${item.id}">
                     <div class="item-icon">
-                        <img src="${item.spritePath}" alt="${item.item}" onerror="this.src='assets/art/recipes/default_item.png'">
+                        <img src="${item.spritePath}" alt="${item.item}">
                         ${!item.isGear && item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
                     </div>
                     <div class="item-info">
@@ -330,9 +329,7 @@ async function loadMyListingsView(container) {
                      data-listing-id="${listing.id}">
                      
                     <div class="item-icon">
-                        <img src="${getItemIcon(listing.item_selling)}" 
-                             alt="${listing.item_selling}" 
-                             onerror="this.src='assets/art/recipes/default_item.png'">
+                        <img src="${getItemIcon(listing.item_selling)}">
                         ${listing.amount_selling > 1 
                             ? `<span class="item-quantity">${listing.amount_selling}</span>` 
                             : ''}
@@ -513,11 +510,7 @@ async function handleSellClick(itemId) {
 
     try {
         // Call secure backend (no keys exposed)
-        const response = await fetch('/api/auction/items', {
-            headers: {
-                'Authorization': `Bearer ${_anonKey}` // client only sends token
-            }
-        });
+        const response = await fetch('/api/auction/items');
 
         if (!response.ok) throw new Error('Failed to load items');
         _availableItems = await response.json();
@@ -546,7 +539,6 @@ async function handleSellClick(itemId) {
         displayMessage('Failed to load available items. Please try again.');
     }
 }
-
 
 async function handleConfirmSell() {
     const itemId = document.querySelector('.confirm-sell').dataset.itemId;
