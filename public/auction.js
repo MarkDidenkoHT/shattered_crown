@@ -536,9 +536,8 @@ async function handleSellClick(itemId) {
         });
         console.log('Items by type:', typeCount);
 
-        // Filter: keep only ingredients + consumables/recipes
         _availableItems = allItems.filter(i =>
-            i.type === 'ingredient' || i.type === 'consumable'
+            i.type === 'Ingredient' || i.type === 'Consumable'
         );
 
         console.log('Items after filtering (ingredient + consumable):', _availableItems.length);
