@@ -50,10 +50,10 @@ export async function loadModule(main, { getCurrentProfile }) {
                 <div class="status-icon">✨</div>
                 <div class="status-message"></div>
               </div>
+              <h3>Recent Divine Blessings</h3>
             </div>
             
             <div class="recent-blessings" id="recentBlessings" style="display: none;">
-              <h3>Recent Divine Blessings</h3>
               <div class="blessings-list" id="blessingsList"></div>
             </div>
           </div>

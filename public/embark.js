@@ -22,6 +22,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     <div class="main-app-container">
       <div class="particles"></div>
       <div class="character-creation-section"></div>
+      <div class="modal-overlay" style="display: none;"></div>
     </div>
   `;
 
@@ -55,12 +56,18 @@ function renderEmbarkScreen() {
     window.gameAuth.loadModule('castle');
   });
 
-  section.querySelectorAll('.embark-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  // Make entire cards clickable
+  section.querySelectorAll('.selection-card').forEach(card => {
+    card.addEventListener('click', (e) => {
       const mode = e.currentTarget.dataset.mode;
       console.log(`[EMBARK] Selected mode: ${mode}`);
-      // Pass selectedMode to battle_manager when loading
-      window.gameAuth.loadModule('battle_manager', { selectedMode: mode });
+      
+      if (mode === 'PvP') {
+        showPvPModal();
+      } else {
+        // Pass selectedMode to battle_manager when loading
+        window.gameAuth.loadModule('battle_manager', { selectedMode: mode });
+      }
     });
   });
 
@@ -74,16 +81,63 @@ function renderEmbarkScreen() {
 
 function createEmbarkCard(title, mode, imgSrc) {
   return `
-    <div class="selection-card">
+    <div class="selection-card clickable-card" data-mode="${mode}">
       <div class="card-art-block">
         <img src="${imgSrc}" alt="${title}" class="card-art">
       </div>
       <div class="card-info-block">
         <h3 class="card-name">${title}</h3>
-        <button class="fantasy-button embark-btn" data-mode="${mode}">Embark</button>
+        ${mode === 'PvP' ? '<p class="coming-soon-text">Coming Soon</p>' : ''}
       </div>
     </div>
   `;
+}
+
+function showPvPModal() {
+  const modalOverlay = _main.querySelector('.modal-overlay');
+  
+  modalOverlay.innerHTML = `
+    <div class="pvp-modal">
+      <div class="modal-header">
+        <h2>PvP Arena</h2>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-content">
+        <div class="coming-soon-icon">⚔️</div>
+        <h3>Coming Soon!</h3>
+        <p>Player vs Player battles are currently in development.</p>
+        <p>Prepare your heroes for epic battles against other players!</p>
+        <div class="modal-features">
+          <ul>
+            <li>Real-time PvP battles</li>
+            <li>Ranked matchmaking</li>
+            <li>Seasonal rewards</li>
+            <li>Tournament modes</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="fantasy-button modal-ok-btn">Got it!</button>
+      </div>
+    </div>
+  `;
+  
+  modalOverlay.style.display = 'flex';
+  
+  // Close modal handlers
+  modalOverlay.querySelector('.modal-close-btn').addEventListener('click', closePvPModal);
+  modalOverlay.querySelector('.modal-ok-btn').addEventListener('click', closePvPModal);
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+      closePvPModal();
+    }
+  });
+}
+
+function closePvPModal() {
+  const modalOverlay = _main.querySelector('.modal-overlay');
+  modalOverlay.style.display = 'none';
+  modalOverlay.innerHTML = '';
 }
 
 function createParticles() {

@@ -86,7 +86,6 @@ function renderCharacters(characters) {
   section.innerHTML = `
     <div class="art-header">
       <h1>Your Champions</h1>
-      <p class="subtitle">View your heroes and their current equipment and abilities.</p>
     </div>
     <div class="characters-slider-container">
       <div class="characters-slider" id="charactersSlider">
@@ -695,7 +694,6 @@ styleEl.textContent = `
 
 .character-creation-section .art-header {
     height: auto;
-    padding-bottom: 1rem;
     background: none;
     border-bottom: 1px solid rgba(196, 151, 90, 0.2);
     margin-bottom: 0.5rem;
@@ -741,13 +739,13 @@ styleEl.textContent = `
 
 .character-card {
     background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
-    border: 2px solid #3d2914;
+    border: 2px solid #c4975a;
     border-radius: 12px;
     overflow: hidden;
     transition: all 0.3s;
     backdrop-filter: blur(3px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    padding: 1rem;
+    padding: 1rem 1rem 0rem 1rem;
     min-width: calc(100% - 2rem);
     max-width: calc(100% - 2rem);
     scroll-snap-align: start;
@@ -758,7 +756,7 @@ styleEl.textContent = `
 .card-top-row {
     display: flex;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 4px;
 }
 
 .card-portrait {
