@@ -1,5 +1,4 @@
 let _main;
-let _apiCall;
 let _getCurrentProfile;
 let _profile;
 let _currentView = 'buy';
@@ -8,9 +7,8 @@ let _bankItems = [];
 let _availableItems = [];
 let _myListings = [];
 
-export async function loadModule(main, { apiCall, getCurrentProfile }) {
+export async function loadModule(main, { getCurrentProfile }) {
     _main = main;
-    _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
 
     _profile = _getCurrentProfile();
@@ -602,59 +600,70 @@ async function handleConfirmSell() {
     }
 }
 
-
 async function handleConfirmBuy() {
-    const auctionId = document.querySelector('.confirm-buy').dataset.auctionId;
-    
-    try {
-        displayMessage('Processing purchase...');
-        
-        const response = await _apiCall('/api/auction/buy', 'POST', {
-            auction_id: auctionId,
-            buyer_id: _profile.id
-        });
+  const auctionId = document.querySelector('.confirm-buy').dataset.auctionId;
 
-        const result = await response.json();
-        
-        if (result.success) {
-            displayMessage('Purchase completed successfully!');
-            document.getElementById('buy-modal').style.display = 'none';
-            
-            // Refresh buy view
-            await loadBuyView(document.getElementById('auctionItemsList'));
-        } else {
-            displayMessage(result.error || 'Failed to complete purchase.');
-        }
-    } catch (error) {
-        console.error('Failed to purchase item:', error);
-        displayMessage('Failed to complete purchase. Please try again.');
+  try {
+    displayMessage('Processing purchase...');
+
+    const response = await fetch('/api/auction/buy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        auction_id: auctionId,
+        buyer_id: _profile.id
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      displayMessage('Purchase completed successfully!');
+      document.getElementById('buy-modal').style.display = 'none';
+
+      // Refresh buy view
+      await loadBuyView(document.getElementById('auctionItemsList'));
+    } else {
+      displayMessage(result.error || 'Failed to complete purchase.');
     }
+  } catch (error) {
+    console.error('Failed to purchase item:', error);
+    displayMessage('Failed to complete purchase. Please try again.');
+  }
 }
 
 async function handleCancelListing(listingId) {
-    if (!confirm('Are you sure you want to cancel this listing? Your items will be returned to your bank.')) {
-        return;
-    }
+  if (!confirm('Are you sure you want to cancel this listing? Your items will be returned to your bank.')) {
+    return;
+  }
 
-    try {
-        displayMessage('Cancelling listing...');
-        
-        const response = await _apiCall(`/api/auction/cancel/${listingId}`, 'DELETE', {
-            seller_id: _profile.id
-        });
+  try {
+    displayMessage('Cancelling listing...');
 
-        const result = await response.json();
-        
-        if (result.success) {
-            displayMessage('Listing cancelled and items returned to your bank.');
-            await loadMyListingsView(document.getElementById('auctionItemsList'));
-        } else {
-            displayMessage(result.error || 'Failed to cancel listing.');
-        }
-    } catch (error) {
-        console.error('Failed to cancel listing:', error);
-        displayMessage('Failed to cancel listing. Please try again.');
+    const response = await fetch(`/api/auction/cancel/${listingId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        seller_id: _profile.id
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      displayMessage('Listing cancelled and items returned to your bank.');
+      await loadMyListingsView(document.getElementById('auctionItemsList'));
+    } else {
+      displayMessage(result.error || 'Failed to cancel listing.');
     }
+  } catch (error) {
+    console.error('Failed to cancel listing:', error);
+    displayMessage('Failed to cancel listing. Please try again.');
+  }
 }
 
 function itemNameToSpriteFormat(itemName) {
@@ -662,53 +671,53 @@ function itemNameToSpriteFormat(itemName) {
 }
 
 async function getItemSprites(itemNames) {
-    if (itemNames.length === 0) return {};
-    
-    const spriteMap = {};
-    const itemNameQuery = itemNames.map(name => `"${name}"`).join(',');
-    
-    try {
-        // Get sprites from ingredients
-        const ingredientsResponse = await _apiCall(`/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`);
-        const ingredients = await ingredientsResponse.json();
-        
-        ingredients.forEach(item => {
-            if (item.sprite) {
-                const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
-                spriteMap[item.name] = `assets/art/ingridients/${fileName}`;
-            }
-        });
-        
-        // Get sprites from recipes
-        const recipesResponse = await _apiCall(`/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`);
-        const recipes = await recipesResponse.json();
-        
-        recipes.forEach(item => {
-            if (item.sprite) {
-                const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
-                spriteMap[item.name] = `assets/art/recipes/${fileName}`;
-            }
-        });
-        
-        // For items not found in database, generate sprite paths based on naming convention
-        itemNames.forEach(itemName => {
-            if (!spriteMap[itemName]) {
-                const spriteName = itemNameToSpriteFormat(itemName);
-                spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
-            }
-        });
-        
-    } catch (error) {
-        console.error('Failed to get item sprites from database:', error);
-        
-        // Fallback: generate all sprite paths based on naming convention
-        itemNames.forEach(itemName => {
-            const spriteName = itemNameToSpriteFormat(itemName);
-            spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
-        });
-    }
-    
-    return spriteMap;
+  if (itemNames.length === 0) return {};
+
+  const spriteMap = {};
+  const itemNameQuery = itemNames.map(name => `"${name}"`).join(',');
+
+  try {
+    // Get sprites from ingredients
+    const ingredientsResponse = await fetch(`/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`);
+    const ingredients = await ingredientsResponse.json();
+
+    ingredients.forEach(item => {
+      if (item.sprite) {
+        const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+        spriteMap[item.name] = `assets/art/ingridients/${fileName}`;
+      }
+    });
+
+    // Get sprites from recipes
+    const recipesResponse = await fetch(`/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`);
+    const recipes = await recipesResponse.json();
+
+    recipes.forEach(item => {
+      if (item.sprite) {
+        const fileName = item.sprite.endsWith('.png') ? item.sprite : `${item.sprite}.png`;
+        spriteMap[item.name] = `assets/art/recipes/${fileName}`;
+      }
+    });
+
+    // For items not found in database, generate sprite paths based on naming convention
+    itemNames.forEach(itemName => {
+      if (!spriteMap[itemName]) {
+        const spriteName = itemNameToSpriteFormat(itemName);
+        spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+      }
+    });
+
+  } catch (error) {
+    console.error('Failed to get item sprites from database:', error);
+
+    // Fallback: generate all sprite paths based on naming convention
+    itemNames.forEach(itemName => {
+      const spriteName = itemNameToSpriteFormat(itemName);
+      spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+    });
+  }
+
+  return spriteMap;
 }
 
 function getItemIcon(itemName) {

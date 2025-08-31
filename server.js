@@ -742,70 +742,77 @@ The items have been added to your bank.`;
   }
 });
 
-
 // Cancel auction (seller only)
-app.delete('/api/auction/cancel/:auctionId', requireAuth, async (req, res) => {
-    try {
-        const { auctionId } = req.params;
-        const { seller_id } = req.body;
+app.delete('/api/auction/cancel/:auctionId', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const { seller_id } = req.body;
 
-        if (!seller_id) {
-            return res.status(400).json({ error: 'Seller ID required' });
-        }
-
-        // Get auction details
-        const auctionResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auctionId}&seller_id=eq.${seller_id}&status=eq.false`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
-
-        const auctions = await auctionResponse.json();
-        if (auctions.length === 0) {
-            return res.status(404).json({ error: 'Auction not found or cannot be cancelled' });
-        }
-
-        const auction = auctions[0];
-
-        // Return items to seller's bank
-        await addItemsToBank(seller_id, auction.item_selling, auction.amount_selling, auction.item_selling_type);
-
-        // Delete auction
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auctionId}`, {
-            method: 'DELETE',
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
-
-        res.json({ success: true, message: 'Auction cancelled and items returned' });
-    } catch (error) {
-        console.error('[AUCTION CANCEL]', error);
-        res.status(500).json({ error: 'Failed to cancel auction' });
+    if (!seller_id) {
+      return res.status(400).json({ error: 'Seller ID required' });
     }
+
+    // Get auction details
+    const auctionResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auctionId}&seller_id=eq.${seller_id}&status=eq.false`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+
+    const auctions = await auctionResponse.json();
+    if (auctions.length === 0) {
+      return res.status(404).json({ error: 'Auction not found or cannot be cancelled' });
+    }
+
+    const auction = auctions[0];
+
+    // Return items to seller's bank
+    await addItemsToBank(seller_id, auction.item_selling, auction.amount_selling, auction.item_selling_type);
+
+    // Delete auction
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auctionId}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+      }
+    });
+
+    res.json({ success: true, message: 'Auction cancelled and items returned' });
+  } catch (error) {
+    console.error('[AUCTION CANCEL]', error);
+    res.status(500).json({ error: 'Failed to cancel auction' });
+  }
 });
+
 
 // Get player's auction listings
-app.get('/api/auction/my-listings/:playerId', requireAuth, async (req, res) => {
-    try {
-        const { playerId } = req.params;
-        
-        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?seller_id=eq.${playerId}&order=created_at.desc`, {
-            headers: {
-                'apikey': process.env.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-        });
+app.get('/api/auction/my-listings/:playerId', async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    
+    const response = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/auction?seller_id=eq.${playerId}&order=created_at.desc`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
 
-        const auctions = await response.json();
-        res.json(auctions);
-    } catch (error) {
-        console.error('[MY LISTINGS]', error);
-        res.status(500).json({ error: 'Failed to fetch your listings' });
-    }
+    const auctions = await response.json();
+    res.json(auctions);
+  } catch (error) {
+    console.error('[MY LISTINGS]', error);
+    res.status(500).json({ error: 'Failed to fetch your listings' });
+  }
 });
+
 
 // Helper function to add items to bank
 async function addItemsToBank(playerId, itemName, amount, itemType) {

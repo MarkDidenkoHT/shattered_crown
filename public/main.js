@@ -160,7 +160,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadUserLanguageFromProfile(currentProfile);
       
       authStatus.textContent = 'Login successful!';
-      await redirectToGame();
+      // await redirectToGame();
+      showTutorial();
     } else {
       console.warn('[LOGIN] Login failed, attempting registration');
 
