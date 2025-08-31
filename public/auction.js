@@ -78,7 +78,7 @@ export async function loadModule(main, { getCurrentProfile }) {
                         <select id="wanted-filter">
                             <option value="all">All</option>
                             <option value="ingredient">Ingredients</option>
-                            <option value="recipe">Consumables</option>
+                            <option value="consumable">Consumables</option>
                         </select>
                         <input id="wanted-search" type="text" placeholder="Search item...">
                         </div>
@@ -525,10 +525,30 @@ async function handleSellClick(itemId) {
         if (!response.ok) throw new Error('Failed to load items');
         let allItems = await response.json();
 
+        console.log('=== SELL CLICK DEBUG ===');
+        console.log('Total items fetched from API:', allItems.length);
+        console.log('Sample of all items:', allItems.slice(0, 3));
+        
+        // Show breakdown by type
+        const typeCount = {};
+        allItems.forEach(item => {
+            typeCount[item.type] = (typeCount[item.type] || 0) + 1;
+        });
+        console.log('Items by type:', typeCount);
+
         // Filter: keep only ingredients + consumables/recipes
         _availableItems = allItems.filter(i =>
             i.type === 'ingredient' || i.type === 'consumable'
         );
+
+        console.log('Items after filtering (ingredient + consumable):', _availableItems.length);
+        console.log('Filtered items breakdown:');
+        const filteredTypeCount = {};
+        _availableItems.forEach(item => {
+            filteredTypeCount[item.type] = (filteredTypeCount[item.type] || 0) + 1;
+        });
+        console.log('Filtered type count:', filteredTypeCount);
+        console.log('Sample filtered items:', _availableItems.slice(0, 5));
 
         // Update modal with item details
         document.getElementById('sell-item-icon').src = item.spritePath;
@@ -540,6 +560,7 @@ async function handleSellClick(itemId) {
         sellAmountInput.value = Math.min(1, item.amount);
 
         // Render picker
+        console.log('About to render picker with', _availableItems.length, 'items');
         renderWantedItemPicker(_availableItems);
 
         document.querySelector('.confirm-sell').dataset.itemId = itemId;
@@ -567,10 +588,18 @@ function renderWantedItemPicker(items) {
     const filterValue = filterSelect.value;
     const searchQuery = searchInput.value.toLowerCase();
 
+    console.log('=== RENDER WANTED PICKER DEBUG ===');
+    console.log('Input items count:', items.length);
+    console.log('Current filter value:', filterValue);
+    console.log('Current search query:', searchQuery);
+
     const filtered = items.filter(item =>
         (filterValue === 'all' || item.type === filterValue) &&
         (!searchQuery || item.name.toLowerCase().includes(searchQuery))
     );
+
+    console.log('Items after render filtering:', filtered.length);
+    console.log('Filtered items sample:', filtered.slice(0, 5));
 
     container.innerHTML = filtered.map(item => `
         <div class="wanted-card" data-name="${item.name}">
@@ -581,6 +610,9 @@ function renderWantedItemPicker(items) {
         </div>
     `).join('');
 
+    console.log('HTML cards generated:', container.children.length);
+    console.log('=== END RENDER DEBUG ===');
+
     // Click handler for selection
     container.querySelectorAll('.wanted-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -590,7 +622,6 @@ function renderWantedItemPicker(items) {
         });
     });
 }
-
 function getSelectedWantedItem() {
     return document.getElementById('wanted-item-picker').dataset.selectedItem || null;
 }
