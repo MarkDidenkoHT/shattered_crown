@@ -160,8 +160,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadUserLanguageFromProfile(currentProfile);
       
       authStatus.textContent = 'Login successful!';
-      // await redirectToGame();
-      showTutorial();
+      await redirectToGame();
+      // showTutorial();
     } else {
       console.warn('[LOGIN] Login failed, attempting registration');
 
@@ -244,7 +244,7 @@ function showTutorial() {
           <p>Warning! Game is in early development stage and there will be bugs, errors and placeholders! Thank you for testing!</p>
           <div class="slide-buttons">
             <button class="tutorial-btn prev-btn" data-action="prev">Previous</button>
-            <button class="fantasy-button" data-action="start-game">Start Your Journey</button>
+            <button class="fantasy-button" data-action="start-game">Play</button>
           </div>
         </div>
       </div>
@@ -304,7 +304,7 @@ function addTutorialStyles() {
       height: 450px;
       overflow: hidden;
       border-radius: 8px;
-      background: rgba(29, 20, 12, 0.8);
+      background: rgba(99, 54, 14, 0.8);
       backdrop-filter: blur(10px);
       border: 2px solid #3d2914;
     }
