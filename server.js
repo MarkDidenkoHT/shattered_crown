@@ -1700,6 +1700,33 @@ app.get('/api/races/:godId', async (req, res) => {
   }
 });
 
+// Get all characters for a player
+app.get('/api/characters/:playerId', async (req, res) => {
+  const { playerId } = req.params;
+
+  try {
+    const response = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${playerId}&select=id,race_id,class_id,sex,profession_id,professions(name)`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Supabase error:", await response.text());
+      return res.status(502).json({ error: "Failed to fetch characters" });
+    }
+
+    const characters = await response.json();
+    res.json(characters);
+  } catch (error) {
+    console.error("[CHARACTERS]", error);
+    res.status(500).json({ error: "Server error fetching characters" });
+  }
+});
 
 
 

@@ -1,12 +1,10 @@
 let _main;
-let _apiCall;
 let _getCurrentProfile;
 let _profile;
 let _playerCharacters = [];
 
-export async function loadModule(main, {refreshTranslations, apiCall, getCurrentProfile }) {
+export async function loadModule(main, {refreshTranslations, getCurrentProfile }) {
     _main = main;
-    _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
     
     _profile = _getCurrentProfile();
@@ -59,9 +57,12 @@ export async function loadModule(main, {refreshTranslations, apiCall, getCurrent
 
 async function fetchPlayerCharacters() {
     try {
-        const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=id,race_id,class_id,sex,profession_id,professions(name)`);
+        const response = await fetch(`/api/characters/${_profile.id}`);
+        if (!response.ok) throw new Error("Failed to fetch characters");
+
         _playerCharacters = await response.json();
     } catch (error) {
+        console.error("fetchPlayerCharacters error:", error);
         displayMessage('Failed to load your champions. Please try again.');
     }
 }
