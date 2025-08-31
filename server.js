@@ -353,7 +353,7 @@ app.get('/api/auction/bank/:playerId', async (req, res) => {
 });
 
 // Get all unique items from recipes and ingredients for trade selection
-app.get('/api/auction/items', async (req, res) => {
+app.get('/api/auction/items', async (res) => {
   try {
     // Get unique items from both tables
     const [recipesResponse, ingredientsResponse] = await Promise.all([

@@ -527,7 +527,7 @@ async function handleSellClick(itemId) {
 
         // Filter: keep only ingredients + consumables/recipes
         _availableItems = allItems.filter(i =>
-            i.type === 'ingredient' || i.type === 'recipe' || i.type === 'consumable'
+            i.type === 'ingredient' || i.type === 'consumable'
         );
 
         // Update modal with item details
