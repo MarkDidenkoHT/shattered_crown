@@ -615,8 +615,7 @@ async function handleConfirmSell() {
         const response = await fetch('/api/auction/create', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${_anonKey}` // send token, not keys
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 seller_id: _profile.id,
