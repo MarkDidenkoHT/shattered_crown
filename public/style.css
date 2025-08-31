@@ -282,25 +282,9 @@
       transition: left 0.6s ease;
     }
 
-    .fantasy-button:hover::before {
-      left: 100%;
-    }
-
-    .fantasy-button:hover {
-      background-color: #e79b29c7;
-    }
-
     .login-btn {
       color: #c4975a;
       border-color: #c4975a;
-    }
-
-    .login-btn:hover {
-      background: linear-gradient(145deg, #3d2914, #2a1f16);
-      box-shadow: 
-        inset 0 1px 0 rgba(196, 151, 90, 0.3),
-        0 4px 8px rgba(0, 0, 0, 0.4);
-      transform: translateY(-1px);
     }
 
     .login-btn:active {
@@ -313,15 +297,6 @@
     .register-btn {
       color: #8b7355;
       border-color: #5a4a3a;
-    }
-
-    .register-btn:hover {
-      background: linear-gradient(145deg, #3d2914, #2a1f16);
-      box-shadow: 
-        inset 0 1px 0 rgba(139, 115, 85, 0.3),
-        0 4px 8px rgba(0, 0, 0, 0.4);
-      transform: translateY(-1px);
-      border-color: #8b7355;
     }
 
     .register-btn:active {
@@ -403,9 +378,6 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-.card-art { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
-.selection-card:hover { border-color: #c4975a; transform: translateY(-1px); }
-.selection-card:hover .card-art { transform: scale(1.03); }
 .card-info-block {
     padding: 0.7rem 1rem 0.7rem 1rem;
 }
@@ -424,7 +396,7 @@
     font-size: 0.9rem;
     line-height: 1.2;
     font-style: italic;
-    min-height: 43vh;
+    min-height: 20vh;
 }
 
 /* --- Condensed stats/items/consumables blocks --- */
@@ -479,14 +451,6 @@
 .condensed-items li { border: none; background: none; color: #c4975a; font-size: 0.8rem; padding: 0; margin: 0; }
 .condensed-items span { color: #b8b3a8; font-size: 0.8rem; }
 
-        .selection-card:hover {
-            border-color: #c4975a;
-            transform: translateY(-2px);
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.2),
-                0 4px 12px rgba(0, 0, 0, 0.4);
-        }
-
         .card-art-block {
             width: 100%;
             height: 100px;
@@ -499,10 +463,6 @@
             height: 100%;
             object-fit: cover;
             transition: transform 0.3s ease;
-        }
-
-        .selection-card:hover .card-art {
-            transform: scale(1.05);
         }
 
         .card-info-block {
@@ -579,14 +539,6 @@
             box-shadow: 
                 inset 0 1px 0 rgba(196, 151, 90, 0.2),
                 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .select-btn:hover {
-            background: linear-gradient(145deg, #3d2914, #2a1f16);
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.3),
-                0 4px 8px rgba(0, 0, 0, 0.4);
-            transform: translateY(-1px);
         }
 
         .selected-race-summary {
@@ -702,7 +654,7 @@
             min-width: 100%;
             min-height: 75vh;
             background: linear-gradient(145deg, rgb(109 64 25 / 90%), rgba(42, 31, 22, 0.8));
-            border: 2px solid #3d2914;
+            border: 2px solid #e59745;
             border-radius: 8px;
             overflow: hidden;
             backdrop-filter: blur(5px);
@@ -740,14 +692,8 @@
             font-weight: 600;
         }
 
-        .slider-btn:hover {
-            background: linear-gradient(145deg, #3d2914, #2a1f16);
-            transform: translateY(-1px);
-        }
-
         .slider-dots {
-            display: flex;
-            gap: 0.5rem;
+            display: none;
         }
 
         .slider-dot {
@@ -762,10 +708,6 @@
 
         .slider-dot.active {
             background: #c4975a;
-            border-color: #c4975a;
-        }
-
-        .slider-dot:hover {
             border-color: #c4975a;
         }
 
@@ -843,14 +785,6 @@
             0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
-    .sex-selection .selection-card:hover, .profession-selection .selection-card:hover {
-        border-color: #c4975a;
-        transform: translateY(-2px);
-        box-shadow: 
-            inset 0 1px 0 rgba(196, 151, 90, 0.2),
-            0 4px 12px rgba(0, 0, 0, 0.4);
-    }
-
     .sex-selection .card-art-block, .profession-selection .card-art-block {
         width: 100%;
         height: 200px; /* Adjusted height for sex/profession images */
@@ -863,10 +797,6 @@
         height: 100%;
         object-fit: cover;
         transition: transform 0.3s ease;
-    }
-
-    .sex-selection .selection-card:hover .card-art, .profession-selection .selection-card:hover .card-art {
-        transform: scale(1.05);
     }
 
     .sex-selection .card-info-block, .profession-selection .card-info-block {
@@ -976,11 +906,6 @@
             white-space: nowrap;
             flex-shrink: 0;
             min-width: fit-content;
-        }
-
-        .filter-tab:hover {
-            border-color: #c4975a;
-            color: #c4975a;
         }
 
         .filter-tab.active {

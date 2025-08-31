@@ -82,10 +82,35 @@ async function fetchRacesAndRenderSelection() {
             return;
         }
 
+        // Fetch all classes for the races to show available classes
+        await fetchAllClassesForRaces();
         renderRaceSelection();
     } catch (error) {
         console.error('Error fetching races:', error);
         displayMessage('Failed to load races. Please try again.');
+    }
+}
+
+async function fetchAllClassesForRaces() {
+    try {
+        // Get all race IDs
+        const raceIds = _races.map(race => race.id);
+        
+        // Fetch classes for all races
+        const response = await _apiCall(`/api/supabase/rest/v1/classes?race_id=in.(${raceIds.join(',')})&select=id,name,description,race_id,stat_bonuses,starting_abilities`);
+        const allClasses = await response.json();
+        
+        // Group classes by race_id and add to each race
+        _races.forEach(race => {
+            race.available_classes = allClasses.filter(cls => cls.race_id === race.id);
+        });
+        
+    } catch (error) {
+        console.error('Error fetching classes for races:', error);
+        // Continue without class information if this fails
+        _races.forEach(race => {
+            race.available_classes = [];
+        });
     }
 }
 
@@ -109,6 +134,20 @@ function renderRaceSelection() {
                                 <div class="card-info-block">
                                     <h3 class="card-name">${race.name}</h3>
                                     <p class="card-description">${race.description}</p>
+                                    
+                                    ${race.available_classes && race.available_classes.length > 0 ? `
+                                        <div class="available-classes-block">
+                                            <h4>Available Classes:</h4>
+                                            <div class="class-list">
+                                                ${race.available_classes.map(cls => `
+                                                    <span class="class-tag" data-class-id="${cls.id}" title="${cls.description}">
+                                                        ${cls.name}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    
                                     <div class="stats-block">
                                         <h4>Base Stats:</h4>
                                         ${Object.entries(race.base_stats).map(([stat, value]) => `
@@ -133,12 +172,72 @@ function renderRaceSelection() {
 
     initializeSelectionSlider();
 
+    // Add click handlers for race selection buttons
     section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const raceId = parseInt(e.target.dataset.id);
             handleRaceSelection(raceId);
         });
     });
+
+    // Add click handlers for class tags to show descriptions
+    section.querySelectorAll('.class-tag').forEach(tag => {
+        tag.addEventListener('click', (e) => {
+            const classId = parseInt(e.target.dataset.classId);
+            const race = _races.find(r => r.available_classes.some(c => c.id === classId));
+            const classInfo = race?.available_classes.find(c => c.id === classId);
+            
+            if (classInfo) {
+                showClassDescription(classInfo);
+            }
+        });
+    });
+}
+
+function showClassDescription(classInfo) {
+    const modal = document.createElement('div');
+    modal.className = 'class-description-modal';
+    modal.innerHTML = `
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${classInfo.name}</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="class-description">${classInfo.description}</p>
+                
+                ${classInfo.stat_bonuses ? `
+                    <div class="stats-block">
+                        <h4>Stat Bonuses:</h4>
+                        ${Object.entries(classInfo.stat_bonuses).map(([stat, value]) => `
+                            <p>${stat}: <span>+${value}</span></p>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${classInfo.starting_abilities && classInfo.starting_abilities.length > 0 ? `
+                    <div class="abilities-block">
+                        <h4>Starting Abilities:</h4>
+                        <ul>
+                            ${classInfo.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="modal-footer">
+                <button class="fantasy-button modal-ok-btn">OK</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal handlers
+    const closeModal = () => modal.remove();
+    modal.querySelector('.modal-close-btn').addEventListener('click', closeModal);
+    modal.querySelector('.modal-ok-btn').addEventListener('click', closeModal);
+    modal.querySelector('.modal-overlay').addEventListener('click', closeModal);
 }
 
 function initializeSelectionSlider() {
