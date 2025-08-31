@@ -678,8 +678,15 @@ async function getItemSprites(itemNames) {
 
   try {
     // Get sprites from ingredients
-    const ingredientsResponse = await fetch(`/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`);
-    const ingredients = await ingredientsResponse.json();
+    const ingredientsResponse = await fetch(
+      `/api/supabase/rest/v1/ingridients?name=in.(${itemNameQuery})&select=name,sprite`
+    );
+    let ingredients = await ingredientsResponse.json();
+
+    if (!Array.isArray(ingredients)) {
+      console.warn("Unexpected ingredients response:", ingredients);
+      ingredients = [];
+    }
 
     ingredients.forEach(item => {
       if (item.sprite) {
@@ -689,8 +696,15 @@ async function getItemSprites(itemNames) {
     });
 
     // Get sprites from recipes
-    const recipesResponse = await fetch(`/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`);
-    const recipes = await recipesResponse.json();
+    const recipesResponse = await fetch(
+      `/api/supabase/rest/v1/recipes?name=in.(${itemNameQuery})&select=name,sprite`
+    );
+    let recipes = await recipesResponse.json();
+
+    if (!Array.isArray(recipes)) {
+      console.warn("Unexpected recipes response:", recipes);
+      recipes = [];
+    }
 
     recipes.forEach(item => {
       if (item.sprite) {
@@ -699,7 +713,7 @@ async function getItemSprites(itemNames) {
       }
     });
 
-    // For items not found in database, generate sprite paths based on naming convention
+    // Fallback for items not found in DB
     itemNames.forEach(itemName => {
       if (!spriteMap[itemName]) {
         const spriteName = itemNameToSpriteFormat(itemName);
@@ -710,7 +724,7 @@ async function getItemSprites(itemNames) {
   } catch (error) {
     console.error('Failed to get item sprites from database:', error);
 
-    // Fallback: generate all sprite paths based on naming convention
+    // Fallback: generate all sprite paths
     itemNames.forEach(itemName => {
       const spriteName = itemNameToSpriteFormat(itemName);
       spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
