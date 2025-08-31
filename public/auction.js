@@ -70,9 +70,17 @@ export async function loadModule(main, { getCurrentProfile }) {
                     
                     <div class="form-group">
                         <label for="wanted-item">Want in return:</label>
-                        <select id="wanted-item">
-                            <option value="">Select item...</option>
+                        <div class="wanted-controls">
+                        <select id="wanted-filter" onchange="renderWantedItemPicker(_availableItems)">
+                            <option value="all">All</option>
+                            <option value="ingredient">Ingredients</option>
+                            <option value="recipe">Consumables</option>
                         </select>
+                        <input id="wanted-search" type="text" placeholder="Search item..." 
+                            oninput="renderWantedItemPicker(_availableItems)">
+                        </div>
+
+                    <div id="wanted-item-picker" class="wanted-grid"></div>
                     </div>
                     
                     <div class="form-group">
@@ -509,11 +517,15 @@ async function handleSellClick(itemId) {
     if (!item) return;
 
     try {
-        // Call secure backend (no keys exposed)
+        // Fetch tradeable items (only consumables + ingredients)
         const response = await fetch('/api/auction/items');
-
         if (!response.ok) throw new Error('Failed to load items');
-        _availableItems = await response.json();
+        let allItems = await response.json();
+
+        // Filter: keep only ingredients + consumables/recipes
+        _availableItems = allItems.filter(i =>
+            i.type === 'ingredient' || i.type === 'recipe' || i.type === 'consumable'
+        );
 
         // Update modal with item details
         document.getElementById('sell-item-icon').src = item.spritePath;
@@ -524,20 +536,51 @@ async function handleSellClick(itemId) {
         sellAmountInput.max = item.amount;
         sellAmountInput.value = Math.min(1, item.amount);
 
-        // Populate wanted items dropdown
-        const wantedSelect = document.getElementById('wanted-item');
-        wantedSelect.innerHTML = '<option value="">Select item...</option>' +
-            _availableItems.map(availableItem =>
-                `<option value="${availableItem.name}">${availableItem.name}</option>`
-            ).join('');
+        // Render picker
+        renderWantedItemPicker(_availableItems);
 
         document.querySelector('.confirm-sell').dataset.itemId = itemId;
-
         document.getElementById('sell-modal').style.display = 'block';
     } catch (error) {
         console.error('Failed to load available items:', error);
         displayMessage('Failed to load available items. Please try again.');
     }
+}
+
+function renderWantedItemPicker(items) {
+    const container = document.getElementById('wanted-item-picker');
+    const filterSelect = document.getElementById('wanted-filter');
+    const searchInput = document.getElementById('wanted-search');
+
+    const filterValue = filterSelect.value;
+    const searchQuery = searchInput.value.toLowerCase();
+
+    const filtered = items.filter(item =>
+        (filterValue === 'all' || item.type === filterValue) &&
+        (!searchQuery || item.name.toLowerCase().includes(searchQuery))
+    );
+
+    container.innerHTML = filtered.map(item => `
+        <div class="wanted-card" data-name="${item.name}">
+            <img src="${item.spritePath || 'assets/art/recipes/default_item.png'}" 
+                 alt="${item.name}" class="wanted-icon">
+            <div class="wanted-name">${item.name}</div>
+            <div class="wanted-type">${item.type}</div>
+        </div>
+    `).join('');
+
+    // Click handler for selection
+    container.querySelectorAll('.wanted-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.wanted-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            container.dataset.selectedItem = card.dataset.name;
+        });
+    });
+}
+
+function getSelectedWantedItem() {
+    return document.getElementById('wanted-item-picker').dataset.selectedItem || null;
 }
 
 async function handleConfirmSell() {
@@ -1266,6 +1309,58 @@ function addAuctionStyles() {
                 flex: none;
             }
         }
+
+        .wanted-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.wanted-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 100px);
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 5px;
+}
+
+.wanted-card {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 5px;
+  text-align: center;
+  cursor: pointer;
+  background: #fafafa;
+  transition: all 0.2s;
+}
+
+.wanted-card:hover {
+  border-color: #888;
+  background: #f1f1f1;
+}
+
+.wanted-card.selected {
+  border-color: #168acd;
+  background: #eaf6ff;
+}
+
+.wanted-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.wanted-name {
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.wanted-type {
+  font-size: 10px;
+  color: #666;
+}
+
+
     `;
     document.head.appendChild(style);
 }
