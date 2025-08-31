@@ -889,6 +889,8 @@ app.get('/api/bank/items/:playerId', async (req, res) => {
             ?player_id=eq.${playerId}
             &equipped_by=is.null
             &result=not.is.null
+            &result=not.eq.success
+            &result=not.eq.fail
             &sprite=not.is.null
             &select=id,result,sprite,type,result_stats`
             .replace(/\s+/g, ''), // clean up spaces/newlines
