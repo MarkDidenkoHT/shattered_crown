@@ -53,7 +53,7 @@ export async function loadModule(main, { getCurrentProfile }) {
                 <h3>Create Auction Listing</h3>
                 <div class="sell-form">
 
-                  <div style="display: flex; gap: 2%;">
+                  <div style="display: flex;">
                     <div class="form-group">
                         <label>Selling:</label>
                         <div class="selling-item">
@@ -65,30 +65,30 @@ export async function loadModule(main, { getCurrentProfile }) {
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="sell-amount">Amount to sell:</label>
-                        <input type="number" id="sell-amount" min="1" max="1">
-                    </div>
-
+                      <div>
+                        <div class="form-group">
+                            <label for="sell-amount">Amount to sell:</label>
+                            <input type="number" id="sell-amount" min="1" max="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="wanted-amount">Amount wanted:</label>
+                            <input type="number" id="wanted-amount" min="1" value="1">
+                        </div>
+                      </div>
                   </div>  
                     
                     <div class="form-group">
                         <label for="wanted-item">Want in return:</label>
                         <div class="wanted-controls">
+                        <input id="wanted-search" type="text" placeholder="Search item..." style="border-radius: 4px;">
                         <select id="wanted-filter">
                             <option value="all">All</option>
                             <option value="ingredient">Ingredients</option>
                             <option value="consumable">Consumables</option>
                         </select>
-                        <input id="wanted-search" type="text" placeholder="Search item..." style="border-radius: 4px;">
                         </div>
 
                     <div id="wanted-item-picker" class="wanted-grid"></div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="wanted-amount">Amount wanted:</label>
-                        <input type="number" id="wanted-amount" min="1" value="1">
                     </div>
                     
                     <div class="form-actions">
@@ -1072,11 +1072,11 @@ function addAuctionStyles() {
             padding: 5px;
             max-width: 500px;
             width: 92%;
-            max-height: 95vh;
+            max-height: 98vh;
             overflow-y: auto;
             position: relative;
             margin: auto;
-            margin-top: 1rem;
+            margin-top: 5px;
         }
 
         .close-modal {
@@ -1116,12 +1116,12 @@ function addAuctionStyles() {
             display: flex;
             align-items: center;
             gap: 1rem;
-            padding: 0.75rem;
+            padding: 5px;
             background: rgba(42,31,22,0.5);
             border-radius: 6px;
             border: 1px solid #3d2914;
             flex-direction: column;
-            width: 50%;
+            width: 96%;
         }
 
         .selling-item img {
@@ -1161,7 +1161,6 @@ function addAuctionStyles() {
             display: flex;
             gap: 1rem;
             justify-content: center;
-            margin-top: 2rem;
         }
 
         /* Trade Preview */
@@ -1315,7 +1314,7 @@ function addAuctionStyles() {
   display: grid;
   grid-template-columns: repeat(auto-fill, 97px);
   gap: 8px;
-  max-height: 300px;
+  max-height: 250px;
   overflow-y: auto;
   padding: 5px;
 }
