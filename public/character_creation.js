@@ -11,6 +11,7 @@ let _selectedRace = null;
 let _selectedClass = null;
 let _selectedSex = null;
 let _selectedProfession = null;
+let _usedProfessionIds = [];
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
     _main = main;
@@ -34,6 +35,9 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
         return;
     }
 
+    // Initialize used professions array
+    await initializeUsedProfessions();
+
     // Ensure the main container is ready for content
     _main.innerHTML = `
         <div class="main-app-container">
@@ -44,6 +48,19 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     
     createParticles();
     await startCharacterCreationFlow();
+}
+
+async function initializeUsedProfessions() {
+    try {
+        const response = await _apiCall(`/api/supabase/rest/v1/characters?chat_id=eq.${_profile.chat_id}&select=profession_id`);
+        const existingCharacters = await response.json();
+        
+        _usedProfessionIds = existingCharacters.map(char => char.profession_id).filter(id => id !== null);
+        console.log('Used profession IDs:', _usedProfessionIds);
+    } catch (error) {
+        console.error('Error fetching existing characters:', error);
+        _usedProfessionIds = []; // Fallback to empty array
+    }
 }
 
 async function startCharacterCreationFlow() {
@@ -592,9 +609,47 @@ async function fetchProfessionsAndRenderSelection() {
 
 function renderProfessionSelection() {
     const section = _main.querySelector('.character-creation-section');
+    
+    // Filter out already used professions
+    const availableProfessions = _professions.filter(profession => 
+        !_usedProfessionIds.includes(profession.id)
+    );
+    
+    // Check if any professions are available
+    if (availableProfessions.length === 0) {
+        section.innerHTML = `
+            <div class="art-header">
+                <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Profession</h1>
+            </div>
+            <div class="selected-race-summary">
+                <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
+                <p><strong>Class:</strong> ${_selectedClass.name}</p>
+                <p>${_selectedClass.description}</p>
+            </div>
+            <div class="no-professions-message">
+                <h3>No Available Professions</h3>
+                <p>All professions have already been selected by your other characters. Each character must have a unique profession.</p>
+            </div>
+            <div class="confirm-return-buttons">
+                <button class="fantasy-button return-btn">Return</button>
+            </div>
+        `;
+        
+        section.querySelector('.return-btn').addEventListener('click', () => {
+            _selectedProfession = null;
+            renderClassSelection();
+        });
+        return;
+    }
+
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Profession</h1>
+            ${_usedProfessionIds.length > 0 ? `
+                <div class="profession-note">
+                    <p><em>Note: ${_usedProfessionIds.length} profession(s) already selected by other characters</em></p>
+                </div>
+            ` : ''}
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
@@ -605,7 +660,7 @@ function renderProfessionSelection() {
             <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track" style="transform: translateX(0%)">
-                        ${_professions.map((profession, index) => `
+                        ${availableProfessions.map((profession, index) => `
                             <div class="selection-slide" data-id="${profession.id}" data-type="profession">
                                 <div class="card-art-block">
                                     <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
@@ -623,7 +678,7 @@ function renderProfessionSelection() {
                 </div>
                 
                 <div class="slider-dots">
-                    ${_professions.map((_, index) => `
+                    ${availableProfessions.map((_, index) => `
                         <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
                     `).join('')}
                 </div>
@@ -757,6 +812,9 @@ async function confirmCharacter() {
         const result = await response.json();
         
         if (result.success) {
+            // Add the selected profession to the used professions list
+            _usedProfessionIds.push(_selectedProfession.id);
+            
             displayMessage(`Character ${_currentCharacterIndex + 1} (${result.character.race} ${result.character.class}) created! (${result.characters_created}/${result.max_characters})`);
             _currentCharacterIndex++;
             
@@ -807,4 +865,15 @@ function displayMessage(message) {
     messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
         messageBox.remove();
     });
+}
+
+// Optional utility functions
+function resetUsedProfessions() {
+    _usedProfessionIds = [];
+}
+
+function getAvailableProfessionsCount() {
+    return _professions.filter(profession => 
+        !_usedProfessionIds.includes(profession.id)
+    ).length;
 }
