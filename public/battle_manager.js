@@ -297,8 +297,8 @@ function renderBattleScreen(mode, level, layoutData) {
             </div>
             <div class="battle-grid-container"></div>
             <div class="battle-info-panel" id="entityInfoPanel">
-                <div style="display: flex; width: 100%; height: 100%;">
-                    <div style="width: 97vw; height: 58vh; display: flex; align-items: center; justify-content: center;">
+                <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
+                    <div style="width: 50%; display: flex; align-items: center; justify-content: center;">
                         <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
                     </div>
                     <div class="info-text" style="width: 50%; padding-left: 10px; display: flex; flex-direction: column; justify-content: center;">
