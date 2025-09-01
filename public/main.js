@@ -183,7 +183,7 @@ function showTutorial() {
         
         <div class="tutorial-slide" data-slide="3">
           <h2>Crafting</h2>
-          <p>Most gear and equipment comes from crafting, and resources and ingredients come as loot from battles! Each profession has a mini-game.</p>
+          <p>All gear and equipment come from crafting, resources and ingredients come as loot from battles and can be traded for with other players! Each profession has a mini-game.</p>
           <div class="slide-buttons">
             <button class="tutorial-btn prev-btn" data-action="prev">Previous</button>
             <button class="tutorial-btn next-btn" data-action="next">Next</button>
