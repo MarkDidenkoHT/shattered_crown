@@ -52,7 +52,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 
 async function initializeUsedProfessions() {
     try {
-        const response = await _apiCall(`/api/supabase/rest/v1/characters?chat_id=eq.${_profile.chat_id}&select=profession_id`);
+        // Use player_id instead of chat_id since that's what the characters table uses
+        const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=profession_id`);
         const existingCharacters = await response.json();
         
         _usedProfessionIds = existingCharacters.map(char => char.profession_id).filter(id => id !== null);
@@ -781,7 +782,7 @@ function calculateFinalStats(baseStats, statBonuses) {
 async function confirmCharacter() {
     try {
         const characterCreationData = {
-            chat_id: _profile.chat_id,
+            player_id: _profile.id,  // Changed from chat_id to player_id
             race_id: _selectedRace.id,
             class_id: _selectedClass.id,
             sex: _selectedSex,
