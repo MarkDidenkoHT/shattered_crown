@@ -6,7 +6,8 @@ let _godId;
 let _races = [];
 let _classes = [];
 let _professions = []; 
-let _currentCharacterIndex = 0;
+let _existingCharacterCount = 0; // Track actual character count
+let _maxCharacters = 3; // Maximum allowed characters
 let _selectedRace = null;
 let _selectedClass = null;
 let _selectedSex = null;
@@ -35,8 +36,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
         return;
     }
 
-    // Initialize used professions array
-    await initializeUsedProfessions();
+    // Initialize character count and used professions
+    await initializeCharacterData();
 
     // Ensure the main container is ready for content
     _main.innerHTML = `
@@ -50,17 +51,24 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     await startCharacterCreationFlow();
 }
 
-async function initializeUsedProfessions() {
+async function initializeCharacterData() {
     try {
-        // Use player_id instead of chat_id since that's what the characters table uses
+        // Fetch existing characters to get count and used professions
         const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=profession_id`);
         const existingCharacters = await response.json();
         
+        // Update character count
+        _existingCharacterCount = existingCharacters.length;
+        
+        // Update used profession IDs
         _usedProfessionIds = existingCharacters.map(char => char.profession_id).filter(id => id !== null);
+        
+        console.log(`Player has ${_existingCharacterCount} existing characters`);
         console.log('Used profession IDs:', _usedProfessionIds);
     } catch (error) {
         console.error('Error fetching existing characters:', error);
-        _usedProfessionIds = []; // Fallback to empty array
+        _existingCharacterCount = 0;
+        _usedProfessionIds = [];
     }
 }
 
@@ -70,7 +78,8 @@ async function startCharacterCreationFlow() {
     _selectedSex = null;
     _selectedProfession = null;
 
-    if (_currentCharacterIndex >= 3) {
+    // Check if player has reached maximum characters
+    if (_existingCharacterCount >= _maxCharacters) {
         displayMessage('All your champions are ready! Entering the Castle...');
         window.gameAuth.loadModule('castle');
         return;
@@ -134,9 +143,14 @@ async function fetchAllClassesForRaces() {
 
 function renderRaceSelection() {
     const section = _main.querySelector('.character-creation-section');
+    const currentCharacterNumber = _existingCharacterCount + 1;
+    
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Race</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Race</h1>
+            <div class="character-progress">
+                <p>You have ${_existingCharacterCount} champion(s). Creating champion ${currentCharacterNumber}.</p>
+            </div>
         </div>
         <div class="selection-section">
             <div class="selection-slider">
@@ -420,9 +434,11 @@ async function handleRaceSelection(raceId) {
 
 function renderSexSelection() {
     const section = _main.querySelector('.character-creation-section');
+    const currentCharacterNumber = _existingCharacterCount + 1;
+    
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Sex</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Sex</h1>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name}</h3>
@@ -512,9 +528,11 @@ async function fetchClassesAndRenderSelection() {
 
 function renderClassSelection() {
     const section = _main.querySelector('.character-creation-section');
+    const currentCharacterNumber = _existingCharacterCount + 1;
+    
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Your Class</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Your Class</h1>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
@@ -610,6 +628,7 @@ async function fetchProfessionsAndRenderSelection() {
 
 function renderProfessionSelection() {
     const section = _main.querySelector('.character-creation-section');
+    const currentCharacterNumber = _existingCharacterCount + 1;
     
     // Filter out already used professions
     const availableProfessions = _professions.filter(profession => 
@@ -620,7 +639,7 @@ function renderProfessionSelection() {
     if (availableProfessions.length === 0) {
         section.innerHTML = `
             <div class="art-header">
-                <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Profession</h1>
+                <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
             </div>
             <div class="selected-race-summary">
                 <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
@@ -645,7 +664,7 @@ function renderProfessionSelection() {
 
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${_currentCharacterIndex + 1} of 3: Choose Profession</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
             ${_usedProfessionIds.length > 0 ? `
                 <div class="profession-note">
                     <p><em>Note: ${_usedProfessionIds.length} profession(s) already selected by other characters</em></p>
@@ -718,10 +737,11 @@ function handleProfessionSelection(professionId) {
 function renderCharacterSummary() {
     const section = _main.querySelector('.character-creation-section');
     const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
+    const currentCharacterNumber = _existingCharacterCount + 1;
 
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${_currentCharacterIndex + 1} of 3: Summary</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Summary</h1>
         </div>
         <div class="summary-card">
             <div class="summary-art-block">
@@ -816,8 +836,10 @@ async function confirmCharacter() {
             // Add the selected profession to the used professions list
             _usedProfessionIds.push(_selectedProfession.id);
             
-            displayMessage(`Character ${_currentCharacterIndex + 1} (${result.character.race} ${result.character.class}) created! (${result.characters_created}/${result.max_characters})`);
-            _currentCharacterIndex++;
+            // Increment the existing character count
+            _existingCharacterCount++;
+            
+            displayMessage(`Character ${_existingCharacterCount} (${result.character.race} ${result.character.class}) created! (${_existingCharacterCount}/${_maxCharacters})`);
             
             setTimeout(() => {
                 startCharacterCreationFlow();
@@ -871,10 +893,19 @@ function displayMessage(message) {
 // Optional utility functions
 function resetUsedProfessions() {
     _usedProfessionIds = [];
+    _existingCharacterCount = 0;
 }
 
 function getAvailableProfessionsCount() {
     return _professions.filter(profession => 
         !_usedProfessionIds.includes(profession.id)
     ).length;
+}
+
+function getCurrentCharacterCount() {
+    return _existingCharacterCount;
+}
+
+function getMaxCharacters() {
+    return _maxCharacters;
 }
