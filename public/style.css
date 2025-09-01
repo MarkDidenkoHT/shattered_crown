@@ -1155,3 +1155,18 @@
     border-top: 1px solid #8B4513;
     text-align: center;
 }
+
+
+.profession-note {
+    margin-bottom: 1rem;
+    font-style: italic;
+    color: #888;
+}
+
+.no-professions-message {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(0,0,0,0.1);
+    border-radius: 8px;
+    margin: 2rem 0;
+}
