@@ -66,7 +66,7 @@ export async function loadModule(main, { getCurrentProfile }) {
   createAltarParticles();
   setupEventHandlers();
   loadRecentBlessings();
-  console.log('[ALTAR] --- loadModule for Altar finished ---');
+  setBankHeaderBackground();
 }
 
 function setupEventHandlers() {
@@ -140,6 +140,13 @@ async function handlePromoRedeem() {
     shakeInput();
   } finally {
     setButtonLoading(redeemBtn, false);
+  }
+}
+
+function setBankHeaderBackground() {
+  const header = document.querySelector('.bank-header');
+  if (header) {
+    header.style.backgroundImage = "url('assets/art/castle/main_altar.png')";
   }
 }
 
