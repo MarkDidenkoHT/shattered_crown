@@ -179,4 +179,4 @@ function setBankHeaderBackground() {
   if (header) {
     header.style.backgroundImage = "url('assets/art/castle/main_embark.png')";
   }
-}z
+}
