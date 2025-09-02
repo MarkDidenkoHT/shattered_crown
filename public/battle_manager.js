@@ -141,15 +141,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
             await supabase.removeChannel(BattleState.unsubscribeFromBattle);
         }
         
-        if (reconnectBattleId) {
-            await reconnectToBattle(reconnectBattleId);
-        } else {
-            const areaLevel = selectedMode !== 'pvp'
-                ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
-                : Math.floor(Math.random() * 10) + 1;
-            await initializeBattle(selectedMode, areaLevel);
-        }
-
+        await initializeBattle(selectedMode, areaLevel);
         setupRealtimeSubscription();
         
     } catch (err) {
@@ -196,31 +188,6 @@ const initializeBattle = async (selectedMode, areaLevel) => {
     BattleState.battleState = initialState;
 
     console.log(`[BATTLE] Battle started with ID: ${BattleState.battleId}`);
-};
-
-const reconnectToBattle = async (battleId) => {
-    console.log(`[BATTLE] Reconnecting to existing battle: ${battleId}`);
-    
-    const supabase = getSupabaseClient({ 
-        SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
-        SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
-    });
-    
-    const { data: battleState, error } = await supabase
-        .from('battle_state')
-        .select('*')
-        .eq('id', battleId)
-        .eq('status', 'active')
-        .single();
-        
-    if (error || !battleState) {
-        throw new Error(`Failed to load battle state: ${error?.message || 'Battle not found'}`);
-    }
-    
-    BattleState.battleId = battleId;
-    BattleState.battleState = battleState;
-    
-    console.log(`[BATTLE] Successfully reconnected to battle ${battleId}`);
 };
 
 const setupRealtimeSubscription = () => {
