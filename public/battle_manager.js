@@ -1,41 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.0';
 
-// Global state management
 const BattleState = {
-    main: null,
-    apiCall: null,
-    getCurrentProfile: null,
-    profile: null,
-    tileMap: new Map(),
-    characters: [],
-    selectedCharacterEl: null,
-    selectedPlayerCharacter: null,
-    currentTurnCharacter: null,
-    highlightedTiles: [],
-    supabaseClient: null,
-    battleState: null,
-    battleId: null,
-    unsubscribeFromBattle: null,
-    isProcessingAITurn: false
+    main: null, apiCall: null, getCurrentProfile: null, profile: null,
+    tileMap: new Map(), characters: [], selectedCharacterEl: null,
+    selectedPlayerCharacter: null, currentTurnCharacter: null,
+    highlightedTiles: [], supabaseClient: null, battleState: null,
+    battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false
 };
 
-// Constants
 const GRID_SIZE = { rows: 7, cols: 7 };
 const MOVEMENT_OFFSETS = [
     { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
     { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
 ];
 
-// Utility functions
 const debounce = (func, wait) => {
     let timeout;
     return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
         clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+        timeout = setTimeout(() => func(...args), wait);
     };
 };
 
@@ -51,12 +34,9 @@ const throttle = (func, limit) => {
 };
 
 const getSupabaseClient = (config) => {
-    if (BattleState.supabaseClient) {
-        return BattleState.supabaseClient;
-    }
-
+    if (BattleState.supabaseClient) return BattleState.supabaseClient;
+    
     if (!config?.SUPABASE_URL || !config?.SUPABASE_ANON_KEY) {
-        console.error('[SUPABASE] Configuration missing');
         throw new Error('Supabase configuration not found.');
     }
 
@@ -67,7 +47,6 @@ const getSupabaseClient = (config) => {
     return BattleState.supabaseClient;
 };
 
-// Character processing optimization
 const processCharacterState = (charState) => {
     const stats = charState.stats || {};
     const normalizedStats = Object.entries(stats).reduce((acc, [key, value]) => {
@@ -106,12 +85,7 @@ const processCharacterState = (charState) => {
 };
 
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig }) {
-    // Initialize state
-    Object.assign(BattleState, {
-        main,
-        apiCall,
-        getCurrentProfile
-    });
+    Object.assign(BattleState, { main, apiCall, getCurrentProfile });
 
     BattleState.profile = BattleState.getCurrentProfile();
     if (!BattleState.profile) {
@@ -131,12 +105,9 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         : Math.floor(Math.random() * 10) + 1;
 
     try {
-        // Load tiles with error handling
         await loadTileData();
         
-        // Initialize battle
         const supabase = getSupabaseClient(supabaseConfig);
-        
         if (BattleState.unsubscribeFromBattle) {
             await supabase.removeChannel(BattleState.unsubscribeFromBattle);
         }
@@ -145,7 +116,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         setupRealtimeSubscription();
         
     } catch (err) {
-        console.error('Error during battle initialization:', err);
         displayMessage('Failed to start battle. Returning to embark.');
         window.gameAuth.loadModule('embark');
         return;
@@ -165,12 +135,11 @@ const loadTileData = async () => {
             BattleState.tileMap.set(tile.name.toLowerCase(), tile);
         });
     } catch (err) {
-        console.warn('[TILES] Could not load tile data:', err);
+        console.warn('Could not load tile data');
     }
 };
 
 const initializeBattle = async (selectedMode, areaLevel) => {
-    console.log('[BATTLE] Starting battle via Edge Function...');
     const startBattleRes = await BattleState.apiCall('/functions/v1/start-battle', 'POST', {
         profileId: BattleState.profile.id,
         selectedMode: selectedMode,
@@ -178,7 +147,6 @@ const initializeBattle = async (selectedMode, areaLevel) => {
     });
 
     const startBattleResponse = await startBattleRes.json();
-
     if (!startBattleResponse.success) {
         throw new Error(startBattleResponse.error || 'Failed to start battle.');
     }
@@ -186,8 +154,6 @@ const initializeBattle = async (selectedMode, areaLevel) => {
     const { battleId, initialState } = startBattleResponse;
     BattleState.battleId = battleId;
     BattleState.battleState = initialState;
-
-    console.log(`[BATTLE] Battle started with ID: ${BattleState.battleId}`);
 };
 
 const setupRealtimeSubscription = () => {
@@ -207,7 +173,6 @@ const setupRealtimeSubscription = () => {
                 filter: `id=eq.${BattleState.battleId}`
             },
             throttle((payload) => {
-                console.log('[REALTIME] Battle state update received');
                 BattleState.battleState = payload.new;
                 updateGameStateFromRealtime();
             }, 100)
@@ -218,15 +183,9 @@ const setupRealtimeSubscription = () => {
 function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
 
-    console.log('[BATTLE] Processing realtime update');
-
-    // Process characters with optimization
     BattleState.characters = Object.values(BattleState.battleState.characters_state)
         .map(processCharacterState);
-
-    console.log('[BATTLE] Updated characters:', BattleState.characters.length);
     
-    // Batch DOM updates
     requestAnimationFrame(() => {
         renderCharacters();
         updateTurnDisplay();
@@ -260,9 +219,8 @@ const updateCharacterAvailability = () => {
     if (!container) return;
 
     const currentTurn = BattleState.battleState.current_turn;
-
-    // Use DocumentFragment for efficient DOM updates
     const tokens = container.querySelectorAll('.character-token');
+    
     tokens.forEach(token => {
         token.classList.remove('current-turn', 'cannot-act');
     });
@@ -302,7 +260,6 @@ const handleAITurn = async () => {
     if (BattleState.isProcessingAITurn) return;
     
     BattleState.isProcessingAITurn = true;
-    console.log('[AI] Processing AI turn...');
     
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -313,14 +270,10 @@ const handleAITurn = async () => {
         
         const result = await aiTurnRes.json();
         
-        if (result.success) {
-            console.log('[AI] AI turn completed:', result.message);
-        } else {
-            console.error('[AI] AI turn failed:', result.message);
+        if (!result.success) {
             displayMessage(`AI turn failed: ${result.message}`);
         }
     } catch (error) {
-        console.error('[AI] Error during AI turn:', error);
         displayMessage('Error during AI turn. Please try ending the turn manually.');
     } finally {
         BattleState.isProcessingAITurn = false;
@@ -340,17 +293,14 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-grid-container"></div>
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
-                    <!-- Portrait: 25% -->
                     <div style="width: 25%; display: flex; align-items: center; justify-content: center;">
                         <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 80px; max-height: 80px; object-fit: contain;" />
                     </div>
-                    <!-- Stats: 35% -->
                     <div class="info-text" style="width: 35%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center;">
                         <h3 id="infoName" style="margin: 0 0 4px 0; font-size: 14px;">—</h3>
                         <div id="infoHP" style="font-size: 12px; margin-bottom: 4px;"></div>
                         <div id="infoStats" style="font-size: 10px;"></div>
                     </div>
-                    <!-- Buffs/Debuffs: 40% -->
                     <div id="statusEffects" style="width: 40%; padding-left: 8px; display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto;">
                         <div style="font-size: 11px; font-weight: bold; color: #B8860B; margin-bottom: 4px;">Status Effects</div>
                         <div id="buffsContainer" style="margin-bottom: 6px;">
@@ -373,7 +323,6 @@ function renderBattleScreen(mode, level, layoutData) {
     renderBottomUI();
     createParticles();
     
-    // Event listeners
     const refreshBtn = document.getElementById('refreshButton');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', debounce(handleRefresh, 300));
@@ -392,22 +341,14 @@ function renderBattleGrid(layoutJson) {
 
     container.innerHTML = '';
     Object.assign(container.style, {
-        width: '100%',
-        maxWidth: '380px',
-        height: '55%',
-        maxHeight: '380px',
-        display: 'flex',
-        flexDirection: 'column',
-        margin: '5px'
+        width: '100%', maxWidth: '380px', height: '55%', maxHeight: '380px',
+        display: 'flex', flexDirection: 'column', margin: '5px'
     });
 
     const table = document.createElement('table');
     table.className = 'battle-grid-table';
     Object.assign(table.style, {
-        borderCollapse: 'collapse',
-        width: '100%',
-        height: '100%',
-        tableLayout: 'fixed'
+        borderCollapse: 'collapse', width: '100%', height: '100%', tableLayout: 'fixed'
     });
 
     for (let y = 0; y < GRID_SIZE.rows; y++) {
@@ -423,21 +364,16 @@ function renderBattleGrid(layoutJson) {
             const td = document.createElement('td');
             td.className = `battle-tile tile-${normalized}`;
             Object.assign(td.dataset, {
-                x: x.toString(),
-                y: y.toString(),
+                x: x.toString(), y: y.toString(),
                 walkable: tileData?.walkable ? 'true' : 'false'
             });
             td.title = tileName;
 
             Object.assign(td.style, {
                 backgroundImage: `url(assets/art/tiles/${art}.png)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                width: `${100 / GRID_SIZE.cols}%`,
-                padding: '0',
-                margin: '0',
-                position: 'relative',
-                boxSizing: 'border-box',
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                width: `${100 / GRID_SIZE.cols}%`, padding: '0', margin: '0',
+                position: 'relative', boxSizing: 'border-box',
                 border: '1px solid #666'
             });
 
@@ -455,10 +391,7 @@ function renderCharacters() {
     const container = BattleState.main.querySelector('.battle-grid-container');
     if (!container) return;
     
-    // Remove existing tokens efficiently
     container.querySelectorAll('.character-token').forEach(token => token.remove());
-
-    const fragment = document.createDocumentFragment();
 
     BattleState.characters.forEach(char => {
         if (!Array.isArray(char.position)) return;
@@ -479,16 +412,10 @@ const createCharacterElement = (char) => {
     charEl.title = `${char.name} (${char.current_hp}/${char.max_hp} HP)`;
     
     Object.assign(charEl.style, {
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        zIndex: '5',
-        boxSizing: 'border-box'
+        position: 'absolute', top: '0', left: '0', width: '100%', height: '100%',
+        zIndex: '5', boxSizing: 'border-box'
     });
 
-    // Character sprite
     const img = document.createElement('img');
     img.src = `assets/art/sprites/${char.spriteName || 'placeholder'}.png`;
     img.alt = char.name;
@@ -497,27 +424,18 @@ const createCharacterElement = (char) => {
     });
     
     Object.assign(img.style, {
-        width: '100px',
-        height: '100px',
-        maxWidth: '100%',
-        maxHeight: '100%',
-        objectFit: 'contain',
-        zIndex: '10',
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)'
+        width: '100px', height: '100px', maxWidth: '100%', maxHeight: '100%',
+        objectFit: 'contain', zIndex: '10', position: 'absolute',
+        top: '50%', left: '50%', transform: 'translate(-50%, -50%)'
     });
 
     charEl.appendChild(img);
 
-    // HP bar
     if (char.current_hp !== undefined && char.max_hp !== undefined && char.max_hp > 0) {
         const hpBar = createHPBar(char);
         charEl.appendChild(hpBar);
     }
 
-    // Turn status indicator
     if (char.has_moved && char.has_acted) {
         const doneIndicator = createTurnIndicator();
         charEl.appendChild(doneIndicator);
@@ -537,15 +455,8 @@ const createHPBar = (char) => {
     else if (hpPercentage <= 75) hpColor = '#FFC107';
     
     Object.assign(hpBar.style, {
-        width: '90%',
-        height: '6px',
-        backgroundColor: '#333',
-        border: '1px solid #666',
-        borderRadius: '2px',
-        position: 'absolute',
-        bottom: '2px',
-        left: '5%',
-        zIndex: '20'
+        width: '90%', height: '6px', backgroundColor: '#333', border: '1px solid #666',
+        borderRadius: '2px', position: 'absolute', bottom: '2px', left: '5%', zIndex: '20'
     });
     
     hpBar.innerHTML = `<div style="width: ${hpPercentage}%; height: 100%; background-color: ${hpColor}; border-radius: 1px; transition: width 0.3s ease, background-color 0.3s ease;"></div>`;
@@ -558,14 +469,8 @@ const createTurnIndicator = () => {
     indicator.className = 'turn-done-indicator';
     
     Object.assign(indicator.style, {
-        position: 'absolute',
-        top: '2px',
-        right: '2px',
-        width: '8px',
-        height: '8px',
-        backgroundColor: '#666',
-        borderRadius: '50%',
-        zIndex: '25'
+        position: 'absolute', top: '2px', right: '2px', width: '8px', height: '8px',
+        backgroundColor: '#666', borderRadius: '50%', zIndex: '25'
     });
     
     indicator.title = 'Turn completed';
@@ -621,7 +526,6 @@ const handleMovementOrDeselect = (tileEl, targetX, targetY) => {
     if (BattleState.selectedPlayerCharacter && tileEl.classList.contains('highlight-walkable')) {
         attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
     } else {
-        // Deselect and show tile info
         unhighlightAllTiles();
         
         if (BattleState.selectedCharacterEl) {
@@ -636,10 +540,7 @@ const handleMovementOrDeselect = (tileEl, targetX, targetY) => {
         const tileData = BattleState.tileMap.get(tileKey);
         showEntityInfo({ 
             tile: tileData || { 
-                name: 'Unknown', 
-                walkable: false, 
-                vision_block: false, 
-                art: 'placeholder' 
+                name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' 
             } 
         });
     }
@@ -709,10 +610,8 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
-    // Update character position locally
     character.position = [targetX, targetY];
     
-    // Batch DOM updates
     requestAnimationFrame(() => {
         renderCharacters();
         unhighlightAllTiles();
@@ -782,12 +681,6 @@ const handleEndTurn = async () => {
     const targetPosition = activeCharacter.position;
     const action = activeCharacter.pendingAction || null;
 
-    console.log('[TURN] Ending turn for:', characterId, {
-        from: currentPosition,
-        to: targetPosition,
-        action
-    });
-
     try {
         const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
             battleId: BattleState.battleId,
@@ -800,25 +693,20 @@ const handleEndTurn = async () => {
         const result = await res.json();
 
         if (!result.success) {
-            console.error('[TURN] Failed to complete action:', result.message);
             displayMessage(`Error: ${result.message}`, 'error');
             return;
         }
 
-        console.log('[TURN] Action completed:', result.message);
         displayMessage('Turn completed successfully!', 'success');
         BattleState.currentTurnCharacter = null;
 
     } catch (err) {
-        console.error('[TURN] Error ending turn:', err);
         displayMessage('Error completing turn. Please try again.', 'error');
     }
 };
 
 const handleRefresh = async () => {
     try {
-        console.log('[REFRESH] Refreshing battle state...');
-        
         const supabase = getSupabaseClient({ 
             SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
             SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
@@ -830,16 +718,13 @@ const handleRefresh = async () => {
             .eq('id', BattleState.battleId)
             .single();
             
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
         
         BattleState.battleState = battleState;
         updateGameStateFromRealtime();
         
         displayMessage('Battle state refreshed successfully.', 'success');
     } catch (error) {
-        console.error('[REFRESH] Error refreshing battle state:', error);
         displayMessage('Failed to refresh battle state.', 'error');
     }
 };
@@ -876,7 +761,6 @@ const clearEntityInfo = () => {
 };
 
 const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuffsList) => {
-    // HP Display
     const currentHp = entity.current_hp || 0;
     const maxHp = entity.max_hp || 0;
     const hpPercentage = maxHp > 0 ? Math.round((currentHp / maxHp) * 100) : 0;
@@ -897,7 +781,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     
     hpEl.innerHTML = `<strong>HP:</strong> <span style="color: ${hpColor}">${currentHp}/${maxHp}</span>${turnStatus}`;
 
-    // Stats Display (Optimized Layout)
     const stats = entity.stats || {};
     const statsData = [
         { label: 'STR', value: stats.strength || 0, color: '#D4AF37' },
@@ -919,7 +802,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         </div>
     `;
 
-    // Buffs Display
     const buffs = entity.buffs || [];
     if (buffs.length > 0) {
         buffsList.innerHTML = buffs.map(buff => `
@@ -932,7 +814,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         buffsList.innerHTML = '<div style="color: #666; font-style: italic;">None</div>';
     }
 
-    // Debuffs Display
     const debuffs = entity.debuffs || [];
     if (debuffs.length > 0) {
         debuffsList.innerHTML = debuffs.map(debuff => `
@@ -945,7 +826,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         debuffsList.innerHTML = '<div style="color: #666; font-style: italic;">None</div>';
     }
 
-    // Portrait
     const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
     portrait.src = spritePath;
     portrait.onerror = () => {
@@ -975,7 +855,6 @@ const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) 
         </div>
     `;
     
-    // Clear status effects for tiles
     buffsList.innerHTML = '<div style="color: #666; font-style: italic;">N/A</div>';
     debuffsList.innerHTML = '<div style="color: #666; font-style: italic;">N/A</div>';
     
@@ -991,13 +870,8 @@ function createParticles() {
     container.className = 'particles';
     
     Object.assign(container.style, {
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: '1'
+        position: 'absolute', top: '0', left: '0', width: '100%', height: '100%',
+        pointerEvents: 'none', zIndex: '1'
     });
     
     BattleState.main.style.position = 'relative';
@@ -1009,14 +883,9 @@ function createParticles() {
         particle.className = 'particle';
         
         Object.assign(particle.style, {
-            position: 'absolute',
-            width: '2px',
-            height: '2px',
-            backgroundColor: '#B8860B',
-            borderRadius: '50%',
-            opacity: '0.6',
-            left: Math.random() * 100 + '%',
-            top: Math.random() * 100 + '%',
+            position: 'absolute', width: '2px', height: '2px',
+            backgroundColor: '#B8860B', borderRadius: '50%', opacity: '0.6',
+            left: Math.random() * 100 + '%', top: Math.random() * 100 + '%',
             animation: `float ${(Math.random() * 3 + 4)}s ease-in-out infinite`,
             animationDelay: Math.random() * 6 + 's'
         });
@@ -1029,11 +898,8 @@ function createParticles() {
 }
 
 function displayMessage(msg, type = 'info') {
-    // Remove any existing message
     const existingMessage = document.querySelector('.custom-message-box');
-    if (existingMessage) {
-        existingMessage.remove();
-    }
+    if (existingMessage) existingMessage.remove();
 
     const box = document.createElement('div');
     box.className = 'custom-message-box';
@@ -1048,39 +914,22 @@ function displayMessage(msg, type = 'info') {
     const config = messageConfig[type] || messageConfig.info;
     
     Object.assign(box.style, {
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: '1000'
+        position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', zIndex: '1000'
     });
     
     box.innerHTML = `
         <div class="message-content" style="
-            background: ${config.bg};
-            border: 2px solid ${config.border};
-            border-radius: 8px;
-            padding: 20px;
-            max-width: 400px;
-            text-align: center;
-            color: white;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            background: ${config.bg}; border: 2px solid ${config.border};
+            border-radius: 8px; padding: 20px; max-width: 400px; text-align: center;
+            color: white; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         ">
             <p style="margin: 0 0 15px 0; font-size: 14px; line-height: 1.4;">${msg}</p>
             <button class="fantasy-button message-ok-btn" style="
-                background: rgba(255, 255, 255, 0.2);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                color: white;
-                padding: 8px 20px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 12px;
-                transition: background 0.3s ease;
+                background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white; padding: 8px 20px; border-radius: 4px; cursor: pointer;
+                font-size: 12px; transition: background 0.3s ease;
             ">OK</button>
         </div>
     `;
@@ -1096,47 +945,28 @@ function displayMessage(msg, type = 'info') {
         okBtn.style.background = 'rgba(255, 255, 255, 0.2)';
     });
     
-    // Auto-remove for non-error messages
     if (type !== 'error') {
         setTimeout(() => {
-            if (box.parentNode) {
-                box.remove();
-            }
+            if (box.parentNode) box.remove();
         }, 5000);
     }
 }
 
 export function cleanup() {
-    console.log('[BATTLE] Cleaning up battle manager...');
-    
     if (BattleState.unsubscribeFromBattle && BattleState.supabaseClient) {
         BattleState.supabaseClient.removeChannel(BattleState.unsubscribeFromBattle);
     }
     
-    // Reset all state
     Object.assign(BattleState, {
-        main: null,
-        apiCall: null,
-        getCurrentProfile: null,
-        profile: null,
-        characters: [],
-        selectedCharacterEl: null,
-        selectedPlayerCharacter: null,
-        currentTurnCharacter: null,
-        highlightedTiles: [],
-        supabaseClient: null,
-        battleState: null,
-        battleId: null,
-        unsubscribeFromBattle: null,
+        main: null, apiCall: null, getCurrentProfile: null, profile: null,
+        characters: [], selectedCharacterEl: null, selectedPlayerCharacter: null,
+        currentTurnCharacter: null, highlightedTiles: [], supabaseClient: null,
+        battleState: null, battleId: null, unsubscribeFromBattle: null,
         isProcessingAITurn: false
     });
     
     BattleState.tileMap.clear();
     
     const existingMessage = document.querySelector('.custom-message-box');
-    if (existingMessage) {
-        existingMessage.remove();
-    }
-    
-    console.log('[BATTLE] Cleanup completed.');
+    if (existingMessage) existingMessage.remove();
 }
