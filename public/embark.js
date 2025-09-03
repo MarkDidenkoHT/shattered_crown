@@ -24,7 +24,7 @@ export async function loadModule(main, { getCurrentProfile, apiCall, supabaseCon
     <div class="main-app-container">
       <div class="particles"></div>
       <div class="character-creation-section"></div>
-      <div class="modal-overlay" style="display: none;"></div>
+      <div class="modal-overlay" style="display: none; z-index: 99;"></div>
     </div>
   `;
 
