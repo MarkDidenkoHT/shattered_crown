@@ -84,7 +84,7 @@ const processCharacterState = (charState) => {
     };
 };
 
-export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig }) {
+export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
 
     BattleState.profile = BattleState.getCurrentProfile();
@@ -94,15 +94,11 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         return;
     }
 
-    if (!selectedMode) {
+    if (!selectedMode && !reconnecting) {
         displayMessage('No mode selected. Returning to embark.');
         window.gameAuth.loadModule('embark');
         return;
     }
-
-    const areaLevel = selectedMode !== 'pvp'
-        ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
-        : Math.floor(Math.random() * 10) + 1;
 
     try {
         await loadTileData();
@@ -112,7 +108,17 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
             await supabase.removeChannel(BattleState.unsubscribeFromBattle);
         }
         
-        await initializeBattle(selectedMode, areaLevel);
+        // Handle reconnection vs new battle
+        if (reconnecting && existingBattleId) {
+            await reconnectToBattle(existingBattleId);
+        } else {
+            const areaLevel = selectedMode !== 'pvp'
+                ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
+                : Math.floor(Math.random() * 10) + 1;
+            
+            await initializeBattle(selectedMode, areaLevel);
+        }
+        
         setupRealtimeSubscription();
         
     } catch (err) {
@@ -121,7 +127,11 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         return;
     }
 
-    renderBattleScreen(selectedMode, areaLevel, BattleState.battleState.layout_data);
+    const areaLevel = selectedMode !== 'pvp' 
+        ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
+        : BattleState.battleState?.round_number || 1;
+    
+    renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState.layout_data);
     updateGameStateFromRealtime();
 }
 
@@ -137,6 +147,33 @@ const loadTileData = async () => {
     } catch (err) {
         console.warn('Could not load tile data');
     }
+};
+
+const reconnectToBattle = async (battleId) => {
+    const supabase = getSupabaseClient({ 
+        SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
+        SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
+    });
+    
+    const { data: battleState, error } = await supabase
+        .from('battle_state')
+        .select('*')
+        .eq('id', battleId)
+        .single();
+        
+    if (error || !battleState) {
+        throw new Error('Failed to reconnect to existing battle.');
+    }
+    
+    // Verify player is in this battle
+    if (!battleState.players?.includes(BattleState.profile.id)) {
+        throw new Error('You are not a participant in this battle.');
+    }
+    
+    BattleState.battleId = battleId;
+    BattleState.battleState = battleState;
+    
+    displayMessage('Reconnected to ongoing battle!', 'success');
 };
 
 const initializeBattle = async (selectedMode, areaLevel) => {
