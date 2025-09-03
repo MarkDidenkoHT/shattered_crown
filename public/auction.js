@@ -22,13 +22,11 @@ export async function loadModule(main, { getCurrentProfile }) {
         <div class="main-app-container bank-container">
             <div class="particles"></div>
             
-            <!-- Top Header -->
             <div class="bank-header">
                 <div class="top-right-buttons">
                     <button class="fantasy-button back-btn">Return</button>
                 </div>
                 
-                <!-- Filter Tabs -->
                 <div class="filter-tabs" id="filterTabs">
                     <button class="filter-tab active" data-view="buy">Buy Items</button>
                     <button class="filter-tab" data-view="sell">Sell Items</button>
@@ -36,23 +34,19 @@ export async function loadModule(main, { getCurrentProfile }) {
                 </div>
             </div>
 
-            <!-- Main Auction Content -->
             <div class="bank-content">
                 <div class="bank-items-container">
                     <div class="bank-items-list" id="auctionItemsList">
-                        <!-- Items will be populated here -->
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Sell Modal -->
         <div id="sell-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
                 <h3>Create Auction Listing</h3>
                 <div class="sell-form">
-
                   <div style="display: flex;">
                     <div class="form-group">
                         <label>Selling:</label>
@@ -99,7 +93,6 @@ export async function loadModule(main, { getCurrentProfile }) {
             </div>
         </div>
 
-        <!-- Buy Modal -->
         <div id="buy-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
@@ -151,15 +144,9 @@ async function loadCurrentView() {
     
     try {
         switch (_currentView) {
-            case 'buy':
-                await loadBuyView(container);
-                break;
-            case 'sell':
-                await loadSellView(container);
-                break;
-            case 'return':
-                await loadMyListingsView(container);
-                break;
+            case 'buy': await loadBuyView(container); break;
+            case 'sell': await loadSellView(container); break;
+            case 'return': await loadMyListingsView(container); break;
         }
     } catch (error) {
         console.error('Failed to load view:', error);
@@ -173,10 +160,8 @@ async function loadBuyView(container) {
     try {
         const response = await fetch('/api/auction/active', {
             method: 'GET',
-            credentials: 'include', // Include cookies for session auth
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
         });
 
         if (!response.ok) {
@@ -198,7 +183,7 @@ async function loadBuyView(container) {
                 <div class="bank-item auction-item" data-auction-id="${auction.id}">
                     <div class="item-icon">
                         <img src="${getItemIcon(auction.item_selling)}" 
-                             alt="${auction.item_selling}" 
+                             alt="${auction.item_selling}">
                         ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
                     </div>
                     
@@ -235,9 +220,7 @@ async function loadSellView(container) {
     
     try {
         const response = await fetch(`/api/auction/bank/${_profile.id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-            }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
         });
 
         if (!response.ok) {
@@ -246,21 +229,15 @@ async function loadSellView(container) {
 
         _bankItems = await response.json();
 
-        // Build a list of item names for sprite lookup (only non-gear)
-        const itemNames = [...new Set(
-            _bankItems.filter(item => !item.isGear).map(item => item.item)
-        )];
-
+        const itemNames = [...new Set(_bankItems.filter(item => !item.isGear).map(item => item.item))];
         const spriteMap = await getItemSprites(itemNames);
 
-        // Normalize sprite paths
         _bankItems = _bankItems.map(item => ({
             ...item,
             spritePath: item.spritePath ||
                 (item.isGear
                     ? (item.sprite || "assets/art/recipes/default_item.png")
-                    : (spriteMap[item.item] ||
-                       `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`))
+                    : (spriteMap[item.item] || `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`))
         }));
 
         if (_bankItems.length === 0) {
@@ -315,9 +292,7 @@ async function loadMyListingsView(container) {
     
     try {
         const response = await fetch(`/api/auction/my-listings/${_profile.id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-            }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
         });
 
         if (!response.ok) {
@@ -386,49 +361,39 @@ async function loadMyListingsView(container) {
 }
 
 function setupAuctionInteractions() {
-    // Back button
     _main.querySelector('.back-btn').addEventListener('click', () => {
         window.gameAuth.loadModule('castle');
     });
 
-    // Navigation tabs (using event delegation)
     _main.querySelector('#filterTabs').addEventListener('click', async (e) => {
         if (e.target.classList.contains('filter-tab')) {
             if (e.target.dataset.view === _currentView) return;
             
-            // Update active tab
             _main.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
             e.target.classList.add('active');
             
-            // Change view
             _currentView = e.target.dataset.view;
             await loadCurrentView();
         }
     });
 
-    // Item action buttons (using event delegation)
     _main.querySelector('#auctionItemsList').addEventListener('click', async (e) => {
-        if (e.target.classList.contains('buy-btn') || e.target.closest('.buy-btn')) {
-            const btn = e.target.classList.contains('buy-btn') ? e.target : e.target.closest('.buy-btn');
-            const auctionId = btn.dataset.auctionId;
-            await handleBuyClick(auctionId);
-        } else if (e.target.classList.contains('sell-btn') || e.target.closest('.sell-btn')) {
-            const btn = e.target.classList.contains('sell-btn') ? e.target : e.target.closest('.sell-btn');
-            const itemId = btn.dataset.itemId;
-            await handleSellClick(itemId);
-        } else if (e.target.classList.contains('cancel-btn') || e.target.closest('.cancel-btn')) {
-            const btn = e.target.classList.contains('cancel-btn') ? e.target : e.target.closest('.cancel-btn');
-            const listingId = btn.dataset.listingId;
-            await handleCancelListing(listingId);
+        const btn = e.target.closest('.buy-btn, .sell-btn, .cancel-btn');
+        if (!btn) return;
+
+        if (btn.classList.contains('buy-btn')) {
+            await handleBuyClick(btn.dataset.auctionId);
+        } else if (btn.classList.contains('sell-btn')) {
+            await handleSellClick(btn.dataset.itemId);
+        } else if (btn.classList.contains('cancel-btn')) {
+            await handleCancelListing(btn.dataset.listingId);
         }
     });
 
-    // Modal interactions
     setupModalInteractions();
 }
 
 function setupModalInteractions() {
-    // Close modals
     document.querySelectorAll('.close-modal, .cancel-sell, .cancel-buy').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.modal').forEach(modal => {
@@ -437,7 +402,6 @@ function setupModalInteractions() {
         });
     });
 
-    // Sell modal interactions
     document.getElementById('sell-amount').addEventListener('input', (e) => {
         const max = parseInt(e.target.max);
         const value = parseInt(e.target.value);
@@ -445,50 +409,31 @@ function setupModalInteractions() {
         if (value < 1) e.target.value = 1;
     });
 
-    // Confirm sell
-    document.querySelector('.confirm-sell').addEventListener('click', async () => {
-        await handleConfirmSell();
-    });
-
-    // Confirm buy
-    document.querySelector('.confirm-buy').addEventListener('click', async () => {
-        await handleConfirmBuy();
-    });
+    document.querySelector('.confirm-sell').addEventListener('click', handleConfirmSell);
+    document.querySelector('.confirm-buy').addEventListener('click', handleConfirmBuy);
 }
 
 async function handleBuyClick(auctionId) {
     const auction = _activeAuctions.find(a => a.id == auctionId);
     if (!auction) return;
 
-    // Prevent buying own auction
     if (auction.seller_id === _profile.id) {
         displayMessage('You cannot purchase your own auction listing.');
         return;
     }
 
     try {
-        // Fetch player’s available items (bank + unequipped crafted gear)
         const response = await fetch(`/api/auction/bank/${_profile.id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-            }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch bank items: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Failed to fetch bank items: ${response.status}`);
 
         const bankItems = await response.json();
-
-        const requiredItem = auction.item_wanted;
-        const requiredAmount = auction.amount_wanted;
-
-        // Sum up player’s amount of the required item (bank only, crafted gear not used as currency)
         const playerAmount = bankItems
-            .filter(item => !item.isGear && item.item === requiredItem)
+            .filter(item => !item.isGear && item.item === auction.item_wanted)
             .reduce((sum, item) => sum + item.amount, 0);
 
-        // Update modal with trade details
         document.getElementById('buy-receive-icon').src = getItemIcon(auction.item_selling);
         document.getElementById('buy-receive-name').textContent = auction.item_selling;
         document.getElementById('buy-receive-amount').textContent = auction.amount_selling;
@@ -498,16 +443,12 @@ async function handleBuyClick(auctionId) {
         document.getElementById('buy-pay-amount').textContent = auction.amount_wanted;
         document.getElementById('buy-pay-available').textContent = playerAmount;
 
-        // Check if player can afford it
-        const canAfford = playerAmount >= requiredAmount;
+        const canAfford = playerAmount >= auction.amount_wanted;
         const confirmBtn = document.querySelector('.confirm-buy');
         confirmBtn.disabled = !canAfford;
         confirmBtn.textContent = canAfford ? 'Confirm Purchase' : 'Insufficient Items';
-
-        // Store auction ID for confirmation
         confirmBtn.dataset.auctionId = auctionId;
 
-        // Show modal
         document.getElementById('buy-modal').style.display = 'block';
     } catch (error) {
         console.error('Failed to check player items:', error);
@@ -520,36 +461,12 @@ async function handleSellClick(itemId) {
     if (!item) return;
 
     try {
-        // Fetch tradeable items (only consumables + ingredients)
         const response = await fetch('/api/auction/items');
         if (!response.ok) throw new Error('Failed to load items');
-        let allItems = await response.json();
-
-        console.log('=== SELL CLICK DEBUG ===');
-        console.log('Total items fetched from API:', allItems.length);
-        console.log('Sample of all items:', allItems.slice(0, 3));
         
-        // Show breakdown by type
-        const typeCount = {};
-        allItems.forEach(item => {
-            typeCount[item.type] = (typeCount[item.type] || 0) + 1;
-        });
-        console.log('Items by type:', typeCount);
+        const allItems = await response.json();
+        _availableItems = allItems.filter(i => i.type === 'Ingredient' || i.type === 'Consumable');
 
-        _availableItems = allItems.filter(i =>
-            i.type === 'Ingredient' || i.type === 'Consumable'
-        );
-
-        console.log('Items after filtering (ingredient + consumable):', _availableItems.length);
-        console.log('Filtered items breakdown:');
-        const filteredTypeCount = {};
-        _availableItems.forEach(item => {
-            filteredTypeCount[item.type] = (filteredTypeCount[item.type] || 0) + 1;
-        });
-        console.log('Filtered type count:', filteredTypeCount);
-        console.log('Sample filtered items:', _availableItems.slice(0, 5));
-
-        // Update modal with item details
         document.getElementById('sell-item-icon').src = item.spritePath;
         document.getElementById('sell-item-name').textContent = item.item;
         document.getElementById('sell-item-available').textContent = item.amount;
@@ -558,21 +475,16 @@ async function handleSellClick(itemId) {
         sellAmountInput.max = item.amount;
         sellAmountInput.value = Math.min(1, item.amount);
 
-        // Render picker
-        console.log('About to render picker with', _availableItems.length, 'items');
         renderWantedItemPicker(_availableItems);
 
         document.querySelector('.confirm-sell').dataset.itemId = itemId;
         document.getElementById('sell-modal').style.display = 'block';
+        
         const filterEl = document.getElementById('wanted-filter');
-        if (filterEl) {
-        filterEl.addEventListener('change', () => renderWantedItemPicker(_availableItems));
-        }
-
         const searchEl = document.getElementById('wanted-search');
-        if (searchEl) {
+        
+        filterEl.addEventListener('change', () => renderWantedItemPicker(_availableItems));
         searchEl.addEventListener('input', () => renderWantedItemPicker(_availableItems));
-        }
     } catch (error) {
         console.error('Failed to load available items:', error);
         displayMessage('Failed to load available items. Please try again.');
@@ -581,24 +493,13 @@ async function handleSellClick(itemId) {
 
 function renderWantedItemPicker(items) {
     const container = document.getElementById('wanted-item-picker');
-    const filterSelect = document.getElementById('wanted-filter');
-    const searchInput = document.getElementById('wanted-search');
-
-    const filterValue = filterSelect.value;
-    const searchQuery = searchInput.value.toLowerCase();
-
-    console.log('=== RENDER WANTED PICKER DEBUG ===');
-    console.log('Input items count:', items.length);
-    console.log('Current filter value:', filterValue);
-    console.log('Current search query:', searchQuery);
+    const filterValue = document.getElementById('wanted-filter').value;
+    const searchQuery = document.getElementById('wanted-search').value.toLowerCase();
 
     const filtered = items.filter(item =>
         (filterValue === 'all' || item.type === filterValue) &&
         (!searchQuery || item.name.toLowerCase().includes(searchQuery))
     );
-
-    console.log('Items after render filtering:', filtered.length);
-    console.log('Filtered items sample:', filtered.slice(0, 5));
 
     container.innerHTML = filtered.map(item => `
         <div class="wanted-card" data-name="${item.name}">
@@ -609,10 +510,6 @@ function renderWantedItemPicker(items) {
         </div>
     `).join('');
 
-    console.log('HTML cards generated:', container.children.length);
-    console.log('=== END RENDER DEBUG ===');
-
-    // Click handler for selection
     container.querySelectorAll('.wanted-card').forEach(card => {
         card.addEventListener('click', () => {
             document.querySelectorAll('.wanted-card').forEach(c => c.classList.remove('selected'));
@@ -621,6 +518,7 @@ function renderWantedItemPicker(items) {
         });
     });
 }
+
 function getSelectedWantedItem() {
     return document.getElementById('wanted-item-picker').dataset.selectedItem || null;
 }
@@ -644,9 +542,7 @@ async function handleConfirmSell() {
 
         const response = await fetch('/api/auction/create', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 seller_id: _profile.id,
                 item_selling: item.item,
@@ -677,69 +573,61 @@ async function handleConfirmSell() {
 }
 
 async function handleConfirmBuy() {
-  const auctionId = document.querySelector('.confirm-buy').dataset.auctionId;
+    const auctionId = document.querySelector('.confirm-buy').dataset.auctionId;
 
-  try {
-    displayMessage('Processing purchase...');
+    try {
+        displayMessage('Processing purchase...');
 
-    const response = await fetch('/api/auction/buy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        auction_id: auctionId,
-        buyer_id: _profile.id
-      })
-    });
+        const response = await fetch('/api/auction/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                auction_id: auctionId,
+                buyer_id: _profile.id
+            })
+        });
 
-    const result = await response.json();
+        const result = await response.json();
 
-    if (result.success) {
-      displayMessage('Purchase completed successfully!');
-      document.getElementById('buy-modal').style.display = 'none';
-
-      // Refresh buy view
-      await loadBuyView(document.getElementById('auctionItemsList'));
-    } else {
-      displayMessage(result.error || 'Failed to complete purchase.');
+        if (result.success) {
+            displayMessage('Purchase completed successfully!');
+            document.getElementById('buy-modal').style.display = 'none';
+            await loadBuyView(document.getElementById('auctionItemsList'));
+        } else {
+            displayMessage(result.error || 'Failed to complete purchase.');
+        }
+    } catch (error) {
+        console.error('Failed to purchase item:', error);
+        displayMessage('Failed to complete purchase. Please try again.');
     }
-  } catch (error) {
-    console.error('Failed to purchase item:', error);
-    displayMessage('Failed to complete purchase. Please try again.');
-  }
 }
 
 async function handleCancelListing(listingId) {
-  if (!confirm('Are you sure you want to cancel this listing? Your items will be returned to your bank.')) {
-    return;
-  }
-
-  try {
-    displayMessage('Cancelling listing...');
-
-    const response = await fetch(`/api/auction/cancel/${listingId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        seller_id: _profile.id
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      displayMessage('Listing cancelled and items returned to your bank.');
-      await loadMyListingsView(document.getElementById('auctionItemsList'));
-    } else {
-      displayMessage(result.error || 'Failed to cancel listing.');
+    if (!confirm('Are you sure you want to cancel this listing? Your items will be returned to your bank.')) {
+        return;
     }
-  } catch (error) {
-    console.error('Failed to cancel listing:', error);
-    displayMessage('Failed to cancel listing. Please try again.');
-  }
+
+    try {
+        displayMessage('Cancelling listing...');
+
+        const response = await fetch(`/api/auction/cancel/${listingId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seller_id: _profile.id })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            displayMessage('Listing cancelled and items returned to your bank.');
+            await loadMyListingsView(document.getElementById('auctionItemsList'));
+        } else {
+            displayMessage(result.error || 'Failed to cancel listing.');
+        }
+    } catch (error) {
+        console.error('Failed to cancel listing:', error);
+        displayMessage('Failed to cancel listing. Please try again.');
+    }
 }
 
 function itemNameToSpriteFormat(itemName) {
@@ -747,54 +635,46 @@ function itemNameToSpriteFormat(itemName) {
 }
 
 async function getItemSprites(itemNames) {
-  if (itemNames.length === 0) return {};
+    if (itemNames.length === 0) return {};
 
-  const spriteMap = {};
+    const spriteMap = {};
 
-  try {
-    // Fetch all auction items from our server
-    const response = await fetch('/api/auction/items');
-    const items = await response.json();
+    try {
+        const response = await fetch('/api/auction/items');
+        const items = await response.json();
 
-    // Index items by name for quick lookup
-    const itemIndex = {};
-    items.forEach(item => {
-      if (item.name) itemIndex[item.name] = item;
-    });
+        const itemIndex = {};
+        items.forEach(item => {
+            if (item.name) itemIndex[item.name] = item;
+        });
 
-    // Map requested names to sprite paths
-    itemNames.forEach(itemName => {
-      const dbItem = itemIndex[itemName];
-      if (dbItem && dbItem.spritePath) {
-        spriteMap[itemName] = dbItem.spritePath;
-      } else {
-        // Fallback naming convention
-        const spriteName = itemNameToSpriteFormat(itemName);
-        spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
-      }
-    });
+        itemNames.forEach(itemName => {
+            const dbItem = itemIndex[itemName];
+            if (dbItem && dbItem.spritePath) {
+                spriteMap[itemName] = dbItem.spritePath;
+            } else {
+                const spriteName = itemNameToSpriteFormat(itemName);
+                spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+            }
+        });
 
-  } catch (error) {
-    console.error('Failed to get item sprites:', error);
+    } catch (error) {
+        console.error('Failed to get item sprites:', error);
+        itemNames.forEach(itemName => {
+            const spriteName = itemNameToSpriteFormat(itemName);
+            spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+        });
+    }
 
-    // Fallback: generate all sprite paths by convention
-    itemNames.forEach(itemName => {
-      const spriteName = itemNameToSpriteFormat(itemName);
-      spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
-    });
-  }
-
-  return spriteMap;
+    return spriteMap;
 }
 
 function getItemIcon(itemName) {
-    // Try to find the item in available items first
     const availableItem = _availableItems.find(item => item.name === itemName);
     if (availableItem && availableItem.spritePath) {
         return availableItem.spritePath;
     }
     
-    // Generate sprite path based on naming convention
     const spriteName = itemNameToSpriteFormat(itemName);
     return `assets/art/recipes/${spriteName}.png`;
 }
@@ -807,13 +687,9 @@ function formatTime(dateString) {
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
     
-    if (diffMins < 60) {
-        return `${diffMins}m ago`;
-    } else if (diffHours < 24) {
-        return `${diffHours}h ago`;
-    } else {
-        return `${diffDays}d ago`;
-    }
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
 }
 
 function createParticles() {
@@ -859,10 +735,10 @@ function closeMessageBox() {
 }
 
 function setBankHeaderBackground() {
-  const header = document.querySelector('.bank-header');
-  if (header) {
-    header.style.backgroundImage = "url('assets/art/castle/main_auction.png')";
-  }
+    const header = document.querySelector('.bank-header');
+    if (header) {
+        header.style.backgroundImage = "url('assets/art/castle/main_auction.png')";
+    }
 }
 
 function addAuctionStyles() {
@@ -872,7 +748,6 @@ function addAuctionStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        /* Auction-specific item states */
         .auction-item {
             border-left: 4px solid #2a5a2a;
         }
@@ -1008,7 +883,6 @@ function addAuctionStyles() {
             gap: 0.3rem;
         }
 
-        /* Empty State */
         .empty-bank {
             display: flex;
             flex-direction: column;
@@ -1051,7 +925,6 @@ function addAuctionStyles() {
             color: #1d140c;
         }
 
-        /* Modals */
         .modal {
             position: fixed;
             top: 0;
@@ -1163,7 +1036,6 @@ function addAuctionStyles() {
             justify-content: center;
         }
 
-        /* Trade Preview */
         .trade-preview {
             display: flex;
             align-items: center;
@@ -1219,7 +1091,6 @@ function addAuctionStyles() {
             font-weight: bold;
         }
 
-        /* Particles */
         .particles {
             position: absolute;
             top: 0;
@@ -1256,7 +1127,6 @@ function addAuctionStyles() {
             }
         }
 
-        /* Message Box */
         .custom-message-box {
             position: fixed;
             top: 0;
@@ -1310,46 +1180,44 @@ function addAuctionStyles() {
             margin-bottom: 10px;
         }
 
-.wanted-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 97px);
-  gap: 8px;
-  max-height: 250px;
-  overflow-y: auto;
-  padding: 5px;
-}
+        .wanted-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 97px);
+            gap: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 5px;
+        }
 
-.wanted-card {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 5px;
-  text-align: center;
-  cursor: pointer;
-  background: #fafafa;
-  transition: all 0.2s;
-}
+        .wanted-card {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 5px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafafa;
+            transition: all 0.2s;
+        }
 
-.wanted-card.selected {
-  border-color: #168acd;
-  background: #eaf6ff;
-}
+        .wanted-card.selected {
+            border-color: #168acd;
+            background: #eaf6ff;
+        }
 
-.wanted-icon {
-  width: 48px;
-  height: 48px;
-}
+        .wanted-icon {
+            width: 48px;
+            height: 48px;
+        }
 
-.wanted-name {
-  font-size: 12px;
-  margin-top: 5px;
-}
+        .wanted-name {
+            font-size: 12px;
+            margin-top: 5px;
+        }
 
-.wanted-type {
-  font-size: 10px;
-  color: #666;
-}
-
-
+        .wanted-type {
+            font-size: 10px;
+            color: #666;
+        }
     `;
     document.head.appendChild(style);
 }
