@@ -1,11 +1,15 @@
 let _main;
 let _getCurrentProfile;
 let _profile;
+let _apiCall; // Add this
+let _supabaseConfig; // Add this
 
-export async function loadModule(main, { getCurrentProfile }) {
+export async function loadModule(main, { getCurrentProfile, apiCall, supabaseConfig }) {
   console.log('[EMBARK] --- Starting loadModule for Embark ---');
   _main = main;
   _getCurrentProfile = getCurrentProfile;
+  _apiCall = apiCall; // Add this line
+  _supabaseConfig = supabaseConfig; // Add this line
 
   _profile = _getCurrentProfile();
   if (!_profile) {
@@ -14,6 +18,9 @@ export async function loadModule(main, { getCurrentProfile }) {
     window.gameAuth.loadModule('login');
     return;
   }
+
+  // Check for active battles before showing embark screen
+  await checkForActiveBattles();
 
   // Clear main container and prepare structure
   _main.innerHTML = `
@@ -178,5 +185,117 @@ function setBankHeaderBackground() {
   const header = document.querySelector('.bank-header');
   if (header) {
     header.style.backgroundImage = "url('assets/art/castle/main_embark.png')";
+  }
+}
+
+async function checkForActiveBattles() {
+  try {
+    console.log('[EMBARK] Checking for active battles...');
+    
+    const response = await _apiCall('/functions/v1/check-active-battle', 'POST', {
+      profileId: _profile.id
+    });
+    
+    const result = await response.json();
+    
+    if (result.success && result.hasActiveBattle) {
+      console.log('[EMBARK] Found active battle:', result.battleData.id);
+      
+      // Show reconnection modal
+      showReconnectModal(result.battleData);
+      return true;
+    }
+    
+    console.log('[EMBARK] No active battles found.');
+    return false;
+    
+  } catch (error) {
+    console.error('[EMBARK] Error checking for active battles:', error);
+    // Don't block embark screen if check fails
+    return false;
+  }
+}
+
+function showReconnectModal(battleData) {
+  const modalOverlay = _main.querySelector('.modal-overlay');
+  
+  modalOverlay.innerHTML = `
+    <div class="reconnect-modal">
+      <div class="modal-header">
+        <h2>Active Battle Found</h2>
+      </div>
+      <div class="modal-content">
+        <div class="battle-info-icon">⚔️</div>
+        <h3>You have an ongoing battle!</h3>
+        <p><strong>Mode:</strong> ${battleData.mode?.toUpperCase() || 'Unknown'}</p>
+        <p><strong>Round:</strong> ${battleData.round_number || 1}</p>
+        <p><strong>Current Turn:</strong> ${battleData.current_turn === 'AI' ? 'AI Turn' : 'Your Turn'}</p>
+        <div class="reconnect-options">
+          <p>Would you like to resume your battle or start a new one?</p>
+          <div class="warning-text">
+            <small>⚠️ Starting a new battle will abandon your current progress.</small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="fantasy-button reconnect-btn">Resume Battle</button>
+        <button class="fantasy-button abandon-btn secondary">Start New Battle</button>
+      </div>
+    </div>
+  `;
+  
+  modalOverlay.style.display = 'flex';
+  
+  // Handle reconnection
+  modalOverlay.querySelector('.reconnect-btn').addEventListener('click', () => {
+    console.log('[EMBARK] Reconnecting to active battle:', battleData.id);
+    closeBattleModal();
+    
+    // Determine the selected mode from battle data
+    const selectedMode = battleData.mode || 'forest';
+    
+    // Load battle manager with existing battle data
+    window.gameAuth.loadModule('battle_manager', { 
+      selectedMode: selectedMode,
+      existingBattleId: battleData.id,
+      reconnecting: true
+    });
+  });
+  
+  // Handle abandoning current battle
+  modalOverlay.querySelector('.abandon-btn').addEventListener('click', async () => {
+    if (confirm('Are you sure you want to abandon your current battle? This cannot be undone.')) {
+      await abandonCurrentBattle(battleData.id);
+      closeBattleModal();
+    }
+  });
+}
+
+function closeBattleModal() {
+  const modalOverlay = _main.querySelector('.modal-overlay');
+  modalOverlay.style.display = 'none';
+  modalOverlay.innerHTML = '';
+}
+
+async function abandonCurrentBattle(battleId) {
+  try {
+    console.log('[EMBARK] Abandoning battle:', battleId);
+    
+    const response = await _apiCall('/functions/v1/abandon-battle', 'POST', {
+      battleId: battleId,
+      profileId: _profile.id
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      displayMessage('Previous battle abandoned successfully.');
+    } else {
+      displayMessage('Failed to abandon previous battle: ' + result.message);
+    }
+    
+  } catch (error) {
+    console.error('[EMBARK] Error abandoning battle:', error);
+    displayMessage('Error abandoning previous battle.');
   }
 }
