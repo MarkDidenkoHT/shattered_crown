@@ -5,7 +5,8 @@ const BattleState = {
     tileMap: new Map(), characters: [], selectedCharacterEl: null,
     selectedPlayerCharacter: null, currentTurnCharacter: null,
     highlightedTiles: [], supabaseClient: null, battleState: null,
-    battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false
+    battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false,
+    characterElements: new Map() // Track character DOM elements for animations
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -13,6 +14,13 @@ const MOVEMENT_OFFSETS = [
     { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
     { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
 ];
+
+const ANIMATION_CONFIG = {
+    moveDuration: 500, // ms
+    fadeInDuration: 300,
+    fadeOutDuration: 200,
+    easingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' // easeOutQuad
+};
 
 const debounce = (func, wait) => {
     let timeout;
@@ -84,6 +92,99 @@ const processCharacterState = (charState) => {
     };
 };
 
+// Animation utilities
+const animateCharacterMovement = (characterEl, fromCell, toCell) => {
+    return new Promise((resolve) => {
+        if (!characterEl || !fromCell || !toCell) {
+            resolve();
+            return;
+        }
+
+        const fromRect = fromCell.getBoundingClientRect();
+        const toRect = toCell.getBoundingClientRect();
+        
+        const deltaX = toRect.left - fromRect.left;
+        const deltaY = toRect.top - fromRect.top;
+
+        // Create a clone for animation
+        const animationClone = characterEl.cloneNode(true);
+        animationClone.style.position = 'fixed';
+        animationClone.style.zIndex = '1000';
+        animationClone.style.pointerEvents = 'none';
+        animationClone.style.left = fromRect.left + 'px';
+        animationClone.style.top = fromRect.top + 'px';
+        animationClone.style.width = fromRect.width + 'px';
+        animationClone.style.height = fromRect.height + 'px';
+        
+        // Hide original during animation
+        characterEl.style.opacity = '0';
+        
+        document.body.appendChild(animationClone);
+
+        // Animate the clone
+        animationClone.style.transition = `transform ${ANIMATION_CONFIG.moveDuration}ms ${ANIMATION_CONFIG.easingFunction}`;
+        
+        requestAnimationFrame(() => {
+            animationClone.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        });
+
+        setTimeout(() => {
+            // Remove clone and show original in new position
+            document.body.removeChild(animationClone);
+            toCell.appendChild(characterEl);
+            characterEl.style.opacity = '1';
+            characterEl.style.transition = 'opacity 150ms ease-in';
+            resolve();
+        }, ANIMATION_CONFIG.moveDuration);
+    });
+};
+
+const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
+    if (!hpBarEl || oldHP === newHP) return;
+
+    const hpFill = hpBarEl.querySelector('div');
+    if (!hpFill) return;
+
+    const oldPercentage = Math.max(0, Math.min(100, Math.round((oldHP / maxHP) * 100)));
+    const newPercentage = Math.max(0, Math.min(100, Math.round((newHP / maxHP) * 100)));
+
+    // Color transition
+    let newColor = '#4CAF50';
+    if (newPercentage <= 25) newColor = '#F44336';
+    else if (newPercentage <= 50) newColor = '#FF9800';
+    else if (newPercentage <= 75) newColor = '#FFC107';
+
+    hpFill.style.transition = `width ${ANIMATION_CONFIG.moveDuration * 0.6}ms ease-out, background-color 300ms ease`;
+    hpFill.style.width = `${newPercentage}%`;
+    hpFill.style.backgroundColor = newColor;
+
+    // Add damage/heal indicator
+    if (newHP !== oldHP) {
+        const indicator = document.createElement('div');
+        indicator.style.cssText = `
+            position: absolute;
+            top: -20px;
+            right: 0;
+            color: ${newHP > oldHP ? '#4CAF50' : '#F44336'};
+            font-size: 10px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 30;
+            animation: floatUp 1s ease-out forwards;
+        `;
+        indicator.textContent = `${newHP > oldHP ? '+' : ''}${newHP - oldHP}`;
+        
+        hpBarEl.style.position = 'relative';
+        hpBarEl.appendChild(indicator);
+        
+        setTimeout(() => {
+            if (indicator.parentNode) {
+                indicator.parentNode.removeChild(indicator);
+            }
+        }, 1000);
+    }
+};
+
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
 
@@ -132,7 +233,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         : BattleState.battleState?.round_number || 1;
     
     renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState.layout_data);
-    updateGameStateFromRealtime();
+    await updateGameStateFromRealtime(); // Make initial update async to handle animations
 }
 
 const loadTileData = async () => {
@@ -209,28 +310,141 @@ const setupRealtimeSubscription = () => {
                 table: 'battle_state',
                 filter: `id=eq.${BattleState.battleId}`
             },
-            throttle((payload) => {
+            throttle(async (payload) => {
                 BattleState.battleState = payload.new;
-                updateGameStateFromRealtime();
+                await updateGameStateFromRealtime();
             }, 100)
         )
         .subscribe();
 };
 
-function updateGameStateFromRealtime() {
+async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
 
-    BattleState.characters = Object.values(BattleState.battleState.characters_state)
+    const newCharacters = Object.values(BattleState.battleState.characters_state)
         .map(processCharacterState);
     
+    // Handle character updates with animations
+    await updateCharactersWithAnimations(newCharacters);
+    
     requestAnimationFrame(() => {
-        renderCharacters();
         updateTurnDisplay();
         updateCharacterAvailability();
     });
     
     handleTurnLogic();
 }
+
+async function updateCharactersWithAnimations(newCharacters) {
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    if (!container) return;
+
+    const animations = [];
+    
+    // Process each character for potential animation
+    for (const newChar of newCharacters) {
+        const oldChar = BattleState.characters.find(c => c.id === newChar.id);
+        const charEl = BattleState.characterElements.get(newChar.id);
+        
+        if (!oldChar) {
+            // New character - create and fade in
+            const newCharEl = createCharacterElement(newChar);
+            const targetCell = container.querySelector(`td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`);
+            
+            if (targetCell) {
+                newCharEl.style.opacity = '0';
+                targetCell.appendChild(newCharEl);
+                BattleState.characterElements.set(newChar.id, newCharEl);
+                
+                animations.push(new Promise(resolve => {
+                    newCharEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeInDuration}ms ease-in`;
+                    newCharEl.style.opacity = '1';
+                    setTimeout(resolve, ANIMATION_CONFIG.fadeInDuration);
+                }));
+            }
+        } else if (charEl) {
+            // Existing character - check for movement or stat changes
+            const [oldX, oldY] = oldChar.position;
+            const [newX, newY] = newChar.position;
+            
+            if (oldX !== newX || oldY !== newY) {
+                // Character moved - animate movement
+                const fromCell = container.querySelector(`td[data-x="${oldX}"][data-y="${oldY}"]`);
+                const toCell = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
+                
+                if (fromCell && toCell) {
+                    animations.push(animateCharacterMovement(charEl, fromCell, toCell));
+                }
+            }
+            
+            // Update HP bar if HP changed
+            if (oldChar.current_hp !== newChar.current_hp) {
+                const hpBar = charEl.querySelector('.character-hp-bar');
+                if (hpBar) {
+                    animateHPChange(hpBar, oldChar.current_hp, newChar.current_hp, newChar.max_hp);
+                }
+            }
+            
+            // Update other visual states (turn indicators, etc.)
+            updateCharacterVisualState(charEl, newChar);
+        }
+    }
+    
+    // Remove characters that no longer exist
+    for (const oldChar of BattleState.characters) {
+        if (!newCharacters.find(c => c.id === oldChar.id)) {
+            const charEl = BattleState.characterElements.get(oldChar.id);
+            if (charEl) {
+                animations.push(new Promise(resolve => {
+                    charEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeOutDuration}ms ease-out`;
+                    charEl.style.opacity = '0';
+                    setTimeout(() => {
+                        if (charEl.parentNode) {
+                            charEl.parentNode.removeChild(charEl);
+                        }
+                        BattleState.characterElements.delete(oldChar.id);
+                        resolve();
+                    }, ANIMATION_CONFIG.fadeOutDuration);
+                }));
+            }
+        }
+    }
+    
+    // Wait for all animations to complete
+    await Promise.all(animations);
+    
+    // Update stored character state
+    BattleState.characters = newCharacters;
+}
+
+const updateCharacterVisualState = (charEl, character) => {
+    // Update tooltip
+    charEl.title = `${character.name} (${character.current_hp}/${character.max_hp} HP)`;
+    
+    // Update turn completion indicator
+    const existingIndicator = charEl.querySelector('.turn-done-indicator');
+    if (character.has_moved && character.has_acted) {
+        if (!existingIndicator) {
+            const indicator = createTurnIndicator();
+            charEl.appendChild(indicator);
+        }
+    } else if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    // Update HP bar content (not animated here, done in animateHPChange)
+    const hpBar = charEl.querySelector('.character-hp-bar');
+    if (hpBar) {
+        const hpFill = hpBar.querySelector('div');
+        if (hpFill) {
+            const hpPercentage = Math.max(0, Math.min(100, Math.round((character.current_hp / character.max_hp) * 100)));
+            // Only update if not already transitioning
+            if (!hpFill.style.transition) {
+                hpFill.style.width = `${hpPercentage}%`;
+            }
+        }
+    }
+};
 
 const updateTurnDisplay = () => {
     const turnStatusEl = document.getElementById('turnStatus');
@@ -256,14 +470,15 @@ const updateCharacterAvailability = () => {
     if (!container) return;
 
     const currentTurn = BattleState.battleState.current_turn;
-    const tokens = container.querySelectorAll('.character-token');
     
-    tokens.forEach(token => {
-        token.classList.remove('current-turn', 'cannot-act');
+    // Remove existing classes with smooth transitions
+    BattleState.characterElements.forEach((charEl, charId) => {
+        charEl.style.transition = 'filter 300ms ease, opacity 200ms ease';
+        charEl.classList.remove('current-turn', 'cannot-act');
     });
 
     BattleState.characters.forEach(char => {
-        const charEl = container.querySelector(`.character-token[data-id="${char.id}"]`);
+        const charEl = BattleState.characterElements.get(char.id);
         if (!charEl) return;
 
         const canAct = !char.has_moved || !char.has_acted;
@@ -319,6 +534,32 @@ const handleAITurn = async () => {
 
 function renderBattleScreen(mode, level, layoutData) {
     BattleState.main.innerHTML = `
+        <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-30px); opacity: 0; }
+        }
+        .character-token {
+            transition: filter 300ms ease, opacity 200ms ease;
+        }
+        .character-token.current-turn {
+            filter: brightness(1.2) saturate(1.1);
+        }
+        .character-token.cannot-act {
+            filter: grayscale(0.3) opacity(0.7);
+        }
+        .character-selected {
+            filter: brightness(1.3) drop-shadow(0 0 8px #FFD700) !important;
+        }
+        .highlight-walkable {
+            box-shadow: inset 0 0 0 2px #4CAF50;
+            background-color: rgba(76, 175, 80, 0.2) !important;
+        }
+        </style>
         <div class="main-app-container">
             <div class="battle-top-bar">
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
@@ -411,7 +652,8 @@ function renderBattleGrid(layoutJson) {
                 backgroundSize: 'cover', backgroundPosition: 'center',
                 width: `${100 / GRID_SIZE.cols}%`, padding: '0', margin: '0',
                 position: 'relative', boxSizing: 'border-box',
-                border: '1px solid #666'
+                border: '1px solid #666',
+                transition: 'box-shadow 200ms ease, background-color 200ms ease'
             });
 
             td.addEventListener('click', handleTileClick);
@@ -428,6 +670,8 @@ function renderCharacters() {
     const container = BattleState.main.querySelector('.battle-grid-container');
     if (!container) return;
     
+    // Clear existing character elements map and DOM elements
+    BattleState.characterElements.clear();
     container.querySelectorAll('.character-token').forEach(token => token.remove());
 
     BattleState.characters.forEach(char => {
@@ -439,6 +683,9 @@ function renderCharacters() {
 
         const charEl = createCharacterElement(char);
         cell.appendChild(charEl);
+        
+        // Store reference for animations
+        BattleState.characterElements.set(char.id, charEl);
     });
 }
 
@@ -542,7 +789,7 @@ const handleCharacterSelection = (character, tileEl) => {
     }
     
     if (character.isPlayerControlled && (!character.has_moved || !character.has_acted)) {
-        const el = tileEl.querySelector('.character-token');
+        const el = BattleState.characterElements.get(character.id);
         if (el) {
             el.classList.add('character-selected');
             BattleState.selectedCharacterEl = el;
@@ -559,9 +806,9 @@ const handleCharacterSelection = (character, tileEl) => {
     showEntityInfo(character);
 };
 
-const handleMovementOrDeselect = (tileEl, targetX, targetY) => {
+const handleMovementOrDeselect = async (tileEl, targetX, targetY) => {
     if (BattleState.selectedPlayerCharacter && tileEl.classList.contains('highlight-walkable')) {
-        attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
+        await attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
     } else {
         unhighlightAllTiles();
         
@@ -602,7 +849,6 @@ function highlightWalkableTiles(character) {
                 );
                 if (!isOccupied) {
                     tileEl.classList.add('highlight-walkable');
-                    tileEl.style.borderColor = '#4CAF50';
                     BattleState.highlightedTiles.push(tileEl);
                 }
             }
@@ -613,7 +859,6 @@ function highlightWalkableTiles(character) {
 function unhighlightAllTiles() {
     BattleState.highlightedTiles.forEach(tileEl => {
         tileEl.classList.remove('highlight-walkable');
-        tileEl.style.borderColor = '#666';
     });
     BattleState.highlightedTiles = [];
 }
@@ -630,7 +875,8 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
-    const targetTileEl = BattleState.main.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    const targetTileEl = container.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
     if (!targetTileEl || targetTileEl.dataset.walkable !== 'true') {
         displayMessage('Cannot move to an unwalkable tile.');
         unhighlightAllTiles();
@@ -647,12 +893,19 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
+    // Perform smooth movement animation for player moves
+    const charEl = BattleState.characterElements.get(character.id);
+    const fromCell = container.querySelector(`td[data-x="${startX}"][data-y="${startY}"]`);
+    const toCell = targetTileEl;
+    
+    if (charEl && fromCell && toCell) {
+        await animateCharacterMovement(charEl, fromCell, toCell);
+    }
+
+    // Update character position
     character.position = [targetX, targetY];
     
-    requestAnimationFrame(() => {
-        renderCharacters();
-        unhighlightAllTiles();
-    });
+    unhighlightAllTiles();
 
     if (BattleState.selectedCharacterEl) {
         BattleState.selectedCharacterEl.classList.remove('character-selected');
@@ -758,7 +1011,7 @@ const handleRefresh = async () => {
         if (error) throw error;
         
         BattleState.battleState = battleState;
-        updateGameStateFromRealtime();
+        await updateGameStateFromRealtime();
         
         displayMessage('Battle state refreshed successfully.', 'success');
     } catch (error) {
@@ -1003,6 +1256,7 @@ export function cleanup() {
     });
     
     BattleState.tileMap.clear();
+    BattleState.characterElements.clear();
     
     const existingMessage = document.querySelector('.custom-message-box');
     if (existingMessage) existingMessage.remove();
