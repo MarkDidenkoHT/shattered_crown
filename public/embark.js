@@ -28,12 +28,11 @@ export async function loadModule(main, { getCurrentProfile, apiCall, supabaseCon
     </div>
   `;
 
-  await checkForActiveBattles();
-
   createParticles();
   renderEmbarkScreen();
   setBankHeaderBackground();
 
+  await checkForActiveBattles();
   console.log('[EMBARK] --- loadModule for Embark finished ---');
 }
 
