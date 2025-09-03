@@ -1,17 +1,11 @@
-let _main;
-let _getCurrentProfile;
-let _profile;
-let _currentView = 'buy';
-let _activeAuctions = [];
-let _bankItems = [];
-let _availableItems = [];
-let _myListings = [];
+let _main, _getCurrentProfile, _profile, _currentView = 'buy';
+let _activeAuctions = [], _bankItems = [], _availableItems = [], _myListings = [];
 
 export async function loadModule(main, { getCurrentProfile }) {
     _main = main;
     _getCurrentProfile = getCurrentProfile;
-
     _profile = _getCurrentProfile();
+    
     if (!_profile) {
         displayMessage('User profile not found. Please log in again.');
         window.gameAuth.loadModule('login');
@@ -21,76 +15,74 @@ export async function loadModule(main, { getCurrentProfile }) {
     _main.innerHTML = `
         <div class="main-app-container bank-container">
             <div class="particles"></div>
-            
-            <!-- Top Header -->
             <div class="bank-header">
                 <div class="top-right-buttons">
                     <button class="fantasy-button back-btn">Return</button>
                 </div>
-                
-                <!-- Filter Tabs -->
                 <div class="filter-tabs" id="filterTabs">
                     <button class="filter-tab active" data-view="buy">Buy Items</button>
                     <button class="filter-tab" data-view="sell">Sell Items</button>
                     <button class="filter-tab" data-view="return">My Listings</button>
                 </div>
             </div>
-
-            <!-- Main Auction Content -->
             <div class="bank-content">
                 <div class="bank-items-container">
-                    <div class="bank-items-list" id="auctionItemsList">
-                        <!-- Items will be populated here -->
-                    </div>
+                    <div class="bank-items-list" id="auctionItemsList"></div>
                 </div>
             </div>
         </div>
+        
+        ${createModals()}
+    `;
 
-        <!-- Sell Modal -->
+    addAuctionStyles();
+    createParticles();
+    setupAuctionInteractions();
+    await loadCurrentView();
+    setBankHeaderBackground();
+}
+
+function createModals() {
+    return `
         <div id="sell-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
                 <h3>Create Auction Listing</h3>
                 <div class="sell-form">
-
-                  <div style="display: flex;">
-                    <div class="form-group">
-                        <label>Selling:</label>
-                        <div class="selling-item">
-                            <img id="sell-item-icon" src="" alt="">
-                            <div>
-                                <div id="sell-item-name"></div>
-                                <div>Available: <span id="sell-item-available"></span></div>
+                    <div style="display: flex;">
+                        <div class="form-group">
+                            <label>Selling:</label>
+                            <div class="selling-item">
+                                <img id="sell-item-icon" src="" alt="">
+                                <div>
+                                    <div id="sell-item-name"></div>
+                                    <div>Available: <span id="sell-item-available"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group">
+                                <label for="sell-amount">Amount to sell:</label>
+                                <input type="number" id="sell-amount" min="1" max="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="wanted-amount">Amount wanted:</label>
+                                <input type="number" id="wanted-amount" min="1" value="1">
                             </div>
                         </div>
                     </div>
-                    
-                      <div>
-                        <div class="form-group">
-                            <label for="sell-amount">Amount to sell:</label>
-                            <input type="number" id="sell-amount" min="1" max="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="wanted-amount">Amount wanted:</label>
-                            <input type="number" id="wanted-amount" min="1" value="1">
-                        </div>
-                      </div>
-                  </div>  
-                    
                     <div class="form-group">
                         <label for="wanted-item">Want in return:</label>
                         <div class="wanted-controls">
-                        <input id="wanted-search" type="text" placeholder="Search item..." style="border-radius: 4px;">
-                        <select id="wanted-filter">
-                            <option value="all">All</option>
-                            <option value="ingredient">Ingredients</option>
-                            <option value="consumable">Consumables</option>
-                        </select>
+                            <input id="wanted-search" type="text" placeholder="Search item..." style="border-radius: 4px;">
+                            <select id="wanted-filter">
+                                <option value="all">All</option>
+                                <option value="ingredient">Ingredients</option>
+                                <option value="consumable">Consumables</option>
+                            </select>
                         </div>
-
-                    <div id="wanted-item-picker" class="wanted-grid"></div>
+                        <div id="wanted-item-picker" class="wanted-grid"></div>
                     </div>
-                    
                     <div class="form-actions">
                         <button class="fantasy-button cancel-sell">Cancel</button>
                         <button class="fantasy-button confirm-sell">List Item</button>
@@ -99,7 +91,6 @@ export async function loadModule(main, { getCurrentProfile }) {
             </div>
         </div>
 
-        <!-- Buy Modal -->
         <div id="buy-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
@@ -115,9 +106,7 @@ export async function loadModule(main, { getCurrentProfile }) {
                             </div>
                         </div>
                     </div>
-                    
                     <div class="trade-arrow">⇄</div>
-                    
                     <div class="trade-section">
                         <h4>You will pay:</h4>
                         <div class="trade-item">
@@ -130,7 +119,6 @@ export async function loadModule(main, { getCurrentProfile }) {
                         </div>
                     </div>
                 </div>
-                
                 <div class="form-actions">
                     <button class="fantasy-button cancel-buy">Cancel</button>
                     <button class="fantasy-button confirm-buy">Confirm Purchase</button>
@@ -138,28 +126,15 @@ export async function loadModule(main, { getCurrentProfile }) {
             </div>
         </div>
     `;
-
-    addAuctionStyles();
-    createParticles();
-    setupAuctionInteractions();
-    await loadCurrentView();
-    setBankHeaderBackground();
 }
 
 async function loadCurrentView() {
     const container = document.getElementById('auctionItemsList');
-    
     try {
         switch (_currentView) {
-            case 'buy':
-                await loadBuyView(container);
-                break;
-            case 'sell':
-                await loadSellView(container);
-                break;
-            case 'return':
-                await loadMyListingsView(container);
-                break;
+            case 'buy': await loadBuyView(container); break;
+            case 'sell': await loadSellView(container); break;
+            case 'return': await loadMyListingsView(container); break;
         }
     } catch (error) {
         console.error('Failed to load view:', error);
@@ -170,274 +145,187 @@ async function loadCurrentView() {
 async function loadBuyView(container) {
     displayMessage('Loading active auctions...');
     
-    try {
-        const response = await fetch('/api/auction/active', {
-            method: 'GET',
-            credentials: 'include', // Include cookies for session auth
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+    const response = await fetch('/api/auction/active', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+    });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch auctions: ${response.status}`);
-        }
+    if (!response.ok) throw new Error(`Failed to fetch auctions: ${response.status}`);
 
-        _activeAuctions = await response.json();
-        
-        if (_activeAuctions.length === 0) {
-            container.innerHTML = `
-                <div class="empty-bank">
-                    <div class="empty-icon">🏛️</div>
-                    <h3>No Active Auctions</h3>
-                    <p>No items are currently available for purchase</p>
+    _activeAuctions = await response.json();
+    
+    if (_activeAuctions.length === 0) {
+        container.innerHTML = createEmptyState('🏛️', 'No Active Auctions', 'No items are currently available for purchase');
+    } else {
+        container.innerHTML = _activeAuctions.map(auction => `
+            <div class="bank-item auction-item" data-auction-id="${auction.id}">
+                <div class="item-icon">
+                    <img src="${getItemIcon(auction.item_selling)}" alt="${auction.item_selling}">
+                    ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
                 </div>
-            `;
-        } else {
-            container.innerHTML = _activeAuctions.map(auction => `
-                <div class="bank-item auction-item" data-auction-id="${auction.id}">
-                    <div class="item-icon">
-                        <img src="${getItemIcon(auction.item_selling)}" 
-                             alt="${auction.item_selling}" 
-                        ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
+                <div class="item-info">
+                    <div class="item-name">${auction.item_selling}</div>
+                    <div class="item-details">
+                        <span class="item-type">Seller: ${auction.seller?.chat_id || 'Anonymous'}</span>
+                        <span class="item-profession">• ${formatTime(auction.created_at)}</span>
                     </div>
-                    
-                    <div class="item-info">
-                        <div class="item-name">${auction.item_selling}</div>
-                        <div class="item-details">
-                            <span class="item-type">Seller: ${auction.seller?.chat_id || 'Anonymous'}</span>
-                            <span class="item-profession">• ${formatTime(auction.created_at)}</span>
-                        </div>
-                        <div class="auction-trade-info">
-                            <span class="trade-want">Wants: ${auction.amount_wanted}× ${auction.item_wanted}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="item-actions">
-                        <button class="action-btn buy-btn" data-action="buy" data-auction-id="${auction.id}">
-                            <span class="btn-icon">💰</span>
-                            Buy
-                        </button>
+                    <div class="auction-trade-info">
+                        <span class="trade-want">Wants: ${auction.amount_wanted}× ${auction.item_wanted}</span>
                     </div>
                 </div>
-            `).join('');
-        }
-        
-        closeMessageBox();
-    } catch (error) {
-        console.error('Failed to load auctions:', error);
-        displayMessage('Failed to load auctions. Please try again.');
+                <div class="item-actions">
+                    <button class="action-btn buy-btn" data-action="buy" data-auction-id="${auction.id}">
+                        <span class="btn-icon">💰</span>Buy
+                    </button>
+                </div>
+            </div>
+        `).join('');
     }
+    closeMessageBox();
 }
 
 async function loadSellView(container) {
     displayMessage('Loading your items...');
     
-    try {
-        const response = await fetch(`/api/auction/bank/${_profile.id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-            }
-        });
+    const response = await fetch(`/api/auction/bank/${_profile.id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
+    });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch bank items: ${response.status}`);
-        }
+    if (!response.ok) throw new Error(`Failed to fetch bank items: ${response.status}`);
 
-        _bankItems = await response.json();
+    _bankItems = await response.json();
+    const itemNames = [...new Set(_bankItems.filter(item => !item.isGear).map(item => item.item))];
+    const spriteMap = await getItemSprites(itemNames);
 
-        // Build a list of item names for sprite lookup (only non-gear)
-        const itemNames = [...new Set(
-            _bankItems.filter(item => !item.isGear).map(item => item.item)
-        )];
+    _bankItems = _bankItems.map(item => ({
+        ...item,
+        spritePath: item.spritePath || (item.isGear 
+            ? (item.sprite || "assets/art/recipes/default_item.png")
+            : (spriteMap[item.item] || `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`))
+    }));
 
-        const spriteMap = await getItemSprites(itemNames);
-
-        // Normalize sprite paths
-        _bankItems = _bankItems.map(item => ({
-            ...item,
-            spritePath: item.spritePath ||
-                (item.isGear
-                    ? (item.sprite || "assets/art/recipes/default_item.png")
-                    : (spriteMap[item.item] ||
-                       `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`))
-        }));
-
-        if (_bankItems.length === 0) {
-            container.innerHTML = `
-                <div class="empty-bank">
-                    <div class="empty-icon">📦</div>
-                    <h3>No Items to Sell</h3>
-                    <p>You need items in your bank or unequipped crafted gear to create auction listings</p>
+    if (_bankItems.length === 0) {
+        container.innerHTML = createEmptyState('📦', 'No Items to Sell', 'You need items in your bank or unequipped crafted gear to create auction listings');
+    } else {
+        container.innerHTML = _bankItems.map(item => `
+            <div class="bank-item ${item.isGear ? 'crafted-gear' : ''}" data-item-id="${item.id}">
+                <div class="item-icon">
+                    <img src="${item.spritePath}" alt="${item.item}">
+                    ${!item.isGear && item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
                 </div>
-            `;
-        } else {
-            container.innerHTML = _bankItems.map(item => `
-                <div class="bank-item ${item.isGear ? 'crafted-gear' : ''}" data-item-id="${item.id}">
-                    <div class="item-icon">
-                        <img src="${item.spritePath}" alt="${item.item}">
-                        ${!item.isGear && item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
+                <div class="item-info">
+                    <div class="item-name">${item.item}</div>
+                    <div class="item-details">
+                        ${item.isGear ? `<span class="item-type">Crafted Gear</span>` : `<span class="item-type">${item.type || 'recipe'}</span>`}
+                        ${item.professions ? `<span class="item-profession">• ${item.professions.name}</span>` : ''}
                     </div>
-                    <div class="item-info">
-                        <div class="item-name">${item.item}</div>
-                        <div class="item-details">
-                            ${item.isGear 
-                                ? `<span class="item-type">Crafted Gear</span>` 
-                                : `<span class="item-type">${item.type || 'recipe'}</span>`}
-                            ${item.professions ? `<span class="item-profession">• ${item.professions.name}</span>` : ''}
-                        </div>
-                        ${item.isGear && item.stats 
-                            ? `<pre class="gear-stats">${JSON.stringify(item.stats, null, 2)}</pre>` 
-                            : ''}
-                    </div>
-                    <div class="item-actions">
-                        <button class="action-btn sell-btn" 
-                                data-action="sell" 
-                                data-item-id="${item.id}" 
-                                data-is-gear="${item.isGear}">
-                            <span class="btn-icon">🏷️</span>
-                            Sell
-                        </button>
-                    </div>
+                    ${item.isGear && item.stats ? `<pre class="gear-stats">${JSON.stringify(item.stats, null, 2)}</pre>` : ''}
                 </div>
-            `).join('');
-        }
-
-        closeMessageBox();
-    } catch (error) {
-        console.error('Failed to load bank items:', error);
-        displayMessage('Failed to load your items. Please try again.');
+                <div class="item-actions">
+                    <button class="action-btn sell-btn" data-action="sell" data-item-id="${item.id}" data-is-gear="${item.isGear}">
+                        <span class="btn-icon">🏷️</span>Sell
+                    </button>
+                </div>
+            </div>
+        `).join('');
     }
+    closeMessageBox();
 }
 
 async function loadMyListingsView(container) {
     displayMessage('Loading your listings...');
     
-    try {
-        const response = await fetch(`/api/auction/my-listings/${_profile.id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-            }
-        });
+    const response = await fetch(`/api/auction/my-listings/${_profile.id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
+    });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch listings: ${response.status}`);
-        }
+    if (!response.ok) throw new Error(`Failed to fetch listings: ${response.status}`);
 
-        _myListings = await response.json();
-        
-        if (_myListings.length === 0) {
-            container.innerHTML = `
-                <div class="empty-bank">
-                    <div class="empty-icon">📋</div>
-                    <h3>No Active Listings</h3>
-                    <p>You haven't created any auction listings yet</p>
-                </div>
-            `;
-        } else {
-            container.innerHTML = _myListings.map(listing => `
-                <div class="bank-item listing-item ${listing.status ? 'sold' : 'active'}" 
-                     data-listing-id="${listing.id}">
-                     
-                    <div class="item-icon">
-                        <img src="${getItemIcon(listing.item_selling)}">
-                        ${listing.amount_selling > 1 
-                            ? `<span class="item-quantity">${listing.amount_selling}</span>` 
-                            : ''}
-                        <div class="listing-status-badge ${listing.status ? 'sold' : 'active'}">
-                            ${listing.status ? 'SOLD' : 'ACTIVE'}
-                        </div>
-                    </div>
-                    
-                    <div class="item-info">
-                        <div class="item-name">${listing.item_selling}</div>
-                        <div class="item-details">
-                            <span class="item-type">Status: ${listing.status ? 'Sold' : 'Active'}</span>
-                            <span class="item-profession">• ${listing.status 
-                                ? formatTime(listing.modified_at) 
-                                : formatTime(listing.created_at)}</span>
-                        </div>
-                        <div class="auction-trade-info">
-                            <span class="trade-want">For: ${listing.amount_wanted}× ${listing.item_wanted}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="item-actions">
-                        ${!listing.status ? `
-                            <button class="action-btn cancel-btn" 
-                                    data-action="cancel" 
-                                    data-listing-id="${listing.id}">
-                                <span class="btn-icon">❌</span>
-                                Cancel
-                            </button>
-                        ` : `
-                            <span class="sold-indicator">✅ Completed</span>
-                        `}
+    _myListings = await response.json();
+    
+    if (_myListings.length === 0) {
+        container.innerHTML = createEmptyState('📋', 'No Active Listings', "You haven't created any auction listings yet");
+    } else {
+        container.innerHTML = _myListings.map(listing => `
+            <div class="bank-item listing-item ${listing.status ? 'sold' : 'active'}" data-listing-id="${listing.id}">
+                <div class="item-icon">
+                    <img src="${getItemIcon(listing.item_selling)}">
+                    ${listing.amount_selling > 1 ? `<span class="item-quantity">${listing.amount_selling}</span>` : ''}
+                    <div class="listing-status-badge ${listing.status ? 'sold' : 'active'}">
+                        ${listing.status ? 'SOLD' : 'ACTIVE'}
                     </div>
                 </div>
-            `).join('');
-        }
-        
-        closeMessageBox();
-    } catch (error) {
-        console.error('Failed to load listings:', error);
-        displayMessage('Failed to load your listings. Please try again.');
+                <div class="item-info">
+                    <div class="item-name">${listing.item_selling}</div>
+                    <div class="item-details">
+                        <span class="item-type">Status: ${listing.status ? 'Sold' : 'Active'}</span>
+                        <span class="item-profession">• ${listing.status ? formatTime(listing.modified_at) : formatTime(listing.created_at)}</span>
+                    </div>
+                    <div class="auction-trade-info">
+                        <span class="trade-want">For: ${listing.amount_wanted}× ${listing.item_wanted}</span>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    ${!listing.status ? `
+                        <button class="action-btn cancel-btn" data-action="cancel" data-listing-id="${listing.id}">
+                            <span class="btn-icon">❌</span>Cancel
+                        </button>
+                    ` : `<span class="sold-indicator">✅ Completed</span>`}
+                </div>
+            </div>
+        `).join('');
     }
+    closeMessageBox();
+}
+
+function createEmptyState(icon, title, message) {
+    return `
+        <div class="empty-bank">
+            <div class="empty-icon">${icon}</div>
+            <h3>${title}</h3>
+            <p>${message}</p>
+        </div>
+    `;
 }
 
 function setupAuctionInteractions() {
-    // Back button
     _main.querySelector('.back-btn').addEventListener('click', () => {
         window.gameAuth.loadModule('castle');
     });
 
-    // Navigation tabs (using event delegation)
     _main.querySelector('#filterTabs').addEventListener('click', async (e) => {
-        if (e.target.classList.contains('filter-tab')) {
-            if (e.target.dataset.view === _currentView) return;
-            
-            // Update active tab
+        if (e.target.classList.contains('filter-tab') && e.target.dataset.view !== _currentView) {
             _main.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
             e.target.classList.add('active');
-            
-            // Change view
             _currentView = e.target.dataset.view;
             await loadCurrentView();
         }
     });
 
-    // Item action buttons (using event delegation)
     _main.querySelector('#auctionItemsList').addEventListener('click', async (e) => {
-        if (e.target.classList.contains('buy-btn') || e.target.closest('.buy-btn')) {
-            const btn = e.target.classList.contains('buy-btn') ? e.target : e.target.closest('.buy-btn');
-            const auctionId = btn.dataset.auctionId;
-            await handleBuyClick(auctionId);
-        } else if (e.target.classList.contains('sell-btn') || e.target.closest('.sell-btn')) {
-            const btn = e.target.classList.contains('sell-btn') ? e.target : e.target.closest('.sell-btn');
-            const itemId = btn.dataset.itemId;
-            await handleSellClick(itemId);
-        } else if (e.target.classList.contains('cancel-btn') || e.target.closest('.cancel-btn')) {
-            const btn = e.target.classList.contains('cancel-btn') ? e.target : e.target.closest('.cancel-btn');
-            const listingId = btn.dataset.listingId;
-            await handleCancelListing(listingId);
+        const btn = e.target.closest('.buy-btn, .sell-btn, .cancel-btn');
+        if (!btn) return;
+
+        if (btn.classList.contains('buy-btn')) {
+            await handleBuyClick(btn.dataset.auctionId);
+        } else if (btn.classList.contains('sell-btn')) {
+            await handleSellClick(btn.dataset.itemId);
+        } else if (btn.classList.contains('cancel-btn')) {
+            await handleCancelListing(btn.dataset.listingId);
         }
     });
 
-    // Modal interactions
     setupModalInteractions();
 }
 
 function setupModalInteractions() {
-    // Close modals
     document.querySelectorAll('.close-modal, .cancel-sell, .cancel-buy').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.modal').forEach(modal => {
-                modal.style.display = 'none';
-            });
+            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
         });
     });
 
-    // Sell modal interactions
     document.getElementById('sell-amount').addEventListener('input', (e) => {
         const max = parseInt(e.target.max);
         const value = parseInt(e.target.value);
@@ -445,174 +333,98 @@ function setupModalInteractions() {
         if (value < 1) e.target.value = 1;
     });
 
-    // Confirm sell
-    document.querySelector('.confirm-sell').addEventListener('click', async () => {
-        await handleConfirmSell();
-    });
-
-    // Confirm buy
-    document.querySelector('.confirm-buy').addEventListener('click', async () => {
-        await handleConfirmBuy();
-    });
+    document.querySelector('.confirm-sell').addEventListener('click', handleConfirmSell);
+    document.querySelector('.confirm-buy').addEventListener('click', handleConfirmBuy);
 }
 
 async function handleBuyClick(auctionId) {
     const auction = _activeAuctions.find(a => a.id == auctionId);
     if (!auction) return;
 
-    // Prevent buying own auction
     if (auction.seller_id === _profile.id) {
         displayMessage('You cannot purchase your own auction listing.');
         return;
     }
 
-    try {
-        // Fetch player’s available items (bank + unequipped crafted gear)
-        const response = await fetch(`/api/auction/bank/${_profile.id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-            }
-        });
+    const response = await fetch(`/api/auction/bank/${_profile.id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
+    });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch bank items: ${response.status}`);
-        }
+    if (!response.ok) throw new Error(`Failed to fetch bank items: ${response.status}`);
 
-        const bankItems = await response.json();
+    const bankItems = await response.json();
+    const playerAmount = bankItems
+        .filter(item => !item.isGear && item.item === auction.item_wanted)
+        .reduce((sum, item) => sum + item.amount, 0);
 
-        const requiredItem = auction.item_wanted;
-        const requiredAmount = auction.amount_wanted;
+    updateBuyModal(auction, playerAmount);
+    
+    const confirmBtn = document.querySelector('.confirm-buy');
+    const canAfford = playerAmount >= auction.amount_wanted;
+    confirmBtn.disabled = !canAfford;
+    confirmBtn.textContent = canAfford ? 'Confirm Purchase' : 'Insufficient Items';
+    confirmBtn.dataset.auctionId = auctionId;
 
-        // Sum up player’s amount of the required item (bank only, crafted gear not used as currency)
-        const playerAmount = bankItems
-            .filter(item => !item.isGear && item.item === requiredItem)
-            .reduce((sum, item) => sum + item.amount, 0);
+    document.getElementById('buy-modal').style.display = 'block';
+}
 
-        // Update modal with trade details
-        document.getElementById('buy-receive-icon').src = getItemIcon(auction.item_selling);
-        document.getElementById('buy-receive-name').textContent = auction.item_selling;
-        document.getElementById('buy-receive-amount').textContent = auction.amount_selling;
-
-        document.getElementById('buy-pay-icon').src = getItemIcon(auction.item_wanted);
-        document.getElementById('buy-pay-name').textContent = auction.item_wanted;
-        document.getElementById('buy-pay-amount').textContent = auction.amount_wanted;
-        document.getElementById('buy-pay-available').textContent = playerAmount;
-
-        // Check if player can afford it
-        const canAfford = playerAmount >= requiredAmount;
-        const confirmBtn = document.querySelector('.confirm-buy');
-        confirmBtn.disabled = !canAfford;
-        confirmBtn.textContent = canAfford ? 'Confirm Purchase' : 'Insufficient Items';
-
-        // Store auction ID for confirmation
-        confirmBtn.dataset.auctionId = auctionId;
-
-        // Show modal
-        document.getElementById('buy-modal').style.display = 'block';
-    } catch (error) {
-        console.error('Failed to check player items:', error);
-        displayMessage('Failed to verify your items. Please try again.');
-    }
+function updateBuyModal(auction, playerAmount) {
+    document.getElementById('buy-receive-icon').src = getItemIcon(auction.item_selling);
+    document.getElementById('buy-receive-name').textContent = auction.item_selling;
+    document.getElementById('buy-receive-amount').textContent = auction.amount_selling;
+    document.getElementById('buy-pay-icon').src = getItemIcon(auction.item_wanted);
+    document.getElementById('buy-pay-name').textContent = auction.item_wanted;
+    document.getElementById('buy-pay-amount').textContent = auction.amount_wanted;
+    document.getElementById('buy-pay-available').textContent = playerAmount;
 }
 
 async function handleSellClick(itemId) {
     const item = _bankItems.find(i => i.id == itemId);
     if (!item) return;
 
-    try {
-        // Fetch tradeable items (only consumables + ingredients)
-        const response = await fetch('/api/auction/items');
-        if (!response.ok) throw new Error('Failed to load items');
-        let allItems = await response.json();
+    const response = await fetch('/api/auction/items');
+    if (!response.ok) throw new Error('Failed to load items');
+    
+    const allItems = await response.json();
+    _availableItems = allItems.filter(i => i.type === 'Ingredient' || i.type === 'Consumable');
 
-        console.log('=== SELL CLICK DEBUG ===');
-        console.log('Total items fetched from API:', allItems.length);
-        console.log('Sample of all items:', allItems.slice(0, 3));
-        
-        // Show breakdown by type
-        const typeCount = {};
-        allItems.forEach(item => {
-            typeCount[item.type] = (typeCount[item.type] || 0) + 1;
-        });
-        console.log('Items by type:', typeCount);
+    document.getElementById('sell-item-icon').src = item.spritePath;
+    document.getElementById('sell-item-name').textContent = item.item;
+    document.getElementById('sell-item-available').textContent = item.amount;
 
-        _availableItems = allItems.filter(i =>
-            i.type === 'Ingredient' || i.type === 'Consumable'
-        );
+    const sellAmountInput = document.getElementById('sell-amount');
+    sellAmountInput.max = item.amount;
+    sellAmountInput.value = Math.min(1, item.amount);
 
-        console.log('Items after filtering (ingredient + consumable):', _availableItems.length);
-        console.log('Filtered items breakdown:');
-        const filteredTypeCount = {};
-        _availableItems.forEach(item => {
-            filteredTypeCount[item.type] = (filteredTypeCount[item.type] || 0) + 1;
-        });
-        console.log('Filtered type count:', filteredTypeCount);
-        console.log('Sample filtered items:', _availableItems.slice(0, 5));
+    renderWantedItemPicker(_availableItems);
+    document.querySelector('.confirm-sell').dataset.itemId = itemId;
+    document.getElementById('sell-modal').style.display = 'block';
 
-        // Update modal with item details
-        document.getElementById('sell-item-icon').src = item.spritePath;
-        document.getElementById('sell-item-name').textContent = item.item;
-        document.getElementById('sell-item-available').textContent = item.amount;
-
-        const sellAmountInput = document.getElementById('sell-amount');
-        sellAmountInput.max = item.amount;
-        sellAmountInput.value = Math.min(1, item.amount);
-
-        // Render picker
-        console.log('About to render picker with', _availableItems.length, 'items');
-        renderWantedItemPicker(_availableItems);
-
-        document.querySelector('.confirm-sell').dataset.itemId = itemId;
-        document.getElementById('sell-modal').style.display = 'block';
-        const filterEl = document.getElementById('wanted-filter');
-        if (filterEl) {
-        filterEl.addEventListener('change', () => renderWantedItemPicker(_availableItems));
-        }
-
-        const searchEl = document.getElementById('wanted-search');
-        if (searchEl) {
-        searchEl.addEventListener('input', () => renderWantedItemPicker(_availableItems));
-        }
-    } catch (error) {
-        console.error('Failed to load available items:', error);
-        displayMessage('Failed to load available items. Please try again.');
-    }
+    ['wanted-filter', 'wanted-search'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(id === 'wanted-filter' ? 'change' : 'input', 
+            () => renderWantedItemPicker(_availableItems));
+    });
 }
 
 function renderWantedItemPicker(items) {
     const container = document.getElementById('wanted-item-picker');
-    const filterSelect = document.getElementById('wanted-filter');
-    const searchInput = document.getElementById('wanted-search');
-
-    const filterValue = filterSelect.value;
-    const searchQuery = searchInput.value.toLowerCase();
-
-    console.log('=== RENDER WANTED PICKER DEBUG ===');
-    console.log('Input items count:', items.length);
-    console.log('Current filter value:', filterValue);
-    console.log('Current search query:', searchQuery);
+    const filterValue = document.getElementById('wanted-filter').value;
+    const searchQuery = document.getElementById('wanted-search').value.toLowerCase();
 
     const filtered = items.filter(item =>
         (filterValue === 'all' || item.type === filterValue) &&
         (!searchQuery || item.name.toLowerCase().includes(searchQuery))
     );
 
-    console.log('Items after render filtering:', filtered.length);
-    console.log('Filtered items sample:', filtered.slice(0, 5));
-
     container.innerHTML = filtered.map(item => `
         <div class="wanted-card" data-name="${item.name}">
-            <img src="${item.spritePath || 'assets/art/recipes/default_item.png'}" 
-                 alt="${item.name}" class="wanted-icon">
+            <img src="${item.spritePath || 'assets/art/recipes/default_item.png'}" alt="${item.name}" class="wanted-icon">
             <div class="wanted-name">${item.name}</div>
             <div class="wanted-type">${item.type}</div>
         </div>
     `).join('');
 
-    console.log('HTML cards generated:', container.children.length);
-    console.log('=== END RENDER DEBUG ===');
-
-    // Click handler for selection
     container.querySelectorAll('.wanted-card').forEach(card => {
         card.addEventListener('click', () => {
             document.querySelectorAll('.wanted-card').forEach(c => c.classList.remove('selected'));
@@ -621,9 +433,6 @@ function renderWantedItemPicker(items) {
         });
     });
 }
-function getSelectedWantedItem() {
-    return document.getElementById('wanted-item-picker').dataset.selectedItem || null;
-}
 
 async function handleConfirmSell() {
     const itemId = document.querySelector('.confirm-sell').dataset.itemId;
@@ -631,7 +440,7 @@ async function handleConfirmSell() {
     if (!item) return;
 
     const sellAmount = parseInt(document.getElementById('sell-amount').value);
-    const wantedItem = getSelectedWantedItem();
+    const wantedItem = document.getElementById('wanted-item-picker').dataset.selectedItem;
     const wantedAmount = parseInt(document.getElementById('wanted-amount').value);
 
     if (!wantedItem || !wantedAmount || sellAmount < 1) {
@@ -639,107 +448,76 @@ async function handleConfirmSell() {
         return;
     }
 
-    try {
-        displayMessage('Creating auction listing...');
+    displayMessage('Creating auction listing...');
 
-        const response = await fetch('/api/auction/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                seller_id: _profile.id,
-                item_selling: item.item,
-                amount_selling: sellAmount,
-                item_wanted: wantedItem,
-                amount_wanted: wantedAmount
-            })
-        });
+    const response = await fetch('/api/auction/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            seller_id: _profile.id,
+            item_selling: item.item,
+            amount_selling: sellAmount,
+            item_wanted: wantedItem,
+            amount_wanted: wantedAmount
+        })
+    });
 
-        const result = await response.json();
+    const result = await response.json();
 
-        if (result.success) {
-            displayMessage('Auction listing created successfully!');
-            document.getElementById('sell-modal').style.display = 'none';
-
-            if (_currentView === 'sell') {
-                await loadSellView(document.getElementById('auctionItemsList'));
-            } else if (_currentView === 'return') {
-                await loadMyListingsView(document.getElementById('auctionItemsList'));
-            }
-        } else {
-            displayMessage(result.error || 'Failed to create auction listing.');
+    if (result.success) {
+        displayMessage('Auction listing created successfully!');
+        document.getElementById('sell-modal').style.display = 'none';
+        
+        if (_currentView === 'sell') {
+            await loadSellView(document.getElementById('auctionItemsList'));
+        } else if (_currentView === 'return') {
+            await loadMyListingsView(document.getElementById('auctionItemsList'));
         }
-    } catch (error) {
-        console.error('Failed to create auction:', error);
-        displayMessage('Failed to create auction listing. Please try again.');
+    } else {
+        displayMessage(result.error || 'Failed to create auction listing.');
     }
 }
 
 async function handleConfirmBuy() {
-  const auctionId = document.querySelector('.confirm-buy').dataset.auctionId;
-
-  try {
+    const auctionId = document.querySelector('.confirm-buy').dataset.auctionId;
     displayMessage('Processing purchase...');
 
     const response = await fetch('/api/auction/buy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        auction_id: auctionId,
-        buyer_id: _profile.id
-      })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auction_id: auctionId, buyer_id: _profile.id })
     });
 
     const result = await response.json();
 
     if (result.success) {
-      displayMessage('Purchase completed successfully!');
-      document.getElementById('buy-modal').style.display = 'none';
-
-      // Refresh buy view
-      await loadBuyView(document.getElementById('auctionItemsList'));
+        displayMessage('Purchase completed successfully!');
+        document.getElementById('buy-modal').style.display = 'none';
+        await loadBuyView(document.getElementById('auctionItemsList'));
     } else {
-      displayMessage(result.error || 'Failed to complete purchase.');
+        displayMessage(result.error || 'Failed to complete purchase.');
     }
-  } catch (error) {
-    console.error('Failed to purchase item:', error);
-    displayMessage('Failed to complete purchase. Please try again.');
-  }
 }
 
 async function handleCancelListing(listingId) {
-  if (!confirm('Are you sure you want to cancel this listing? Your items will be returned to your bank.')) {
-    return;
-  }
+    if (!confirm('Are you sure you want to cancel this listing? Your items will be returned to your bank.')) return;
 
-  try {
     displayMessage('Cancelling listing...');
 
     const response = await fetch(`/api/auction/cancel/${listingId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        seller_id: _profile.id
-      })
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: _profile.id })
     });
 
     const result = await response.json();
 
     if (result.success) {
-      displayMessage('Listing cancelled and items returned to your bank.');
-      await loadMyListingsView(document.getElementById('auctionItemsList'));
+        displayMessage('Listing cancelled and items returned to your bank.');
+        await loadMyListingsView(document.getElementById('auctionItemsList'));
     } else {
-      displayMessage(result.error || 'Failed to cancel listing.');
+        displayMessage(result.error || 'Failed to cancel listing.');
     }
-  } catch (error) {
-    console.error('Failed to cancel listing:', error);
-    displayMessage('Failed to cancel listing. Please try again.');
-  }
 }
 
 function itemNameToSpriteFormat(itemName) {
@@ -747,73 +525,42 @@ function itemNameToSpriteFormat(itemName) {
 }
 
 async function getItemSprites(itemNames) {
-  if (itemNames.length === 0) return {};
+    if (itemNames.length === 0) return {};
 
-  const spriteMap = {};
+    const spriteMap = {};
+    try {
+        const response = await fetch('/api/auction/items');
+        const items = await response.json();
+        const itemIndex = {};
+        items.forEach(item => { if (item.name) itemIndex[item.name] = item; });
 
-  try {
-    // Fetch all auction items from our server
-    const response = await fetch('/api/auction/items');
-    const items = await response.json();
-
-    // Index items by name for quick lookup
-    const itemIndex = {};
-    items.forEach(item => {
-      if (item.name) itemIndex[item.name] = item;
-    });
-
-    // Map requested names to sprite paths
-    itemNames.forEach(itemName => {
-      const dbItem = itemIndex[itemName];
-      if (dbItem && dbItem.spritePath) {
-        spriteMap[itemName] = dbItem.spritePath;
-      } else {
-        // Fallback naming convention
-        const spriteName = itemNameToSpriteFormat(itemName);
-        spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
-      }
-    });
-
-  } catch (error) {
-    console.error('Failed to get item sprites:', error);
-
-    // Fallback: generate all sprite paths by convention
-    itemNames.forEach(itemName => {
-      const spriteName = itemNameToSpriteFormat(itemName);
-      spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
-    });
-  }
-
-  return spriteMap;
+        itemNames.forEach(itemName => {
+            const dbItem = itemIndex[itemName];
+            spriteMap[itemName] = dbItem?.spritePath || `assets/art/recipes/${itemNameToSpriteFormat(itemName)}.png`;
+        });
+    } catch (error) {
+        console.error('Failed to get item sprites:', error);
+        itemNames.forEach(itemName => {
+            spriteMap[itemName] = `assets/art/recipes/${itemNameToSpriteFormat(itemName)}.png`;
+        });
+    }
+    return spriteMap;
 }
 
 function getItemIcon(itemName) {
-    // Try to find the item in available items first
     const availableItem = _availableItems.find(item => item.name === itemName);
-    if (availableItem && availableItem.spritePath) {
-        return availableItem.spritePath;
-    }
-    
-    // Generate sprite path based on naming convention
-    const spriteName = itemNameToSpriteFormat(itemName);
-    return `assets/art/recipes/${spriteName}.png`;
+    return availableItem?.spritePath || `assets/art/recipes/${itemNameToSpriteFormat(itemName)}.png`;
 }
 
 function formatTime(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
+    const diffMs = new Date() - new Date(dateString);
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
     
-    if (diffMins < 60) {
-        return `${diffMins}m ago`;
-    } else if (diffHours < 24) {
-        return `${diffHours}h ago`;
-    } else {
-        return `${diffDays}d ago`;
-    }
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
 }
 
 function createParticles() {
@@ -821,9 +568,7 @@ function createParticles() {
     if (!particlesContainer) return;
 
     particlesContainer.innerHTML = '';
-    const particleCount = 15;
-    
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < 15; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.left = Math.random() * 100 + '%';
@@ -848,9 +593,7 @@ function displayMessage(message) {
     `;
     document.body.appendChild(messageBox);
 
-    messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
-        messageBox.remove();
-    });
+    messageBox.querySelector('.message-ok-btn').addEventListener('click', () => messageBox.remove());
 }
 
 function closeMessageBox() {
@@ -859,10 +602,8 @@ function closeMessageBox() {
 }
 
 function setBankHeaderBackground() {
-  const header = document.querySelector('.bank-header');
-  if (header) {
-    header.style.backgroundImage = "url('assets/art/castle/main_auction.png')";
-  }
+    const header = document.querySelector('.bank-header');
+    if (header) header.style.backgroundImage = "url('assets/art/castle/main_auction.png')";
 }
 
 function addAuctionStyles() {
@@ -872,19 +613,9 @@ function addAuctionStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        /* Auction-specific item states */
-        .auction-item {
-            border-left: 4px solid #2a5a2a;
-        }
-
-        .listing-item.active {
-            border-left: 4px solid #c4975a;
-        }
-
-        .listing-item.sold {
-            border-left: 4px solid #4a7a4a;
-            opacity: 0.85;
-        }
+        .auction-item { border-left: 4px solid #2a5a2a; }
+        .listing-item.active { border-left: 4px solid #c4975a; }
+        .listing-item.sold { border-left: 4px solid #4a7a4a; opacity: 0.85; }
 
         .item-icon {
             position: relative;
@@ -926,20 +657,10 @@ function addAuctionStyles() {
             text-transform: uppercase;
         }
 
-        .listing-status-badge.active {
-            background: #c4975a;
-            color: #1d140c;
-        }
+        .listing-status-badge.active { background: #c4975a; color: #1d140c; }
+        .listing-status-badge.sold { background: #4a7a4a; color: #fff; }
 
-        .listing-status-badge.sold {
-            background: #4a7a4a;
-            color: #fff;
-        }
-
-        .item-info {
-            flex: 1;
-            min-width: 0;
-        }
+        .item-info { flex: 1; min-width: 0; }
 
         .item-name {
             font-family: 'Cinzel', serif;
@@ -957,13 +678,8 @@ function addAuctionStyles() {
             margin-bottom: 0.25rem;
         }
 
-        .item-type {
-            color: #8b7355;
-        }
-
-        .item-profession {
-            color: #9a8566;
-        }
+        .item-type { color: #8b7355; }
+        .item-profession { color: #9a8566; }
 
         .auction-trade-info {
             font-size: 0.8rem;
@@ -971,9 +687,7 @@ function addAuctionStyles() {
             font-style: italic;
         }
 
-        .trade-want {
-            color: #b8b3a8;
-        }
+        .trade-want { color: #b8b3a8; }
 
         .item-actions {
             display: flex;
@@ -995,9 +709,7 @@ function addAuctionStyles() {
             gap: 0.3rem;
         }
 
-        .btn-icon {
-            font-size: 0.9rem;
-        }
+        .btn-icon { font-size: 0.9rem; }
 
         .sold-indicator {
             color: #90c690;
@@ -1008,7 +720,6 @@ function addAuctionStyles() {
             gap: 0.3rem;
         }
 
-        /* Empty State */
         .empty-bank {
             display: flex;
             flex-direction: column;
@@ -1051,7 +762,6 @@ function addAuctionStyles() {
             color: #1d140c;
         }
 
-        /* Modals */
         .modal {
             position: fixed;
             top: 0;
@@ -1163,7 +873,6 @@ function addAuctionStyles() {
             justify-content: center;
         }
 
-        /* Trade Preview */
         .trade-preview {
             display: flex;
             align-items: center;
@@ -1219,7 +928,6 @@ function addAuctionStyles() {
             font-weight: bold;
         }
 
-        /* Particles */
         .particles {
             position: absolute;
             top: 0;
@@ -1240,23 +948,12 @@ function addAuctionStyles() {
         }
 
         @keyframes float {
-            0% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-10vh) rotate(360deg);
-                opacity: 0;
-            }
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
         }
 
-        /* Message Box */
         .custom-message-box {
             position: fixed;
             top: 0;
@@ -1299,57 +996,36 @@ function addAuctionStyles() {
             transition: all 0.3s ease;
         }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .wanted-controls { display: flex; gap: 10px; margin-bottom: 10px; }
+
+        .wanted-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 97px);
+            gap: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 5px;
         }
 
-        .wanted-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+        .wanted-card {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 5px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafafa;
+            transition: all 0.2s;
         }
 
-.wanted-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 97px);
-  gap: 8px;
-  max-height: 250px;
-  overflow-y: auto;
-  padding: 5px;
-}
+        .wanted-card.selected {
+            border-color: #168acd;
+            background: #eaf6ff;
+        }
 
-.wanted-card {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 5px;
-  text-align: center;
-  cursor: pointer;
-  background: #fafafa;
-  transition: all 0.2s;
-}
-
-.wanted-card.selected {
-  border-color: #168acd;
-  background: #eaf6ff;
-}
-
-.wanted-icon {
-  width: 48px;
-  height: 48px;
-}
-
-.wanted-name {
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-.wanted-type {
-  font-size: 10px;
-  color: #666;
-}
-
-
+        .wanted-icon { width: 48px; height: 48px; }
+        .wanted-name { font-size: 12px; margin-top: 5px; }
+        .wanted-type { font-size: 10px; color: #666; }
     `;
-    document.head.appendChild(style);
 }
