@@ -19,9 +19,6 @@ export async function loadModule(main, { getCurrentProfile, apiCall, supabaseCon
     return;
   }
 
-  // Check for active battles before showing embark screen
-  await checkForActiveBattles();
-
   // Clear main container and prepare structure
   _main.innerHTML = `
     <div class="main-app-container">
@@ -30,6 +27,8 @@ export async function loadModule(main, { getCurrentProfile, apiCall, supabaseCon
       <div class="modal-overlay" style="display: none;"></div>
     </div>
   `;
+
+  await checkForActiveBattles();
 
   createParticles();
   renderEmbarkScreen();
