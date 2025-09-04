@@ -536,8 +536,14 @@ async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
   return response;
 }
 
+function updateCurrentProfile(newProfile) {
+  currentProfile = newProfile;
+  localStorage.setItem('profile', JSON.stringify(newProfile));
+}
+
 window.gameAuth = {
   getCurrentProfile,
+  updateCurrentProfile,
   logout,
   apiCall,
   loadModule,

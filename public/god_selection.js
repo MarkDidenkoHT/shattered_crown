@@ -1,4 +1,4 @@
-export async function loadModule(main, { getCurrentProfile }) {
+export async function loadModule(main, { getCurrentProfile, updateCurrentProfile }) {
   let gods = [];
   
   try {
@@ -367,19 +367,25 @@ async function selectGod(godId, godName, getCurrentProfile) {
 
     const updatedProfile = data[0];
     localStorage.setItem('profile', JSON.stringify(updatedProfile));
+    
+    // Update the cached profile in main.js
+    if (window.gameAuth && window.gameAuth.updateCurrentProfile) {
+      window.gameAuth.updateCurrentProfile(updatedProfile);
+    }
 
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
     
-    // Give enough time for the profile to be refreshed
+    // Small delay for user experience
     setTimeout(() => {
       window.gameAuth.loadModule('character_creation');
-    }, 1000);
+    }, 500);
 
   } catch (error) {
     console.error('Error selecting god:', error);
     alert(`Failed to select god: ${error.message}. Please try again.`);
   }
 }
+
 function createParticles() {
   const particles = document.querySelector('.particles');
   if (!particles) return;
