@@ -1706,7 +1706,7 @@ app.get('/api/characters/:playerId', async (req, res) => {
 
   try {
     const response = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${playerId}&select=id,race_id,class_id,sex,profession_id,professions(name)`,
+      `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${playerId}&select=id,race_id,class_id,portrait,profession_id,professions(name)`,
       {
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
