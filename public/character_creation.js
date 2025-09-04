@@ -148,9 +148,9 @@ function renderRaceSelection() {
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Race</h1>
-            <div class="character-progress">
-                <p>You have ${_existingCharacterCount} champion(s). Creating champion ${currentCharacterNumber}.</p>
-            </div>
+            // <div class="character-progress">
+            //     <p>You have ${_existingCharacterCount} champion(s). Creating champion ${currentCharacterNumber}.</p>
+            // </div>
         </div>
         <div class="selection-section">
             <div class="selection-slider">
