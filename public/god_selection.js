@@ -90,12 +90,6 @@ export async function loadModule(main, { getCurrentProfile }) {
       touch-action: pan-y;
     }
 
-    .slider-track {
-      display: flex;
-      transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-      will-change: transform;
-    }
-
     .god-slide {
       min-width: 100%;
       background: linear-gradient(145deg, rgba(29, 20, 12, 0.95), rgba(42, 31, 22, 0.9));

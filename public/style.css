@@ -636,6 +636,12 @@
             border-radius: 8px;
         }
 
+        .slider-track {
+            display: flex;
+            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            will-change: transform;
+        }
+
         .selection-slide {
             min-width: 100%;
             min-height: 75vh;
