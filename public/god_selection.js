@@ -44,7 +44,7 @@ export async function loadModule(main, { getCurrentProfile }) {
                     <h3 class="god-name">${god.name}</h3>
                     <p class="god-description">${god.description}</p>
                     <button class="fantasy-button select-god-btn" data-god-id="${god.id}">
-                      Choose ${god.name}
+                      Choose
                     </button>
                   </div>
                 </div>
@@ -110,7 +110,7 @@ export async function loadModule(main, { getCurrentProfile }) {
 
     .god-art-block {
       width: 100%;
-      height: 60vh;
+      height: 70vh;
       overflow: hidden;
       position: relative;
     }
@@ -125,6 +125,7 @@ export async function loadModule(main, { getCurrentProfile }) {
     .god-info-block {
       padding: 0.75rem;
       text-align: center;
+      height: 20vh;
     }
 
     .god-name {
@@ -138,6 +139,7 @@ export async function loadModule(main, { getCurrentProfile }) {
     }
 
     .god-description {
+      display: none;
       color: #b8b3a8;
       font-size: 0.85rem;
       line-height: 1.3;
@@ -173,30 +175,6 @@ export async function loadModule(main, { getCurrentProfile }) {
       box-shadow: 
         inset 0 2px 4px rgba(0, 0, 0, 0.3),
         0 1px 2px rgba(0, 0, 0, 0.2);
-    }
-
-    .slider-dots {
-      display: flex;
-      justify-content: center;
-      gap: 0.4rem;
-      padding: 0.5rem 0;
-    }
-
-    .slider-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      border: 1px solid #3d2914;
-      background: transparent;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .slider-dot.active {
-      background: #c4975a;
-      border-color: #c4975a;
-      transform: scale(1.2);
     }
 
     .art-header {
