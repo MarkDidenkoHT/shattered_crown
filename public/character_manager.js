@@ -165,7 +165,7 @@ function characterCardHTML(character) {
             class="card-art">
         </div>
         <div class="card-info">
-          <h3 class="card-name">Lvl ${character.level || 1} ${character.sex || 'Unknown'}</h3>
+          <h3 class="card-name">Lvl ${character.level || 1}</h3>
           <p class="card-race-class">${raceName} ${className}</p>
           <p class="card-profession">${professionName}</p>
           <p class="card-exp">EXP: ${exp}</p>

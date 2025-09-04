@@ -131,29 +131,6 @@ function setupInteractions() {
             }
         });
     });
-
-    _main.querySelectorAll('.building-hotspot').forEach(hotspot => {
-        hotspot.addEventListener('mouseenter', (e) => {
-            e.target.classList.add('highlight');
-        });
-
-        hotspot.addEventListener('mouseleave', (e) => {
-            e.target.classList.remove('highlight');
-        });
-
-        hotspot.addEventListener('click', (e) => {
-            const building = e.target.dataset.building;
-            let message = `You clicked the ${building} building.`;
-            if (e.target.dataset.characterId) {
-                const charId = e.target.dataset.characterId;
-                const character = _playerCharacters.find(c => c.id == charId);
-                if (character) {
-                    message = `You clicked ${character.professions.name}'s workshop (${character.sex === 'male' ? 'Male' : 'Female'} ${character.professions.name}).`;
-                }
-            }
-            displayMessage(message);
-        });
-    });
 }
 
 function createParticles() {
