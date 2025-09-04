@@ -110,7 +110,7 @@ export async function loadModule(main, { getCurrentProfile }) {
 
     .god-art-block {
       width: 100%;
-      height: 70vh;
+      height: 74vh;
       overflow: hidden;
       position: relative;
     }
@@ -125,7 +125,7 @@ export async function loadModule(main, { getCurrentProfile }) {
     .god-info-block {
       padding: 0.75rem;
       text-align: center;
-      height: 20vh;
+      height: 16vh;
     }
 
     .god-name {

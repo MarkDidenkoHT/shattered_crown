@@ -155,7 +155,7 @@ function renderRaceSelection() {
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
-                    <div class="slider-track" style="transform: translateX(0%)">
+                    <div class="slider-track">
                         ${_races.map((race, index) => `
                             <div class="selection-slide" data-id="${race.id}" data-type="race">
                                 <div class="card-art-block">
@@ -447,7 +447,7 @@ function renderSexSelection() {
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
-                    <div class="slider-track" style="transform: translateX(0%)">
+                    <div class="slider-track">
                         <div class="selection-slide" data-sex="male">
                             <div class="card-art-block">
                                 <img src="assets/art/sex/male.png" 
@@ -541,7 +541,7 @@ function renderClassSelection() {
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
-                    <div class="slider-track" style="transform: translateX(0%)">
+                    <div class="slider-track">
                         ${_classes.map((cls, index) => `
                             <div class="selection-slide" data-id="${cls.id}" data-type="class">
                                 <div class="card-art-block">
@@ -679,7 +679,7 @@ function renderProfessionSelection() {
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
-                    <div class="slider-track" style="transform: translateX(0%)">
+                    <div class="slider-track">
                         ${availableProfessions.map((profession, index) => `
                             <div class="selection-slide" data-id="${profession.id}" data-type="profession">
                                 <div class="card-art-block">
