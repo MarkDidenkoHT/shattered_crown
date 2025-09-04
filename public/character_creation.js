@@ -481,7 +481,7 @@ function renderSexSelection() {
                 </div>
             </div>
         </div>
-        <div class="confirm-return-buttons">
+        <div class="top-right-buttons">
             <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
@@ -578,7 +578,7 @@ function renderClassSelection() {
                 </div>
             </div>
         </div>
-        <div class="confirm-return-buttons">
+        <div class="top-right-buttons">
             <button class="fantasy-button return-btn">Return</button>
         </div>
     `;
@@ -650,7 +650,7 @@ function renderProfessionSelection() {
                 <h3>No Available Professions</h3>
                 <p>All professions have already been selected by your other characters. Each character must have a unique profession.</p>
             </div>
-            <div class="confirm-return-buttons">
+            <div class="top-right-buttons">
                 <button class="fantasy-button return-btn">Return</button>
             </div>
         `;
@@ -704,7 +704,7 @@ function renderProfessionSelection() {
                 </div>
             </div>
         </div>
-        <div class="confirm-return-buttons">
+        <div class="top-right-buttons">
             <button class="fantasy-button return-btn">Return</button>
         </div>
     `;

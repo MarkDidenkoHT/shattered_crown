@@ -518,6 +518,7 @@
         }
 
         .selected-race-summary {
+            display: none;
             background: rgba(29, 20, 12, 0.7);
             border: 2px solid #3d2914;
             border-radius: 8px;
@@ -528,12 +529,14 @@
             text-align: center;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
+
         .selected-race-summary h3 {
             font-family: 'Cinzel', serif;
             color: #c4975a;
             margin-bottom: 0.5rem;
             font-size: 1.2rem;
         }
+
         .selected-race-summary p {
             color: #b8b3a8;
             font-size: 0.9rem;
