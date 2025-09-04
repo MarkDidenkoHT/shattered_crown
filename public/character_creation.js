@@ -1,84 +1,49 @@
-let _main;
-let _apiCall;
-let _getCurrentProfile;
-let _profile;
-let _godId;
-let _races = [];
-let _classes = [];
-let _professions = []; 
-let _existingCharacterCount = 0; // Track actual character count
-let _maxCharacters = 3; // Maximum allowed characters
-let _selectedRace = null;
-let _selectedClass = null;
-let _selectedSex = null;
-let _selectedProfession = null;
+let _main, _apiCall, _getCurrentProfile, _profile, _godId;
+let _races = [], _classes = [], _professions = [];
+let _existingCharacterCount = 0, _maxCharacters = 3;
+let _selectedRace = null, _selectedClass = null, _selectedPortrait = null, _selectedProfession = null;
 let _usedProfessionIds = [];
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
     _main = main;
     _apiCall = apiCall;
     _getCurrentProfile = getCurrentProfile;
-
     _profile = _getCurrentProfile();
+    
     if (!_profile) {
-        console.error('No profile found. Cannot proceed with character creation.');
         displayMessage('User profile not found. Please log in again.');
         window.gameAuth.loadModule('login');
         return;
     }
     
     _godId = _profile.god;
-
     if (!_godId || _godId === null || _godId === 'null') {
-        console.error('No god selected or invalid god_id. Redirecting to god selection.');
         displayMessage('Please select a deity first.');
         window.gameAuth.loadModule('god_selection');
         return;
     }
 
-    // Initialize character count and used professions
     await initializeCharacterData();
-
-    // Ensure the main container is ready for content
-    _main.innerHTML = `
-        <div class="main-app-container">
-            <div class="particles"></div>
-            <div class="character-creation-section"></div>
-        </div>
-    `;
-    
+    _main.innerHTML = `<div class="main-app-container"><div class="particles"></div><div class="character-creation-section"></div></div>`;
     createParticles();
     await startCharacterCreationFlow();
 }
 
 async function initializeCharacterData() {
     try {
-        // Fetch existing characters to get count and used professions
         const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}&select=profession_id`);
         const existingCharacters = await response.json();
-        
-        // Update character count
         _existingCharacterCount = existingCharacters.length;
-        
-        // Update used profession IDs
         _usedProfessionIds = existingCharacters.map(char => char.profession_id).filter(id => id !== null);
-        
-        console.log(`Player has ${_existingCharacterCount} existing characters`);
-        console.log('Used profession IDs:', _usedProfessionIds);
     } catch (error) {
-        console.error('Error fetching existing characters:', error);
         _existingCharacterCount = 0;
         _usedProfessionIds = [];
     }
 }
 
 async function startCharacterCreationFlow() {
-    _selectedRace = null;
-    _selectedClass = null;
-    _selectedSex = null;
-    _selectedProfession = null;
-
-    // Check if player has reached maximum characters
+    _selectedRace = _selectedClass = _selectedPortrait = _selectedProfession = null;
+    
     if (_existingCharacterCount >= _maxCharacters) {
         displayMessage('All your champions are ready! Entering the Castle...');
         window.gameAuth.loadModule('castle');
@@ -91,7 +56,6 @@ async function startCharacterCreationFlow() {
 async function fetchRacesAndRenderSelection() {
     try {
         if (!_godId || _godId === null || _godId === 'null') {
-            console.error('God ID is null, redirecting to god selection');
             window.gameAuth.loadModule('god_selection');
             return;
         }
@@ -103,38 +67,28 @@ async function fetchRacesAndRenderSelection() {
         }
 
         _races = await response.json();
-
         if (_races.length === 0) {
             displayMessage('No races available for your chosen deity. Please contact support.');
             return;
         }
 
-        // Fetch all classes for the races to show available classes
         await fetchAllClassesForRaces();
         renderRaceSelection();
     } catch (error) {
-        console.error('Error fetching races:', error);
         displayMessage('Failed to load races. Please try again.');
     }
 }
 
 async function fetchAllClassesForRaces() {
     try {
-        // Get all race IDs
         const raceIds = _races.map(race => race.id);
-        
-        // Fetch classes for all races
         const response = await _apiCall(`/api/supabase/rest/v1/classes?race_id=in.(${raceIds.join(',')})&select=id,name,description,race_id,stat_bonuses,starting_abilities`);
         const allClasses = await response.json();
         
-        // Group classes by race_id and add to each race
         _races.forEach(race => {
             race.available_classes = allClasses.filter(cls => cls.race_id === race.id);
         });
-        
     } catch (error) {
-        console.error('Error fetching classes for races:', error);
-        // Continue without class information if this fails
         _races.forEach(race => {
             race.available_classes = [];
         });
@@ -148,20 +102,15 @@ function renderRaceSelection() {
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Race</h1>
-            // <div class="character-progress">
-            //     <p>You have ${_existingCharacterCount} champion(s). Creating champion ${currentCharacterNumber}.</p>
-            // </div>
         </div>
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track">
-                        ${_races.map((race, index) => `
+                        ${_races.map(race => `
                             <div class="selection-slide" data-id="${race.id}" data-type="race">
                                 <div class="card-art-block">
-                                    <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                            alt="${race.name}" 
-                                            class="card-art">
+                                    <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${race.name}" class="card-art">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${race.name}</h3>
@@ -172,9 +121,7 @@ function renderRaceSelection() {
                                             <h4>Available Classes:</h4>
                                             <div class="class-list">
                                                 ${race.available_classes.map(cls => `
-                                                    <span class="class-tag" data-class-id="${cls.id}" title="${cls.description}">
-                                                        ${cls.name}
-                                                    </span>
+                                                    <span class="class-tag" data-class-id="${cls.id}" title="${cls.description}">${cls.name}</span>
                                                 `).join('')}
                                             </div>
                                         </div>
@@ -182,9 +129,7 @@ function renderRaceSelection() {
                                     
                                     <div class="stats-block">
                                         <h4>Base Stats:</h4>
-                                        ${Object.entries(race.base_stats).map(([stat, value]) => `
-                                            <p>${stat}: <span>${value}</span></p>
-                                        `).join('')}
+                                        ${Object.entries(race.base_stats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
                                     </div>
                                     <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
                                 </div>
@@ -194,17 +139,13 @@ function renderRaceSelection() {
                 </div>
                 
                 <div class="slider-dots">
-                    ${_races.map((_, index) => `
-                        <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                    `).join('')}
+                    ${_races.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
                 </div>
             </div>
         </div>
     `;
 
     initializeSelectionSlider();
-
-    // Add click handlers for race selection buttons
     section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const raceId = parseInt(e.target.dataset.id);
@@ -212,16 +153,13 @@ function renderRaceSelection() {
         });
     });
 
-    // Add click handlers for class tags to show descriptions
     section.querySelectorAll('.class-tag').forEach(tag => {
         tag.addEventListener('click', (e) => {
             const classId = parseInt(e.target.dataset.classId);
             const race = _races.find(r => r.available_classes.some(c => c.id === classId));
             const classInfo = race?.available_classes.find(c => c.id === classId);
             
-            if (classInfo) {
-                showClassDescription(classInfo);
-            }
+            if (classInfo) showClassDescription(classInfo);
         });
     });
 }
@@ -242,18 +180,14 @@ function showClassDescription(classInfo) {
                 ${classInfo.stat_bonuses ? `
                     <div class="stats-block">
                         <h4>Stat Bonuses:</h4>
-                        ${Object.entries(classInfo.stat_bonuses).map(([stat, value]) => `
-                            <p>${stat}: <span>+${value}</span></p>
-                        `).join('')}
+                        ${Object.entries(classInfo.stat_bonuses).map(([stat, value]) => `<p>${stat}: <span>+${value}</span></p>`).join('')}
                     </div>
                 ` : ''}
                 
                 ${classInfo.starting_abilities && classInfo.starting_abilities.length > 0 ? `
                     <div class="abilities-block">
                         <h4>Starting Abilities:</h4>
-                        <ul>
-                            ${classInfo.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
-                        </ul>
+                        <ul>${classInfo.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
                     </div>
                 ` : ''}
             </div>
@@ -264,8 +198,6 @@ function showClassDescription(classInfo) {
     `;
     
     document.body.appendChild(modal);
-    
-    // Close modal handlers
     const closeModal = () => modal.remove();
     modal.querySelector('.modal-close-btn').addEventListener('click', closeModal);
     modal.querySelector('.modal-ok-btn').addEventListener('click', closeModal);
@@ -284,8 +216,6 @@ function initializeSelectionSlider() {
     function updateSlider() {
         const translateX = -currentSlide * 100;
         sliderTrack.style.transform = `translateX(${translateX}%)`;
-        
-        // Update dots
         dots.forEach((dot, index) => {
             dot.classList.toggle('active', index === currentSlide);
         });
@@ -301,7 +231,6 @@ function initializeSelectionSlider() {
         updateSlider();
     }
     
-    // Dot click support
     dots.forEach((dot, index) => {
         dot.addEventListener('click', () => {
             currentSlide = index;
@@ -309,28 +238,22 @@ function initializeSelectionSlider() {
         });
     });
     
-    // Enhanced touch/swipe support
-    let startX = 0;
-    let currentX = 0;
-    let isDragging = false;
-    let startTime = 0;
+    let startX = 0, currentX = 0, isDragging = false, startTime = 0;
     
     sliderTrack.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
         currentX = startX;
         isDragging = true;
         startTime = Date.now();
-        sliderTrack.style.transition = 'none'; // Disable transition during drag
+        sliderTrack.style.transition = 'none';
     }, { passive: true });
     
     sliderTrack.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
-        
         currentX = e.touches[0].clientX;
         const diffX = currentX - startX;
         const currentTranslate = -currentSlide * 100;
         const newTranslate = currentTranslate + (diffX / sliderTrack.offsetWidth) * 100;
-        
         sliderTrack.style.transform = `translateX(${newTranslate}%)`;
         e.preventDefault();
     }, { passive: false });
@@ -338,32 +261,23 @@ function initializeSelectionSlider() {
     sliderTrack.addEventListener('touchend', (e) => {
         if (!isDragging) return;
         isDragging = false;
-        
         const endX = e.changedTouches[0].clientX;
         const diffX = startX - endX;
         const diffTime = Date.now() - startTime;
         const velocity = Math.abs(diffX) / diffTime;
         
-        // Re-enable transition
         sliderTrack.style.transition = 'transform 0.3s ease-out';
-        
-        // Determine if we should slide based on distance and velocity
-        const threshold = 50; // minimum distance to trigger slide
-        const velocityThreshold = 0.3; // minimum velocity for quick swipe
+        const threshold = 50;
+        const velocityThreshold = 0.3;
         
         if (Math.abs(diffX) > threshold || velocity > velocityThreshold) {
-            if (diffX > 0) {
-                nextSlide();
-            } else {
-                prevSlide();
-            }
+            if (diffX > 0) nextSlide();
+            else prevSlide();
         } else {
-            // Snap back to current slide
             updateSlider();
         }
     });
-    
-    // Mouse support for desktop testing (optional)
+
     let isMouseDown = false;
     
     sliderTrack.addEventListener('mousedown', (e) => {
@@ -377,12 +291,10 @@ function initializeSelectionSlider() {
     
     sliderTrack.addEventListener('mousemove', (e) => {
         if (!isMouseDown) return;
-        
         currentX = e.clientX;
         const diffX = currentX - startX;
         const currentTranslate = -currentSlide * 100;
         const newTranslate = currentTranslate + (diffX / sliderTrack.offsetWidth) * 100;
-        
         sliderTrack.style.transform = `translateX(${newTranslate}%)`;
         e.preventDefault();
     });
@@ -390,23 +302,18 @@ function initializeSelectionSlider() {
     sliderTrack.addEventListener('mouseup', (e) => {
         if (!isMouseDown) return;
         isMouseDown = false;
-        
         const endX = e.clientX;
         const diffX = startX - endX;
         const diffTime = Date.now() - startTime;
         const velocity = Math.abs(diffX) / diffTime;
         
         sliderTrack.style.transition = 'transform 0.3s ease-out';
-        
         const threshold = 50;
         const velocityThreshold = 0.3;
         
         if (Math.abs(diffX) > threshold || velocity > velocityThreshold) {
-            if (diffX > 0) {
-                nextSlide();
-            } else {
-                prevSlide();
-            }
+            if (diffX > 0) nextSlide();
+            else prevSlide();
         } else {
             updateSlider();
         }
@@ -424,85 +331,10 @@ function initializeSelectionSlider() {
 async function handleRaceSelection(raceId) {
     _selectedRace = _races.find(r => r.id === raceId);
     if (!_selectedRace) {
-        console.error(`Selected race with ID ${raceId} not found.`);
         displayMessage('Selected race not found. Please try again.');
         return;
     }
 
-    renderSexSelection();
-}
-
-function renderSexSelection() {
-    const section = _main.querySelector('.character-creation-section');
-    const currentCharacterNumber = _existingCharacterCount + 1;
-    
-    section.innerHTML = `
-        <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Sex</h1>
-        </div>
-        <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name}</h3>
-            <p>${_selectedRace.description}</p>
-        </div>
-        <div class="selection-section">
-            <div class="selection-slider">
-                <div class="slider-container">
-                    <div class="slider-track">
-                        <div class="selection-slide" data-sex="male">
-                            <div class="card-art-block">
-                                <img src="assets/art/sex/male.png" 
-                                    alt="Male" 
-                                    class="card-art">
-                            </div>
-                            <div class="card-info-block">
-                                <h3 class="card-name">Male</h3>
-                                <p class="card-description">Strength and fortitude define this path.</p>
-                                <button class="fantasy-button select-btn" data-sex="male" data-type="sex">Select Male</button>
-                            </div>
-                        </div>
-                        <div class="selection-slide" data-sex="female">
-                            <div class="card-art-block">
-                                <img src="assets/art/sex/female.png" 
-                                    alt="Female" 
-                                    class="card-art">
-                            </div>
-                            <div class="card-info-block">
-                                <h3 class="card-name">Female</h3>
-                                <p class="card-description">Grace and wisdom guide this journey.</p>
-                                <button class="fantasy-button select-btn" data-sex="female" data-type="sex">Select Female</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="slider-dots">
-                    <button class="slider-dot active" data-slide="0"></button>
-                    <button class="slider-dot" data-slide="1"></button>
-                </div>
-            </div>
-        </div>
-        <div class="top-right-buttons">
-            <button class="fantasy-button return-btn">Return</button>
-        </div>
-    `;
-
-    initializeSelectionSlider();
-
-    section.querySelectorAll('.select-btn[data-type="sex"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const sex = e.target.dataset.sex;
-            handleSexSelection(sex);
-        });
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', () => {
-        _selectedSex = null;
-        renderRaceSelection();
-    });
-}
-
-function handleSexSelection(sex) {
-    _selectedSex = sex;
     fetchClassesAndRenderSelection();
 }
 
@@ -519,7 +351,6 @@ async function fetchClassesAndRenderSelection() {
         }
         renderClassSelection();
     } catch (error) {
-        console.error('Error fetching classes:', error);
         displayMessage('Failed to load classes. Please try again.');
         _selectedRace = null;
         renderRaceSelection();
@@ -535,34 +366,28 @@ function renderClassSelection() {
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Your Class</h1>
         </div>
         <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
+            <h3>Selected Race: ${_selectedRace.name}</h3>
             <p>${_selectedRace.description}</p>
         </div>
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track">
-                        ${_classes.map((cls, index) => `
+                        ${_classes.map(cls => `
                             <div class="selection-slide" data-id="${cls.id}" data-type="class">
                                 <div class="card-art-block">
-                                    <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                            alt="${cls.name}" 
-                                            class="card-art">
+                                    <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${cls.name}" class="card-art">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${cls.name}</h3>
                                     <p class="card-description">${cls.description}</p>
                                     <div class="stats-block">
                                         <h4>Stat Bonuses:</h4>
-                                        ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `
-                                            <p>${stat}: <span>+${value}</span></p>
-                                        `).join('')}
+                                        ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `<p>${stat}: <span>+${value}</span></p>`).join('')}
                                     </div>
                                     <div class="abilities-block">
                                         <h4>Starting Abilities:</h4>
-                                        <ul>
-                                            ${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
-                                        </ul>
+                                        <ul>${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
                                     </div>
                                     <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
                                 </div>
@@ -572,9 +397,7 @@ function renderClassSelection() {
                 </div>
                 
                 <div class="slider-dots">
-                    ${_classes.map((_, index) => `
-                        <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                    `).join('')}
+                    ${_classes.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
                 </div>
             </div>
         </div>
@@ -594,17 +417,87 @@ function renderClassSelection() {
 
     section.querySelector('.return-btn').addEventListener('click', () => {
         _selectedClass = null;
-        renderSexSelection();
+        renderRaceSelection();
     });
 }
 
 function handleClassSelection(classId) {
     _selectedClass = _classes.find(c => c.id === classId);
     if (!_selectedClass) {
-        console.error(`Selected class with ID ${classId} not found.`);
         displayMessage('Selected class not found. Please try again.');
         return;
     }
+    renderPortraitSelection();
+}
+
+async function renderPortraitSelection() {
+    const section = _main.querySelector('.character-creation-section');
+    const currentCharacterNumber = _existingCharacterCount + 1;
+    const className = _selectedClass.name.toLowerCase().replace(/\s+/g, '_');
+    
+    const portraits = [
+        `${className}_portrait_1`,
+        `${className}_portrait_2`,
+        `${className}_portrait_3`,
+        `${className}_portrait_4`
+    ];
+    
+    section.innerHTML = `
+        <div class="art-header">
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Portrait</h1>
+        </div>
+        <div class="selected-race-summary">
+            <h3>Selected Race: ${_selectedRace.name}</h3>
+            <p><strong>Class:</strong> ${_selectedClass.name}</p>
+            <p>${_selectedClass.description}</p>
+        </div>
+        <div class="selection-section">
+            <div class="selection-slider">
+                <div class="slider-container">
+                    <div class="slider-track">
+                        ${portraits.map(portrait => `
+                            <div class="selection-slide" data-portrait="${portrait}">
+                                <div class="card-art-block">
+                                    <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${portrait}.png" 
+                                         alt="${portrait}" 
+                                         class="card-art portrait-art">
+                                </div>
+                                <div class="card-info-block">
+                                    <h3 class="card-name">Portrait ${portrait.slice(-1)}</h3>
+                                    <button class="fantasy-button select-btn" data-portrait="${portrait}" data-type="portrait">Select This Portrait</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="slider-dots">
+                    ${portraits.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
+                </div>
+            </div>
+        </div>
+        <div class="top-right-buttons">
+            <button class="fantasy-button return-btn">Return</button>
+        </div>
+    `;
+
+    initializeSelectionSlider();
+
+    section.querySelectorAll('.select-btn[data-type="portrait"]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const portrait = e.target.dataset.portrait;
+            handlePortraitSelection(portrait);
+        });
+    });
+
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        _selectedPortrait = null;
+        renderClassSelection();
+    });
+}
+
+function handlePortraitSelection(portrait) {
+    _selectedPortrait = portrait;
     fetchProfessionsAndRenderSelection();
 }
 
@@ -615,34 +508,28 @@ async function fetchProfessionsAndRenderSelection() {
 
         if (_professions.length === 0) {
             displayMessage('No professions available. Please contact support.');
-            renderClassSelection();
+            renderPortraitSelection();
             return;
         }
         renderProfessionSelection();
     } catch (error) {
-        console.error('Error fetching professions:', error);
         displayMessage('Failed to load professions. Please try again.');
-        renderClassSelection();
+        renderPortraitSelection();
     }
 }
 
 function renderProfessionSelection() {
     const section = _main.querySelector('.character-creation-section');
     const currentCharacterNumber = _existingCharacterCount + 1;
+    const availableProfessions = _professions.filter(profession => !_usedProfessionIds.includes(profession.id));
     
-    // Filter out already used professions
-    const availableProfessions = _professions.filter(profession => 
-        !_usedProfessionIds.includes(profession.id)
-    );
-    
-    // Check if any professions are available
     if (availableProfessions.length === 0) {
         section.innerHTML = `
             <div class="art-header">
                 <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
             </div>
             <div class="selected-race-summary">
-                <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
+                <h3>Selected Race: ${_selectedRace.name}</h3>
                 <p><strong>Class:</strong> ${_selectedClass.name}</p>
                 <p>${_selectedClass.description}</p>
             </div>
@@ -657,7 +544,7 @@ function renderProfessionSelection() {
         
         section.querySelector('.return-btn').addEventListener('click', () => {
             _selectedProfession = null;
-            renderClassSelection();
+            renderPortraitSelection();
         });
         return;
     }
@@ -672,7 +559,7 @@ function renderProfessionSelection() {
             ` : ''}
         </div>
         <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name} (${_selectedSex})</h3>
+            <h3>Selected Race: ${_selectedRace.name}</h3>
             <p><strong>Class:</strong> ${_selectedClass.name}</p>
             <p>${_selectedClass.description}</p>
         </div>
@@ -680,12 +567,10 @@ function renderProfessionSelection() {
             <div class="selection-slider">
                 <div class="slider-container">
                     <div class="slider-track">
-                        ${availableProfessions.map((profession, index) => `
+                        ${availableProfessions.map(profession => `
                             <div class="selection-slide" data-id="${profession.id}" data-type="profession">
                                 <div class="card-art-block">
-                                    <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                            alt="${profession.name}" 
-                                            class="card-art">
+                                    <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${profession.name}" class="card-art">
                                 </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${profession.name}</h3>
@@ -698,9 +583,7 @@ function renderProfessionSelection() {
                 </div>
                 
                 <div class="slider-dots">
-                    ${availableProfessions.map((_, index) => `
-                        <button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>
-                    `).join('')}
+                    ${availableProfessions.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
                 </div>
             </div>
         </div>
@@ -720,14 +603,13 @@ function renderProfessionSelection() {
 
     section.querySelector('.return-btn').addEventListener('click', () => {
         _selectedProfession = null;
-        renderClassSelection();
+        renderPortraitSelection();
     });
 }
 
 function handleProfessionSelection(professionId) {
     _selectedProfession = _professions.find(p => p.id === professionId);
     if (!_selectedProfession) {
-        console.error(`Selected profession with ID ${professionId} not found.`);
         displayMessage('Selected profession not found. Please try again.');
         return;
     }
@@ -745,26 +627,22 @@ function renderCharacterSummary() {
         </div>
         <div class="summary-card">
             <div class="summary-art-block">
-                <img src="assets/art/characters/${_selectedRace.name.toLowerCase().replace(/\s+/g, '_')}_${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}.png" 
+                <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${_selectedPortrait}.png" 
                     alt="${_selectedRace.name} ${_selectedClass.name}" 
                     class="summary-art">
             </div>
             <div class="summary-info-block">
-                <h2>${_selectedSex === 'male' ? 'Male' : 'Female'} ${_selectedRace.name} ${_selectedClass.name}</h2>
+                <h2>${_selectedRace.name} ${_selectedClass.name}</h2>
                 <p><strong>Race Description:</strong> ${_selectedRace.description}</p>
                 <p><strong>Class Description:</strong> ${_selectedClass.description}</p>
                 <p><strong>Profession:</strong> ${_selectedProfession.name} - ${_selectedProfession.description}</p>
                 <div class="stats-block">
                     <h4>Final Stats:</h4>
-                    ${Object.entries(finalStats).map(([stat, value]) => `
-                        <p>${stat}: <span>${value}</span></p>
-                    `).join('')}
+                    ${Object.entries(finalStats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
                 </div>
                 <div class="abilities-block">
                     <h4>Starting Abilities:</h4>
-                    <ul>
-                        ${_selectedClass.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}
-                    </ul>
+                    <ul>${_selectedClass.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
                 </div>
             </div>
         </div>
@@ -796,16 +674,18 @@ function calculateFinalStats(baseStats, statBonuses) {
             finalStats[stat] = statBonuses[stat];
         }
     }
+    finalStats.Armor = 0;
+    finalStats.Resistance = 0;
     return finalStats;
 }
 
 async function confirmCharacter() {
     try {
         const characterCreationData = {
-            player_id: _profile.id,  // Changed from chat_id to player_id
+            player_id: _profile.id,
             race_id: _selectedRace.id,
             class_id: _selectedClass.id,
-            sex: _selectedSex,
+            portrait: _selectedPortrait,
             profession_id: _selectedProfession.id
         };
 
@@ -820,8 +700,6 @@ async function confirmCharacter() {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Edge function response not ok. Status:', response.status, 'Error text:', errorText);
-            
             try {
                 const errorData = JSON.parse(errorText);
                 throw new Error(errorData.error || `Edge function call failed with status ${response.status}`);
@@ -833,12 +711,8 @@ async function confirmCharacter() {
         const result = await response.json();
         
         if (result.success) {
-            // Add the selected profession to the used professions list
             _usedProfessionIds.push(_selectedProfession.id);
-            
-            // Increment the existing character count
             _existingCharacterCount++;
-            
             displayMessage(`Character ${_existingCharacterCount} (${result.character.race} ${result.character.class}) created! (${_existingCharacterCount}/${_maxCharacters})`);
             
             setTimeout(() => {
@@ -849,19 +723,15 @@ async function confirmCharacter() {
         }
 
     } catch (error) {
-        console.error('Character save error:', error);
         displayMessage(`Failed to save character: ${error.message}`);
     }
 }
 
 function createParticles() {
     const particlesContainer = _main.querySelector('.particles');
-    if (!particlesContainer) {
-        return;
-    }
+    if (!particlesContainer) return;
 
     particlesContainer.innerHTML = '';
-
     const particleCount = 20;
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
@@ -888,24 +758,4 @@ function displayMessage(message) {
     messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
         messageBox.remove();
     });
-}
-
-// Optional utility functions
-function resetUsedProfessions() {
-    _usedProfessionIds = [];
-    _existingCharacterCount = 0;
-}
-
-function getAvailableProfessionsCount() {
-    return _professions.filter(profession => 
-        !_usedProfessionIds.includes(profession.id)
-    ).length;
-}
-
-function getCurrentCharacterCount() {
-    return _existingCharacterCount;
-}
-
-function getMaxCharacters() {
-    return _maxCharacters;
 }

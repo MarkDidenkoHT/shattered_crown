@@ -601,7 +601,6 @@
             gap: 0.5rem;
             margin-top: 0.5rem;
             width: 100%;
-            max-width: 100px;
             justify-content: center;
         }
 
@@ -709,13 +708,7 @@
             .summary-info-block {
                 padding: 1rem;
             }
-            .confirm-return-buttons {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            .confirm-return-buttons .fantasy-button {
-                max-width: 100%;
-            }
+
             .card-art-block {
                 height: 60px;
             }
