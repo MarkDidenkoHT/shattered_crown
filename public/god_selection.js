@@ -368,24 +368,18 @@ async function selectGod(godId, godName, getCurrentProfile) {
     const updatedProfile = data[0];
     localStorage.setItem('profile', JSON.stringify(updatedProfile));
 
-    // Force a profile refresh by clearing any cached profile data
-    if (window.gameAuth && window.gameAuth.refreshProfile) {
-      await window.gameAuth.refreshProfile();
-    }
-
     alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
     
-    // Small delay to ensure profile is updated
+    // Give enough time for the profile to be refreshed
     setTimeout(() => {
       window.gameAuth.loadModule('character_creation');
-    }, 100);
+    }, 1000);
 
   } catch (error) {
     console.error('Error selecting god:', error);
     alert(`Failed to select god: ${error.message}. Please try again.`);
   }
 }
-
 function createParticles() {
   const particles = document.querySelector('.particles');
   if (!particles) return;

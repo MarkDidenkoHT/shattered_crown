@@ -170,7 +170,6 @@
       text-shadow: 
         2px 2px 0px #3d2914,
         0 0 10px rgba(196, 151, 90, 0.3);
-      margin-bottom: 2.5rem;
       text-align: center;
       letter-spacing: 3px;
     }
@@ -323,7 +322,6 @@
 
         .character-creation-section .art-header h1 {
             font-size: 2rem;
-            margin-bottom: 0.5rem;
         }
 
         .character-creation-section .subtitle {
@@ -373,16 +371,17 @@
 .card-info-block {
     padding: 0.7rem 1rem 0.7rem 1rem;
 }
+
 .card-name {
     font-family: 'Cinzel', serif;
     font-size: 0.95rem;
     font-weight: 600;
     color: #c4975a;
-    margin-bottom: 0.4rem;
     text-shadow: 1px 1px 0 #3d2914;
     letter-spacing: 1px;
     text-align: center;
 }
+
 .card-description {
     color: #b8b3a8;
     font-size: 0.9rem;
@@ -455,21 +454,6 @@
             height: 100%;
             object-fit: cover;
             transition: transform 0.3s ease;
-        }
-
-        .card-info-block {
-            padding: 1rem;
-        }
-
-        .card-name {
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #c4975a;
-            margin-bottom: 0.75rem;
-            text-shadow: 1px 1px 0px #3d2914;
-            letter-spacing: 1px;
-            text-align: center;
         }
 
         .stats-block h4, .abilities-block h4 {
