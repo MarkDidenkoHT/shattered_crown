@@ -352,7 +352,7 @@ app.get('/api/auction/bank/:playerId', async (req, res) => {
 });
 
 // Get all unique items from recipes and ingredients for trade selection
-app.get('/api/auction/items', async (req, res) => {  // Added 'req' parameter
+app.get('/api/auction/items', async (req, res) => {
   try {
     // Get unique items from both tables
     const [recipesResponse, ingredientsResponse] = await Promise.all([
@@ -425,8 +425,8 @@ app.post('/api/auction/create', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const bankUrl = `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}`;
-
+    // Get items from bank with type column
+    const bankUrl = `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}&select=*`;
     const bankResponse = await fetch(bankUrl, {
       headers: {
         'apikey': process.env.SUPABASE_ANON_KEY,
@@ -450,6 +450,10 @@ app.post('/api/auction/create', async (req, res) => {
       return res.status(400).json({ error: 'Insufficient items in bank' });
     }
 
+    // Get the item type from the bank entry
+    const itemSellingType = bankItems[0]?.type || 'unknown';
+
+    // Remove items from bank
     let remainingToRemove = amount_selling;
     for (const bankItem of bankItems) {
       if (remainingToRemove <= 0) break;
@@ -482,19 +486,20 @@ app.post('/api/auction/create', async (req, res) => {
       }
     }
 
+    // Create auction with type from bank table
     const auctionData = {
       seller_id,
       item_selling,
       amount_selling,
-      item_selling_type: req.body.item_selling_type,
       item_wanted,
       amount_wanted,
-      item_wanted_type: req.body.item_wanted_type,
+      type: itemSellingType,
       status: false
     };
 
     const auctionUrl = `${process.env.SUPABASE_URL}/rest/v1/auction`;
     console.log('Auction creation URL:', auctionUrl);
+    console.log('Auction data:', auctionData);
 
     const auctionResponse = await fetch(auctionUrl, {
       method: 'POST',
@@ -543,6 +548,35 @@ app.post('/api/auction/create', async (req, res) => {
   } catch (error) {
     console.error('❌ [AUCTION CREATE ERROR]', error);
     res.status(500).json({ error: 'Failed to create auction', details: error.message });
+  }
+});
+
+// Update the active auctions endpoint to include type
+app.get('/api/auction/active', async (req, res) => {
+  try {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?status=eq.false&select=*,profiles:seller_id(chat_id)&order=created_at.desc`, {
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch auctions: ${response.status}`);
+    }
+
+    const auctions = await response.json();
+    
+    // Transform the nested profile data
+    const transformedAuctions = auctions.map(auction => ({
+      ...auction,
+      seller: auction.profiles
+    }));
+
+    res.json(transformedAuctions);
+  } catch (error) {
+    console.error('[ACTIVE AUCTIONS]', error);
+    res.status(500).json({ error: 'Failed to fetch active auctions' });
   }
 });
 

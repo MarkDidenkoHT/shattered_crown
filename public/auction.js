@@ -204,7 +204,8 @@ function renderFilteredAuctions(auctions) {
             auction.item_selling.toLowerCase().includes(searchQuery) ||
             auction.item_wanted.toLowerCase().includes(searchQuery);
         
-        const matchesFilter = filterType === 'all' || getItemType(auction.item_selling) === filterType;
+        // Use the type from auction table instead of calculating it
+        const matchesFilter = filterType === 'all' || auction.type === filterType;
         
         return matchesSearch && matchesFilter;
     });
@@ -260,23 +261,6 @@ function renderFilteredAuctions(auctions) {
             </div>
         `).join('');
     }
-}
-
-function getItemType(itemName) {
-    // This is a basic categorization - you might want to enhance this
-    // based on your actual item database or API
-    const itemLower = itemName.toLowerCase();
-    
-    if (itemLower.includes('potion') || itemLower.includes('elixir') || itemLower.includes('brew')) {
-        return 'consumable';
-    }
-    
-    if (itemLower.includes('armor') || itemLower.includes('weapon') || itemLower.includes('shield') || 
-        itemLower.includes('sword') || itemLower.includes('bow') || itemLower.includes('helmet')) {
-        return 'gear';
-    }
-    
-    return 'ingredient';
 }
 
 async function loadSellView(container) {
@@ -797,31 +781,18 @@ function getGearIconPath(itemName) {
     return finalPath;
 }
 
-function getItemIcon(itemName) {
-    console.log('getItemIcon called with:', itemName);
-    
+function getItemIcon(itemName, isGear = false) {
     const availableItem = _availableItems.find(item => item.name === itemName);
-    console.log('Found in availableItems:', availableItem);
-    
     if (availableItem && availableItem.spritePath) {
-        console.log('Using availableItem spritePath:', availableItem.spritePath);
         return availableItem.spritePath;
     }
     
-    // Check if this is a crafted gear item
-    const itemType = getItemType(itemName);
-    console.log('Item type determined as:', itemType);
-    
-    if (itemType === 'gear') {
-        const gearPath = getGearIconPath(itemName);
-        console.log('Using gear path:', gearPath);
-        return gearPath;
+    if (isGear) {
+        return getGearIconPath(itemName);
     }
     
     const spriteName = itemNameToSpriteFormat(itemName);
-    const recipePath = `assets/art/recipes/${spriteName}.png`;
-    console.log('Using recipe path:', recipePath);
-    return recipePath;
+    return `assets/art/recipes/${spriteName}.png`;
 }
 
 function formatTime(dateString) {
