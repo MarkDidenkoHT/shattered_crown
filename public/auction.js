@@ -775,29 +775,50 @@ async function getItemSprites(itemNames) {
 }
 
 function getGearIconPath(itemName) {
+    console.log('getGearIconPath called with:', itemName);
+    
     let baseName = itemName;
     
     baseName = baseName.replace(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i, '');
+    console.log('After removing rarity prefix:', baseName);
+    
     baseName = baseName.replace(/\s+of\s+(the\s+)?.*$/i, '');
+    console.log('After removing suffix:', baseName);
     
     const spriteName = baseName.replace(/\s+/g, '');
+    console.log('Final sprite name:', spriteName);
     
-    return `assets/art/items/${spriteName}.png`;
+    const finalPath = `assets/art/items/${spriteName}.png`;
+    console.log('Final path:', finalPath);
+    
+    return finalPath;
 }
 
 function getItemIcon(itemName) {
+    console.log('getItemIcon called with:', itemName);
+    
     const availableItem = _availableItems.find(item => item.name === itemName);
+    console.log('Found in availableItems:', availableItem);
+    
     if (availableItem && availableItem.spritePath) {
+        console.log('Using availableItem spritePath:', availableItem.spritePath);
         return availableItem.spritePath;
     }
     
     // Check if this is a crafted gear item
-    if (getItemType(itemName) === 'gear') {
-        return getGearIconPath(itemName);
+    const itemType = getItemType(itemName);
+    console.log('Item type determined as:', itemType);
+    
+    if (itemType === 'gear') {
+        const gearPath = getGearIconPath(itemName);
+        console.log('Using gear path:', gearPath);
+        return gearPath;
     }
     
     const spriteName = itemNameToSpriteFormat(itemName);
-    return `assets/art/recipes/${spriteName}.png`;
+    const recipePath = `assets/art/recipes/${spriteName}.png`;
+    console.log('Using recipe path:', recipePath);
+    return recipePath;
 }
 
 function formatTime(dateString) {
