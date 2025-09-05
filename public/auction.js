@@ -296,10 +296,12 @@ async function loadSellView(container) {
 
         _bankItems = _bankItems.map(item => {
             const spritePath = item.isGear ? getItemIcon(item.item, true) : (item.spritePath || getItemIcon(item.item));
-            console.log(`[Auction] Item "${item.item}" (isGear: ${item.isGear}) assigned spritePath:`, spritePath, 'type:', item.type);
+            const rarityClass = item.isGear ? getGearRarity(item.item) : '';
+            console.log(`[Auction] Item "${item.item}" (isGear: ${item.isGear}) assigned spritePath:`, spritePath, 'type:', item.type, 'rarityClass:', rarityClass);
             return {
                 ...item,
-                spritePath
+                spritePath,
+                rarityClass
             };
         });
 
@@ -316,7 +318,7 @@ async function loadSellView(container) {
                 console.log('[Auction] Rendering item:', item);
                 return `
                 <div class="bank-item ${item.isGear ? 'crafted-gear' : ''}" data-item-id="${item.id}">
-                    <div class="item-icon">
+                    <div class="item-icon ${item.rarityClass}">
                         <img src="${item.spritePath}" alt="${item.item}">
                         ${!item.isGear && item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
                     </div>
@@ -950,8 +952,8 @@ function addAuctionStyles() {
 
         .item-icon {
             position: relative;
-            width: 48px;
-            height: 48px;
+            width: 60px;
+            height: 60px;
             flex-shrink: 0;
         }
 
@@ -963,7 +965,6 @@ function addAuctionStyles() {
             border: 1px solid #3d2914;
         }
 
-        /* Rarity-based borders for gear items */
         .item-icon.rarity-basic img {
             border: 2px solid #9d9d9d; /* Grey */
             box-shadow: 0 0 6px rgba(157, 157, 157, 0.3);
@@ -1390,4 +1391,11 @@ function addAuctionStyles() {
         }
     `;
     document.head.appendChild(style);
+}
+
+function getGearRarity(itemName) {
+    // Extracts rarity from item name prefix (e.g. "Epic Sword of Doom")
+    const match = itemName.match(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i);
+    if (!match) return '';
+    return `rarity-${match[1].toLowerCase()}`;
 }
