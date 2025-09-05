@@ -928,8 +928,6 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         BattleState.selectedCharacterEl = null;
     }
     BattleState.selectedPlayerCharacter = null;
-
-    displayMessage('Move queued. Press "End Turn" to confirm.', 'info');
 };
 
 function renderBottomUI() {
@@ -1003,7 +1001,6 @@ const handleEndTurn = async () => {
             return;
         }
 
-        displayMessage('Turn completed successfully!', 'success');
         BattleState.currentTurnCharacter = null;
         // Reset move queued flag after turn ends
         BattleState.isMoveQueued = false;
@@ -1098,7 +1095,8 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         { label: 'VIT', value: stats.vitality || 0, color: '#CD853F' },
         { label: 'SPR', value: stats.spirit || 0, color: '#DAA520' },
         { label: 'INT', value: stats.intellect || 0, color: '#F4A460' },
-        { label: 'ARM', value: stats.armor || 0, color: '#8B7355' }
+        { label: 'ARM', value: stats.armor || 0, color: '#8B7355' },
+        { label: 'RES', value: stats.resistance || 0, color: '#4682B4' }
     ];
 
     statsEl.innerHTML = `
