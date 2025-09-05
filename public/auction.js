@@ -315,7 +315,6 @@ async function loadSellView(container) {
             `;
         } else {
             container.innerHTML = _bankItems.map(item => {
-                console.log('[Auction] Rendering item:', item);
                 return `
                 <div class="bank-item ${item.isGear ? 'crafted-gear' : ''}" data-item-id="${item.id}">
                     <div class="item-icon ${item.rarityClass}">

@@ -6,7 +6,8 @@ const BattleState = {
     selectedPlayerCharacter: null, currentTurnCharacter: null,
     highlightedTiles: [], supabaseClient: null, battleState: null,
     battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false,
-    characterElements: new Map() // Track character DOM elements for animations
+    characterElements: new Map(), // Track character DOM elements for animations
+    isMoveQueued: false // Add a flag to track if a move is queued and awaiting confirmation
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -782,6 +783,12 @@ const handleTileClick = throttle((event) => {
 }, 150);
 
 const handleCharacterSelection = (character, tileEl) => {
+    // Prevent selecting another character if a move is queued
+    if (BattleState.isMoveQueued) {
+        displayMessage('Finish your move by pressing "End Turn" before selecting another character.', 'warning');
+        return;
+    }
+
     unhighlightAllTiles();
     
     if (BattleState.selectedCharacterEl) {
@@ -807,6 +814,12 @@ const handleCharacterSelection = (character, tileEl) => {
 };
 
 const handleMovementOrDeselect = async (tileEl, targetX, targetY) => {
+    // Prevent moving another character if a move is queued
+    if (BattleState.isMoveQueued) {
+        displayMessage('Finish your move by pressing "End Turn" before moving another character.', 'warning');
+        return;
+    }
+
     if (BattleState.selectedPlayerCharacter && tileEl.classList.contains('highlight-walkable')) {
         await attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
     } else {
@@ -904,7 +917,10 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
 
     // Update character position
     character.position = [targetX, targetY];
-    
+
+    // Set move queued flag
+    BattleState.isMoveQueued = true;
+
     unhighlightAllTiles();
 
     if (BattleState.selectedCharacterEl) {
@@ -989,6 +1005,8 @@ const handleEndTurn = async () => {
 
         displayMessage('Turn completed successfully!', 'success');
         BattleState.currentTurnCharacter = null;
+        // Reset move queued flag after turn ends
+        BattleState.isMoveQueued = false;
 
     } catch (err) {
         displayMessage('Error completing turn. Please try again.', 'error');
@@ -1014,6 +1032,8 @@ const handleRefresh = async () => {
         await updateGameStateFromRealtime();
         
         displayMessage('Battle state refreshed successfully.', 'success');
+        // Reset move queued flag on refresh
+        BattleState.isMoveQueued = false;
     } catch (error) {
         displayMessage('Failed to refresh battle state.', 'error');
     }
@@ -1252,7 +1272,7 @@ export function cleanup() {
         characters: [], selectedCharacterEl: null, selectedPlayerCharacter: null,
         currentTurnCharacter: null, highlightedTiles: [], supabaseClient: null,
         battleState: null, battleId: null, unsubscribeFromBattle: null,
-        isProcessingAITurn: false
+        isProcessingAITurn: false, isMoveQueued: false // Reset move queued flag
     });
     
     BattleState.tileMap.clear();
