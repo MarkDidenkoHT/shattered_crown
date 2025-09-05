@@ -283,6 +283,12 @@ async function loadSellView(container) {
     displayMessage('Loading your items...');
     
     try {
+        const itemsResponse = await fetch('/api/auction/items');
+            if (itemsResponse.ok) {
+                const allItems = await itemsResponse.json();
+                _availableItems = allItems.filter(i => i.type === 'Ingredient' || i.type === 'Consumable');
+            }
+
         const response = await fetch(`/api/auction/bank/${_profile.id}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
         });
@@ -298,7 +304,7 @@ async function loadSellView(container) {
 
         _bankItems = _bankItems.map(item => ({
             ...item,
-            spritePath: item.spritePath || getItemIcon(item.item)
+            spritePath: item.isGear ? getItemIcon(item.item) : (item.spritePath || getItemIcon(item.item))
         }));
 
         if (_bankItems.length === 0) {
