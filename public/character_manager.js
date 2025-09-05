@@ -725,12 +725,12 @@ styleEl.textContent = `
     gap: 1.5rem;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 1rem;
     scroll-behavior: smooth;
     scrollbar-width: none;
     scroll-snap-type: x mandatory;
     -ms-overflow-style: none;
     user-select: none;
+    height: 84vh;
 }
 
 .characters-slider::-webkit-scrollbar {
@@ -817,9 +817,9 @@ styleEl.textContent = `
 
 .stats-items-container {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    padding-top: 1rem;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-top: 8px;
     border-top: 1px solid rgba(196,151,90,0.15);
 }
 

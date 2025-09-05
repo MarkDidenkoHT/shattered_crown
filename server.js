@@ -304,7 +304,6 @@ app.get('/api/auction/active', async (req, res) => {
     }
 });
 
-
 app.get('/api/auction/bank/:playerId', async (req, res) => {
   const { playerId } = req.params;
 

@@ -247,34 +247,6 @@ function addBankStyles() {
             text-align: center;
         }
 
-        .item-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .item-name {
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #c4975a;
-            margin-bottom: 0.25rem;
-        }
-
-        .item-details {
-            font-size: 0.8rem;
-            color: #b8b3a8;
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .item-type {
-            color: #8b7355;
-        }
-
-        .item-profession {
-            color: #9a8566;
-        }
-
         /* Empty State */
         .empty-bank {
             display: flex;

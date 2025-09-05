@@ -17,7 +17,7 @@ export async function loadModule(main, { getCurrentProfile }) {
 
   _main.innerHTML = `
     <div class="main-app-container">
-      <div class="altar-particles"></div>
+      <div class="particles"></div>
       <div class="altar-section">
       
       <div class="bank-header">

@@ -11,13 +11,6 @@ export async function loadModule(main, { getCurrentProfile }) {
     _main = main;
     _getCurrentProfile = getCurrentProfile;
 
-    _profile = _getCurrentProfile();
-    if (!_profile) {
-        displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login');
-        return;
-    }
-
     _main.innerHTML = `
         <div class="main-app-container bank-container">
             <div class="particles"></div>
@@ -35,6 +28,24 @@ export async function loadModule(main, { getCurrentProfile }) {
             </div>
 
             <div class="bank-content">
+                <!-- Buy View Filters -->
+                <div class="buy-filters" id="buyFilters" style="display: none;">
+                    <div class="filter-controls">
+                        <input type="text" id="buy-search" placeholder="Search items..." class="search-input">
+                        <select id="buy-filter" class="filter-select">
+                            <option value="all">All Items</option>
+                            <option value="ingredient">Ingredients</option>
+                            <option value="consumable">Consumables</option>
+                            <option value="gear">Crafted Gear</option>
+                        </select>
+                        <select id="buy-sort" class="filter-select">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="name">By Name</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="bank-items-container">
                     <div class="bank-items-list" id="auctionItemsList">
                     </div>
@@ -74,7 +85,7 @@ export async function loadModule(main, { getCurrentProfile }) {
                     <div class="form-group">
                         <label for="wanted-item">Want in return:</label>
                         <div class="wanted-controls">
-                        <input id="wanted-search" type="text" placeholder="Search item..." style="border-radius: 4px;">
+                        <input id="wanted-search" type="text" placeholder="Search item..." style="border-radius: 4px; background: rgba(42, 31, 22, 0.8)">
                         <select id="wanted-filter">
                             <option value="all">All</option>
                             <option value="ingredient">Ingredients</option>
@@ -141,6 +152,10 @@ export async function loadModule(main, { getCurrentProfile }) {
 
 async function loadCurrentView() {
     const container = document.getElementById('auctionItemsList');
+    const buyFilters = document.getElementById('buyFilters');
+    
+    // Show/hide filters based on current view
+    buyFilters.style.display = _currentView === 'buy' ? 'block' : 'none';
     
     try {
         switch (_currentView) {
@@ -169,50 +184,98 @@ async function loadBuyView(container) {
         }
 
         _activeAuctions = await response.json();
-        
-        if (_activeAuctions.length === 0) {
-            container.innerHTML = `
-                <div class="empty-bank">
-                    <div class="empty-icon">🏛️</div>
-                    <h3>No Active Auctions</h3>
-                    <p>No items are currently available for purchase</p>
-                </div>
-            `;
-        } else {
-            container.innerHTML = _activeAuctions.map(auction => `
-                <div class="bank-item auction-item" data-auction-id="${auction.id}">
-                    <div class="item-icon">
-                        <img src="${getItemIcon(auction.item_selling)}" 
-                             alt="${auction.item_selling}">
-                        ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
-                    </div>
-                    
-                    <div class="item-info">
-                        <div class="item-name">${auction.item_selling}</div>
-                        <div class="item-details">
-                            <span class="item-type">Seller: ${auction.seller?.chat_id || 'Anonymous'}</span>
-                            <span class="item-profession">• ${formatTime(auction.created_at)}</span>
-                        </div>
-                        <div class="auction-trade-info">
-                            <span class="trade-want">Wants: ${auction.amount_wanted}× ${auction.item_wanted}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="item-actions">
-                        <button class="action-btn buy-btn" data-action="buy" data-auction-id="${auction.id}">
-                            <span class="btn-icon">💰</span>
-                            Buy
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
+        renderFilteredAuctions(_activeAuctions);
         closeMessageBox();
     } catch (error) {
         console.error('Failed to load auctions:', error);
         displayMessage('Failed to load auctions. Please try again.');
     }
+}
+
+function renderFilteredAuctions(auctions) {
+    const container = document.getElementById('auctionItemsList');
+    const searchQuery = document.getElementById('buy-search')?.value.toLowerCase() || '';
+    const filterType = document.getElementById('buy-filter')?.value || 'all';
+    const sortBy = document.getElementById('buy-sort')?.value || 'newest';
+
+    let filteredAuctions = auctions.filter(auction => {
+        const matchesSearch = !searchQuery || 
+            auction.item_selling.toLowerCase().includes(searchQuery) ||
+            auction.item_wanted.toLowerCase().includes(searchQuery);
+        
+        const matchesFilter = filterType === 'all' || getItemType(auction.item_selling) === filterType;
+        
+        return matchesSearch && matchesFilter;
+    });
+
+    // Sort auctions
+    filteredAuctions.sort((a, b) => {
+        switch (sortBy) {
+            case 'oldest':
+                return new Date(a.created_at) - new Date(b.created_at);
+            case 'name':
+                return a.item_selling.localeCompare(b.item_selling);
+            case 'newest':
+            default:
+                return new Date(b.created_at) - new Date(a.created_at);
+        }
+    });
+    
+    if (filteredAuctions.length === 0) {
+        const hasFilters = searchQuery || filterType !== 'all';
+        container.innerHTML = `
+            <div class="empty-bank">
+                <div class="empty-icon">🏛️</div>
+                <h3>${hasFilters ? 'No Matching Auctions' : 'No Active Auctions'}</h3>
+                <p>${hasFilters ? 'Try adjusting your search or filters' : 'No items are currently available for purchase'}</p>
+            </div>
+        `;
+    } else {
+        container.innerHTML = filteredAuctions.map(auction => `
+            <div class="bank-item auction-item" data-auction-id="${auction.id}">
+                <div class="item-icon">
+                    <img src="${getItemIcon(auction.item_selling)}" 
+                         alt="${auction.item_selling}">
+                    ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
+                </div>
+                
+                <div class="item-info">
+                    <div class="item-name">${auction.item_selling}</div>
+                    <div class="item-details">
+                        <span class="item-type">Seller: ${auction.seller?.chat_id || 'Anonymous'}</span>
+                        <span class="item-profession">• ${formatTime(auction.created_at)}</span>
+                    </div>
+                    <div class="auction-trade-info">
+                        <span class="trade-want">Wants: ${auction.amount_wanted}× ${auction.item_wanted}</span>
+                    </div>
+                </div>
+                
+                <div class="item-actions">
+                    <button class="action-btn buy-btn" data-action="buy" data-auction-id="${auction.id}">
+                        <span class="btn-icon">💰</span>
+                        Buy
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function getItemType(itemName) {
+    // This is a basic categorization - you might want to enhance this
+    // based on your actual item database or API
+    const itemLower = itemName.toLowerCase();
+    
+    if (itemLower.includes('potion') || itemLower.includes('elixir') || itemLower.includes('brew')) {
+        return 'consumable';
+    }
+    
+    if (itemLower.includes('armor') || itemLower.includes('weapon') || itemLower.includes('shield') || 
+        itemLower.includes('sword') || itemLower.includes('bow') || itemLower.includes('helmet')) {
+        return 'gear';
+    }
+    
+    return 'ingredient';
 }
 
 async function loadSellView(container) {
@@ -264,7 +327,7 @@ async function loadSellView(container) {
                             ${item.professions ? `<span class="item-profession">• ${item.professions.name}</span>` : ''}
                         </div>
                         ${item.isGear && item.stats 
-                            ? `<pre class="gear-stats">${JSON.stringify(item.stats, null, 2)}</pre>` 
+                            ? `<div class="gear-stats">${formatGearStats(item.stats)}</div>` 
                             : ''}
                     </div>
                     <div class="item-actions">
@@ -285,6 +348,14 @@ async function loadSellView(container) {
         console.error('Failed to load bank items:', error);
         displayMessage('Failed to load your items. Please try again.');
     }
+}
+
+function formatGearStats(stats) {
+    if (!stats || !Array.isArray(stats)) return '';
+    
+    return stats.map(stat => 
+        `<span class="stat-item">${stat.name}: ${stat.value}</span>`
+    ).join(' • ');
 }
 
 async function loadMyListingsView(container) {
@@ -377,6 +448,9 @@ function setupAuctionInteractions() {
         }
     });
 
+    // Setup buy view filters
+    setupBuyFilters();
+
     _main.querySelector('#auctionItemsList').addEventListener('click', async (e) => {
         const btn = e.target.closest('.buy-btn, .sell-btn, .cancel-btn');
         if (!btn) return;
@@ -391,6 +465,36 @@ function setupAuctionInteractions() {
     });
 
     setupModalInteractions();
+}
+
+function setupBuyFilters() {
+    const searchInput = document.getElementById('buy-search');
+    const filterSelect = document.getElementById('buy-filter');
+    const sortSelect = document.getElementById('buy-sort');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            if (_currentView === 'buy') {
+                renderFilteredAuctions(_activeAuctions);
+            }
+        });
+    }
+
+    if (filterSelect) {
+        filterSelect.addEventListener('change', () => {
+            if (_currentView === 'buy') {
+                renderFilteredAuctions(_activeAuctions);
+            }
+        });
+    }
+
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            if (_currentView === 'buy') {
+                renderFilteredAuctions(_activeAuctions);
+            }
+        });
+    }
 }
 
 function setupModalInteractions() {
@@ -669,6 +773,22 @@ async function getItemSprites(itemNames) {
     return spriteMap;
 }
 
+function getGearIconPath(itemName) {
+    // Remove common affixes from crafted gear names
+    // Pattern: "Epic Magma Boots of the Aegis" -> "EpicMagmaBoots"
+    
+    let baseName = itemName;
+    
+    // Remove suffix affixes (everything after "of the", "of", etc.)
+    baseName = baseName.replace(/\s+of\s+(the\s+)?.*$/i, '');
+    
+    // Convert to sprite format (remove spaces)
+    const spriteName = baseName.replace(/\s+/g, '');
+    
+    // Return the path to the gear icon
+    return `assets/art/gear/${spriteName}.png`;
+}
+
 function getItemIcon(itemName) {
     const availableItem = _availableItems.find(item => item.name === itemName);
     if (availableItem && availableItem.spritePath) {
@@ -748,6 +868,51 @@ function addAuctionStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
+        .buy-filters {
+            padding: 1rem;
+            background: rgba(42, 31, 22, 0.3);
+            border-bottom: 1px solid #3d2914;
+            margin-bottom: 1rem;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.5rem;
+            background: rgba(42, 31, 22, 0.8);
+            border: 2px solid #3d2914;
+            border-radius: 4px;
+            color: #b8b3a8;
+            font-family: 'Cinzel', serif;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #c4975a;
+        }
+
+        .filter-select {
+            padding: 0.5rem;
+            background: rgba(42, 31, 22, 0.8);
+            border: 2px solid #3d2914;
+            border-radius: 4px;
+            color: #b8b3a8;
+            font-family: 'Cinzel', serif;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #c4975a;
+        }
+
         .auction-item {
             border-left: 4px solid #2a5a2a;
         }
@@ -774,6 +939,32 @@ function addAuctionStyles() {
             object-fit: cover;
             border-radius: 4px;
             border: 1px solid #3d2914;
+        }
+
+        /* Rarity-based borders for gear items */
+        .item-icon.rarity-basic img {
+            border: 2px solid #9d9d9d; /* Grey */
+            box-shadow: 0 0 6px rgba(157, 157, 157, 0.3);
+        }
+
+        .item-icon.rarity-uncommon img {
+            border: 2px solid #1eff00; /* Green */
+            box-shadow: 0 0 6px rgba(30, 255, 0, 0.3);
+        }
+
+        .item-icon.rarity-rare img {
+            border: 2px solid #0070dd; /* Blue */
+            box-shadow: 0 0 6px rgba(0, 112, 221, 0.3);
+        }
+
+        .item-icon.rarity-epic img {
+            border: 2px solid #a335ee; /* Purple */
+            box-shadow: 0 0 6px rgba(163, 53, 238, 0.3);
+        }
+
+        .item-icon.rarity-legendary img {
+            border: 2px solid #ff8000; /* Orange */
+            box-shadow: 0 0 6px rgba(255, 128, 0, 0.3);
         }
 
         .item-quantity {
@@ -811,35 +1002,6 @@ function addAuctionStyles() {
             color: #fff;
         }
 
-        .item-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .item-name {
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #c4975a;
-            margin-bottom: 0.25rem;
-        }
-
-        .item-details {
-            font-size: 0.8rem;
-            color: #b8b3a8;
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .item-type {
-            color: #8b7355;
-        }
-
-        .item-profession {
-            color: #9a8566;
-        }
-
         .auction-trade-info {
             font-size: 0.8rem;
             color: #9a8566;
@@ -850,14 +1012,25 @@ function addAuctionStyles() {
             color: #b8b3a8;
         }
 
+        .gear-stats {
+            font-size: 0.75rem;
+            color: #9a8566;
+            margin-top: 0.25rem;
+        }
+
+        .stat-item {
+            color: #c4975a;
+            font-weight: 600;
+        }
+
         .item-actions {
             display: flex;
             align-items: center;
         }
 
         .action-btn {
-            background: linear-gradient(145deg, #2a1f16, #1d140c);
-            border: 2px solid #3d2914;
+            background: linear-gradient(145deg, #2a1f16, #63360f);
+            border: 2px solid #996228;
             color: #b8b3a8;
             padding: 0.4rem 0.8rem;
             border-radius: 4px;
@@ -969,11 +1142,6 @@ function addAuctionStyles() {
             font-family: 'Cinzel', serif;
             color: #c4975a;
             text-align: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
         }
 
         .form-group label {
@@ -981,7 +1149,6 @@ function addAuctionStyles() {
             color: #b8b3a8;
             font-family: 'Cinzel', serif;
             font-weight: 600;
-            margin-bottom: 0.5rem;
             text-align: center;
         }
 
@@ -1091,25 +1258,6 @@ function addAuctionStyles() {
             font-weight: bold;
         }
 
-        .particles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-        }
-
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: radial-gradient(circle, #c4975a, transparent);
-            border-radius: 50%;
-            animation: float 8s infinite linear;
-        }
-
         @keyframes float {
             0% {
                 transform: translateY(100vh) rotate(0deg);
@@ -1190,18 +1338,18 @@ function addAuctionStyles() {
         }
 
         .wanted-card {
-            border: 1px solid #ccc;
+            border: 1px solid #ff9817;
             border-radius: 6px;
             padding: 5px;
             text-align: center;
             cursor: pointer;
-            background: #fafafa;
+            background: linear-gradient(145deg, #2a1f16, #63360f);
             transition: all 0.2s;
         }
 
         .wanted-card.selected {
-            border-color: #168acd;
-            background: #eaf6ff;
+            border-color: #3216cd;
+            background: #225921;
         }
 
         .wanted-icon {
