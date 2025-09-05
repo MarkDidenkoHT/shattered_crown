@@ -796,6 +796,11 @@ function getItemIcon(itemName) {
         return availableItem.spritePath;
     }
     
+    // Check if this is a crafted gear item
+    if (getItemType(itemName) === 'gear') {
+        return getGearIconPath(itemName);
+    }
+    
     const spriteName = itemNameToSpriteFormat(itemName);
     return `assets/art/recipes/${spriteName}.png`;
 }
