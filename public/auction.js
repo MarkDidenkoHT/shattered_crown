@@ -298,10 +298,7 @@ async function loadSellView(container) {
 
         _bankItems = _bankItems.map(item => ({
             ...item,
-            spritePath: item.spritePath ||
-                (item.isGear
-                    ? (item.sprite || "assets/art/recipes/default_item.png")
-                    : (spriteMap[item.item] || `assets/art/recipes/${itemNameToSpriteFormat(item.item)}.png`))
+            spritePath: item.spritePath || getItemIcon(item.item)
         }));
 
         if (_bankItems.length === 0) {
