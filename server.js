@@ -453,8 +453,10 @@ app.post('/api/auction/create', async (req, res) => {
     // Get the item type from the bank entry
     const itemSellingType = bankItems[0]?.type || 'unknown';
 
-    // Remove items from bank
+    // Remove items (bank items first, then craft items)
     let remainingToRemove = amount_selling;
+    
+    // Remove from bank first
     for (const bankItem of bankItems) {
       if (remainingToRemove <= 0) break;
 
@@ -472,7 +474,7 @@ app.post('/api/auction/create', async (req, res) => {
         });
       } else {
         // Update amount
-        const updateResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
           method: 'PATCH',
           headers: {
             'apikey': process.env.SUPABASE_ANON_KEY,
@@ -482,8 +484,23 @@ app.post('/api/auction/create', async (req, res) => {
           },
           body: JSON.stringify({ amount: bankItem.amount - amountToTake })
         });
-        console.log('Update bank entry response status:', updateResponse.status);
       }
+    }
+    
+    // Remove from craft_sessions if needed
+    for (const craftItem of craftItems) {
+      if (remainingToRemove <= 0) break;
+      
+      remainingToRemove -= 1;
+      
+      // Delete the craft session
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItem.id}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      });
     }
 
     // Create auction with type from bank table
@@ -548,6 +565,35 @@ app.post('/api/auction/create', async (req, res) => {
   } catch (error) {
     console.error('❌ [AUCTION CREATE ERROR]', error);
     res.status(500).json({ error: 'Failed to create auction', details: error.message });
+  }
+});
+
+// Update the active auctions endpoint to include type
+app.get('/api/auction/active', async (req, res) => {
+  try {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/auction?status=eq.false&select=*,profiles:seller_id(chat_id)&order=created_at.desc`, {
+      headers: {
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch auctions: ${response.status}`);
+    }
+
+    const auctions = await response.json();
+    
+    // Transform the nested profile data
+    const transformedAuctions = auctions.map(auction => ({
+      ...auction,
+      seller: auction.profiles
+    }));
+
+    res.json(transformedAuctions);
+  } catch (error) {
+    console.error('[ACTIVE AUCTIONS]', error);
+    res.status(500).json({ error: 'Failed to fetch active auctions' });
   }
 });
 
