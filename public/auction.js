@@ -267,12 +267,16 @@ async function loadSellView(container) {
     displayMessage('Loading your items...');
     
     try {
+        console.log('[Auction] Fetching available items for wanted picker...');
         const itemsResponse = await fetch('/api/auction/items');
-            if (itemsResponse.ok) {
-                const allItems = await itemsResponse.json();
-                _availableItems = allItems.filter(i => i.type === 'Ingredient' || i.type === 'Consumable');
-            }
+        if (itemsResponse.ok) {
+            const allItems = await itemsResponse.json();
+            console.log('[Auction] /api/auction/items response:', allItems);
+            _availableItems = allItems.filter(i => i.type === 'Ingredient' || i.type === 'Consumable');
+            console.log('[Auction] Filtered available items:', _availableItems);
+        }
 
+        console.log('[Auction] Fetching bank items and gear for profile:', _profile.id);
         const response = await fetch(`/api/auction/bank/${_profile.id}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase_token')}` }
         });
@@ -282,14 +286,22 @@ async function loadSellView(container) {
         }
 
         _bankItems = await response.json();
+        console.log('[Auction] Raw bank items + gear:', _bankItems);
 
         const itemNames = [...new Set(_bankItems.filter(item => !item.isGear).map(item => item.item))];
-        const spriteMap = await getItemSprites(itemNames);
+        console.log('[Auction] Item names for sprite lookup:', itemNames);
 
-        _bankItems = _bankItems.map(item => ({
-            ...item,
-            spritePath: item.isGear ? getItemIcon(item.item) : (item.spritePath || getItemIcon(item.item))
-        }));
+        const spriteMap = await getItemSprites(itemNames);
+        console.log('[Auction] Sprite map:', spriteMap);
+
+        _bankItems = _bankItems.map(item => {
+            const spritePath = item.isGear ? getItemIcon(item.item, true) : (item.spritePath || getItemIcon(item.item));
+            console.log(`[Auction] Item "${item.item}" (isGear: ${item.isGear}) assigned spritePath:`, spritePath, 'type:', item.type);
+            return {
+                ...item,
+                spritePath
+            };
+        });
 
         if (_bankItems.length === 0) {
             container.innerHTML = `
@@ -300,7 +312,9 @@ async function loadSellView(container) {
                 </div>
             `;
         } else {
-            container.innerHTML = _bankItems.map(item => `
+            container.innerHTML = _bankItems.map(item => {
+                console.log('[Auction] Rendering item:', item);
+                return `
                 <div class="bank-item ${item.isGear ? 'crafted-gear' : ''}" data-item-id="${item.id}">
                     <div class="item-icon">
                         <img src="${item.spritePath}" alt="${item.item}">
@@ -328,7 +342,8 @@ async function loadSellView(container) {
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         closeMessageBox();
@@ -732,8 +747,10 @@ async function getItemSprites(itemNames) {
     const spriteMap = {};
 
     try {
+        console.log('[Auction] getItemSprites - fetching /api/auction/items for sprite lookup');
         const response = await fetch('/api/auction/items');
         const items = await response.json();
+        console.log('[Auction] getItemSprites - items:', items);
 
         const itemIndex = {};
         items.forEach(item => {
@@ -744,9 +761,11 @@ async function getItemSprites(itemNames) {
             const dbItem = itemIndex[itemName];
             if (dbItem && dbItem.spritePath) {
                 spriteMap[itemName] = dbItem.spritePath;
+                console.log(`[Auction] getItemSprites - Found spritePath for "${itemName}":`, dbItem.spritePath);
             } else {
                 const spriteName = itemNameToSpriteFormat(itemName);
                 spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+                console.log(`[Auction] getItemSprites - Default spritePath for "${itemName}":`, spriteMap[itemName]);
             }
         });
 
@@ -755,6 +774,7 @@ async function getItemSprites(itemNames) {
         itemNames.forEach(itemName => {
             const spriteName = itemNameToSpriteFormat(itemName);
             spriteMap[itemName] = `assets/art/recipes/${spriteName}.png`;
+            console.log(`[Auction] getItemSprites - Error fallback spritePath for "${itemName}":`, spriteMap[itemName]);
         });
     }
 
@@ -782,17 +802,23 @@ function getGearIconPath(itemName) {
 }
 
 function getItemIcon(itemName, isGear = false) {
+    console.log(`[Auction] getItemIcon called for "${itemName}" (isGear: ${isGear})`);
     const availableItem = _availableItems.find(item => item.name === itemName);
     if (availableItem && availableItem.spritePath) {
+        console.log(`[Auction] getItemIcon - Found spritePath in _availableItems for "${itemName}":`, availableItem.spritePath);
         return availableItem.spritePath;
     }
     
     if (isGear) {
-        return getGearIconPath(itemName);
+        const gearPath = getGearIconPath(itemName);
+        console.log(`[Auction] getItemIcon - Gear path for "${itemName}":`, gearPath);
+        return gearPath;
     }
     
     const spriteName = itemNameToSpriteFormat(itemName);
-    return `assets/art/recipes/${spriteName}.png`;
+    const recipePath = `assets/art/recipes/${spriteName}.png`;
+    console.log(`[Auction] getItemIcon - Default recipe path for "${itemName}":`, recipePath);
+    return recipePath;
 }
 
 function formatTime(dateString) {
