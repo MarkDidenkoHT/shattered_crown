@@ -775,19 +775,14 @@ async function getItemSprites(itemNames) {
 }
 
 function getGearIconPath(itemName) {
-    // Remove common affixes from crafted gear names
-    // Pattern: "Epic Magma Boots of the Aegis" -> "EpicMagmaBoots"
-    
     let baseName = itemName;
     
-    // Remove suffix affixes (everything after "of the", "of", etc.)
+    baseName = baseName.replace(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i, '');
     baseName = baseName.replace(/\s+of\s+(the\s+)?.*$/i, '');
     
-    // Convert to sprite format (remove spaces)
     const spriteName = baseName.replace(/\s+/g, '');
     
-    // Return the path to the gear icon
-    return `assets/art/gear/${spriteName}.png`;
+    return `assets/art/items/${spriteName}.png`;
 }
 
 function getItemIcon(itemName) {
