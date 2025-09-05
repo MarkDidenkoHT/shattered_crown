@@ -10,6 +10,7 @@ let _myListings = [];
 export async function loadModule(main, { getCurrentProfile }) {
     _main = main;
     _getCurrentProfile = getCurrentProfile;
+    _profile = await _getCurrentProfile();
 
     _main.innerHTML = `
         <div class="main-app-container bank-container">
