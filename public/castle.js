@@ -348,27 +348,6 @@ function addCastleStyles() {
             height: 13%;
         }
 
-        .particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 1;
-        }
-
-        .particle {
-            position: absolute;
-            background-color: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            animation: floatAndFade 5s infinite ease-in-out;
-            width: 5px;
-            height: 5px;
-            opacity: 0;
-        }
-
         @keyframes floatAndFade {
             0% {
                 transform: translateY(0) translateX(0);

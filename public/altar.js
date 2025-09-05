@@ -34,20 +34,20 @@ export async function loadModule(main, { getCurrentProfile }) {
               <div class="input-container">
                 <input type="text" 
                        id="promoCodeInput" 
-                       placeholder="Enter divine code..." 
+                       placeholder="Enter promo code" 
                        maxlength="50"
                        class="promo-input">
                 <div class="input-glow"></div>
               </div>
               <button class="fantasy-button redeem-btn" id="redeemBtn">
                 <span class="btn-text">Offer Code</span>
-                <span class="btn-icon">⚡</span>
+                <span class="btn-icon"></span>
               </button>
             </div>
             
             <div class="blessing-status" id="blessingStatus" style="display: none;">
               <div class="status-content">
-                <div class="status-icon">✨</div>
+                <div class="status-icon"></div>
                 <div class="status-message"></div>
               </div>
               <h3>Recent Divine Blessings</h3>
@@ -63,7 +63,7 @@ export async function loadModule(main, { getCurrentProfile }) {
     </div>
   `;
 
-  createAltarParticles();
+  createParticles();
   setupEventHandlers();
   loadRecentBlessings();
   setBankHeaderBackground();
@@ -163,7 +163,7 @@ function setButtonLoading(button, loading) {
     button.disabled = false;
     button.classList.remove('loading');
     btnText.textContent = 'Offer Code';
-    btnIcon.textContent = '⚡';
+    btnIcon.textContent = '';
     
     const promoInput = _main.querySelector('#promoCodeInput');
     if (promoInput.value.trim().length === 0) {
@@ -242,26 +242,19 @@ function displayRecentBlessings(promos) {
   container.style.display = 'block';
 }
 
-function createAltarParticles() {
-  console.log('[ALTAR] Creating mystical particles...');
-  const particlesContainer = _main.querySelector('.altar-particles');
+function createParticles() {
+  const particlesContainer = _main.querySelector('.particles');
   if (!particlesContainer) return;
 
   particlesContainer.innerHTML = '';
-  const particleCount = 15;
-  
+  const particleCount = 20;
   for (let i = 0; i < particleCount; i++) {
     const particle = document.createElement('div');
-    particle.className = 'altar-particle';
-    
-    const types = ['✨', '⭐', '💫', '🌟'];
-    particle.textContent = types[Math.floor(Math.random() * types.length)];
-    
+    particle.className = 'particle';
     particle.style.left = Math.random() * 100 + '%';
     particle.style.top = Math.random() * 100 + '%';
-    particle.style.animationDelay = Math.random() * 8 + 's';
-    particle.style.animationDuration = (Math.random() * 4 + 6) + 's';
-    
+    particle.style.animationDelay = Math.random() * 6 + 's';
+    particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
     particlesContainer.appendChild(particle);
   }
 }
@@ -304,12 +297,12 @@ styleEl.textContent = `
   }
 
   .offering-panel {
-    max-height: 65vh;
+    max-height: 75vh;
     flex: 1;
     background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
     border: 2px solid #3d2914;
     border-radius: 15px;
-    padding: 1rem;
+    padding: 8px;
     backdrop-filter: blur(5px);
     box-shadow: 
       inset 0 1px 0 rgba(196, 151, 90, 0.2),
@@ -319,7 +312,7 @@ styleEl.textContent = `
   .offering-panel h2 {
     font-family: 'Cinzel', serif;
     color: #c4975a;
-    font-size: 1.8rem;
+    font-size: 1.2rem;
     text-align: center;
     letter-spacing: 1px;
   }
@@ -327,8 +320,8 @@ styleEl.textContent = `
   .promo-input-section {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   .input-container {
@@ -337,7 +330,7 @@ styleEl.textContent = `
 
   .promo-input {
     width: 100%;
-    padding: 1rem 1.5rem;
+    padding: 8px;
     background: rgba(0, 0, 0, 0.4);
     border: 2px solid rgba(196, 151, 90, 0.3);
     border-radius: 10px;
@@ -443,11 +436,10 @@ styleEl.textContent = `
   }
 
   .recent-blessings {
-    margin-top: 1rem;
     padding-top: 0.5rem;
     border-top: 1px solid rgba(196, 151, 90, 0.2);
     overflow: auto;
-    max-height: 25vh;
+    max-height: 35vh;
   }
 
   .recent-blessings h3 {
@@ -468,7 +460,7 @@ styleEl.textContent = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.8rem 1rem;
+    padding: 8px;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     border-left: 3px solid #c4975a;
@@ -493,7 +485,7 @@ styleEl.textContent = `
     position: absolute;
     inset: 0;
     overflow: hidden;
-    z-index: 1;
+    z-index: 10;
     pointer-events: none;
   }
 

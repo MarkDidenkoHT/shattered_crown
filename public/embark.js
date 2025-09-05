@@ -106,7 +106,6 @@ function showPvPModal() {
         <button class="modal-close-btn">&times;</button>
       </div>
       <div class="modal-content">
-        <div class="coming-soon-icon">⚔️</div>
         <h3>Coming Soon!</h3>
         <p>Player vs Player battles are currently in development.</p>
         <p>Prepare your heroes for epic battles against other players!</p>
@@ -223,7 +222,6 @@ function showReconnectModal(battleData) {
         <h2>Active Battle Found</h2>
       </div>
       <div class="modal-content">
-        <div class="battle-info-icon">⚔️</div>
         <h3>You have an ongoing battle!</h3>
         <p><strong>Mode:</strong> ${battleData.mode?.toUpperCase() || 'Unknown'}</p>
         <p><strong>Round:</strong> ${battleData.round_number || 1}</p>
@@ -231,7 +229,7 @@ function showReconnectModal(battleData) {
         <div class="reconnect-options">
           <p>Would you like to resume your battle or start a new one?</p>
           <div class="warning-text">
-            <small>⚠️ Starting a new battle will abandon your current progress.</small>
+            <small>Starting a new battle will abandon your current progress.</small>
           </div>
         </div>
       </div>
