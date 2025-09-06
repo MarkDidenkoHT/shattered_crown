@@ -1293,27 +1293,21 @@ const handleEndTurn = async () => {
 };
 
 const handleUseConsumable = async () => {
-    // Try to find the character with the consumable more robustly
-    let activeCharacter = BattleState.currentTurnCharacter;
-    
-    if (!activeCharacter) {
-        // Fallback: find any player character
-        activeCharacter = BattleState.characters.find(c => c.isPlayerControlled);
-    }
+    const activeCharacter = BattleState.currentTurnCharacter;
     
     if (!activeCharacter) {
         displayMessage('No character is currently active for this turn.');
         return;
     }
 
-    const consumable = activeCharacter.equipped_items?.equipped_consumable;
-    if (!consumable || consumable === 'none') {
-        displayMessage('No consumable equipped.');
+    if (!activeCharacter.isPlayerControlled) {
+        displayMessage('Cannot use consumables for AI characters.');
         return;
     }
 
-    if (activeCharacter.has_acted) {
-        displayMessage('This character has already acted this turn.');
+    const consumable = activeCharacter.equipped_items?.equipped_consumable;
+    if (!consumable || consumable === 'none') {
+        displayMessage('No consumable equipped.');
         return;
     }
 
