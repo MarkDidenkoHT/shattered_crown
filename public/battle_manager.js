@@ -478,6 +478,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState.layout_data);
     await updateGameStateFromRealtime();
+    renderBottomUI();
 }
 
 const loadTileData = async () => {
@@ -842,7 +843,6 @@ function renderBattleScreen(mode, level, layoutData) {
 
     renderBattleGrid(layoutData.layout);
     renderCharacters();
-    renderBottomUI();
     createParticles();
     
     const refreshBtn = document.getElementById('refreshButton');
