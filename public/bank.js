@@ -354,10 +354,14 @@ function getGearIconPath(itemName) {
 }
 
 function getItemIcon(item) {
+    // Define all gear types that should use gear icon logic
+    const gearTypes = ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand'];
+    
     // If item is crafted gear, use gear icon logic
-    if (item.type === 'Boots' || item.isGear) {
+    if (gearTypes.includes(item.type) || item.isGear) {
         return getGearIconPath(item.item);
     }
+    
     // Use the sprite path from backend response, or fallback to default
     return item.sprite_path || 'assets/art/recipes/default_item.png';
 }
@@ -371,7 +375,8 @@ function getGearRarity(itemName) {
 
 function renderBankItems() {
     const itemsList = document.getElementById('bankItemsList');
-    
+    const gearTypes = ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand'];
+
     if (_filteredItems.length === 0) {
         itemsList.innerHTML = `
             <div class="empty-bank">
@@ -384,7 +389,7 @@ function renderBankItems() {
     }
 
     itemsList.innerHTML = _filteredItems.map(item => {
-        const isGear = item.type === 'Crafted Gear' || item.isGear;
+        const isGear = gearTypes.includes(item.type) || item.isGear;
         const rarityClass = isGear ? getGearRarity(item.item) : '';
         return `
         <div class="bank-item" data-item-id="${item.id}" data-type="${item.type || 'consumable'}">
