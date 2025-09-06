@@ -186,17 +186,249 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
     }
 };
 
+// --- Loading Modal Utilities (copied from crafting_manager.js for consistency) ---
+function injectBattleLoadingStyles() {
+    if (document.getElementById('battle-loading-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'battle-loading-styles';
+    style.textContent = `
+    .loading-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease;
+    }
+    .loading-content {
+      background: linear-gradient(145deg, rgba(29, 20, 12, 0.95), rgba(42, 31, 22, 0.9));
+      border: 2px solid #c4975a;
+      border-radius: 12px;
+      padding: 2.5rem;
+      text-align: center;
+      box-shadow: 
+        inset 0 1px 0 rgba(196, 151, 90, 0.2),
+        0 8px 32px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      min-width: 320px;
+      max-width: 90vw;
+    }
+    .loading-header h2 {
+      font-family: 'Cinzel', serif;
+      color: #c4975a;
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 1px 1px 0 #3d2914;
+      letter-spacing: 1px;
+    }
+    .loading-message {
+      color: #b8b3a8;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+      font-style: italic;
+      opacity: 0.9;
+    }
+    .loading-animation {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 2rem;
+    }
+    .crafting-wheel {
+      width: 100%;
+      height: 100%;
+      border: 3px solid #3d2914;
+      border-radius: 50%;
+      position: relative;
+      background: radial-gradient(circle, rgba(196, 151, 90, 0.1), transparent);
+      animation: rotateWheel 3s linear infinite;
+      box-shadow: 
+        inset 0 0 10px rgba(196, 151, 90, 0.3),
+        0 0 20px rgba(196, 151, 90, 0.2);
+    }
+    .wheel-spoke {
+      position: absolute;
+      width: 2px;
+      height: 50px;
+      background: linear-gradient(to bottom, #c4975a, transparent);
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 0;
+      border-radius: 1px;
+    }
+    .wheel-spoke:nth-child(1) { transform: translate(-50%, -100%) rotate(0deg); }
+    .wheel-spoke:nth-child(2) { transform: translate(-50%, -100%) rotate(60deg); }
+    .wheel-spoke:nth-child(3) { transform: translate(-50%, -100%) rotate(120deg); }
+    .wheel-spoke:nth-child(4) { transform: translate(-50%, -100%) rotate(180deg); }
+    .wheel-spoke:nth-child(5) { transform: translate(-50%, -100%) rotate(240deg); }
+    .wheel-spoke:nth-child(6) { transform: translate(-50%, -100%) rotate(300deg); }
+    .loading-particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .loading-particles .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #c4975a;
+      border-radius: 50%;
+      opacity: 0;
+      animation: floatParticle 2s ease-in-out infinite;
+      box-shadow: 0 0 6px rgba(196, 151, 90, 0.5);
+    }
+    .loading-particles .particle:nth-child(1) { top: 20%; left: 30%; animation-delay: 0s; }
+    .loading-particles .particle:nth-child(2) { top: 60%; right: 25%; animation-delay: 0.4s; }
+    .loading-particles .particle:nth-child(3) { bottom: 30%; left: 20%; animation-delay: 0.8s; }
+    .loading-particles .particle:nth-child(4) { top: 40%; right: 40%; animation-delay: 1.2s; }
+    .loading-particles .particle:nth-child(5) { bottom: 20%; right: 30%; animation-delay: 1.6s; }
+    .loading-progress {
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(61, 41, 20, 0.8);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #3d2914;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c4975a, #e6b573, #c4975a);
+      background-size: 200% 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      animation: progressShimmer 2s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(196, 151, 90, 0.4);
+    }
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .progress-step {
+      color: #b8b3a8;
+      font-style: italic;
+    }
+    .progress-percent {
+      color: #c4975a;
+      font-weight: bold;
+      font-family: 'Cinzel', serif;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes rotateWheel {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes floatParticle {
+      0%, 100% { 
+        opacity: 0; 
+        transform: translateY(0px) scale(1); 
+      }
+      50% { 
+        opacity: 1; 
+        transform: translateY(-20px) scale(1.2); 
+      }
+    }
+    @keyframes progressShimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    `;
+    document.head.appendChild(style);
+}
+
+function createBattleLoadingModal(title = "Loading Battle", message = "Preparing your battlefield...") {
+    injectBattleLoadingStyles();
+    const modal = document.createElement('div');
+    modal.className = 'loading-modal';
+    modal.innerHTML = `
+      <div class="loading-content">
+        <div class="loading-header">
+          <h2>${title}</h2>
+          <p class="loading-message">${message}</p>
+        </div>
+        <div class="loading-animation">
+          <div class="crafting-wheel">
+            ${Array(6).fill().map(() => '<div class="wheel-spoke"></div>').join('')}
+          </div>
+          <div class="loading-particles">
+            ${Array(5).fill().map(() => '<div class="particle"></div>').join('')}
+          </div>
+        </div>
+        <div class="loading-progress">
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+          <div class="progress-text">
+            <span class="progress-step">Connecting to server...</span>
+            <span class="progress-percent">0%</span>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function updateBattleLoadingProgress(modal, step, message, percent) {
+    if (!modal?.parentNode) return;
+    const progressStep = modal.querySelector('.progress-step');
+    const loadingMessage = modal.querySelector('.loading-message');
+    const progressFill = modal.querySelector('.progress-fill');
+    const progressPercent = modal.querySelector('.progress-percent');
+    if (progressStep) progressStep.textContent = step;
+    if (loadingMessage) loadingMessage.textContent = message;
+    if (progressFill && typeof percent === 'number') progressFill.style.width = `${percent}%`;
+    if (progressPercent && typeof percent === 'number') progressPercent.textContent = `${Math.round(percent)}%`;
+}
+
+function removeBattleLoadingModal(modal) {
+    if (modal?.parentNode) {
+        modal.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => modal.parentNode && modal.remove(), 300);
+    }
+}
+
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
 
+    // Show loading modal
+    const loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
+    const loadingStartTime = Date.now();
+
+    // Simulate progress steps for consistency
+    updateBattleLoadingProgress(loadingModal, "Connecting to server...", "Authenticating player...", 10);
+
     BattleState.profile = BattleState.getCurrentProfile();
     if (!BattleState.profile) {
+        removeBattleLoadingModal(loadingModal);
         displayMessage('User profile not found. Please log in again.');
         window.gameAuth.loadModule('login');
         return;
     }
 
+    updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
+
     if (!selectedMode && !reconnecting) {
+        removeBattleLoadingModal(loadingModal);
         displayMessage('No mode selected. Returning to embark.');
         window.gameAuth.loadModule('embark');
         return;
@@ -204,37 +436,47 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     try {
         await loadTileData();
-        
+        updateBattleLoadingProgress(loadingModal, "Connecting to battle...", "Setting up battle state...", 50);
+
         const supabase = getSupabaseClient(supabaseConfig);
         if (BattleState.unsubscribeFromBattle) {
             await supabase.removeChannel(BattleState.unsubscribeFromBattle);
         }
-        
-        // Handle reconnection vs new battle
+
         if (reconnecting && existingBattleId) {
+            updateBattleLoadingProgress(loadingModal, "Reconnecting...", "Restoring previous battle...", 70);
             await reconnectToBattle(existingBattleId);
         } else {
             const areaLevel = selectedMode !== 'pvp'
                 ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
                 : Math.floor(Math.random() * 10) + 1;
-            
+            updateBattleLoadingProgress(loadingModal, "Initializing battle...", "Generating battlefield...", 80);
             await initializeBattle(selectedMode, areaLevel);
         }
-        
+
         setupRealtimeSubscription();
-        
+        updateBattleLoadingProgress(loadingModal, "Finalizing...", "Rendering battlefield...", 95);
+
     } catch (err) {
+        removeBattleLoadingModal(loadingModal);
         displayMessage('Failed to start battle. Returning to embark.');
         window.gameAuth.loadModule('embark');
         return;
     }
 
+    // Ensure minimum loading time for smooth animation
+    const minTime = 2000;
+    const elapsed = Date.now() - loadingStartTime;
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, minTime - elapsed)));
+
+    removeBattleLoadingModal(loadingModal);
+
     const areaLevel = selectedMode !== 'pvp' 
         ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
         : BattleState.battleState?.round_number || 1;
-    
+
     renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState.layout_data);
-    await updateGameStateFromRealtime(); // Make initial update async to handle animations
+    await updateGameStateFromRealtime();
 }
 
 const loadTileData = async () => {
