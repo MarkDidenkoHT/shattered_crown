@@ -355,7 +355,7 @@ function getGearIconPath(itemName) {
 
 function getItemIcon(item) {
     // If item is crafted gear, use gear icon logic
-    if (item.type === 'Crafted Gear' || item.isGear) {
+    if (item.type === 'Boots' || item.isGear) {
         return getGearIconPath(item.item);
     }
     // Use the sprite path from backend response, or fallback to default
