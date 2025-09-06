@@ -964,31 +964,6 @@ function addAuctionStyles() {
             border: 1px solid #3d2914;
         }
 
-        .item-icon.rarity-basic img {
-            border: 2px solid #9d9d9d; /* Grey */
-            box-shadow: 0 0 6px rgba(157, 157, 157, 0.3);
-        }
-
-        .item-icon.rarity-uncommon img {
-            border: 2px solid #1eff00; /* Green */
-            box-shadow: 0 0 6px rgba(30, 255, 0, 0.3);
-        }
-
-        .item-icon.rarity-rare img {
-            border: 2px solid #0070dd; /* Blue */
-            box-shadow: 0 0 6px rgba(0, 112, 221, 0.3);
-        }
-
-        .item-icon.rarity-epic img {
-            border: 2px solid #a335ee; /* Purple */
-            box-shadow: 0 0 6px rgba(163, 53, 238, 0.3);
-        }
-
-        .item-icon.rarity-legendary img {
-            border: 2px solid #ff8000; /* Orange */
-            box-shadow: 0 0 6px rgba(255, 128, 0, 0.3);
-        }
-
         .item-quantity {
             position: absolute;
             bottom: -4px;

@@ -333,6 +333,32 @@ function createDynamicFilters() {
     `).join('');
 }
 
+function getGearIconPath(itemName) {
+    // Remove rarity prefix
+    let baseName = itemName.replace(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i, '');
+    // Remove suffixes like "of the Fox"
+    baseName = baseName.replace(/\s+of\s+(the\s+)?.*$/i, '');
+    // Remove spaces for sprite filename
+    const spriteName = baseName.replace(/\s+/g, '');
+    return `assets/art/items/${spriteName}.png`;
+}
+
+function getItemIcon(item) {
+    // If item is crafted gear, use gear icon logic
+    if (item.type === 'Crafted Gear' || item.isGear) {
+        return getGearIconPath(item.item);
+    }
+    // Use the sprite path from backend response, or fallback to default
+    return item.sprite_path || 'assets/art/recipes/default_item.png';
+}
+
+function getGearRarity(itemName) {
+    // Extracts rarity from item name prefix (e.g. "Epic Sword of Doom")
+    const match = itemName.match(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i);
+    if (!match) return '';
+    return `rarity-${match[1].toLowerCase()}`;
+}
+
 function renderBankItems() {
     const itemsList = document.getElementById('bankItemsList');
     
@@ -347,9 +373,12 @@ function renderBankItems() {
         return;
     }
 
-    itemsList.innerHTML = _filteredItems.map(item => `
+    itemsList.innerHTML = _filteredItems.map(item => {
+        const isGear = item.type === 'Crafted Gear' || item.isGear;
+        const rarityClass = isGear ? getGearRarity(item.item) : '';
+        return `
         <div class="bank-item" data-item-id="${item.id}" data-type="${item.type || 'consumable'}">
-            <div class="item-icon">
+            <div class="item-icon ${rarityClass}">
                 <img src="${getItemIcon(item)}" alt="${item.item}">
                 ${item.amount > 1 ? `<span class="item-quantity">${item.amount}</span>` : ''}
             </div>
@@ -362,12 +391,8 @@ function renderBankItems() {
                 </div>
             </div>
         </div>
-    `).join('');
-}
-
-function getItemIcon(item) {
-    // Use the sprite path from backend response, or fallback to default
-    return item.sprite_path || 'assets/art/recipes/default_item.png';
+        `;
+    }).join('');
 }
 
 function setupBankInteractions() {
