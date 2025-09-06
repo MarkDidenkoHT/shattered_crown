@@ -1119,6 +1119,22 @@ function unhighlightAllTiles() {
     BattleState.highlightedTiles = [];
 }
 
+function debugConsumableLoading() {
+    console.log('=== CONSUMABLE DEBUG ===');
+    console.log('Current turn character:', BattleState.currentTurnCharacter);
+    console.log('All characters:', BattleState.characters);
+    
+    BattleState.characters.forEach(char => {
+        console.log(`Character ${char.name}:`, {
+            id: char.id,
+            isPlayerControlled: char.isPlayerControlled,
+            equipped_items: char.equipped_items,
+            equipped_consumable: char.equipped_items?.equipped_consumable
+        });
+    });
+    console.log('========================');
+}
+
 const attemptMoveCharacter = async (character, targetX, targetY) => {
     const [startX, startY] = character.position;
     const distanceX = Math.abs(targetX - startX);
@@ -1177,6 +1193,9 @@ function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
     ui.innerHTML = '';
 
+    // Add debug logging
+    debugConsumableLoading();
+
     const fragment = document.createDocumentFragment();
 
     for (let row = 0; row < 2; row++) {
@@ -1190,8 +1209,40 @@ function renderBottomUI() {
 
             if (btnIndex === 5) {
                 // Consumable button (6th button, index 5)
-                const activeChar = BattleState.currentTurnCharacter;
-                const consumable = activeChar?.equipped_items?.equipped_consumable;
+                
+                // Try multiple ways to find the active character with consumable
+                let activeChar = null;
+                let consumable = null;
+
+                // Method 1: Use currentTurnCharacter
+                if (BattleState.currentTurnCharacter?.equipped_items?.equipped_consumable) {
+                    activeChar = BattleState.currentTurnCharacter;
+                    consumable = activeChar.equipped_items.equipped_consumable;
+                    console.log('Found consumable via currentTurnCharacter:', consumable);
+                }
+
+                // Method 2: Find first player character with consumable (fallback)
+                if (!consumable) {
+                    const playerChars = BattleState.characters.filter(c => c.isPlayerControlled);
+                    for (const char of playerChars) {
+                        if (char.equipped_items?.equipped_consumable && char.equipped_items.equipped_consumable !== 'none') {
+                            activeChar = char;
+                            consumable = char.equipped_items.equipped_consumable;
+                            console.log('Found consumable via player character search:', consumable);
+                            break;
+                        }
+                    }
+                }
+
+                // Method 3: Check if current turn is player and get any player character
+                if (!consumable && BattleState.battleState?.current_turn !== 'AI') {
+                    const playerChars = BattleState.characters.filter(c => c.isPlayerControlled);
+                    if (playerChars.length > 0) {
+                        activeChar = playerChars[0];
+                        consumable = activeChar.equipped_items?.equipped_consumable;
+                        console.log('Found consumable via turn-based player search:', consumable);
+                    }
+                }
                 
                 if (consumable && consumable !== 'none') {
                     // Create image element for item sprite
@@ -1200,9 +1251,13 @@ function renderBottomUI() {
                     btn.id = 'consumableButton';
                     btn.disabled = false;
                     btn.title = consumable; // Tooltip showing item name
+                    
+                    // Add the click handler that was missing
+                    btn.addEventListener('click', debounce(handleUseConsumable, 500));
                 } else {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
+                    console.log('No consumable found. Active char:', activeChar);
                 }
             } else if (btnIndex === 9) {
                 btn.textContent = 'End Turn';
@@ -1270,7 +1325,14 @@ const handleEndTurn = async () => {
 };
 
 const handleUseConsumable = async () => {
-    const activeCharacter = BattleState.currentTurnCharacter;
+    // Try to find the character with the consumable more robustly
+    let activeCharacter = BattleState.currentTurnCharacter;
+    
+    if (!activeCharacter) {
+        // Fallback: find any player character
+        activeCharacter = BattleState.characters.find(c => c.isPlayerControlled);
+    }
+    
     if (!activeCharacter) {
         displayMessage('No character is currently active for this turn.');
         return;
