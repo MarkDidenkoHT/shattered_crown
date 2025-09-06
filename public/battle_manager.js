@@ -1311,15 +1311,24 @@ const handleUseConsumable = async () => {
         return;
     }
 
+    const requestData = {
+        battleId: BattleState.battleId,
+        characterId: activeCharacter.id,
+        playerId: BattleState.profile.id,
+        consumableItem: consumable
+    };
+
+    console.log('=== USE CONSUMABLE DEBUG ===');
+    console.log('Request data:', requestData);
+    console.log('Active character:', activeCharacter);
+    console.log('Profile:', BattleState.profile);
+    console.log('============================');
+
     try {
-        const res = await BattleState.apiCall('/functions/v1/use-consumable', 'POST', {
-            battleId: BattleState.battleId,
-            characterId: activeCharacter.id,
-            playerId: BattleState.profile.id,
-            consumableItem: consumable
-        });
+        const res = await BattleState.apiCall('/functions/v1/use-consumable', 'POST', requestData);
 
         const result = await res.json();
+        console.log('Server response:', result);
 
         if (!result.success) {
             displayMessage(`Error using ${consumable}: ${result.message}`, 'error');
@@ -1334,6 +1343,7 @@ const handleUseConsumable = async () => {
         }, 1000);
 
     } catch (err) {
+        console.error('Use consumable error:', err);
         displayMessage('Error using consumable. Please try again.', 'error');
     }
 };
