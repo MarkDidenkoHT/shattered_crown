@@ -132,9 +132,9 @@ function characterCardHTML(character) {
   const spirit = normalizedStats.spirit || 0;
   const dexterity = normalizedStats.dexterity || 0;
   const intellect = normalizedStats.intellect || 0;
+  const armor = normalizedStats.armor || 0;
+  const resistance = normalizedStats.resistance || 0;
   const hp = vitality * 10;
-  const armor = Math.floor(strength * 0.25);
-  const resistance = Math.floor(spirit * 0.25);
 
   const statsData = [
     { label: 'Strength', value: strength },
@@ -209,8 +209,6 @@ function characterCardHTML(character) {
                       data-stat-name="${stat.label}" 
                       data-total-value="${stat.value}"
                       data-base-value="${stat.label === 'HP' ? (normalizedBaseStats.vitality || 0) * 10 : 
-                                        stat.label === 'Armor' ? Math.floor((normalizedBaseStats.strength || 0) * 0.25) : 
-                                        stat.label === 'Resistance' ? Math.floor((normalizedBaseStats.spirit || 0) * 0.25) : 
                                         normalizedBaseStats[stat.label.toLowerCase()] || 0}"
                       style="cursor: pointer; text-decoration: underline;">
                   ${stat.value}
