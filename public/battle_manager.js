@@ -751,6 +751,8 @@ const handleTurnLogic = () => {
             handleAITurn();
         }
     }
+
+    renderBottomUI();
 };
 
 const handleAITurn = async () => {
@@ -1054,6 +1056,7 @@ const handleCharacterSelection = (character, tileEl) => {
     }
     
     showEntityInfo(character);
+    renderBottomUI();
 };
 
 const handleMovementOrDeselect = async (tileEl, targetX, targetY) => {
