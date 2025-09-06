@@ -70,6 +70,7 @@ const processCharacterState = (charState) => {
         name: charState.name,
         type: charState.type,
         isPlayerControlled: charState.isPlayerControlled,
+        equipped_items: charState.equipped_items || {},
         position: charState.current_position,
         originalPosition: charState.current_position,
         stats: {
@@ -1187,7 +1188,23 @@ function renderBottomUI() {
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
 
-            if (btnIndex === 9) {
+            if (btnIndex === 5) {
+                // Consumable button (6th button, index 5)
+                const activeChar = BattleState.currentTurnCharacter;
+                const consumable = activeChar?.equipped_items?.equipped_consumable;
+                
+                if (consumable && consumable !== 'none') {
+                    // Create image element for item sprite
+                    const itemSprite = consumable.replace(/\s+/g, ''); // Remove spaces
+                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 24px; height: 24px; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.textContent='${consumable}';">`;
+                    btn.id = 'consumableButton';
+                    btn.disabled = false;
+                    btn.title = consumable; // Tooltip showing item name
+                } else {
+                    btn.textContent = 'No Item';
+                    btn.disabled = true;
+                }
+            } else if (btnIndex === 9) {
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
@@ -1249,6 +1266,51 @@ const handleEndTurn = async () => {
 
     } catch (err) {
         displayMessage('Error completing turn. Please try again.', 'error');
+    }
+};
+
+const handleUseConsumable = async () => {
+    const activeCharacter = BattleState.currentTurnCharacter;
+    if (!activeCharacter) {
+        displayMessage('No character is currently active for this turn.');
+        return;
+    }
+
+    const consumable = activeCharacter.equipped_items?.equipped_consumable;
+    if (!consumable || consumable === 'none') {
+        displayMessage('No consumable equipped.');
+        return;
+    }
+
+    if (activeCharacter.has_acted) {
+        displayMessage('This character has already acted this turn.');
+        return;
+    }
+
+    try {
+        const res = await BattleState.apiCall('/functions/v1/use-consumable', 'POST', {
+            battleId: BattleState.battleId,
+            characterId: activeCharacter.id,
+            playerId: BattleState.profile.id,
+            consumableItem: consumable
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            displayMessage(`Error using ${consumable}: ${result.message}`, 'error');
+            return;
+        }
+
+        displayMessage(`Used ${consumable}!`, 'success');
+        
+        // Using a consumable always ends the turn
+        setTimeout(() => {
+            handleEndTurn();
+        }, 1000);
+
+    } catch (err) {
+        displayMessage('Error using consumable. Please try again.', 'error');
     }
 };
 
