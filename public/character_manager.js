@@ -110,14 +110,22 @@ function renderCharacters(characters) {
 
   setupEquipmentClickHandlers(section, characters);
   setupSpellbookHandlers(section, characters);
+  setupStatsClickHandlers(section, characters);
   setupDragSlider();
 }
 
 function characterCardHTML(character) {
-  const stats = character.stats || {};
+  // Use total_stats if available, fallback to base stats
+  const stats = character.total_stats || character.stats || {};
+  const baseStats = character.stats || {};
   const normalizedStats = {};
+  const normalizedBaseStats = {};
+  
   for (const [key, value] of Object.entries(stats)) {
     normalizedStats[key.toLowerCase()] = value;
+  }
+  for (const [key, value] of Object.entries(baseStats)) {
+    normalizedBaseStats[key.toLowerCase()] = value;
   }
   const strength = normalizedStats.strength || 0;
   const vitality = normalizedStats.vitality || 0;
@@ -193,7 +201,22 @@ function characterCardHTML(character) {
         <div class="stats-block">
           <h4>Stats</h4>
           <div class="stats-list">
-            ${statsData.map(stat => `<p>${stat.label}: <span>${stat.value}</span></p>`).join('')}
+            ${statsData.map(stat => `
+              <p>
+                ${stat.label}: 
+                <span class="stat-value" 
+                      data-character-id="${character.id}" 
+                      data-stat-name="${stat.label}" 
+                      data-total-value="${stat.value}"
+                      data-base-value="${stat.label === 'HP' ? (normalizedBaseStats.vitality || 0) * 10 : 
+                                        stat.label === 'Armor' ? Math.floor((normalizedBaseStats.strength || 0) * 0.25) : 
+                                        stat.label === 'Resistance' ? Math.floor((normalizedBaseStats.spirit || 0) * 0.25) : 
+                                        normalizedBaseStats[stat.label.toLowerCase()] || 0}"
+                      style="cursor: pointer; text-decoration: underline;">
+                  ${stat.value}
+                </span>
+              </p>
+            `).join('')}
           </div>
         </div>
       </div>
@@ -375,6 +398,26 @@ function setupSpellbookHandlers(section, characters) {
       e.stopPropagation();
       
       displayMessage('Talents system coming soon!');
+    });
+  });
+}
+
+function setupStatsClickHandlers(section, characters) {
+  section.querySelectorAll('.stat-value').forEach(statEl => {
+    statEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const characterId = statEl.dataset.characterId;
+      const statName = statEl.dataset.statName;
+      const totalValue = parseInt(statEl.dataset.totalValue);
+      const baseValue = parseInt(statEl.dataset.baseValue);
+      const itemBonus = totalValue - baseValue;
+      
+      const character = characters.find(c => c.id == characterId);
+      if (!character) return;
+      
+      showStatsBreakdown(character, statName, baseValue, itemBonus, totalValue);
     });
   });
 }
@@ -643,6 +686,52 @@ async function equipItem(character, slot, itemName, craftingSessionId = null, is
   }
 }
 
+function showStatsBreakdown(character, statName, baseValue, itemBonus, totalValue) {
+  const modal = document.createElement('div');
+  modal.className = 'custom-message-box';
+  modal.innerHTML = `
+    <div class="message-content" style="width: 90%; max-width: 400px;">
+      <h2>${statName} Breakdown</h2>
+      <p style="margin-bottom: 1rem; color: #ccc;">
+        Character: <strong>${character.name || `Lvl ${character.level} ${character.races?.name} ${character.classes?.name}`}</strong>
+      </p>
+      
+      <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span>Base ${statName}:</span>
+          <span style="color: #4CAF50;">${baseValue}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span>Item Bonus:</span>
+          <span style="color: ${itemBonus > 0 ? '#4CAF50' : '#999'};">+${itemBonus}</span>
+        </div>
+        <hr style="border: 1px solid rgba(196,151,90,0.3); margin: 0.5rem 0;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold;">
+          <span>Total ${statName}:</span>
+          <span style="color: #c4975a;">${totalValue}</span>
+        </div>
+      </div>
+      
+      <div style="display: flex; justify-content: center;">
+        <button class="fantasy-button close-btn" style="max-width: 120px;">Close</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const closeBtn = modal.querySelector('.close-btn');
+  closeBtn.addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
 function createParticles() {
   const particlesContainer = _main.querySelector('.particles');
   if (!particlesContainer) return;
@@ -820,7 +909,6 @@ styleEl.textContent = `
     gap: 6px;
     margin-bottom: 8px;
     padding-top: 8px;
-    border-top: 1px solid rgba(196,151,90,0.15);
 }
 
 .equipment-block, .stats-block {
@@ -862,9 +950,8 @@ styleEl.textContent = `
 
 .character-actions {
     display: flex;
-    gap: 0.8rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(196,151,90,0.15);
+    gap: 5px;
+    padding-top: 6px;
 }
 
 .character-actions .fantasy-button {
@@ -1069,10 +1156,6 @@ styleEl.textContent = `
     .stats-items-container {
         flex-direction: row;
         gap: 0.8rem;
-    }
-    
-    .character-actions {
-        flex-direction: column;
     }
     
     .spells-grid {
