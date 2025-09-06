@@ -1208,58 +1208,23 @@ function renderBottomUI() {
             btn.className = 'fantasy-button ui-btn';
 
             if (btnIndex === 5) {
-                // Consumable button (6th button, index 5)
-                
-                // Try multiple ways to find the active character with consumable
-                let activeChar = null;
-                let consumable = null;
-
-                // Method 1: Use currentTurnCharacter
-                if (BattleState.currentTurnCharacter?.equipped_items?.equipped_consumable) {
-                    activeChar = BattleState.currentTurnCharacter;
-                    consumable = activeChar.equipped_items.equipped_consumable;
-                    console.log('Found consumable via currentTurnCharacter:', consumable);
-                }
-
-                // Method 2: Find first player character with consumable (fallback)
-                if (!consumable) {
-                    const playerChars = BattleState.characters.filter(c => c.isPlayerControlled);
-                    for (const char of playerChars) {
-                        if (char.equipped_items?.equipped_consumable && char.equipped_items.equipped_consumable !== 'none') {
-                            activeChar = char;
-                            consumable = char.equipped_items.equipped_consumable;
-                            console.log('Found consumable via player character search:', consumable);
-                            break;
-                        }
-                    }
-                }
-
-                // Method 3: Check if current turn is player and get any player character
-                if (!consumable && BattleState.battleState?.current_turn !== 'AI') {
-                    const playerChars = BattleState.characters.filter(c => c.isPlayerControlled);
-                    if (playerChars.length > 0) {
-                        activeChar = playerChars[0];
-                        consumable = activeChar.equipped_items?.equipped_consumable;
-                        console.log('Found consumable via turn-based player search:', consumable);
-                    }
-                }
+                // Consumable button - only show for current turn character
+                const currentChar = BattleState.currentTurnCharacter;
+                const consumable = currentChar?.equipped_items?.equipped_consumable;
                 
                 if (consumable && consumable !== 'none') {
-                    // Create image element for item sprite
-                    const itemSprite = consumable.replace(/\s+/g, ''); // Remove spaces
-                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 24px; height: 24px; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.textContent='${consumable}';">`;
+                    const itemSprite = consumable.replace(/\s+/g, '');
+                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
                     btn.id = 'consumableButton';
                     btn.disabled = false;
-                    btn.title = consumable; // Tooltip showing item name
-                    
-                    // Add the click handler that was missing
+                    btn.title = consumable;
                     btn.addEventListener('click', debounce(handleUseConsumable, 500));
                 } else {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
-                    console.log('No consumable found. Active char:', activeChar);
                 }
-            } else if (btnIndex === 9) {
+            }
+            else if (btnIndex === 9) {
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
