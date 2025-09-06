@@ -412,13 +412,11 @@ function setButtonLoading(button, loading) {
 
 function showStatus(type, message, rewards = null) {
   const statusEl = _main.querySelector('#blessingStatus');
-  const statusIcon = statusEl.querySelector('.status-icon');
   const statusMessage = statusEl.querySelector('.status-message');
   
   statusEl.className = `blessing-status ${type}`;
   
   if (type === 'success') {
-    statusIcon.textContent = '✨';
     let fullMessage = message;
     
     if (rewards && rewards.length > 0) {
@@ -428,7 +426,6 @@ function showStatus(type, message, rewards = null) {
     
     statusMessage.textContent = fullMessage;
   } else {
-    statusIcon.textContent = '❌';
     statusMessage.textContent = message;
   }
   
@@ -455,9 +452,10 @@ async function loadRecentBlessings() {
     const profiles = await response.json();
 
     if (profiles && profiles.length > 0 && profiles[0].promos_used) {
-      const recentPromos = profiles[0].promos_used.slice(-3).reverse();
-      if (recentPromos.length > 0) {
-        displayRecentBlessings(recentPromos);
+      // Show all promos, not just last 3
+      const allPromos = profiles[0].promos_used.slice().reverse();
+      if (allPromos.length > 0) {
+        displayRecentBlessings(allPromos);
       }
     }
   } catch (error) {
@@ -637,9 +635,9 @@ styleEl.textContent = `
   }
 
   .blessing-status {
-    padding: 1.5rem;
+    padding: 6px;
     border-radius: 10px;
-    margin-top: 1rem;
+    margin-top: 6px;
     animation: fadeInScale 0.5s ease-out;
   }
 
@@ -657,12 +655,6 @@ styleEl.textContent = `
     display: flex;
     align-items: flex-start;
     gap: 1rem;
-  }
-
-  .status-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-    margin-top: 0.2rem;
   }
 
   .status-message {
