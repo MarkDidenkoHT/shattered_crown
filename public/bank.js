@@ -334,13 +334,23 @@ function createDynamicFilters() {
 }
 
 function getGearIconPath(itemName) {
-    // Remove rarity prefix
-    let baseName = itemName.replace(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i, '');
-    // Remove suffixes like "of the Fox"
+    console.log('getGearIconPath called with:', itemName);
+    
+    let baseName = itemName;
+    
+    baseName = baseName.replace(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i, '');
+    console.log('After removing rarity prefix:', baseName);
+    
     baseName = baseName.replace(/\s+of\s+(the\s+)?.*$/i, '');
-    // Remove spaces for sprite filename
+    console.log('After removing suffix:', baseName);
+    
     const spriteName = baseName.replace(/\s+/g, '');
-    return `assets/art/items/${spriteName}.png`;
+    console.log('Final sprite name:', spriteName);
+    
+    const finalPath = `assets/art/items/${spriteName}.png`;
+    console.log('Final path:', finalPath);
+    
+    return finalPath;
 }
 
 function getItemIcon(item) {
