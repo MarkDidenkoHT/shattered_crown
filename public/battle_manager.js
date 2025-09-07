@@ -566,14 +566,60 @@ const setupRealtimeSubscription = () => {
 async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
 
-    // Add guard for characters_state
+    // Add comprehensive guard for characters_state
     if (!BattleState.battleState.characters_state) {
-        console.warn('Battle state missing characters_state:', BattleState.battleState);
+        console.warn('Battle state missing characters_state, attempting to fetch complete battle state...');
+        
+        try {
+            // Attempt to fetch the complete battle state from the database
+            const supabase = getSupabaseClient({ 
+                SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
+                SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
+            });
+            
+            const { data: completeBattleState, error } = await supabase
+                .from('battle_state')
+                .select('*')
+                .eq('id', BattleState.battleId)
+                .single();
+                
+            if (error) {
+                console.error('Failed to fetch complete battle state:', error);
+                displayMessage('Battle state sync error. Please refresh.', 'warning');
+                return;
+            }
+            
+            if (!completeBattleState.characters_state) {
+                console.error('Complete battle state also missing characters_state:', completeBattleState);
+                displayMessage('Critical battle state error. Please restart battle.', 'error');
+                return;
+            }
+            
+            // Update with complete battle state
+            BattleState.battleState = completeBattleState;
+            console.log('Successfully restored complete battle state');
+            
+        } catch (fetchError) {
+            console.error('Error fetching complete battle state:', fetchError);
+            displayMessage('Unable to sync battle state. Please refresh.', 'error');
+            return;
+        }
+    }
+
+    // Validate characters_state structure
+    if (typeof BattleState.battleState.characters_state !== 'object') {
+        console.error('characters_state is not an object:', BattleState.battleState.characters_state);
+        displayMessage('Invalid battle state format. Please refresh.', 'error');
         return;
     }
 
-    const newCharacters = Object.values(BattleState.battleState.characters_state)
-        .map(processCharacterState);
+    const charactersStateValues = Object.values(BattleState.battleState.characters_state);
+    if (charactersStateValues.length === 0) {
+        console.warn('characters_state is empty, this might be expected at battle end');
+        return;
+    }
+
+    const newCharacters = charactersStateValues.map(processCharacterState);
     
     // Handle character updates with animations
     await updateCharactersWithAnimations(newCharacters);
