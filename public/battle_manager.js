@@ -539,6 +539,8 @@ const initializeBattle = async (selectedMode, areaLevel) => {
     BattleState.battleState = initialState;
 };
 
+let skipNextRealtimeUpdate = false;
+
 const setupRealtimeSubscription = () => {
     const supabase = getSupabaseClient({ 
         SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
@@ -556,6 +558,10 @@ const setupRealtimeSubscription = () => {
                 filter: `id=eq.${BattleState.battleId}`
             },
             throttle(async (payload) => {
+                if (skipNextRealtimeUpdate) {
+                    skipNextRealtimeUpdate = false;
+                    return;
+                }
                 BattleState.battleState = payload.new;
                 await updateGameStateFromRealtime();
             }, 100)
@@ -1346,6 +1352,7 @@ const handleEndTurn = async () => {
 
         // Use the returned battleState if present
         if (result.battleState && result.battleState.characters_state) {
+            skipNextRealtimeUpdate = true; // Ignore next realtime update
             BattleState.battleState = result.battleState;
             await updateGameStateFromRealtime();
         }
