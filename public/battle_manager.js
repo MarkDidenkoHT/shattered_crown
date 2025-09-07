@@ -1328,7 +1328,17 @@ const handleEndTurn = async () => {
             action
         });
 
-        const result = await res.json();
+        // Only call .json() if response is JSON
+        let result;
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            result = await res.json();
+        } else {
+            result = await res.text();
+            console.error('Non-JSON response:', result);
+            displayMessage('Server returned invalid response.', 'error');
+            return;
+        }
 
         if (!result.success) {
             displayMessage(`Error: ${result.message}`, 'error');
