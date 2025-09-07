@@ -1328,7 +1328,6 @@ const handleEndTurn = async () => {
             action
         });
 
-        // Only call .json() if response is JSON
         let result;
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
@@ -1345,8 +1344,13 @@ const handleEndTurn = async () => {
             return;
         }
 
+        // Use the returned battleState if present
+        if (result.battleState && result.battleState.characters_state) {
+            BattleState.battleState = result.battleState;
+            await updateGameStateFromRealtime();
+        }
+
         BattleState.currentTurnCharacter = null;
-        // Reset move queued flag after turn ends
         BattleState.isMoveQueued = false;
 
     } catch (err) {
