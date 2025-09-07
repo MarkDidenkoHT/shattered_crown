@@ -566,6 +566,12 @@ const setupRealtimeSubscription = () => {
 async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
 
+    // Add guard for characters_state
+    if (!BattleState.battleState.characters_state) {
+        console.warn('Battle state missing characters_state:', BattleState.battleState);
+        return;
+    }
+
     const newCharacters = Object.values(BattleState.battleState.characters_state)
         .map(processCharacterState);
     
