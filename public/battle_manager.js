@@ -1201,6 +1201,11 @@ function renderBottomUI() {
     debugConsumableLoading();
 
     const fragment = document.createDocumentFragment();
+    const currentChar = BattleState.currentTurnCharacter;
+    let selectedAbilities = [];
+    if (currentChar && currentChar.selected_abilities && currentChar.selected_abilities.basic) {
+        selectedAbilities = currentChar.selected_abilities.basic.slice(0, 3);
+    }
 
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
@@ -1211,7 +1216,20 @@ function renderBottomUI() {
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
 
-            if (btnIndex === 4) {
+            if (btnIndex < 3 && selectedAbilities[btnIndex]) {
+                // Ability button: load ability sprite
+                fetch(`/api/supabase/rest/v1/abilities?name=eq.${encodeURIComponent(selectedAbilities[btnIndex])}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const ability = data[0];
+                        if (ability && ability.sprite) {
+                            btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:32px;height:32px;'>`;
+                            btn.title = ability.name;
+                        }
+                    });
+                btn.disabled = false;
+                btn.addEventListener('click', debounce(handleEndTurn, 500));
+            } else if (btnIndex === 4) {
                 btn.textContent = 'Refresh';
                 btn.id = 'refreshButtonBottom';
                 btn.disabled = false;
