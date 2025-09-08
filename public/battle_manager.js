@@ -83,6 +83,7 @@ const processCharacterState = (charState) => {
             resistance: normalizedStats.resistance || 0
         },
         spriteName: charState.sprite_name,
+        portrait: charState.portrait, // <-- Add portrait field
         has_moved: charState.has_moved,
         has_acted: charState.has_acted,
         current_hp: charState.current_hp || (vitality * 10),
@@ -945,11 +946,12 @@ const createCharacterElement = (char) => {
         zIndex: '5', boxSizing: 'border-box'
     });
 
+    // Use portrait if available, otherwise fallback to spriteName
     const img = document.createElement('img');
-    img.src = `assets/art/sprites/${char.spriteName || 'placeholder'}.png`;
+    img.src = char.portrait ? `assets/art/portraits/${char.portrait}` : `assets/art/sprites/${char.spriteName || 'placeholder'}.png`;
     img.alt = char.name;
     img.addEventListener('error', () => {
-        img.src = 'assets/art/sprites/placeholder.png';
+        img.src = char.portrait ? 'assets/art/portraits/placeholder.png' : 'assets/art/sprites/placeholder.png';
     });
     
     Object.assign(img.style, {
