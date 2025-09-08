@@ -338,8 +338,9 @@ function addSupportStyles() {
             border: 2px solid #c4975a;
             border-radius: 15px;
             padding: 0;
+            margin: 1rem;
             max-width: 700px;
-            max-height: 80vh;
+            min-height: 95vh;
             width: 95%;
             color: #e0d8c9;
             font-family: 'Cinzel', serif;
@@ -440,7 +441,7 @@ function addSupportStyles() {
         .new-ticket-form {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 0.5rem;
         }
 
         .form-group {
@@ -657,11 +658,6 @@ function addSupportStyles() {
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
-            .support-modal-content {
-                margin: 1rem;
-                max-height: 90vh;
-            }
-
             .support-header {
                 padding: 1rem;
             }

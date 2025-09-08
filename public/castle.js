@@ -259,7 +259,7 @@ function addCastleStyles() {
         .castle-scene {
             position: relative;
             width: 100%;
-            height: 83%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -284,9 +284,7 @@ function addCastleStyles() {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 0.5rem;
-            padding: 1rem;
-            background: linear-gradient(to top, rgba(29, 20, 12, 0.9), rgba(29, 20, 12, 0.5));
-            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
+            padding: 1rem 1rem 0.5rem 1rem;
             z-index: 10;
         }
 
