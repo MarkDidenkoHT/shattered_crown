@@ -145,7 +145,7 @@ function renderBlacksmithingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 90vh; height: 90vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
                 
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select materials and item type to begin forging</div>
       
@@ -186,9 +186,9 @@ function renderBlacksmithingModal() {
       
       <div style="display: flex; justify-content: center; gap: 0.5rem;">
         <button class="help-tutorial-close-button message-ok-btn">X</button>
-        <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Forge</button>
-        <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
-        <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
+        <button id="craft-btn" class="help-tutorial-craft-button" disabled>Forge</button>
+        <button id="finish-btn" class="help-tutorial-craft-button" disabled style="display: none;">Finish</button>
+        <button id="claim-btn" class="help-tutorial-craft-button" style="display: none;">Claim</button>
       </div>
     </div>
 

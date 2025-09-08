@@ -277,7 +277,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">        
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 90vh; height: 90vh; overflow-y: auto; text-align: center; scrollbar-width:none;">        
       <div id="craft-result" style="margin: 0.4rem 0; font-weight: bold; min-height: 16px; font-size: 0.9rem;">Set up your garden to start growing</div>
       
       <div>
@@ -301,8 +301,8 @@ function renderCraftingModal() {
       
       <div style="display: flex; justify-content: center; gap: 0.3rem;">
         <button class="help-tutorial-close-button message-ok-btn">X</button>
-        <button id="grow-btn" class="fantasy-button" disabled>Grow</button>
-        <button id="claim-all-btn" class="fantasy-button" style="display: none;">Claim All</button>
+        <button id="grow-btn" class="help-tutorial-craft-button" disabled>Grow</button>
+        <button id="claim-all-btn" class="help-tutorial-craft-button" style="display: none;">Claim All</button>
       </div>
     </div>
 

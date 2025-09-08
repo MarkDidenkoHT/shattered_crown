@@ -154,10 +154,10 @@ function createMiningRowHTML(rowIndex) {
         <button class="fantasy-button adjust-left" data-row="${rowIndex}" style="padding: 0.3rem 0.6rem; font-size: 1.2rem; opacity: 0.3;" disabled>←</button>
       </div>
       
-      <div class="rock-formation" style="width: 380px; height: 80px; background: linear-gradient(135deg, #8B7355 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%); border: 3px solid #654321; border-radius: 15px; display: flex; align-items: center; position: relative; box-shadow: inset 0 4px 8px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);">
+      <div class="rock-formation" style="width: 380px; height: 75px; background: linear-gradient(135deg, #8B7355 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%); border: 3px solid #654321; border-radius: 15px; display: flex; align-items: center; position: relative; box-shadow: inset 0 4px 8px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);">
         <div class="rock-texture" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px); border-radius: 12px; pointer-events: none;"></div>
         
-        <div class="ore-input-slot" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px dashed #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,215,0,0.15); z-index: 15; transition: all 0.5s ease;">
+        <div class="ore-input-slot" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 65px; height: 65px; border: 2px dashed #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,215,0,0.15); z-index: 15; transition: all 0.5s ease;">
           <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore</span>
         </div>
         
@@ -216,7 +216,7 @@ function renderCraftingModal() {
   const modal = document.createElement('div');
   modal.className = 'custom-message-box';
   modal.innerHTML = `
-    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 99vh; height: 99vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
+    <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 90vh; height: 90vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
                 
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select 3 ores to start mining</div>
       
@@ -250,9 +250,9 @@ function renderCraftingModal() {
       
       <div style="display: flex; justify-content: center; gap: 0.5rem;">
         <button class="help-tutorial-close-button message-ok-btn">X</button>
-        <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Mine</button>
-        <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Extract</button>
-        <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
+        <button id="craft-btn" class="help-tutorial-craft-button" disabled>Mine</button>
+        <button id="finish-btn" class="help-tutorial-craft-button" disabled style="display: none;">Extract</button>
+        <button id="claim-btn" class="help-tutorial-craft-button" style="display: none;">Claim</button>
       </div>
     </div>
 
