@@ -234,8 +234,8 @@ function renderBarsHTML() {
   return forgingState.availableBars.map((bar, idx) => `
     <div class="material-item bar" data-index="${idx}" style="cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139, 69, 19, 0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative; flex: 0 0 auto;">
       <img src="assets/art/ingridients/${bar.sprite}.png" title="${bar.name} (${bar.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bar.name}">${bar.name}</div>
       <div style="font-size: 0.8rem; margin-top: 4px; color: #FFD700; font-weight: bold;">x${bar.amount}</div>
+      <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bar.name}">${bar.name}</div>
       <div class="info-icon" data-bar="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
   `).join('');
@@ -249,8 +249,8 @@ function renderPowdersHTML() {
   return forgingState.availablePowders.map((powder, idx) => `
     <div class="material-item powder" data-index="${idx}" style="cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139, 69, 19, 0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative; flex: 0 0 auto;">
       <img src="assets/art/ingridients/${powder.sprite}.png" title="${powder.name} (${powder.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${powder.name}">${powder.name}</div>
       <div style="font-size: 0.8rem; margin-top: 4px; color: #FFD700; font-weight: bold;">x${powder.amount}</div>
+      <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${powder.name}">${powder.name}</div>
       <div class="rarity-indicator" style="position: absolute; top: -2px; left: -2px; width: 12px; height: 12px; background: ${RARITY_LEVELS[powder.name]?.color || '#666'}; border-radius: 50%; border: 1px solid #fff;"></div>
       <div class="info-icon" data-powder="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
     </div>
