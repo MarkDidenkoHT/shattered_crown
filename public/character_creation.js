@@ -3,6 +3,7 @@ let _races = [], _classes = [], _professions = [];
 let _existingCharacterCount = 0, _maxCharacters = 3;
 let _selectedRace = null, _selectedClass = null, _selectedPortrait = null, _selectedProfession = null;
 let _usedProfessionIds = [];
+let _characterName = '';
 
 export async function loadModule(main, { apiCall, getCurrentProfile }) {
     _main = main;
@@ -43,14 +44,47 @@ async function initializeCharacterData() {
 
 async function startCharacterCreationFlow() {
     _selectedRace = _selectedClass = _selectedPortrait = _selectedProfession = null;
-    
+    _characterName = '';
     if (_existingCharacterCount >= _maxCharacters) {
         displayMessage('All your champions are ready! Entering the Castle...');
         window.gameAuth.loadModule('castle');
         return;
     }
+    renderNameSelection();
+}
 
-    await fetchRacesAndRenderSelection();
+function renderNameSelection() {
+    const section = _main.querySelector('.character-creation-section');
+    const currentCharacterNumber = _existingCharacterCount + 1;
+    section.innerHTML = `
+        <div class="art-header">
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name Your Champion</h1>
+        </div>
+        <div class="name-selection-block">
+            <label for="character-name-input">Enter a name for your champion:</label>
+            <input type="text" id="character-name-input" maxlength="24" placeholder="Champion Name" class="fantasy-input" value="${_characterName}">
+            <div class="name-error-message" style="color: red; display: none;"></div>
+            <button class="fantasy-button name-confirm-btn">Confirm Name</button>
+        </div>
+    `;
+    const input = section.querySelector('#character-name-input');
+    const errorMsg = section.querySelector('.name-error-message');
+    section.querySelector('.name-confirm-btn').addEventListener('click', () => {
+        const name = input.value.trim();
+        if (!name) {
+            errorMsg.textContent = 'Please enter a name.';
+            errorMsg.style.display = 'block';
+            return;
+        }
+        if (name.length < 2) {
+            errorMsg.textContent = 'Name must be at least 2 characters.';
+            errorMsg.style.display = 'block';
+            return;
+        }
+        errorMsg.style.display = 'none';
+        _characterName = name;
+        fetchRacesAndRenderSelection();
+    });
 }
 
 async function fetchRacesAndRenderSelection() {
@@ -686,7 +720,8 @@ async function confirmCharacter() {
             race_id: _selectedRace.id,
             class_id: _selectedClass.id,
             portrait: _selectedPortrait,
-            profession_id: _selectedProfession.id
+            profession_id: _selectedProfession.id,
+            name: _characterName
         };
 
         const response = await _apiCall(`${window.gameAuth.supabaseConfig?.SUPABASE_URL}/functions/v1/create-character`, {
