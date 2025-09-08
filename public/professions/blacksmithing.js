@@ -858,7 +858,6 @@ async function finishForging(resultDiv) {
         claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
         
         newClaimBtn.addEventListener('click', () => {
-          context.displayMessage(`${json.crafted.name} added to your bank!`);
           document.querySelector('.custom-message-box')?.remove();
           forgingState = null;
         });
