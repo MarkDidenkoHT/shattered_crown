@@ -814,14 +814,11 @@ function renderBattleScreen(mode, level, layoutData) {
         }
         </style>
         <div class="main-app-container">
+            <div class="battle-grid-container"></div>
             <div class="battle-top-bar">
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
                 <p id="turnStatus">Turn: —</p>
-                <div class="battle-controls">
-                    <button id="refreshButton" class="fantasy-button small-btn">Refresh</button>
-                </div>
             </div>
-            <div class="battle-grid-container"></div>
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
                     <div style="width: 25%; display: flex; align-items: center; justify-content: center;">
@@ -852,11 +849,6 @@ function renderBattleScreen(mode, level, layoutData) {
     renderBattleGrid(layoutData.layout);
     renderCharacters();
     createParticles();
-    
-    const refreshBtn = document.getElementById('refreshButton');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', debounce(handleRefresh, 300));
-    }
 }
 
 function renderBattleGrid(layoutJson) {
@@ -1216,7 +1208,11 @@ function renderBottomUI() {
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
 
-            if (btnIndex === 5) {
+            if (btnIndex === 4) {
+                btn.textContent = 'Refresh';
+                btn.id = 'refreshButtonBottom';
+                btn.disabled = false;
+            } else if (btnIndex === 5) {
                 // Consumable button - only show for current turn character
                 const currentChar = BattleState.currentTurnCharacter;
                 const consumable = currentChar?.equipped_items?.equipped_consumable;
@@ -1253,6 +1249,10 @@ function renderBottomUI() {
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
     if (endTurnBtn) {
         endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
+    }
+    const refreshBtnBottom = document.getElementById('refreshButtonBottom');
+    if (refreshBtnBottom) {
+        refreshBtnBottom.addEventListener('click', debounce(handleRefresh, 300));
     }
 }
 

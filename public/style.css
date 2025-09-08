@@ -1202,3 +1202,8 @@
             border: 2px solid #ff8000; /* Orange */
             box-shadow: 0 0 6px rgba(255, 128, 0, 0.3);
         }
+
+.battle-ui-row {
+    display: flex;
+    max-height: 55px;
+}

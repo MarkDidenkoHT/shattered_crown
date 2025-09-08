@@ -234,8 +234,8 @@ function showReconnectModal(battleData) {
         </div>
       </div>
       <div class="modal-footer">
-        <button class="fantasy-button reconnect-btn">Resume Battle</button>
-        <button class="fantasy-button abandon-btn secondary">Start New Battle</button>
+        <button class="fantasy-button reconnect-btn">Resume</button>
+        <button class="fantasy-button abandon-btn secondary">Abandon</button>
       </div>
     </div>
   `;
