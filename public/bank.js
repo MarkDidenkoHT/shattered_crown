@@ -492,20 +492,6 @@ function addBankStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-        .item-icon {
-            position: relative;
-            width: 48px;
-            height: 48px;
-            flex-shrink: 0;
-        }
-
-        .item-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid #3d2914;
-        }
 
         .item-quantity {
             position: absolute;

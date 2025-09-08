@@ -949,21 +949,6 @@ function addAuctionStyles() {
             opacity: 0.85;
         }
 
-        .item-icon {
-            position: relative;
-            width: 60px;
-            height: 60px;
-            flex-shrink: 0;
-        }
-
-        .item-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid #3d2914;
-        }
-
         .item-quantity {
             position: absolute;
             bottom: -4px;
