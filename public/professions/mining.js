@@ -244,7 +244,7 @@ function renderCraftingModal() {
         <button id="filter-powders" class="fantasy-button filter-btn" data-filter="powders" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Powders</button>
         <button id="filter-gems" class="fantasy-button filter-btn" data-filter="gems" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Gems</button>
       </div>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 1rem; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderRecipesHTML()}
       </div>
       

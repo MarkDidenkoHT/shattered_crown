@@ -901,22 +901,23 @@
 
         /* prof help classes */
 
-    .help-tutorial-fantasy-button {
-        background: linear-gradient(145deg, #c4975a, #a25612);
-        border: 2px solid #3d2914;
-        color: #FFD700;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1.5rem;
-        font-family: 'Cinzel', serif;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.2);
-        position: fixed;
-        bottom: 2px;
-        left: 2px;
-    }
+        .help-tutorial-fantasy-button {
+            background: linear-gradient(145deg, #c4975a, #a25612);
+            border: 2px solid #3d2914;
+            color: #FFD700;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.2);
+            position: fixed;
+            bottom: 2px;
+            left: 2px;
+            max-height: 52px;
+        }
 
         .help-tutorial-craft-button {
             background: linear-gradient(145deg, #c4975a, #a25612);
@@ -934,24 +935,26 @@
             bottom: 2px;
             left: 50%;
             transform: translateX(-50%);
+            max-height: 52px;
         }
 
         .help-tutorial-close-button {
-        background: linear-gradient(145deg, #c4975a, #a25612);
-        border: 2px solid #3d2914;
-        color: #FFD700;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1.5rem;
-        font-family: 'Cinzel', serif;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.2);
-        position: fixed;
-        bottom: 2px;
-        right: 2px;
-    }
+            background: linear-gradient(145deg, #c4975a, #a25612);
+            border: 2px solid #3d2914;
+            color: #FFD700;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.2);
+            position: fixed;
+            bottom: 2px;
+            right: 2px;
+            max-height: 52px;
+        }
 
     .help-tutorial-modal {
         display: none;

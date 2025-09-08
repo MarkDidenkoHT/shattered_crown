@@ -295,7 +295,7 @@ function renderCraftingModal() {
       </div>
       
       <h3 style="margin: 0.3rem 0; font-size: 0.9rem;">Recipes</h3>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; margin-bottom: 0.6rem; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.3rem; padding: 3px; border: 1px solid #8B4513; border-radius: 4px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -565,11 +565,6 @@ function setupModalEventListeners(modal) {
 
   // Claim all button
   claimAllBtn.addEventListener('click', () => {
-    const successfulCrafts = herbalismState.results.filter(r => r && r.success);
-    if (successfulCrafts.length > 0) {
-      const itemNames = successfulCrafts.map(r => r.crafted.name).join(', ');
-      context.displayMessage(`Claimed: ${itemNames}`);
-    }
     modal.remove();
     herbalismState = null;
   });
