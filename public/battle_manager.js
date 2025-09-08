@@ -176,7 +176,8 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
         `;
         indicator.textContent = `${newHP > oldHP ? '+' : ''}${newHP - oldHP}`;
         
-        hpBarEl.style.position = 'relative';
+        // Always keep hpBarEl position absolute
+        hpBarEl.style.position = 'absolute';
         hpBarEl.appendChild(indicator);
         
         setTimeout(() => {
@@ -863,8 +864,8 @@ function renderBattleGrid(layoutJson) {
 
     container.innerHTML = '';
     Object.assign(container.style, {
-        width: '100%', maxWidth: '380px', height: '55%', maxHeight: '380px',
-        display: 'flex', flexDirection: 'column', margin: '5px'
+        width: '98%', maxWidth: '380px', height: '55%', maxHeight: '380px',
+        display: 'flex', flexDirection: 'column', margin: '3px', border: '2px solid #c4975a', borderRadius: '4px',
     });
 
     const table = document.createElement('table');
