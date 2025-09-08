@@ -219,49 +219,49 @@ function renderBlacksmithingModal() {
 
 function renderItemTypesHTML() {
   return ITEM_TYPES.map((itemType, idx) => `
-    <div class="item-type-card" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 2px solid transparent; min-width: 70px; text-align: center; transition: all 0.2s ease;">
-      <img src="assets/art/items/${itemType.sprite}.png" title="${itemType.name}" style="width: 48px; height: 48px;">
-      <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold; margin-top: 4px;">${itemType.name}</div>
+    <div class="item-type-card" data-index="${idx}">
+      <img src="assets/art/items/${itemType.sprite}.png" title="${itemType.name}" class="item-type-img">
+      <div class="item-type-name">${itemType.name}</div>
     </div>
   `).join('');
 }
 
 function renderBarsHTML() {
   if (!forgingState.availableBars.length) {
-    return '<div style="color: #666; font-style: italic; padding: 1rem;">No bars available</div>';
+    return '<div class="no-materials">No bars available</div>';
   }
   
   return forgingState.availableBars.map((bar, idx) => `
-    <div class="material-item bar" data-index="${idx}" style="cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139, 69, 19, 0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative; flex: 0 0 auto;">
-      <img src="assets/art/ingridients/${bar.sprite}.png" title="${bar.name} (${bar.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bar.name}">${bar.name}</div>
-      <div style="font-size: 0.8rem; margin-top: 4px; color: #FFD700; font-weight: bold;">x${bar.amount}</div>
-      <div class="info-icon" data-bar="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    <div class="material-item bar" data-index="${idx}">
+      <img src="assets/art/ingridients/${bar.sprite}.png" title="${bar.name} (${bar.amount})" class="material-img">
+      <div class="material-name" title="${bar.name}">${bar.name}</div>
+      <div class="material-count">x${bar.amount}</div>
+      <div class="info-icon" data-bar="${idx}">i</div>
     </div>
   `).join('');
 }
 
 function renderPowdersHTML() {
   if (!forgingState.availablePowders.length) {
-    return '<div style="color: #666; font-style: italic; padding: 1rem;">No powders available</div>';
+    return '<div class="no-materials">No powders available</div>';
   }
   
   return forgingState.availablePowders.map((powder, idx) => `
-    <div class="material-item powder" data-index="${idx}" style="cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139, 69, 19, 0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative; flex: 0 0 auto;">
-      <img src="assets/art/ingridients/${powder.sprite}.png" title="${powder.name} (${powder.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size:0.65rem; color: #FFD700; font-weight: bold; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${powder.name}">${powder.name}</div>
-      <div style="font-size: 0.8rem; margin-top: 4px; color: #FFD700; font-weight: bold;">x${powder.amount}</div>
-      <div class="rarity-indicator" style="position: absolute; top: -2px; left: -2px; width: 12px; height: 12px; background: ${RARITY_LEVELS[powder.name]?.color || '#666'}; border-radius: 50%; border: 1px solid #fff;"></div>
-      <div class="info-icon" data-powder="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    <div class="material-item powder" data-index="${idx}">
+      <img src="assets/art/ingridients/${powder.sprite}.png" title="${powder.name} (${powder.amount})" class="material-img">
+      <div class="material-name" title="${powder.name}">${powder.name}</div>
+      <div class="material-count">x${powder.amount}</div>
+      <div class="rarity-indicator" style="background: ${RARITY_LEVELS[powder.name]?.color || '#666'}"></div>
+      <div class="info-icon" data-powder="${idx}">i</div>
     </div>
   `).join('');
 }
 
 function createPropertyRowHTML(rowIndex) {
   return `
-    <div class="property-display" style="width: 80px; height: 50px; background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%); border: 3px solid #FFD700; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.2s ease;" data-row="${rowIndex}">
-      <div class="property-text" style="font-size: 0.8rem; color: #FFD700; font-weight: bold; text-align: center;">-</div>
-      <div class="bonus-counter" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #FF4500; border-radius: 50%; color: white; font-size: 0.7rem; display: none; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff;">0</div>
+    <div class="property-display" data-row="${rowIndex}">
+      <div class="property-text">-</div>
+      <div class="bonus-counter">0</div>
     </div>
   `;
 }
@@ -409,14 +409,12 @@ function setupBlacksmithingEventListeners(modal) {
 function selectItemType(typeIndex, modal) {
   // Clear previous selection
   modal.querySelectorAll('.item-type-card').forEach(card => {
-    card.style.border = '2px solid transparent';
-    card.style.background = 'rgba(139,69,19,0.2)';
+    card.classList.remove('selected');
   });
 
   // Highlight selected
   const selectedCard = modal.querySelector(`.item-type-card[data-index="${typeIndex}"]`);
-  selectedCard.style.border = '2px solid #FFD700';
-  selectedCard.style.background = 'rgba(255,215,0,0.2)';
+  selectedCard.classList.add('selected');
 
   forgingState.selectedItemType = ITEM_TYPES[typeIndex];
   updateCraftButtonState(modal);
@@ -425,12 +423,12 @@ function selectItemType(typeIndex, modal) {
 function selectBar(barIndex, modal) {
   // Clear previous selection
   modal.querySelectorAll('.bar').forEach(item => {
-    item.style.border = '1px solid #8B4513';
+    item.classList.remove('selected');
   });
 
   // Highlight selected
   const selectedBar = modal.querySelector(`.bar[data-index="${barIndex}"]`);
-  selectedBar.style.border = '2px solid #FFD700';
+  selectedBar.classList.add('selected');
 
   forgingState.selectedBar = forgingState.availableBars[barIndex];
   updateCraftButtonState(modal);
@@ -439,12 +437,12 @@ function selectBar(barIndex, modal) {
 function selectPowder(powderIndex, modal) {
   // Clear previous selection
   modal.querySelectorAll('.powder').forEach(item => {
-    item.style.border = '1px solid #8B4513';
+    item.classList.remove('selected');
   });
 
   // Highlight selected
   const selectedPowder = modal.querySelector(`.powder[data-index="${powderIndex}"]`);
-  selectedPowder.style.border = '2px solid #FFD700';
+  selectedPowder.classList.add('selected');
 
   forgingState.selectedPowder = forgingState.availablePowders[powderIndex];
   
@@ -1102,31 +1100,143 @@ function injectBlacksmithingCSS() {
   if (document.getElementById('blacksmithing-css')) return;
   
   const css = `
-    .property-display:active {
-      transform: scale(0.95);
+    .item-type-card {
+      flex: 0 0 auto;
+      cursor: pointer;
+      position: relative;
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(139,69,19,0.2);
+      border: 2px solid transparent;
+      min-width: 70px;
+      text-align: center;
+      transition: all 0.2s ease;
     }
-
-    .bonus-counter {
-      animation: pulse 2s infinite ease-in-out;
+    .item-type-card.selected {
+      border: 2px solid #FFD700;
+      background: rgba(255,215,0,0.2);
     }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
+    .item-type-img {
+      width: 48px;
+      height: 48px;
     }
-
-    .property-display {
-      transition: all 0.3s ease;
-      will-change: transform, background-color;
+    .item-type-name {
+      font-size: 0.8rem;
+      color: #FFD700;
+      font-weight: bold;
+      margin-top: 4px;
     }
-
+    .material-item {
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(139, 69, 19, 0.2);
+      border: 1px solid #8B4513;
+      min-width: 80px;
+      text-align: center;
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .material-item.selected {
+      border: 2px solid #FFD700;
+    }
+    .material-img {
+      width: 48px;
+      height: 48px;
+    }
+    .material-name {
+      font-size:0.65rem;
+      color: #FFD700;
+      font-weight: bold;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .material-count {
+      font-size: 0.8rem;
+      margin-top: 4px;
+      color: #FFD700;
+      font-weight: bold;
+    }
+    .no-materials {
+      color: #666;
+      font-style: italic;
+      padding: 1rem;
+    }
+    .info-icon {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 16px;
+      height: 16px;
+      background: #8B4513;
+      border-radius: 50%;
+      color: white;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
     .rarity-indicator {
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid #fff;
       animation: rarity-glow 2s infinite ease-in-out;
     }
-
     @keyframes rarity-glow {
       0%, 100% { opacity: 0.8; }
       50% { opacity: 1; }
+    }
+    .property-display {
+      width: 80px;
+      height: 50px;
+      background: linear-gradient(135deg, #654321 0%, #8B4513 50%, #A0522D 100%);
+      border: 3px solid #FFD700;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      will-change: transform, background-color;
+    }
+    .property-display:active {
+      transform: scale(0.95);
+    }
+    .property-text {
+      font-size: 0.8rem;
+      color: #FFD700;
+      font-weight: bold;
+      text-align: center;
+    }
+    .bonus-counter {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      background: #FF4500;
+      border-radius: 50%;
+      color: white;
+      font-size: 0.7rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      border: 2px solid #fff;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
     }
   `;
 
