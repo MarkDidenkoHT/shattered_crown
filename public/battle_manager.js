@@ -1202,54 +1202,24 @@ function renderBottomUI() {
 
     const fragment = document.createDocumentFragment();
 
-    // Get selected abilities for current turn character
-    const currentChar = BattleState.currentTurnCharacter;
-    let selectedAbilities = [];
-    if (currentChar && currentChar.selected_abilities && currentChar.selected_abilities.basic) {
-        selectedAbilities = currentChar.selected_abilities.basic.slice(0, 3);
-    }
-
-    // Ability buttons (0,1,2)
-    for (let i = 0; i < 3; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'fantasy-button ui-btn';
-        if (selectedAbilities[i]) {
-            // Fetch ability data by name
-            fetch(`/api/supabase/rest/v1/abilities?name=eq.${encodeURIComponent(selectedAbilities[i])}`)
-                .then(res => res.json())
-                .then(data => {
-                    const ability = data[0];
-                    if (ability) {
-                        btn.innerHTML = ability.sprite ? `<img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}" style="width:32px;height:32px;vertical-align:middle;"> ${ability.name}` : ability.name;
-                        btn.title = ability.description || ability.name;
-                    } else {
-                        btn.textContent = selectedAbilities[i];
-                    }
-                });
-            btn.disabled = false;
-            btn.addEventListener('click', debounce(handleEndTurn, 500));
-        } else {
-            btn.textContent = `Ability ${i+1}`;
-            btn.disabled = true;
-        }
-        fragment.appendChild(btn);
-    }
-
-    // ...existing code for other buttons...
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
-        for (let i = 3; i < 5; i++) {
+
+        for (let i = 0; i < 5; i++) {
             const btnIndex = row * 5 + i;
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
+
             if (btnIndex === 4) {
                 btn.textContent = 'Refresh';
                 btn.id = 'refreshButtonBottom';
                 btn.disabled = false;
             } else if (btnIndex === 5) {
                 // Consumable button - only show for current turn character
+                const currentChar = BattleState.currentTurnCharacter;
                 const consumable = currentChar?.equipped_items?.equipped_consumable;
+                
                 if (consumable && consumable !== 'none') {
                     const itemSprite = consumable.replace(/\s+/g, '');
                     btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
@@ -1270,11 +1240,15 @@ function renderBottomUI() {
                 btn.textContent = `Btn ${btnIndex + 1}`;
                 btn.disabled = true;
             }
+
             rowDiv.appendChild(btn);
         }
+
         fragment.appendChild(rowDiv);
     }
+
     ui.appendChild(fragment);
+
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
     if (endTurnBtn) {
         endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
