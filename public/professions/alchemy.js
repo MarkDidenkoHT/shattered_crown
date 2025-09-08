@@ -212,7 +212,7 @@ function renderCraftingModal() {
       </div>
       
       <div style="display: flex; justify-content: center; gap: 0.4rem;">
-        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 80px; padding: 0.4rem;">Close</button>
+        <button class="help-tutorial-close-button message-ok-btn">X</button>
         <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.4rem;">Craft</button>
         <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 80px; padding: 0.4rem; display: none;">Finish</button>
         <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 80px; padding: 0.4rem; display: none;">Claim</button>

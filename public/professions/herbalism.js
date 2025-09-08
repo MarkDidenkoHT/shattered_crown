@@ -300,7 +300,7 @@ function renderCraftingModal() {
       </div>
       
       <div style="display: flex; justify-content: center; gap: 0.3rem;">
-        <button class="fantasy-button message-ok-btn">Close</button>
+        <button class="help-tutorial-close-button message-ok-btn">X</button>
         <button id="grow-btn" class="fantasy-button" disabled>Grow</button>
         <button id="claim-all-btn" class="fantasy-button" style="display: none;">Claim All</button>
       </div>

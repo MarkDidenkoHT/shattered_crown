@@ -185,7 +185,7 @@ function renderBlacksmithingModal() {
       </div>
       
       <div style="display: flex; justify-content: center; gap: 0.5rem;">
-        <button class="fantasy-button message-ok-btn" style="flex: 1; max-width: 100px;">Close</button>
+        <button class="help-tutorial-close-button message-ok-btn">X</button>
         <button id="craft-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px;">Forge</button>
         <button id="finish-btn" class="fantasy-button" disabled style="flex: 1; max-width: 100px; display: none;">Finish</button>
         <button id="claim-btn" class="fantasy-button" style="flex: 1; max-width: 100px; display: none;">Claim</button>
