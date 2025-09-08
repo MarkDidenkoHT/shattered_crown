@@ -1132,13 +1132,17 @@ function injectBlacksmithingCSS() {
       padding: 8px;
       background: rgba(139, 69, 19, 0.2);
       border: 1px solid #8B4513;
-      min-width: 80px;
+      min-width: 100px;
+      max-width: 120px;
       text-align: center;
       position: relative;
       flex: 0 0 auto;
-    }
-    .material-item.selected {
-      border: 2px solid #FFD700;
+      box-sizing: border-box;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
     .material-img {
       width: 48px;
@@ -1158,6 +1162,11 @@ function injectBlacksmithingCSS() {
       margin-top: 4px;
       color: #FFD700;
       font-weight: bold;
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+      overflow: hidden;
+      word-break: break-all;
     }
     .no-materials {
       color: #666;
