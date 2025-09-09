@@ -1196,36 +1196,45 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
 function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
     ui.innerHTML = '';
-
-    // Add debug logging
     debugConsumableLoading();
-
     const fragment = document.createDocumentFragment();
     const currentChar = BattleState.currentTurnCharacter;
     let selectedAbilities = [];
     if (currentChar && currentChar.selected_abilities && currentChar.selected_abilities.basic) {
         selectedAbilities = currentChar.selected_abilities.basic.slice(0, 3);
+        console.log('[renderBottomUI] selectedAbilities:', selectedAbilities);
+    } else {
+        console.log('[renderBottomUI] No selectedAbilities found for currentChar:', currentChar);
     }
-
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
-
         for (let i = 0; i < 5; i++) {
             const btnIndex = row * 5 + i;
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
-
             if (btnIndex < 3 && selectedAbilities[btnIndex]) {
-                // Ability button: load ability sprite
+                console.log(`[renderBottomUI] Fetching ability for button ${btnIndex}:`, selectedAbilities[btnIndex]);
                 fetch(`/api/supabase/rest/v1/abilities?name=eq.${encodeURIComponent(selectedAbilities[btnIndex])}`)
-                    .then(res => res.json())
+                    .then(res => {
+                        console.log(`[renderBottomUI] Fetch response for ability '${selectedAbilities[btnIndex]}':`, res);
+                        return res.json();
+                    })
                     .then(data => {
+                        console.log(`[renderBottomUI] Ability data for '${selectedAbilities[btnIndex]}':`, data);
                         const ability = data[0];
                         if (ability && ability.sprite) {
                             btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:32px;height:32px;'>`;
                             btn.title = ability.name;
+                            console.log(`[renderBottomUI] Set image for ability '${ability.name}' on button ${btnIndex}`);
+                        } else {
+                            btn.textContent = selectedAbilities[btnIndex];
+                            console.warn(`[renderBottomUI] No sprite found for ability '${selectedAbilities[btnIndex]}'`, ability);
                         }
+                    })
+                    .catch(err => {
+                        btn.textContent = selectedAbilities[btnIndex];
+                        console.error(`[renderBottomUI] Error fetching ability '${selectedAbilities[btnIndex]}':`, err);
                     });
                 btn.disabled = false;
                 btn.addEventListener('click', debounce(handleEndTurn, 500));
@@ -1234,10 +1243,7 @@ function renderBottomUI() {
                 btn.id = 'refreshButtonBottom';
                 btn.disabled = false;
             } else if (btnIndex === 5) {
-                // Consumable button - only show for current turn character
-                const currentChar = BattleState.currentTurnCharacter;
                 const consumable = currentChar?.equipped_items?.equipped_consumable;
-                
                 if (consumable && consumable !== 'none') {
                     const itemSprite = consumable.replace(/\s+/g, '');
                     btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
@@ -1249,8 +1255,7 @@ function renderBottomUI() {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
                 }
-            }
-            else if (btnIndex === 9) {
+            } else if (btnIndex === 9) {
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
@@ -1258,15 +1263,11 @@ function renderBottomUI() {
                 btn.textContent = `Btn ${btnIndex + 1}`;
                 btn.disabled = true;
             }
-
             rowDiv.appendChild(btn);
         }
-
         fragment.appendChild(rowDiv);
     }
-
     ui.appendChild(fragment);
-
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
     if (endTurnBtn) {
         endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
