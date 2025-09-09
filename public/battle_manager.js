@@ -71,8 +71,8 @@ const processCharacterState = (charState) => {
         type: charState.type,
         isPlayerControlled: charState.isPlayerControlled,
         equipped_items: charState.equipped_items || {},
-        position: charState.current_position,
-        originalPosition: charState.current_position,
+        position: charState.current_position || charState.position || charState.originalPosition || [0,0],
+        originalPosition: charState.current_position || charState.originalPosition || charState.position || [0,0],
         stats: {
             strength: normalizedStats.strength || 0,
             vitality: vitality,
@@ -82,16 +82,17 @@ const processCharacterState = (charState) => {
             armor: normalizedStats.armor || 0,
             resistance: normalizedStats.resistance || 0
         },
-        spriteName: charState.sprite_name,
-        portrait: charState.portrait, // <-- Add portrait field
-        has_moved: charState.has_moved,
-        has_acted: charState.has_acted,
+        spriteName: charState.sprite_name || charState.spriteName,
+        portrait: charState.portrait,
+        has_moved: !!charState.has_moved,
+        has_acted: !!charState.has_acted,
         current_hp: charState.current_hp || (vitality * 10),
         max_hp: charState.max_hp || (vitality * 10),
         priority: charState.priority || 999,
         buffs: charState.buffs || [],
         debuffs: charState.debuffs || [],
-        pendingAction: null
+        pendingAction: null,
+        selected_abilities: charState.selected_abilities || { basic: [], ultimate: null } // <-- preserved
     };
 };
 
@@ -568,23 +569,64 @@ const setupRealtimeSubscription = () => {
 async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
 
-    // Add guard for characters_state
     if (!BattleState.battleState.characters_state) {
         console.warn('Battle state missing characters_state:', BattleState.battleState);
         return;
     }
 
-    const newCharacters = Object.values(BattleState.battleState.characters_state)
-        .map(processCharacterState);
-    
-    // Handle character updates with animations
+    // --- NEW: fetch DB rows for these character ids and merge ---
+    const stateCharsObj = BattleState.battleState.characters_state;
+    const charIds = Object.keys(stateCharsObj);
+    let dbRows = [];
+    try {
+        dbRows = await fetchCharactersFromTableByIds(charIds);
+    } catch (err) {
+        console.warn('Failed to fetch characters from characters table:', err);
+        dbRows = [];
+    }
+
+    const dbMap = new Map((dbRows || []).map(r => [r.id, r]));
+
+    // Merge battle snapshot + DB row (DB provides static metadata like selected_abilities)
+    const newCharacters = Object.values(stateCharsObj).map(charState => {
+        const db = dbMap.get(charState.id) || {};
+
+        // Merge rules: battle snapshot fields (position, has_moved, has_acted, curr HP, buffs, etc.)
+        // DB fields provide persistent metadata (selected_abilities, portrait, equipped_items, stats)
+        const merged = {
+            // battle snapshot first
+            ...charState,
+            // then overlay DB persistent fields where present
+            name: db.name || charState.name,
+            player_id: db.player_id || charState.player_id,
+            equipped_items: charState.equipped_items || db.equipped_items || {},
+            portrait: db.portrait || charState.portrait,
+            sprite_name: charState.sprite_name || db.sprite_name || charState.spriteName,
+            // prefer DB selected_abilities (this is the key user asked for)
+            selected_abilities: db.selected_abilities || charState.selected_abilities || { basic: [], ultimate: null },
+            // merge stats: allow battle snapshot to override totals if present
+            stats: Object.assign({}, db.total_stats || db.stats || {}, charState.stats || {}),
+            // keep other battle fields (current_hp, has_moved, position, buffs...)
+            buffs: charState.buffs || db.buffs || [],
+            debuffs: charState.debuffs || db.debuffs || [],
+            current_hp: charState.current_hp ?? ( (db.stats?.vitality || db.total_stats?.vitality || 10) * 10),
+            max_hp: charState.max_hp ?? ( (db.stats?.vitality || db.total_stats?.vitality || 10) * 10),
+            // ensure type and control flag
+            type: charState.type || 'player',
+            isPlayerControlled: (db.player_id ? (db.player_id === BattleState.profile.id) : !!charState.isPlayerControlled),
+        };
+
+        return processCharacterState(merged);
+    });
+
+    // rest unchanged: updateCharactersWithAnimations...
     await updateCharactersWithAnimations(newCharacters);
-    
+
     requestAnimationFrame(() => {
         updateTurnDisplay();
         updateCharacterAvailability();
     });
-    
+
     handleTurnLogic();
 }
 
@@ -786,6 +828,30 @@ const handleAITurn = async () => {
         BattleState.isProcessingAITurn = false;
     }
 };
+
+// Fetch rows from public.characters by array of ids
+const fetchCharactersFromTableByIds = async (ids = []) => {
+  if (!ids || ids.length === 0) return [];
+  try {
+    const supabase = getSupabaseClient({
+      SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL,
+      SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY
+    });
+    const { data, error } = await supabase
+      .from('characters')
+      .select('*')
+      .in('id', ids);
+    if (error) {
+      console.warn('Error loading characters table rows:', error);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.warn('Exception fetching characters table rows:', err);
+    return [];
+  }
+};
+
 
 function renderBattleScreen(mode, level, layoutData) {
     BattleState.main.innerHTML = `
