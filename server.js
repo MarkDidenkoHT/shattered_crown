@@ -1603,6 +1603,79 @@ app.get('/api/promo/recent/:playerId', async (req, res) => {
     }
 });
 
+// Add this endpoint to your Express server
+app.get('/api/abilities/:name', async (req, res) => {
+    try {
+        const { name } = req.params;
+
+        if (!name) {
+            return res.status(400).json({ error: 'Missing ability name' });
+        }
+
+        const response = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/abilities?name=eq.${encodeURIComponent(name)}`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_SERVICE_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('[ABILITIES] Supabase error:', text);
+            return res.status(response.status).json({ error: 'Failed to fetch ability data' });
+        }
+
+        const abilities = await response.json();
+        res.json(abilities);
+
+    } catch (error) {
+        console.error('[ABILITIES ERROR]', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Alternative: Batch endpoint for multiple abilities
+app.post('/api/abilities/batch', async (req, res) => {
+    try {
+        const { names } = req.body;
+
+        if (!names || !Array.isArray(names)) {
+            return res.status(400).json({ error: 'Missing or invalid ability names array' });
+        }
+
+        // Create filter for multiple names: name.in.(name1,name2,name3)
+        const nameFilter = `name.in.(${names.map(name => encodeURIComponent(name)).join(',')})`;
+        
+        const response = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/abilities?${nameFilter}`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_SERVICE_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('[ABILITIES BATCH] Supabase error:', text);
+            return res.status(response.status).json({ error: 'Failed to fetch abilities data' });
+        }
+
+        const abilities = await response.json();
+        res.json(abilities);
+
+    } catch (error) {
+        console.error('[ABILITIES BATCH ERROR]', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Update profile language setting
 app.patch('/api/profile/language/:playerId', async (req, res) => {
     try {

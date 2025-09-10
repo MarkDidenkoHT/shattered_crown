@@ -1222,7 +1222,8 @@ function renderBottomUI() {
                 const abilityName = selectedAbilities[btnIndex];
                 console.log(`[renderBottomUI] Fetching ability for button ${btnIndex}:`, abilityName);
 
-                fetch(`/api/supabase/rest/v1/abilities?name=eq.${encodeURIComponent(abilityName)}`)
+                // Updated to use server endpoint instead of direct Supabase call
+                fetch(`/api/abilities/${encodeURIComponent(abilityName)}`)
                     .then(res => res.json())
                     .then(data => {
                         const ability = data[0];
@@ -1292,7 +1293,6 @@ function renderBottomUI() {
         refreshBtnBottom.addEventListener('click', debounce(handleRefresh, 300));
     }
 }
-
 
 const handleEndTurn = async () => {
     const activeCharacter = BattleState.currentTurnCharacter;
