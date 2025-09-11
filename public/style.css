@@ -1260,5 +1260,6 @@
     display: flex;
     max-height: 55px;
     max-width: 95vw;
+    width: 95vw;
     margin: auto;
 }
