@@ -64,34 +64,24 @@ const processCharacterState = (charState) => {
     }, {});
 
     const vitality = normalizedStats.vitality || 0;
-    
+
     return {
         id: charState.id,
         name: charState.name,
         type: charState.type,
         isPlayerControlled: charState.isPlayerControlled,
         equipped_items: charState.equipped_items || {},
-        position: charState.current_position,
+        position: charState.current_position,          // keep for UI
+        current_position: charState.current_position,  // add this line
         originalPosition: charState.current_position,
         stats: {
             strength: normalizedStats.strength || 0,
-            vitality: vitality,
+            vitality,
             spirit: normalizedStats.spirit || 0,
             dexterity: normalizedStats.dexterity || 0,
-            intellect: normalizedStats.intellect || 0,
-            armor: normalizedStats.armor || 0,
-            resistance: normalizedStats.resistance || 0
         },
-        spriteName: charState.sprite_name,
-        portrait: charState.portrait, // <-- Add portrait field
-        has_moved: charState.has_moved,
-        has_acted: charState.has_acted,
-        current_hp: charState.current_hp || (vitality * 10),
-        max_hp: charState.max_hp || (vitality * 10),
-        priority: charState.priority || 999,
-        buffs: charState.buffs || [],
-        debuffs: charState.debuffs || [],
-        pendingAction: null
+        current_hp: charState.current_hp,
+        max_hp: charState.max_hp
     };
 };
 
@@ -1016,18 +1006,16 @@ const TargetingState = {
     casterCharacter: null
 };
 
-/**
- * Calculate Chebyshev distance between two points
- */
 function calculateChebyshevDistance(pos1, pos2) {
+    if (!Array.isArray(pos1) || !Array.isArray(pos2)) {
+        console.error('Invalid positions passed to calculateChebyshevDistance:', pos1, pos2);
+        return Infinity;
+    }
     const dx = Math.abs(pos1[0] - pos2[0]);
     const dy = Math.abs(pos1[1] - pos2[1]);
     return Math.max(dx, dy);
 }
 
-/**
- * Check if there's line of sight between two positions
- */
 function hasLineOfSight(start, end, layoutTiles, tileMap) {
     if (start[0] === end[0] && start[1] === end[1]) {
         return true;
