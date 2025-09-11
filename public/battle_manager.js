@@ -64,24 +64,34 @@ const processCharacterState = (charState) => {
     }, {});
 
     const vitality = normalizedStats.vitality || 0;
-
+    
     return {
         id: charState.id,
         name: charState.name,
         type: charState.type,
         isPlayerControlled: charState.isPlayerControlled,
         equipped_items: charState.equipped_items || {},
-        position: charState.current_position,          // keep for UI
-        current_position: charState.current_position,  // add this line
+        position: charState.current_position,
         originalPosition: charState.current_position,
         stats: {
             strength: normalizedStats.strength || 0,
-            vitality,
+            vitality: vitality,
             spirit: normalizedStats.spirit || 0,
             dexterity: normalizedStats.dexterity || 0,
+            intellect: normalizedStats.intellect || 0,
+            armor: normalizedStats.armor || 0,
+            resistance: normalizedStats.resistance || 0
         },
-        current_hp: charState.current_hp,
-        max_hp: charState.max_hp
+        spriteName: charState.sprite_name,
+        portrait: charState.portrait, // <-- Add portrait field
+        has_moved: charState.has_moved,
+        has_acted: charState.has_acted,
+        current_hp: charState.current_hp || (vitality * 10),
+        max_hp: charState.max_hp || (vitality * 10),
+        priority: charState.priority || 999,
+        buffs: charState.buffs || [],
+        debuffs: charState.debuffs || [],
+        pendingAction: null
     };
 };
 
@@ -892,7 +902,7 @@ function renderBattleGrid(layoutJson) {
                 transition: 'box-shadow 200ms ease, background-color 200ms ease'
             });
 
-            td.addEventListener('click', TargetingSystem.handleTileClickWithTargeting);
+            td.addEventListener('click', handleTileClick);
             tr.appendChild(td);
         }
         table.appendChild(tr);
@@ -924,443 +934,6 @@ function renderCharacters() {
         BattleState.characterElements.set(char.id, charEl);
     });
 }
-
-// Battle Targeting System
-
-// Add CSS styles for targeting (mobile-optimized)
-const targetingStyles = `
-.target-highlight {
-    box-shadow: inset 0 0 0 3px #FFD700 !important;
-    animation: targetPulse 1s ease-in-out infinite alternate;
-}
-
-.target-heal {
-    box-shadow: inset 0 0 0 3px #4CAF50 !important;
-    background-color: rgba(76, 175, 80, 0.4) !important;
-}
-
-.target-damage {
-    box-shadow: inset 0 0 0 3px #F44336 !important;
-    background-color: rgba(244, 67, 54, 0.4) !important;
-}
-
-.target-area {
-    box-shadow: inset 0 0 0 3px #FF9800 !important;
-    background-color: rgba(255, 152, 0, 0.3) !important;
-}
-
-@keyframes targetPulse {
-    0% { opacity: 0.7; }
-    100% { opacity: 1.0; }
-}
-
-.targeting-mode {
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-}
-
-.targeting-mode .battle-tile {
-    touch-action: manipulation;
-}
-
-/* Enhanced mobile touch targets */
-.target-highlight {
-    position: relative;
-}
-
-.target-highlight::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.8);
-    pointer-events: none;
-    animation: targetCenter 1s ease-in-out infinite alternate;
-}
-
-@keyframes targetCenter {
-    0% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.8); }
-    100% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-}
-`;
-
-// Inject styles into the page
-if (!document.getElementById('targeting-styles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'targeting-styles';
-    styleSheet.textContent = targetingStyles;
-    document.head.appendChild(styleSheet);
-}
-
-// Global targeting state
-const TargetingState = {
-    isTargeting: false,
-    selectedAbility: null,
-    validTargets: [],
-    casterPosition: null,
-    casterCharacter: null
-};
-
-function calculateChebyshevDistance(pos1, pos2) {
-    if (!Array.isArray(pos1) || !Array.isArray(pos2)) {
-        console.error('Invalid positions passed to calculateChebyshevDistance:', pos1, pos2);
-        return Infinity;
-    }
-    const dx = Math.abs(pos1[0] - pos2[0]);
-    const dy = Math.abs(pos1[1] - pos2[1]);
-    return Math.max(dx, dy);
-}
-
-function hasLineOfSight(start, end, layoutTiles, tileMap) {
-    if (start[0] === end[0] && start[1] === end[1]) {
-        return true;
-    }
-
-    // Bresenham's line algorithm
-    const dx = Math.abs(end[0] - start[0]);
-    const dy = Math.abs(end[1] - start[1]);
-    const sx = start[0] < end[0] ? 1 : -1;
-    const sy = start[1] < end[1] ? 1 : -1;
-    let err = dx - dy;
-    
-    let x = start[0];
-    let y = start[1];
-    
-    while (true) {
-        // Don't check the starting position
-        if (!(x === start[0] && y === start[1])) {
-            // Check bounds
-            if (x < 0 || x >= layoutTiles[0].length || y < 0 || y >= layoutTiles.length) {
-                return false;
-            }
-            
-            // Check if this tile blocks vision
-            const tileName = layoutTiles[y][x];
-            const normalizedTile = tileName.toLowerCase().replace(/\s+/g, '_');
-            const tileData = tileMap.get(normalizedTile);
-            
-            if (tileData && tileData.vision_block) {
-                return false;
-            }
-        }
-        
-        if (x === end[0] && y === end[1]) {
-            break;
-        }
-        
-        const e2 = 2 * err;
-        if (e2 > -dy) {
-            err -= dy;
-            x += sx;
-        }
-        if (e2 < dx) {
-            err += dx;
-            y += sy;
-        }
-    }
-    
-    return true;
-}
-
-/**
- * Get all positions within an area around a center point
- */
-function getAreaPositions(center, radius) {
-    const positions = [];
-    
-    for (let dx = -radius; dx <= radius; dx++) {
-        for (let dy = -radius; dy <= radius; dy++) {
-            const x = center[0] + dx;
-            const y = center[1] + dy;
-            
-            if (x >= 0 && x < 7 && y >= 0 && y < 7) {
-                positions.push([x, y]);
-            }
-        }
-    }
-    
-    return positions;
-}
-
-/**
- * Check if a character can be targeted by an ability
- */
-function isValidTarget(ability, caster, target) {
-    if (ability.target_type === 'ally' && target.type !== caster.type) {
-        return false;
-    }
-    
-    if (ability.target_type === 'enemy' && target.type === caster.type) {
-        return false;
-    }
-    
-    return true;
-}
-
-/**
- * Determine what effect an ability will have on a target
- */
-function determineEffect(ability, caster, target) {
-    if (ability.effects === 'heal') {
-        return 'heal';
-    } else if (ability.effects === 'damage') {
-        return 'damage';
-    } else if (ability.effects === 'damage or heal') {
-        return target.type === caster.type ? 'heal' : 'damage';
-    }
-    return 'unknown';
-}
-
-/**
- * Find all valid targets for an ability
- */
-function findValidTargets(ability, caster, battleState) {
-    const validTargets = [];
-    const casterPos = caster.current_position;
-    const layoutTiles = battleState.layout_data.layout.tiles;
-    const characters = battleState.characters_state;
-    
-    const allCharacters = Object.values(characters).filter(char => char.status === 'alive');
-    
-    if (ability.targeting === 'single') {
-        for (const character of allCharacters) {
-            const targetPos = character.current_position;
-            const distance = calculateChebyshevDistance(casterPos, targetPos);
-            
-            if (distance > ability.range) continue;
-            if (!hasLineOfSight(casterPos, targetPos, layoutTiles, BattleState.tileMap)) continue;
-            if (!isValidTarget(ability, caster, character)) continue;
-            
-            validTargets.push({
-                position: targetPos,
-                character: character,
-                effect: determineEffect(ability, caster, character)
-            });
-        }
-    } else if (ability.targeting === 'area') {
-        const range = parseInt(ability.range);
-        const area = parseInt(ability.area);
-        
-        for (let x = 0; x < 7; x++) {
-            for (let y = 0; y < 7; y++) {
-                const centerPos = [x, y];
-                const distance = calculateChebyshevDistance(casterPos, centerPos);
-                
-                if (distance > range) continue;
-                if (!hasLineOfSight(casterPos, centerPos, layoutTiles, BattleState.tileMap)) continue;
-                
-                const areaPositions = getAreaPositions(centerPos, area);
-                const affectedCharacters = [];
-                
-                for (const areaPos of areaPositions) {
-                    const character = allCharacters.find(char => 
-                        char.current_position[0] === areaPos[0] && 
-                        char.current_position[1] === areaPos[1]
-                    );
-                    
-                    if (character && isValidTarget(ability, caster, character)) {
-                        affectedCharacters.push({
-                            character: character,
-                            effect: determineEffect(ability, caster, character)
-                        });
-                    }
-                }
-                
-                if (affectedCharacters.length > 0) {
-                    validTargets.push({
-                        position: centerPos,
-                        centerPosition: centerPos,
-                        affectedCharacters: affectedCharacters,
-                        isAreaTarget: true
-                    });
-                }
-            }
-        }
-    }
-    
-    return validTargets;
-}
-
-/**
- * Start targeting mode for an ability
- */
-function startTargeting(ability, caster) {
-    console.log(`[TARGETING] Starting targeting for ${ability.name} by ${caster.name}`);
-    
-    TargetingState.isTargeting = true;
-    TargetingState.selectedAbility = ability;
-    TargetingState.casterCharacter = caster;
-    TargetingState.casterPosition = caster.current_position;
-    
-    TargetingState.validTargets = findValidTargets(ability, caster, BattleState.battleState);
-    
-    console.log(`[TARGETING] Found ${TargetingState.validTargets.length} valid targets:`, TargetingState.validTargets);
-    
-    highlightValidTargets(TargetingState.validTargets);
-    document.body.style.cursor = 'crosshair';
-}
-
-/**
- * Highlight valid target positions on the battle grid
- */
-function highlightValidTargets(validTargets) {
-    document.querySelectorAll('.target-highlight').forEach(el => {
-        el.classList.remove('target-highlight', 'target-heal', 'target-damage', 'target-area');
-    });
-    
-    validTargets.forEach(target => {
-        const [x, y] = target.position;
-        const tile = document.querySelector(`[data-x="${x}"][data-y="${y}"]`);
-        
-        if (tile) {
-            tile.classList.add('target-highlight');
-            
-            if (target.isAreaTarget) {
-                tile.classList.add('target-area');
-            } else if (target.effect === 'heal') {
-                tile.classList.add('target-heal');
-            } else if (target.effect === 'damage') {
-                tile.classList.add('target-damage');
-            }
-        }
-    });
-}
-
-/**
- * Handle clicking on a target during targeting mode
- */
-function handleTargetClick(targetPosition) {
-    if (!TargetingState.isTargeting) return false;
-    
-    const clickedTarget = TargetingState.validTargets.find(target => 
-        target.position[0] === targetPosition[0] && target.position[1] === targetPosition[1]
-    );
-    
-    if (!clickedTarget) {
-        console.log(`[TARGETING] Invalid target clicked: [${targetPosition}]`);
-        return false;
-    }
-    
-    executeAbility(TargetingState.selectedAbility, TargetingState.casterCharacter, clickedTarget);
-    endTargeting();
-    return true;
-}
-
-/**
- * Execute an ability on its targets
- */
-function executeAbility(ability, caster, targetData) {
-    console.log(`[ABILITY EXECUTION] ${caster.name} uses ${ability.name}`);
-    
-    if (targetData.isAreaTarget) {
-        console.log(`[ABILITY EXECUTION] Area ability centered at [${targetData.centerPosition}]`);
-        console.log(`[ABILITY EXECUTION] Affects ${targetData.affectedCharacters.length} characters:`);
-        
-        targetData.affectedCharacters.forEach(({ character, effect }) => {
-            console.log(`  - ${effect.toUpperCase()} ${character.name} at [${character.current_position}]`);
-        });
-    } else {
-        console.log(`[ABILITY EXECUTION] ${targetData.effect.toUpperCase()} ${targetData.character.name} at [${targetData.position}]`);
-    }
-}
-
-/**
- * End targeting mode
- */
-function endTargeting() {
-    TargetingState.isTargeting = false;
-    TargetingState.selectedAbility = null;
-    TargetingState.casterCharacter = null;
-    TargetingState.casterPosition = null;
-    TargetingState.validTargets = [];
-    
-    document.querySelectorAll('.target-highlight').forEach(el => {
-        el.classList.remove('target-highlight', 'target-heal', 'target-damage', 'target-area');
-    });
-    
-    document.body.style.cursor = 'default';
-    console.log('[TARGETING] Targeting mode ended');
-}
-
-/**
- * Cancel current targeting
- */
-function cancelTargeting() {
-    console.log('[TARGETING] Targeting cancelled');
-    endTargeting();
-}
-
-/**
- * Modified tile click handler with targeting integration
- */
-function handleTileClickWithTargeting(event) {
-    const tile = event.target;
-    const x = parseInt(tile.dataset.x);
-    const y = parseInt(tile.dataset.y);
-    
-    console.log(`[TILE CLICK] Clicked tile [${x}, ${y}]`);
-    
-    if (TargetingState.isTargeting) {
-        const handled = handleTargetClick([x, y]);
-        if (handled) return;
-        console.log('[TILE CLICK] Not a valid target');
-        return;
-    }
-    
-    // Your existing tile click logic goes here
-    console.log('[TILE CLICK] Processing as normal tile click');
-}
-
-/**
- * Handle ability button clicks
- */
-function handleAbilityClick(abilityName, caster) {
-    console.log(`[ABILITY CLICK] ${abilityName} clicked by ${caster.name}`);
-    
-    fetch(`/api/abilities/${encodeURIComponent(abilityName)}`)
-        .then(res => res.json())
-        .then(data => {
-            const ability = data[0];
-            if (ability) {
-                startTargeting(ability, caster);
-            } else {
-                console.error(`[ABILITY CLICK] Ability ${abilityName} not found`);
-            }
-        })
-        .catch(err => {
-            console.error(`[ABILITY CLICK] Error fetching ability ${abilityName}:`, err);
-        });
-}
-
-// Add keyboard handlers
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && TargetingState.isTargeting) {
-        cancelTargeting();
-    }
-});
-
-document.addEventListener('contextmenu', (event) => {
-    if (TargetingState.isTargeting) {
-        event.preventDefault();
-        cancelTargeting();
-    }
-});
-
-// Export targeting system
-window.TargetingSystem = {
-    startTargeting,
-    handleTargetClick,
-    endTargeting,
-    cancelTargeting,
-    handleTileClickWithTargeting,
-    handleAbilityClick,
-    TargetingState
-};
 
 const createCharacterElement = (char) => {
     const charEl = document.createElement('div');
@@ -1671,7 +1244,7 @@ function renderBottomUI() {
                 btn.disabled = false;
                 btn.addEventListener('click', debounce(() => {
                     console.log(`[ABILITY USED] ${abilityName}`);
-                    TargetingSystem.handleAbilityClick(abilityName, currentChar);
+                    handleEndTurn(); // end turn for now
                 }, 500));
 
             } else if (btnIndex === 4) {
