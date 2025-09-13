@@ -640,6 +640,16 @@ function clearAbilitySelection() {
   BattleState.selectingAbility = null;
 }
 
+function toggleAbilitySelection(caster, ability) {
+  // if same ability already selected → cancel
+  if (BattleState.selectingAbility?.ability?.name === ability.name) {
+    clearAbilitySelection();
+    return;
+  }
+  startAbilitySelection(caster, ability);
+}
+
+
 function startAbilitySelection(caster, abilityRaw) {
   // remove movement highlights (player clicked ability; movement highlights must go)
   unhighlightAllTiles();
@@ -656,37 +666,39 @@ function startAbilitySelection(caster, abilityRaw) {
 
   // register tile as clickable for ability selection
   function registerTile(tile, handler) {
-    const wrapped = function (ev) {
-      ev.stopPropagation();
+  const wrapped = function (ev) {
+    ev.stopPropagation();
 
-      // If the tile contains a character token → select that character instead of using ability
-      const charEl = tile.querySelector('.character-token');
-      if (charEl && charEl.dataset?.id) {
-        const charId = charEl.dataset.id;
-        const char = BattleState.characters.find(c => c.id === charId);
-        if (char) {
-          try {
-            handleCharacterSelection(char, tile);
-          } catch (err) {
-            console.warn('handleCharacterSelection error', err);
-          }
-          clearAbilitySelection();
-          return;
-        }
-      }
-
-      // otherwise execute the ability handler
+    // if in targeting mode → treat click as ability use, not character selection
+    if (BattleState.selectingAbility) {
       try {
         handler(ev);
       } catch (err) {
         console.error('ability handler error', err);
       }
-    };
+      return;
+    }
 
-    tile._abilityTargetHandler = wrapped;
-    tile.addEventListener('click', wrapped);
-    BattleState.highlightedTiles.push(tile);
-  }
+    // normal mode → clicking a tile with a character selects that character
+    const charEl = tile.querySelector('.character-token');
+    if (charEl && charEl.dataset?.id) {
+      const charId = charEl.dataset.id;
+      const char = BattleState.characters.find(c => c.id === charId);
+      if (char) {
+        try {
+          handleCharacterSelection(char, tile);
+        } catch (err) {
+          console.warn('handleCharacterSelection error', err);
+        }
+        return;
+      }
+    }
+  };
+
+  tile._abilityTargetHandler = wrapped;
+  tile.addEventListener('click', wrapped);
+  BattleState.highlightedTiles.push(tile);
+}
 
   // --- SINGLE target logic ---
   if (ability.targeting === 'single') {
@@ -1437,25 +1449,24 @@ function renderBottomUI() {
                     });
 
                 btn.disabled = false;
-                btn.addEventListener('click', debounce(() => {
-                    console.log(`[ABILITY USED] ${abilityName}`);
-                    // handleEndTurn();
-                   const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
-                   if (!caster) {
-                     console.warn('No caster selected to use ability', abilityName);
-                     return;
-                   }
-                   fetch(`/api/abilities/${encodeURIComponent(abilityName)}`)
-                     .then(res => res.json())
-                     .then(data => {
-                       const ability = Array.isArray(data) ? data[0] : data;
-                       if (!ability) {
-                         console.warn('Ability not found from API:', abilityName);
-                         return;
-                       }
-                       startAbilitySelection(caster, ability);
-                     })
-                     .catch(err => console.error('Failed to load ability', abilityName, err));
+                btn.addEventListener('click', debounce(async () => {
+                const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
+                if (!caster) {
+                    console.warn('No caster selected to use ability', abilityName);
+                    return;
+                }
+                try {
+                    const res = await fetch(`/api/abilities/${encodeURIComponent(abilityName)}`);
+                    const abilityData = await res.json();
+                    const ability = Array.isArray(abilityData) ? abilityData[0] : abilityData;
+                    if (!ability) {
+                    console.warn('Ability not found from API:', abilityName);
+                    return;
+                    }
+                    toggleAbilitySelection(caster, ability);
+                } catch (err) {
+                    console.error('Failed loading ability for selection', abilityName, err);
+                }
                 }, 150));
 
             } else if (btnIndex === 4) {
