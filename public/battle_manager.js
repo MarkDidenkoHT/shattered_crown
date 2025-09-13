@@ -641,31 +641,72 @@ function clearAbilitySelection() {
 }
 
 function startAbilitySelection(caster, abilityRaw) {
+  // remove movement highlights (player clicked ability; movement highlights must go)
+  unhighlightAllTiles();
+
+  // clear any previous ability selection state
   clearAbilitySelection();
   const ability = normalizeAbility(abilityRaw);
-  BattleState.selectingAbility = { casterId: caster.id, casterPos: caster.position.slice(), ability };
+  BattleState.selectingAbility = {
+    casterId: caster.id,
+    casterPos: caster.position.slice(),
+    ability
+  };
   BattleState.highlightedTiles = [];
 
+  // register tile as clickable for ability selection
   function registerTile(tile, handler) {
-    tile._abilityTargetHandler = handler;
-    tile.addEventListener('click', handler);
+    const wrapped = function (ev) {
+      ev.stopPropagation();
+
+      // If the tile contains a character token → select that character instead of using ability
+      const charEl = tile.querySelector('.character-token');
+      if (charEl && charEl.dataset?.id) {
+        const charId = charEl.dataset.id;
+        const char = BattleState.characters.find(c => c.id === charId);
+        if (char) {
+          try {
+            handleCharacterSelection(char, tile);
+          } catch (err) {
+            console.warn('handleCharacterSelection error', err);
+          }
+          clearAbilitySelection();
+          return;
+        }
+      }
+
+      // otherwise execute the ability handler
+      try {
+        handler(ev);
+      } catch (err) {
+        console.error('ability handler error', err);
+      }
+    };
+
+    tile._abilityTargetHandler = wrapped;
+    tile.addEventListener('click', wrapped);
     BattleState.highlightedTiles.push(tile);
   }
 
-  // --- SINGLE ---
+  // --- SINGLE target logic ---
   if (ability.targeting === 'single') {
     for (const ch of BattleState.characters) {
       const dist = chebyshevDistance(caster.position, ch.position);
       if (dist > ability.range) continue;
+
       let allowed = false;
       if (ability.target_type === 'any') allowed = true;
       else if (ability.target_type === 'ally') allowed = isAlly(caster, ch);
       else if (ability.target_type === 'enemy') allowed = !isAlly(caster, ch);
+
       if (ch.id === caster.id && ability.effects === 'damage') allowed = false;
       if (!allowed) continue;
+
       const cell = getCellAt(ch.position[0], ch.position[1]);
       if (!cell) continue;
+
       cell.classList.add(isAlly(caster, ch) ? 'highlight-target-ally' : 'highlight-target-enemy');
+
       registerTile(cell, () => {
         const eff = computeEffect(caster, ability, ch);
         console.log('[ABILITY USED]', {
@@ -673,19 +714,28 @@ function startAbilitySelection(caster, abilityRaw) {
           casterId: caster.id,
           casterPos: caster.position,
           targetCenter: ch.position,
-          affectedTargets: [{ id: ch.id, pos: ch.position, faction: isAlly(caster, ch) ? 'ally' : 'enemy', intendedEffect: eff }]
+          affectedTargets: [
+            {
+              id: ch.id,
+              pos: ch.position,
+              faction: isAlly(caster, ch) ? 'ally' : 'enemy',
+              intendedEffect: eff
+            }
+          ]
         });
         clearAbilitySelection();
       });
     }
   }
 
-  // --- AREA ---
+  // --- AREA target logic ---
   if (ability.targeting === 'area') {
     const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
     for (const cell of cells) {
-      const x = +cell.dataset.x, y = +cell.dataset.y;
+      const x = +cell.dataset.x,
+        y = +cell.dataset.y;
       if (chebyshevDistance(caster.position, [x, y]) > ability.range) continue;
+
       const affected = [];
       for (let ax = x - ability.area; ax <= x + ability.area; ax++) {
         for (let ay = y - ability.area; ay <= y + ability.area; ay++) {
@@ -696,8 +746,10 @@ function startAbilitySelection(caster, abilityRaw) {
           if (eff) affected.push({ char: ch, eff });
         }
       }
+
       if (!affected.length) continue;
       cell.classList.add('highlight-area-center');
+
       registerTile(cell, () => {
         console.log('[ABILITY USED]', {
           abilityName: ability.name,
@@ -716,7 +768,9 @@ function startAbilitySelection(caster, abilityRaw) {
     }
   }
 
-  BattleState._abilityEscHandler = (e) => { if (e.key === 'Escape') clearAbilitySelection(); };
+  BattleState._abilityEscHandler = e => {
+    if (e.key === 'Escape') clearAbilitySelection();
+  };
   document.addEventListener('keydown', BattleState._abilityEscHandler);
 }
 
