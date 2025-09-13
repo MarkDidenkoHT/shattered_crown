@@ -1216,6 +1216,11 @@ const createTurnIndicator = () => {
 };
 
 const handleTileClick = throttle((event) => {
+    // ⬇️ prevent normal selection when aiming an ability
+    if (BattleState.selectingAbility) {
+        return; 
+    }
+
     const clickedTileEl = event.currentTarget;
     const targetX = parseInt(clickedTileEl.dataset.x);
     const targetY = parseInt(clickedTileEl.dataset.y);
@@ -1234,6 +1239,7 @@ const handleTileClick = throttle((event) => {
         handleMovementOrDeselect(clickedTileEl, targetX, targetY);
     }
 }, 150);
+
 
 const handleCharacterSelection = (character, tileEl) => {
     // Prevent selecting another character if a move is queued
