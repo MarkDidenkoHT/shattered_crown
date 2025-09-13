@@ -735,6 +735,22 @@ function startAbilitySelection(caster, abilityRaw) {
             }
           ]
         });
+        const payload = {
+        abilityName: ability.name,
+        casterId: caster.id,
+        casterPos: caster.position,
+        targetCenter: ch.position,
+        affectedTargets: [
+            {
+            id: ch.id,
+            pos: ch.position,
+            faction: isAlly(caster, ch) ? 'ally' : 'enemy',
+            intendedEffect: eff
+            }
+        ]
+        };
+
+        handleAbilityUse(payload);
         clearAbilitySelection();
       });
     }
@@ -775,6 +791,23 @@ function startAbilitySelection(caster, abilityRaw) {
             intendedEffect: a.eff
           }))
         });
+
+        const payload = {
+        abilityName: ability.name,
+        casterId: caster.id,
+        casterPos: caster.position,
+        targetCenter: ch.position,
+        affectedTargets: [
+            {
+            id: ch.id,
+            pos: ch.position,
+            faction: isAlly(caster, ch) ? 'ally' : 'enemy',
+            intendedEffect: eff
+            }
+        ]
+        };
+
+        handleAbilityUse(payload);
         clearAbilitySelection();
       });
     }
@@ -1521,6 +1554,49 @@ function renderBottomUI() {
         refreshBtnBottom.addEventListener('click', debounce(handleRefresh, 300));
     }
 }
+
+const handleAbilityUse = async (abilityPayload) => {
+    const activeCharacter = BattleState.currentTurnCharacter;
+    if (!activeCharacter) {
+        displayMessage('No active character to cast ability.');
+        return;
+    }
+
+    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
+        displayMessage('Missing battle or character data.');
+        return;
+    }
+
+    // Store action as "pendingAction" on character
+    activeCharacter.pendingAction = {
+        type: 'ability',
+        data: abilityPayload
+    };
+
+    try {
+        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
+            battleId: BattleState.battleId,
+            characterId: activeCharacter.id,
+            currentPosition: activeCharacter.originalPosition || activeCharacter.position,
+            targetPosition: activeCharacter.position,
+            action: activeCharacter.pendingAction
+        });
+
+        const result = await res.json();
+        if (!result.success) {
+            displayMessage(`Error: ${result.message}`, 'error');
+            return;
+        }
+
+        BattleState.currentTurnCharacter = null;
+        BattleState.isMoveQueued = false;
+        unhighlightAllTiles();
+
+    } catch (err) {
+        console.error('Ability use error:', err);
+        displayMessage('Error completing ability. Please try again.', 'error');
+    }
+};
 
 const handleEndTurn = async () => {
     const activeCharacter = BattleState.currentTurnCharacter;
