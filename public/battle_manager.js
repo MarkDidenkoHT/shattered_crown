@@ -588,6 +588,147 @@ async function updateGameStateFromRealtime() {
     handleTurnLogic();
 }
 
+// === UTILS / HELPERS ===
+// -------------------------------
+// Targeting System (selection + highlighting)
+// -------------------------------
+
+BattleState.selectingAbility = BattleState.selectingAbility || null;
+BattleState._abilityEscHandler = null;
+
+function chebyshevDistance(a, b) {
+  return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
+}
+
+function getCellAt(x, y) {
+  return BattleState.main?.querySelector(`td[data-x="${x}"][data-y="${y}"]`) || null;
+}
+
+function getCharacterAt(x, y) {
+  return BattleState.characters.find(c => c.position?.[0] === x && c.position?.[1] === y) || null;
+}
+
+function isAlly(caster, other) {
+  return caster?.type === other?.type;
+}
+
+function normalizeAbility(ability) {
+  return {
+    ...ability,
+    range: Number(ability.range) || 0,
+    area: Number(ability.area) || 0,
+    targeting: ability.targeting || 'single',
+    target_type: ability.target_type || 'any',
+    effects: ability.effects || 'damage'
+  };
+}
+
+function clearAbilitySelection() {
+  (BattleState.highlightedTiles || []).forEach(tileEl => {
+    tileEl.classList.remove('highlight-target-ally', 'highlight-target-enemy', 'highlight-area-center');
+    if (tileEl._abilityTargetHandler) {
+      tileEl.removeEventListener('click', tileEl._abilityTargetHandler);
+      delete tileEl._abilityTargetHandler;
+    }
+  });
+  BattleState.highlightedTiles = [];
+
+  if (BattleState._abilityEscHandler) {
+    document.removeEventListener('keydown', BattleState._abilityEscHandler);
+    BattleState._abilityEscHandler = null;
+  }
+  BattleState.selectingAbility = null;
+}
+
+function startAbilitySelection(caster, abilityRaw) {
+  clearAbilitySelection();
+  const ability = normalizeAbility(abilityRaw);
+  BattleState.selectingAbility = { casterId: caster.id, casterPos: caster.position.slice(), ability };
+  BattleState.highlightedTiles = [];
+
+  function registerTile(tile, handler) {
+    tile._abilityTargetHandler = handler;
+    tile.addEventListener('click', handler);
+    BattleState.highlightedTiles.push(tile);
+  }
+
+  // --- SINGLE ---
+  if (ability.targeting === 'single') {
+    for (const ch of BattleState.characters) {
+      const dist = chebyshevDistance(caster.position, ch.position);
+      if (dist > ability.range) continue;
+      let allowed = false;
+      if (ability.target_type === 'any') allowed = true;
+      else if (ability.target_type === 'ally') allowed = isAlly(caster, ch);
+      else if (ability.target_type === 'enemy') allowed = !isAlly(caster, ch);
+      if (ch.id === caster.id && ability.effects === 'damage') allowed = false;
+      if (!allowed) continue;
+      const cell = getCellAt(ch.position[0], ch.position[1]);
+      if (!cell) continue;
+      cell.classList.add(isAlly(caster, ch) ? 'highlight-target-ally' : 'highlight-target-enemy');
+      registerTile(cell, () => {
+        const eff = computeEffect(caster, ability, ch);
+        console.log('[ABILITY USED]', {
+          abilityName: ability.name,
+          casterId: caster.id,
+          casterPos: caster.position,
+          targetCenter: ch.position,
+          affectedTargets: [{ id: ch.id, pos: ch.position, faction: isAlly(caster, ch) ? 'ally' : 'enemy', intendedEffect: eff }]
+        });
+        clearAbilitySelection();
+      });
+    }
+  }
+
+  // --- AREA ---
+  if (ability.targeting === 'area') {
+    const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
+    for (const cell of cells) {
+      const x = +cell.dataset.x, y = +cell.dataset.y;
+      if (chebyshevDistance(caster.position, [x, y]) > ability.range) continue;
+      const affected = [];
+      for (let ax = x - ability.area; ax <= x + ability.area; ax++) {
+        for (let ay = y - ability.area; ay <= y + ability.area; ay++) {
+          if (chebyshevDistance([x, y], [ax, ay]) > ability.area) continue;
+          const ch = getCharacterAt(ax, ay);
+          if (!ch) continue;
+          const eff = computeEffect(caster, ability, ch);
+          if (eff) affected.push({ char: ch, eff });
+        }
+      }
+      if (!affected.length) continue;
+      cell.classList.add('highlight-area-center');
+      registerTile(cell, () => {
+        console.log('[ABILITY USED]', {
+          abilityName: ability.name,
+          casterId: caster.id,
+          casterPos: caster.position,
+          targetCenter: [x, y],
+          affectedTargets: affected.map(a => ({
+            id: a.char.id,
+            pos: a.char.position,
+            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+            intendedEffect: a.eff
+          }))
+        });
+        clearAbilitySelection();
+      });
+    }
+  }
+
+  BattleState._abilityEscHandler = (e) => { if (e.key === 'Escape') clearAbilitySelection(); };
+  document.addEventListener('keydown', BattleState._abilityEscHandler);
+}
+
+function computeEffect(caster, ability, target) {
+  const ally = isAlly(caster, target);
+  const eff = ability.effects.toLowerCase();
+  if (eff === 'damage') return ally ? null : 'damage';
+  if (eff === 'heal') return ally ? 'heal' : null;
+  if (eff.includes('damage') && eff.includes('heal')) return ally ? 'heal' : 'damage';
+  return ally ? 'heal' : 'damage';
+}
+
 async function updateCharactersWithAnimations(newCharacters) {
     const container = BattleState.main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -844,7 +985,7 @@ function renderBattleScreen(mode, level, layoutData) {
                     </div>
                 </div>
             </div>
-            <div class="battle-bottom-ui" style="display: contents; width: 97vw;"></div>
+            <div class="battle-bottom-ui" style="display: block; width: 97vw; margin: auto;"></div>
         </div>
     `;
 
@@ -1244,8 +1385,24 @@ function renderBottomUI() {
                 btn.disabled = false;
                 btn.addEventListener('click', debounce(() => {
                     console.log(`[ABILITY USED] ${abilityName}`);
-                    handleEndTurn(); // end turn for now
-                }, 500));
+                    // handleEndTurn();
+                   const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
+                   if (!caster) {
+                     console.warn('No caster selected to use ability', abilityName);
+                     return;
+                   }
+                   fetch(`/api/abilities/${encodeURIComponent(abilityName)}`)
+                     .then(res => res.json())
+                     .then(data => {
+                       const ability = Array.isArray(data) ? data[0] : data;
+                       if (!ability) {
+                         console.warn('Ability not found from API:', abilityName);
+                         return;
+                       }
+                       startAbilitySelection(caster, ability);
+                     })
+                     .catch(err => console.error('Failed to load ability', abilityName, err));
+                }, 150));
 
             } else if (btnIndex === 4) {
                 btn.textContent = 'Refresh';
