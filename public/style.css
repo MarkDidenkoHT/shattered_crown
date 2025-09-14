@@ -1263,6 +1263,8 @@
     max-width: 95vw;
     width: 95vw;
     margin: auto;
+    gap: 5px;
+    justify-content: center;
 }
 
 
@@ -1274,4 +1276,10 @@
 }
 .battle-tile.highlight-area-center {
   outline: 3px solid rgba(0, 120, 220, 0.6);
+}
+
+.battle-info-panel {
+    border: 2px solid rgb(196, 151, 90);
+    margin: 3px;
+    border-radius: 4px;
 }

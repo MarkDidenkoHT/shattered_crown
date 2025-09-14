@@ -1064,7 +1064,7 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
                     <div style="width: 25%; display: flex; align-items: center; justify-content: center;">
-                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 80px; max-height: 80px; object-fit: contain;" />
+                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 90px; max-height: 90px; object-fit: contain;" />
                     </div>
                     <div class="info-text" style="width: 35%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center;">
                         <h3 id="infoName" style="margin: 0 0 4px 0; font-size: 14px;">—</h3>
