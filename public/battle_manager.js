@@ -1296,14 +1296,18 @@ const handleCharacterSelection = (character, tileEl) => {
             BattleState.currentTurnCharacter = character;
             highlightWalkableTiles(character);
         }
+        // ✅ show bottom UI only for player characters
+        renderBottomUI();
     } else {
         BattleState.selectedPlayerCharacter = null;
         BattleState.selectedCharacterEl = null;
         unhighlightAllTiles();
+        // ✅ clear bottom UI if AI character is clicked
+        const ui = BattleState.main.querySelector('.battle-bottom-ui');
+        if (ui) ui.innerHTML = '';
     }
     
     showEntityInfo(character);
-    renderBottomUI();
 };
 
 const handleMovementOrDeselect = async (tileEl, targetX, targetY) => {
@@ -1363,10 +1367,16 @@ function highlightWalkableTiles(character) {
 }
 
 function unhighlightAllTiles() {
+    // Remove walkable highlights
     BattleState.highlightedTiles.forEach(tileEl => {
         tileEl.classList.remove('highlight-walkable');
     });
     BattleState.highlightedTiles = [];
+
+    // Remove any selected character border
+    document.querySelectorAll('.character-selected').forEach(el => {
+        el.classList.remove('character-selected');
+    });
 }
 
 function debugConsumableLoading() {
