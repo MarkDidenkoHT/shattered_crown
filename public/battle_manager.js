@@ -1773,19 +1773,27 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     else if (hpPercentage <= 50) hpColor = '#FF9800';
     else if (hpPercentage <= 75) hpColor = '#FFC107';
     
-    // Removed turn status - no longer needed
-    hpEl.innerHTML = `<strong>HP:</strong> <span style="color: ${hpColor}">${currentHp}/${maxHp}</span>`;
-
     const stats = entity.stats || {};
     
-    // Updated layout: Row 1: HP-VIT, Row 2: STR-DEX, Row 3: INT-SPR-ARM-RES
+    // Updated layout: Row 1: HP-VIT, Row 2: STR-DEX, Row 3: INT-SPR, Row 4: ARM-RES
+    hpEl.innerHTML = `
+        <div style="font-size: 10px; line-height: 1.2;">
+            <!-- Row 1: HP - VIT -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <div style="display: flex; flex: 1;">
+                    <span style="font-weight: bold;">HP:</span>
+                    <span id="hp-value" style="margin-left: 4px; color: ${hpColor}">${currentHp}/${maxHp}</span>
+                </div>
+                <div style="display: flex; flex: 1; justify-content: flex-end;">
+                    <span style="color: #CD853F; font-weight: bold;">VIT:</span>
+                    <span style="margin-left: 4px;">${stats.vitality || 0}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
     statsEl.innerHTML = `
         <div style="font-size: 10px; line-height: 1.2;">
-            <!-- Row 1: VIT (HP is displayed separately above) -->
-            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                <span style="color: #CD853F; font-weight: bold;">VIT:</span>
-                <span>${stats.vitality || 0}</span>
-            </div>
             
             <!-- Row 2: STR - DEX -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
@@ -1855,7 +1863,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         portrait.src = 'assets/art/sprites/placeholder.png';
     };
 };
-
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
     
