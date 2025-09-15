@@ -1057,7 +1057,7 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-grid-container"></div>
             <div class="battle-top-bar" style="display: flex; justify-content: space-between; align-items: center;">
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
-                <div id="turnStatus" style="width: 25%; text-align: center; font-size: 12px; padding: 4px 8px; background: rgba(0,0,0,0.3); border-radius: 4px;">—</div>
+                <div id="turnStatus" style="width: 25%; text-align: center; font-size: 16px; background: rgba(0,0,0,0.3); border-radius: 4px;">—</div>
             </div>
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
