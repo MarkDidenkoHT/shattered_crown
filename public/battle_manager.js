@@ -1774,9 +1774,7 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     else if (hpPercentage <= 75) hpColor = '#FFC107';
     
     let turnStatus = '';
-    if (entity.has_moved && entity.has_acted) {
-        turnStatus = ' <span style="color: #888; font-size: 10px;">(Complete)</span>';
-    } else if (entity.has_moved) {
+    if (entity.has_moved) {
         turnStatus = ' <span style="color: #FFB74D; font-size: 10px;">(Moved)</span>';
     } else if (entity.has_acted) {
         turnStatus = ' <span style="color: #81C784; font-size: 10px;">(Acted)</span>';
