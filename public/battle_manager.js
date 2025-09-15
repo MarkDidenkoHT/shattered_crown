@@ -1773,34 +1773,55 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     else if (hpPercentage <= 50) hpColor = '#FF9800';
     else if (hpPercentage <= 75) hpColor = '#FFC107';
     
-    let turnStatus = '';
-    if (entity.has_moved) {
-        turnStatus = ' <span style="color: #FFB74D; font-size: 10px;">(Moved)</span>';
-    } else if (entity.has_acted) {
-        turnStatus = ' <span style="color: #81C784; font-size: 10px;">(Acted)</span>';
-    }
-    
-    hpEl.innerHTML = `<strong>HP:</strong> <span style="color: ${hpColor}">${currentHp}/${maxHp}</span>${turnStatus}`;
+    // Removed turn status - no longer needed
+    hpEl.innerHTML = `<strong>HP:</strong> <span style="color: ${hpColor}">${currentHp}/${maxHp}</span>`;
 
     const stats = entity.stats || {};
-    const statsData = [
-        { label: 'STR', value: stats.strength || 0, color: '#D4AF37' },
-        { label: 'DEX', value: stats.dexterity || 0, color: '#B8860B' },
-        { label: 'VIT', value: stats.vitality || 0, color: '#CD853F' },
-        { label: 'SPR', value: stats.spirit || 0, color: '#DAA520' },
-        { label: 'INT', value: stats.intellect || 0, color: '#F4A460' },
-        { label: 'ARM', value: stats.armor || 0, color: '#8B7355' },
-        { label: 'RES', value: stats.resistance || 0, color: '#4682B4' }
-    ];
-
+    
+    // Updated layout: Row 1: HP-VIT, Row 2: STR-DEX, Row 3: INT-SPR-ARM-RES
     statsEl.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 10px;">
-            ${statsData.map(stat => `
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: ${stat.color}; font-weight: bold;">${stat.label}:</span>
-                    <span>${stat.value}</span>
+        <div style="font-size: 10px; line-height: 1.2;">
+            <!-- Row 1: VIT (HP is displayed separately above) -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <span style="color: #CD853F; font-weight: bold;">VIT:</span>
+                <span>${stats.vitality || 0}</span>
+            </div>
+            
+            <!-- Row 2: STR - DEX -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <div style="display: flex; flex: 1;">
+                    <span style="color: #D4AF37; font-weight: bold;">STR:</span>
+                    <span style="margin-left: 4px;">${stats.strength || 0}</span>
                 </div>
-            `).join('')}
+                <div style="display: flex; flex: 1; justify-content: flex-end;">
+                    <span style="color: #B8860B; font-weight: bold;">DEX:</span>
+                    <span style="margin-left: 4px;">${stats.dexterity || 0}</span>
+                </div>
+            </div>
+            
+            <!-- Row 3: INT - SPR -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <div style="display: flex; flex: 1;">
+                    <span style="color: #F4A460; font-weight: bold;">INT:</span>
+                    <span style="margin-left: 4px;">${stats.intellect || 0}</span>
+                </div>
+                <div style="display: flex; flex: 1; justify-content: flex-end;">
+                    <span style="color: #DAA520; font-weight: bold;">SPR:</span>
+                    <span style="margin-left: 4px;">${stats.spirit || 0}</span>
+                </div>
+            </div>
+            
+            <!-- Row 4: ARM - RES -->
+            <div style="display: flex; justify-content: space-between;">
+                <div style="display: flex; flex: 1;">
+                    <span style="color: #8B7355; font-weight: bold;">ARM:</span>
+                    <span style="margin-left: 4px;">${stats.armor || 0}</span>
+                </div>
+                <div style="display: flex; flex: 1; justify-content: flex-end;">
+                    <span style="color: #4682B4; font-weight: bold;">RES:</span>
+                    <span style="margin-left: 4px;">${stats.resistance || 0}</span>
+                </div>
+            </div>
         </div>
     `;
 
