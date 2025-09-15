@@ -944,17 +944,15 @@ const updateTurnDisplay = () => {
     if (!turnStatusEl) return;
 
     const currentTurn = BattleState.battleState.current_turn;
-    const roundNumber = BattleState.battleState.round_number;
 
     if (currentTurn === 'AI') {
-        turnStatusEl.textContent = `AI Turn - Round ${roundNumber}`;
-        turnStatusEl.style.color = '#8B4513';
+        turnStatusEl.textContent = 'Enemy Turn';
+        turnStatusEl.style.color = '#F44336';
+        turnStatusEl.style.background = 'rgba(244, 67, 54, 0.2)';
     } else {
-        const playerCharacters = BattleState.characters.filter(c => c.isPlayerControlled);
-        const activePlayerChar = playerCharacters.find(c => !c.has_moved || !c.has_acted);
-        const displayName = activePlayerChar?.name || 'Player';
-        turnStatusEl.textContent = `${displayName}'s Turn - Round ${roundNumber}`;
-        turnStatusEl.style.color = '#B8860B';
+        turnStatusEl.textContent = 'Your Turn';
+        turnStatusEl.style.color = '#4CAF50';
+        turnStatusEl.style.background = 'rgba(76, 175, 80, 0.2)';
     }
 };
 
@@ -1057,9 +1055,9 @@ function renderBattleScreen(mode, level, layoutData) {
         </style>
         <div class="main-app-container">
             <div class="battle-grid-container"></div>
-            <div class="battle-top-bar">
+            <div class="battle-top-bar" style="display: flex; justify-content: space-between; align-items: center;">
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
-                <p id="turnStatus">Turn: —</p>
+                <div id="turnStatus" style="width: 25%; text-align: center; font-size: 12px; padding: 4px 8px; background: rgba(0,0,0,0.3); border-radius: 4px;">—</div>
             </div>
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
