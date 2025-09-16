@@ -1213,7 +1213,7 @@ const createCharacterElement = (char) => {
 
     // Use portrait if available, otherwise fallback to spriteName
     const img = document.createElement('img');
-    img.src = char.portrait ? `assets/art/portraits/${char.portrait}` : `assets/art/sprites/${char.spriteName || 'placeholder'}.png`;
+    img.src = char.portrait ? `assets/art/portraits/${char.portrait}.png` : `assets/art/sprites/${char.spriteName || 'placeholder'}.png`;
     img.alt = char.name;
     img.addEventListener('error', () => {
         img.src = char.portrait ? 'assets/art/portraits/placeholder.png' : 'assets/art/sprites/placeholder.png';
@@ -1900,7 +1900,7 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
 
     // ✅ Only use portrait from state, no sprite fallback
     if (entity.portrait) {
-        portrait.src = `assets/art/portraits/${entity.portrait}`;
+        portrait.src = `assets/art/portraits/${entity.portrait}.png`;
         portrait.onerror = () => {
             portrait.src = 'assets/art/portraits/placeholder.png';
         };
