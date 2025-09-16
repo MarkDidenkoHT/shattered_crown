@@ -639,6 +639,8 @@ function clearAbilitySelection() {
     BattleState._abilityEscHandler = null;
   }
   BattleState.selectingAbility = null;
+
+  resetAbilityButtonsUI(); // 🔥 reset ability button state
 }
 
 function toggleAbilitySelection(caster, ability) {
@@ -1539,7 +1541,6 @@ async function renderBottomUI() {
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
 
-            // Ability buttons
             if (btnIndex < abilityObjs.length) {
                 const ability = abilityObjs[btnIndex];
                 if (ability?.sprite) {
@@ -1548,14 +1549,13 @@ async function renderBottomUI() {
                 } else {
                     btn.textContent = ability?.name || 'Unknown';
                 }
-
+            
+                btn.dataset.abilityName = ability.name; // 🔥 important
                 btn.disabled = false;
                 btn.addEventListener('click', debounce(() => {
                     const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
                     if (caster) toggleAbilitySelection(caster, ability);
                 }, 150));
-
-            // Refresh
             } else if (btnIndex === 4) {
                 btn.textContent = 'Refresh';
                 btn.id = 'refreshButtonBottom';
