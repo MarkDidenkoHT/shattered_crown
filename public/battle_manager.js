@@ -8,7 +8,7 @@ const BattleState = {
     battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false,
     characterElements: new Map(), // Track character DOM elements for animations
     isMoveQueued: false, // Add a flag to track if a move is queued and awaiting confirmation
-    BattleState.characterAbilities = {}; // key: characterId → array of ability objects
+    characterAbilities: {} // key: characterId → array of ability objects
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
