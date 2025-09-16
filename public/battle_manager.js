@@ -7,7 +7,8 @@ const BattleState = {
     highlightedTiles: [], supabaseClient: null, battleState: null,
     battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false,
     characterElements: new Map(), // Track character DOM elements for animations
-    isMoveQueued: false // Add a flag to track if a move is queued and awaiting confirmation
+    isMoveQueued: false, // Add a flag to track if a move is queued and awaiting confirmation
+    BattleState.characterAbilities = {}; // key: characterId → array of ability objects
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -1062,7 +1063,7 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
                     <div style="width: 25%; display: flex; align-items: center; justify-content: center;">
-                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 90px; max-height: 90px; object-fit: contain;" />
+                        <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 80px; max-height: 80px; object-fit: contain;" />
                     </div>
                     <div class="info-text" style="width: 35%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center;">
                         <h3 id="infoName" style="margin: 0 0 4px 0; font-size: 14px;">—</h3>
@@ -1447,22 +1448,64 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
     BattleState.selectedPlayerCharacter = null;
 };
 
-function renderBottomUI() {
+async function getAbility(abilityName) {
+    BattleState.abilityCache = BattleState.abilityCache || {};
+    if (BattleState.abilityCache[abilityName]) {
+        return BattleState.abilityCache[abilityName];
+    }
+    try {
+        const res = await fetch(`/api/abilities/${encodeURIComponent(abilityName)}`);
+        const abilityData = await res.json();
+        const ability = Array.isArray(abilityData) ? abilityData[0] : abilityData;
+        if (ability) {
+            BattleState.abilityCache[abilityName] = ability;
+            return ability;
+        }
+    } catch (err) {
+        console.error('Failed fetching ability', abilityName, err);
+    }
+    return null;
+}
+
+async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
     ui.innerHTML = '';
-    debugConsumableLoading();
     const fragment = document.createDocumentFragment();
     const currentChar = BattleState.currentTurnCharacter;
 
-    // --- NEW: load abilities from battle_state.player_abilities ---
-    let selectedAbilities = [];
-    if (currentChar && BattleState.battleState?.player_abilities?.[currentChar.id]) {
-        selectedAbilities = Object.keys(BattleState.battleState.player_abilities[currentChar.id]).slice(0, 3);
-        console.log('[renderBottomUI] selectedAbilities from state:', selectedAbilities);
-    } else {
-        console.log('[renderBottomUI] No abilities found for currentChar:', currentChar);
+    if (!currentChar) {
+        ui.appendChild(fragment);
+        return;
     }
 
+    // Ensure cache container exists
+    BattleState.characterAbilities = BattleState.characterAbilities || {};
+
+    // === Load or reuse abilities for this character ===
+    let abilityObjs = [];
+    if (BattleState.characterAbilities[currentChar.id]) {
+        // ✅ Already cached
+        abilityObjs = BattleState.characterAbilities[currentChar.id];
+    } else {
+        // First time → build ability list from battle state
+        let abilityNames = [];
+        if (BattleState.battleState?.player_abilities?.[currentChar.id]) {
+            abilityNames = Object.keys(
+                BattleState.battleState.player_abilities[currentChar.id]
+            ).slice(0, 3);
+        }
+
+        abilityObjs = [];
+        for (const abilityName of abilityNames) {
+            const ability = await getAbility(abilityName); // uses local cache per name
+            if (ability) abilityObjs.push(ability);
+        }
+
+        // Store in cache
+        BattleState.characterAbilities[currentChar.id] = abilityObjs;
+    }
+
+    // === Render 2 rows of 5 buttons ===
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
@@ -1472,55 +1515,29 @@ function renderBottomUI() {
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
 
-            if (btnIndex < 3 && selectedAbilities[btnIndex]) {
-                const abilityName = selectedAbilities[btnIndex];
-                console.log(`[renderBottomUI] Fetching ability for button ${btnIndex}:`, abilityName);
-
-                // Updated to use server endpoint instead of direct Supabase call
-                fetch(`/api/abilities/${encodeURIComponent(abilityName)}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        const ability = data[0];
-                        if (ability && ability.sprite) {
-                            btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:32px;height:32px;'>`;
-                            btn.title = ability.name;
-                            console.log(`[renderBottomUI] Set image for ability '${ability.name}' on button ${btnIndex}`);
-                        } else {
-                            btn.textContent = abilityName;
-                            console.warn(`[renderBottomUI] No sprite found for ability '${abilityName}'`, ability);
-                        }
-                    })
-                    .catch(err => {
-                        btn.textContent = abilityName;
-                        console.error(`[renderBottomUI] Error fetching ability '${abilityName}':`, err);
-                    });
+            // Ability buttons
+            if (btnIndex < abilityObjs.length) {
+                const ability = abilityObjs[btnIndex];
+                if (ability?.sprite) {
+                    btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:32px;height:32px;'>`;
+                    btn.title = ability.name;
+                } else {
+                    btn.textContent = ability?.name || 'Unknown';
+                }
 
                 btn.disabled = false;
-                btn.addEventListener('click', debounce(async () => {
-                const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
-                if (!caster) {
-                    console.warn('No caster selected to use ability', abilityName);
-                    return;
-                }
-                try {
-                    const res = await fetch(`/api/abilities/${encodeURIComponent(abilityName)}`);
-                    const abilityData = await res.json();
-                    const ability = Array.isArray(abilityData) ? abilityData[0] : abilityData;
-                    if (!ability) {
-                    console.warn('Ability not found from API:', abilityName);
-                    return;
-                    }
-                    toggleAbilitySelection(caster, ability);
-                } catch (err) {
-                    console.error('Failed loading ability for selection', abilityName, err);
-                }
+                btn.addEventListener('click', debounce(() => {
+                    const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
+                    if (caster) toggleAbilitySelection(caster, ability);
                 }, 150));
 
+            // Refresh
             } else if (btnIndex === 4) {
                 btn.textContent = 'Refresh';
                 btn.id = 'refreshButtonBottom';
                 btn.disabled = false;
 
+            // Consumable
             } else if (btnIndex === 5) {
                 const consumable = currentChar?.equipped_items?.equipped_consumable;
                 if (consumable && consumable !== 'none') {
@@ -1535,11 +1552,13 @@ function renderBottomUI() {
                     btn.disabled = true;
                 }
 
+            // End Turn
             } else if (btnIndex === 9) {
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
 
+            // Filler
             } else {
                 btn.textContent = `Btn ${btnIndex + 1}`;
                 btn.disabled = true;
@@ -1552,16 +1571,14 @@ function renderBottomUI() {
 
     ui.appendChild(fragment);
 
+    // Hook up buttons
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
-    if (endTurnBtn) {
-        endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
-    }
+    if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
 
     const refreshBtnBottom = document.getElementById('refreshButtonBottom');
-    if (refreshBtnBottom) {
-        refreshBtnBottom.addEventListener('click', debounce(handleRefresh, 300));
-    }
+    if (refreshBtnBottom) refreshBtnBottom.addEventListener('click', debounce(handleRefresh, 300));
 }
+
 
 const handleAbilityUse = async (abilityPayload) => {
     const activeCharacter = BattleState.currentTurnCharacter;
