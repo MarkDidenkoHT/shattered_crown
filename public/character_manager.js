@@ -15,6 +15,8 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     return;
   }
 
+
+
   _main.innerHTML = `
     <div class="main-app-container">
       <div class="particles"></div>
@@ -52,6 +54,425 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
   createParticles();
   await fetchAndRenderCharacters();
 }
+
+const styleEl = document.createElement('style');
+styleEl.textContent = `
+.character-creation-section {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 1rem;
+    position: relative;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+}
+
+.character-creation-section .art-header {
+    height: auto;
+    background: none;
+    border-bottom: 1px solid rgba(196, 151, 90, 0.2);
+    margin-bottom: 0.5rem;
+    text-align: center;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.character-creation-section .art-header h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.character-creation-section .subtitle {
+    font-size: 0.9rem;
+    color: #b8b3a8;
+}
+
+.characters-slider-container {
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.characters-slider {
+    width: 100%;
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+    -ms-overflow-style: none;
+    user-select: none;
+    height: 84vh;
+}
+
+.characters-slider::-webkit-scrollbar {
+    display: none;
+}
+
+.character-card {
+    background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
+    border: 2px solid #c4975a;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s;
+    backdrop-filter: blur(3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 1rem 1rem 0rem 1rem;
+    min-width: calc(100% - 2rem);
+    max-width: calc(100% - 2rem);
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.card-top-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 4px;
+}
+
+.card-portrait {
+    width: 120px;
+    height: 120px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(196, 151, 90, 0.3);
+    flex-shrink: 0;
+}
+
+.card-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+}
+
+.card-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.3rem;
+}
+
+.card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #c4975a;
+    margin: 0;
+    text-shadow: 1px 1px 0px #3d2914;
+    letter-spacing: 1px;
+}
+
+.card-race-class {
+    font-size: 0.95rem;
+    color: #b8b3a8;
+    font-weight: 500;
+    margin: 0;
+}
+
+.card-profession {
+    font-size: 0.85rem;
+    color: #9a8f7e;
+    font-style: italic;
+    margin: 0;
+}
+
+.card-exp {
+    font-size: 0.8rem;
+    color: #8a7f6e;
+    margin: 0;
+}
+
+.stats-items-container {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-top: 8px;
+}
+
+.equipment-block, .stats-block {
+    flex: 1;
+}
+
+.equipment-block h4, .stats-block h4 {
+    font-family: 'Cinzel', serif;
+    color: #c4975a;
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.items-list, .stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.items-list p, .stats-list p {
+    color: #c4975a;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0.1rem 0;
+    height: 25px;
+
+.stats-list p span {
+    color: #c4975a;
+    font-weight: bold;
+}
+
+.equipment-item {
+    transition: color 0.2s ease;
+}
+
+.character-actions {
+    display: flex;
+    gap: 5px;
+    padding-top: 6px;
+}
+
+.character-actions .fantasy-button {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.spellbook-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(1200px 800px at 50% -10%, rgba(110,195,255,.12), rgba(0,0,0,.76) 40%, rgba(0,0,0,.86));
+    backdrop-filter: blur(2px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spellbook-stage {
+    position: relative;
+    perspective: 1600px;
+}
+
+.spellbook {
+    width: min(900px, 92vw);
+    height: min(560px, 78vh);
+    border-radius: 18px;
+    transform-style: preserve-3d;
+    box-shadow: 0 30px 100px rgba(0,0,0,.55);
+    position: relative;
+    background: linear-gradient(180deg, #7a5d2a, #5b4218);
+    padding: 14px;
+}
+
+.spellbook::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 2px, rgba(0,0,0,.06) 2px 4px);
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+}
+
+.spellbook-inner {
+    position: absolute;
+    inset: 14px;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: linear-gradient(90deg, #e9ddc6 0 50%, #d2c6a8 50% 100%);
+    overflow: hidden;
+}
+
+.spellbook-spine {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    width: 2px;
+    background: rgba(0,0,0,.12);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.06);
+    z-index: 2;
+}
+
+.spellbook-page {
+    position: relative;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.spellbook-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.spellbook-title {
+    color: #2a1e0f;
+    font-weight: 800;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    font-size: 13px;
+}
+
+.spellbook-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.spells-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+    overflow-y: auto;
+}
+
+.spell-card {
+    background: linear-gradient(180deg, #1e2430, #0f131a);
+    border-radius: 12px;
+    position: relative;
+    aspect-ratio: 1/1;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), inset 0 10px 20px rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.2);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.spell-icon {
+    font-size: 28px;
+    user-select: none;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
+    transform: translateY(2px);
+}
+
+.spell-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 6px;
+    border-radius: 8px;
+    color: #0c0f14;
+    background: linear-gradient(180deg, #c8e9ff, #86c8ff);
+    box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+
+.spellbook-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+    border: 0;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-weight: 800;
+    color: #1a1006;
+    background: linear-gradient(180deg, #ffd7a1, #f0c47d);
+    box-shadow: 0 6px 16px rgba(0,0,0,.25);
+    transition: transform 0.2s ease;
+}
+
+.spell-tooltip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 110;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: #121418;
+    background: linear-gradient(180deg, #fffef9, #f2e9d5);
+    border: 1px solid rgba(0,0,0,.15);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    transform: translate(-50%, calc(-100% - 14px));
+}
+
+.tooltip-name {
+    font-weight: 900;
+    letter-spacing: .3px;
+    color: #341f07;
+    margin-bottom: 4px;
+}
+
+.tooltip-desc {
+    font-size: 13px;
+    color: #3e2c14;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.tooltip-cooldown {
+    font-size: 12px;
+    color: #6b512f;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .card-portrait {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .stats-items-container {
+        flex-direction: row;
+        gap: 0.8rem;
+    }
+    
+    .spells-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .spell-badge {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .characters-slider {
+        padding: 0.5rem;
+    }
+    
+    .card-top-row {
+        gap: 0.8rem;
+    }
+    
+    .card-portrait {
+        width: 80px;
+        height: 80px;
+    }
+}
+`;
+document.head.appendChild(styleEl);
 
 async function fetchAndRenderCharacters() {
   try {
@@ -104,7 +525,7 @@ function renderCharacters(characters) {
   const characterImages = section.querySelectorAll('.card-art');
   characterImages.forEach(img => {
     img.addEventListener('error', function() {
-      this.src = 'assets/art/placeholder.png';
+      this.src = 'assets/art/portraits/default_portrait.png';
     });
   });
 
@@ -168,9 +589,8 @@ function characterCardHTML(character) {
     <div class="character-card" data-character-id="${character.id}">
       <div class="card-top-row">
         <div class="card-portrait">
-          <img src="assets/art/characters/${raceName.toLowerCase().replace(/\s+/g, '_')}_${className.toLowerCase().replace(/\s+/g, '_')}.png" 
-            alt="Character Portrait" 
-            class="card-art">
+          <img src="assets/art/portraits/${character.portrait || 'default_portrait.png'}" 
+          class="card-art">
         </div>
         <div class="card-info">
           <h3 class="card-name">Lvl ${character.level || 1}</h3>
@@ -762,422 +1182,3 @@ function displayMessage(message) {
     messageBox.remove();
   });
 }
-
-const styleEl = document.createElement('style');
-styleEl.textContent = `
-.character-creation-section {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    padding: 1rem;
-    position: relative;
-    z-index: 2;
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(10px);
-    overflow: hidden;
-}
-
-.character-creation-section .art-header {
-    height: auto;
-    background: none;
-    border-bottom: 1px solid rgba(196, 151, 90, 0.2);
-    margin-bottom: 0.5rem;
-    text-align: center;
-    width: 100%;
-    flex-shrink: 0;
-}
-
-.character-creation-section .art-header h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
-.character-creation-section .subtitle {
-    font-size: 0.9rem;
-    color: #b8b3a8;
-}
-
-.characters-slider-container {
-    flex: 1;
-    width: 100%;
-    overflow: hidden;
-    position: relative;
-}
-
-.characters-slider {
-    width: 100%;
-    display: flex;
-    gap: 1.5rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-behavior: smooth;
-    scrollbar-width: none;
-    scroll-snap-type: x mandatory;
-    -ms-overflow-style: none;
-    user-select: none;
-    height: 84vh;
-}
-
-.characters-slider::-webkit-scrollbar {
-    display: none;
-}
-
-.character-card {
-    background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
-    border: 2px solid #c4975a;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.3s;
-    backdrop-filter: blur(3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    padding: 1rem 1rem 0rem 1rem;
-    min-width: calc(100% - 2rem);
-    max-width: calc(100% - 2rem);
-    scroll-snap-align: start;
-    flex-shrink: 0;
-    user-select: none;
-}
-
-.card-top-row {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 4px;
-}
-
-.card-portrait {
-    width: 120px;
-    height: 120px;
-    overflow: hidden;
-    border-radius: 8px;
-    background: rgba(0,0,0,0.3);
-    border: 2px solid rgba(196, 151, 90, 0.3);
-    flex-shrink: 0;
-}
-
-.card-art {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-    pointer-events: none;
-}
-
-.card-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.3rem;
-}
-
-.card-name {
-    font-family: 'Cinzel', serif;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #c4975a;
-    margin: 0;
-    text-shadow: 1px 1px 0px #3d2914;
-    letter-spacing: 1px;
-}
-
-.card-race-class {
-    font-size: 0.95rem;
-    color: #b8b3a8;
-    font-weight: 500;
-    margin: 0;
-}
-
-.card-profession {
-    font-size: 0.85rem;
-    color: #9a8f7e;
-    font-style: italic;
-    margin: 0;
-}
-
-.card-exp {
-    font-size: 0.8rem;
-    color: #8a7f6e;
-    margin: 0;
-}
-
-.stats-items-container {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
-    padding-top: 8px;
-}
-
-.equipment-block, .stats-block {
-    flex: 1;
-}
-
-.equipment-block h4, .stats-block h4 {
-    font-family: 'Cinzel', serif;
-    color: #c4975a;
-    font-size: 0.9rem;
-    margin-bottom: 0.6rem;
-    text-align: center;
-    font-weight: 600;
-}
-
-.items-list, .stats-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.items-list p, .stats-list p {
-    color: #c4975a;
-    font-size: 0.8rem;
-    display: flex;
-    justify-content: space-between;
-    margin: 0;
-    padding: 0.1rem 0;
-    height: 25px;
-
-.stats-list p span {
-    color: #c4975a;
-    font-weight: bold;
-}
-
-.equipment-item {
-    transition: color 0.2s ease;
-}
-
-.character-actions {
-    display: flex;
-    gap: 5px;
-    padding-top: 6px;
-}
-
-.character-actions .fantasy-button {
-    flex: 1;
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-}
-
-.spellbook-overlay {
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(1200px 800px at 50% -10%, rgba(110,195,255,.12), rgba(0,0,0,.76) 40%, rgba(0,0,0,.86));
-    backdrop-filter: blur(2px);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.spellbook-stage {
-    position: relative;
-    perspective: 1600px;
-}
-
-.spellbook {
-    width: min(900px, 92vw);
-    height: min(560px, 78vh);
-    border-radius: 18px;
-    transform-style: preserve-3d;
-    box-shadow: 0 30px 100px rgba(0,0,0,.55);
-    position: relative;
-    background: linear-gradient(180deg, #7a5d2a, #5b4218);
-    padding: 14px;
-}
-
-.spellbook::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 18px;
-    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 2px, rgba(0,0,0,.06) 2px 4px);
-    mix-blend-mode: soft-light;
-    pointer-events: none;
-}
-
-.spellbook-inner {
-    position: absolute;
-    inset: 14px;
-    border-radius: 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    background: linear-gradient(90deg, #e9ddc6 0 50%, #d2c6a8 50% 100%);
-    overflow: hidden;
-}
-
-.spellbook-spine {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(50% - 1px);
-    width: 2px;
-    background: rgba(0,0,0,.12);
-    box-shadow: 0 0 0 1px rgba(0,0,0,.06);
-    z-index: 2;
-}
-
-.spellbook-page {
-    position: relative;
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.spellbook-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 1rem;
-}
-
-.spellbook-title {
-    color: #2a1e0f;
-    font-weight: 800;
-    letter-spacing: .6px;
-    text-transform: uppercase;
-    font-size: 13px;
-}
-
-.spellbook-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.spells-grid {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-top: 10px;
-    overflow-y: auto;
-}
-
-.spell-card {
-    background: linear-gradient(180deg, #1e2430, #0f131a);
-    border-radius: 12px;
-    position: relative;
-    aspect-ratio: 1/1;
-    cursor: pointer;
-    box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), inset 0 10px 20px rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.2);
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border: none;
-    transition: all 0.2s ease;
-}
-
-.spell-icon {
-    font-size: 28px;
-    user-select: none;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
-    transform: translateY(2px);
-}
-
-.spell-badge {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 4px 6px;
-    border-radius: 8px;
-    color: #0c0f14;
-    background: linear-gradient(180deg, #c8e9ff, #86c8ff);
-    box-shadow: 0 2px 6px rgba(0,0,0,.2);
-}
-
-.spellbook-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 3;
-    border: 0;
-    cursor: pointer;
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-weight: 800;
-    color: #1a1006;
-    background: linear-gradient(180deg, #ffd7a1, #f0c47d);
-    box-shadow: 0 6px 16px rgba(0,0,0,.25);
-    transition: transform 0.2s ease;
-}
-
-.spell-tooltip {
-    position: fixed;
-    pointer-events: none;
-    z-index: 110;
-    min-width: 220px;
-    max-width: 320px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    color: #121418;
-    background: linear-gradient(180deg, #fffef9, #f2e9d5);
-    border: 1px solid rgba(0,0,0,.15);
-    box-shadow: 0 12px 40px rgba(0,0,0,.35);
-    transform: translate(-50%, calc(-100% - 14px));
-}
-
-.tooltip-name {
-    font-weight: 900;
-    letter-spacing: .3px;
-    color: #341f07;
-    margin-bottom: 4px;
-}
-
-.tooltip-desc {
-    font-size: 13px;
-    color: #3e2c14;
-    margin-bottom: 4px;
-    line-height: 1.3;
-}
-
-.tooltip-cooldown {
-    font-size: 12px;
-    color: #6b512f;
-    font-style: italic;
-}
-
-@media (max-width: 768px) {
-    .card-portrait {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .stats-items-container {
-        flex-direction: row;
-        gap: 0.8rem;
-    }
-    
-    .spells-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    
-    .spell-badge {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .characters-slider {
-        padding: 0.5rem;
-    }
-    
-    .card-top-row {
-        gap: 0.8rem;
-    }
-    
-    .card-portrait {
-        width: 80px;
-        height: 80px;
-    }
-}
-`;
-document.head.appendChild(styleEl);

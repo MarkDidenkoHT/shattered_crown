@@ -155,7 +155,7 @@ function renderProfessions(characters) {
   section.innerHTML = `
     <div class="art-header">
       <h1>Your Crafting Professions</h1>
-      <p class="subtitle">Select a profession to start crafting.</p>
+      <p class="subtitle"></p>
     </div>
     <div class="selection-section">
       <div class="profession-selection-grid">
