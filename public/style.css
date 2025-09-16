@@ -1284,3 +1284,8 @@
     margin: 3px;
     border-radius: 4px;
 }
+
+.ability-selected {
+  outline: 2px solid gold;
+  box-shadow: 0 0 10px gold;
+}
