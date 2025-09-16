@@ -481,7 +481,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState.layout_data);
     await updateGameStateFromRealtime();
-    renderBottomUI();
+    // renderBottomUI();
 }
 
 const loadTileData = async () => {
