@@ -645,17 +645,41 @@ function toggleAbilitySelection(caster, ability) {
   // if same ability already selected → cancel
   if (BattleState.selectingAbility?.ability?.name === ability.name) {
     clearAbilitySelection();
+    resetAbilityButtonsUI();
     return;
   }
+
   startAbilitySelection(caster, ability);
+  highlightSelectedAbilityButton(ability.name);
 }
 
+function highlightSelectedAbilityButton(abilityName) {
+  const allBtns = document.querySelectorAll('.battle-bottom-ui .fantasy-button.ui-btn');
+  allBtns.forEach(btn => {
+    if (btn.dataset.abilityName) {
+      if (btn.dataset.abilityName === abilityName) {
+        btn.classList.add('ability-selected');
+        btn.disabled = false; // keep selected one usable
+      } else {
+        btn.classList.remove('ability-selected');
+        btn.disabled = true; // disable others
+      }
+    }
+  });
+}
+
+function resetAbilityButtonsUI() {
+  const allBtns = document.querySelectorAll('.battle-bottom-ui .fantasy-button.ui-btn');
+  allBtns.forEach(btn => {
+    btn.classList.remove('ability-selected');
+    if (btn.dataset.abilityName) {
+      btn.disabled = false; // re-enable all ability buttons
+    }
+  });
+}
 
 function startAbilitySelection(caster, abilityRaw) {
-  // remove movement highlights (player clicked ability; movement highlights must go)
   unhighlightAllTiles();
-
-  // clear any previous ability selection state
   clearAbilitySelection();
   const ability = normalizeAbility(abilityRaw);
   BattleState.selectingAbility = {
