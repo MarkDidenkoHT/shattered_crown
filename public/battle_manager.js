@@ -170,7 +170,7 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
             top: -20px;
             right: 0;
             color: ${newHP > oldHP ? '#4CAF50' : '#F44336'};
-            font-size: 10px;
+            font-size: 12px;
             font-weight: bold;
             pointer-events: none;
             z-index: 30;
@@ -1087,23 +1087,23 @@ function renderBattleScreen(mode, level, layoutData) {
                 <div id="turnStatus" style="width: 25%; text-align: center; font-size: 16px; background: rgba(0,0,0,0.3); border-radius: 4px;">—</div>
             </div>
             <div class="battle-info-panel" id="entityInfoPanel">
-                <div style="display: flex; width: 100%; height: 100%; max-height: 20vh; min-height: 20vh;">
+                <div style="display: flex; width: 100%; height: 100%; max-height: 17vh; min-height: 17vh;">
                     <div style="width: 25%; display: flex; align-items: center; justify-content: center;">
                         <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 80px; max-height: 80px; object-fit: contain;" />
                     </div>
                     <div class="info-text" style="width: 35%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center;">
-                        <h3 id="infoName" style="margin: 0 0 4px 0; font-size: 14px;">—</h3>
-                        <div id="infoHP" style="font-size: 12px; margin-bottom: 4px;"></div>
-                        <div id="infoStats" style="font-size: 10px;"></div>
+                        <h3 id="infoName" style="font-size: 14px;">—</h3>
+                        <div id="infoHP" style="font-size: 12px;"></div>
+                        <div id="infoStats" style="font-size: 12px;"></div>
                     </div>
                     <div id="statusEffects" style="width: 40%; padding-left: 8px; display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto;">
                         <div style="font-size: 11px; font-weight: bold; color: #B8860B; margin-bottom: 4px;">Status Effects</div>
                         <div id="buffsContainer" style="margin-bottom: 6px;">
-                            <div style="font-size: 10px; color: #4CAF50; margin-bottom: 2px;">Buffs:</div>
+                            <div style="font-size: 12px; color: #4CAF50; margin-bottom: 2px;">Buffs:</div>
                             <div id="buffsList" style="font-size: 9px; color: #90EE90;"></div>
                         </div>
                         <div id="debuffsContainer">
-                            <div style="font-size: 10px; color: #F44336; margin-bottom: 2px;">Debuffs:</div>
+                            <div style="font-size: 12px; color: #F44336; margin-bottom: 2px;">Debuffs:</div>
                             <div id="debuffsList" style="font-size: 9px; color: #FFB6C1;"></div>
                         </div>
                     </div>
@@ -1824,7 +1824,7 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     
     // Updated layout: Row 1: HP-VIT, Row 2: STR-DEX, Row 3: INT-SPR, Row 4: ARM-RES
     hpEl.innerHTML = `
-        <div style="font-size: 10px; line-height: 1.2;">
+        <div style="font-size: 12px; line-height: 1.2;">
             <!-- Row 1: HP - VIT -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                 <div style="display: flex; flex: 1;">
@@ -1840,7 +1840,7 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     `;
 
     statsEl.innerHTML = `
-        <div style="font-size: 10px; line-height: 1.2;">
+        <div style="font-size: 12px; line-height: 1.2;">
             
             <!-- Row 2: STR - DEX -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
