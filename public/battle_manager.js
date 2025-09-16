@@ -1898,12 +1898,18 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         debuffsList.innerHTML = '<div style="color: #666; font-style: italic;">None</div>';
     }
 
-    const spritePath = `assets/art/sprites/${entity.spriteName || 'placeholder'}.png`;
-    portrait.src = spritePath;
-    portrait.onerror = () => {
-        portrait.src = 'assets/art/sprites/placeholder.png';
-    };
+    // ✅ Only use portrait from state, no sprite fallback
+    if (entity.portrait) {
+        portrait.src = `assets/art/portraits/${entity.portrait}`;
+        portrait.onerror = () => {
+            portrait.src = 'assets/art/portraits/placeholder.png';
+        };
+    } else {
+        // Always placeholder if portrait missing
+        portrait.src = 'assets/art/portraits/placeholder.png';
+    }
 };
+
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
     
