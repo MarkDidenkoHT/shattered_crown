@@ -1211,13 +1211,19 @@ const createCharacterElement = (char) => {
         zIndex: '5', boxSizing: 'border-box'
     });
 
-    // Use portrait if available, otherwise fallback to spriteName
+    // 🔥 FIXED: Use portrait for character tokens too, not sprites
     const img = document.createElement('img');
-    img.src = char.portrait ? `assets/art/portraits/${char.portrait}.png` : `assets/art/sprites/${char.spriteName || 'placeholder'}.png`;
+    
+    if (char.portrait && char.portrait !== 'none') {
+        img.src = `assets/art/portraits/${char.portrait}.png`;
+        img.onerror = () => {
+            img.src = 'assets/art/portraits/placeholder.png';
+        };
+    } else {
+        img.src = 'assets/art/portraits/placeholder.png';
+    }
+    
     img.alt = char.name;
-    img.addEventListener('error', () => {
-        img.src = char.portrait ? 'assets/art/portraits/placeholder.png' : 'assets/art/sprites/placeholder.png';
-    });
     
     Object.assign(img.style, {
         width: '100px', height: '100px', maxWidth: '100%', maxHeight: '100%',
@@ -1898,14 +1904,20 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         debuffsList.innerHTML = '<div style="color: #666; font-style: italic;">None</div>';
     }
 
-    // ✅ Only use portrait from state, no sprite fallback
-    if (entity.portrait) {
-        portrait.src = `assets/art/portraits/${entity.portrait}.png`;
+    // 🔥 FIXED: Portrait loading logic
+    console.log('Entity portrait value:', entity.portrait); // Debug log
+    
+    if (entity.portrait && entity.portrait !== 'none') {
+        const portraitPath = `assets/art/portraits/${entity.portrait}.png`;
+        console.log('Loading portrait from:', portraitPath); // Debug log
+        
+        portrait.src = portraitPath;
         portrait.onerror = () => {
+            console.log('Portrait failed to load, using placeholder'); // Debug log
             portrait.src = 'assets/art/portraits/placeholder.png';
         };
     } else {
-        // Always placeholder if portrait missing
+        console.log('No portrait specified, using placeholder'); // Debug log
         portrait.src = 'assets/art/portraits/placeholder.png';
     }
 };
