@@ -1211,7 +1211,6 @@ const createCharacterElement = (char) => {
         zIndex: '5', boxSizing: 'border-box'
     });
 
-    // 🔥 FIXED: Use portrait for character tokens too, not sprites
     const img = document.createElement('img');
     
     if (char.portrait && char.portrait !== 'none') {
