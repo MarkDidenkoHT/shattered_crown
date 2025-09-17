@@ -87,8 +87,8 @@ const processCharacterState = (charState) => {
         portrait: charState.portrait, // <-- Add portrait field
         has_moved: charState.has_moved,
         has_acted: charState.has_acted,
-        current_hp: charState.current_hp,
-        max_hp: charState.max_hp,
+        current_hp: charState.current_hp || (vitality * 10),
+        max_hp: charState.max_hp || (vitality * 10),
         priority: charState.priority || 999,
         buffs: charState.buffs || [],
         debuffs: charState.debuffs || [],
@@ -143,36 +143,21 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
     });
 };
 
-// Replace ALL animateHPChange definitions with this single robust version
 const animateHPChange = (hpBarEl, oldHP, newHP, maxHP, status) => {
-  try {
-    if (!hpBarEl) return;
-    // guard: treat undefined maxHP safely
-    const safeMax = (typeof maxHP === 'number' && maxHP > 0) ? maxHP : 1;
+     if (status === "dead" || newHp <= 0) {
+        hpBar.style.width = "0%";
+        return;
+      }
+    
+    if (!hpBarEl || oldHP === newHP) return;
 
-    // normalize numeric args
-    oldHP = (typeof oldHP === 'number') ? oldHP : 0;
-    newHP = (typeof newHP === 'number') ? newHP : oldHP;
-
-    // nothing to do
-    if (oldHP === newHP) return;
-
-    // find inner fill element (the colored div)
     const hpFill = hpBarEl.querySelector('div');
     if (!hpFill) return;
 
-    // If dead or newHP <= 0, immediately set to 0% and red
-    if (status === 'dead' || newHP <= 0) {
-      hpFill.style.transition = 'width 150ms linear, background-color 150ms linear';
-      hpFill.style.width = '0%';
-      hpFill.style.backgroundColor = '#F44336';
-      return;
-    }
+    const oldPercentage = Math.max(0, Math.min(100, Math.round((oldHP / maxHP) * 100)));
+    const newPercentage = Math.max(0, Math.min(100, Math.round((newHP / maxHP) * 100)));
 
-    const oldPercentage = Math.max(0, Math.min(100, Math.round((oldHP / safeMax) * 100)));
-    const newPercentage = Math.max(0, Math.min(100, Math.round((newHP / safeMax) * 100)));
-
-    // choose color by new percentage
+    // Color transition
     let newColor = '#4CAF50';
     if (newPercentage <= 25) newColor = '#F44336';
     else if (newPercentage <= 50) newColor = '#FF9800';
@@ -182,31 +167,32 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP, status) => {
     hpFill.style.width = `${newPercentage}%`;
     hpFill.style.backgroundColor = newColor;
 
-    // show floating indicator (+/-)
+    // Add damage/heal indicator
     if (newHP !== oldHP) {
-      const delta = newHP - oldHP;
-      const indicator = document.createElement('div');
-      Object.assign(indicator.style, {
-        position: 'absolute',
-        top: '-20px',
-        right: '0',
-        color: delta > 0 ? '#4CAF50' : '#F44336',
-        fontSize: '12px',
-        fontWeight: 'bold',
-        pointerEvents: 'none',
-        zIndex: '30',
-        animation: 'floatUp 1s ease-out forwards'
-      });
-      indicator.textContent = `${delta > 0 ? '+' : ''}${delta}`;
-      // make sure hpBarEl is positioned to host absolute child
-      if (!hpBarEl.style.position) hpBarEl.style.position = hpBarEl.style.position || 'absolute';
-      hpBarEl.appendChild(indicator);
-      setTimeout(() => indicator.parentNode && indicator.parentNode.removeChild(indicator), 1000);
+        const indicator = document.createElement('div');
+        indicator.style.cssText = `
+            position: absolute;
+            top: -20px;
+            right: 0;
+            color: ${newHP > oldHP ? '#4CAF50' : '#F44336'};
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 30;
+            animation: floatUp 1s ease-out forwards;
+        `;
+        indicator.textContent = `${newHP > oldHP ? '+' : ''}${newHP - oldHP}`;
+        
+        // Always keep hpBarEl position absolute
+        hpBarEl.style.position = 'absolute';
+        hpBarEl.appendChild(indicator);
+        
+        setTimeout(() => {
+            if (indicator.parentNode) {
+                indicator.parentNode.removeChild(indicator);
+            }
+        }, 1000);
     }
-
-  } catch (err) {
-    console.error('animateHPChange error:', err);
-  }
 };
 
 // --- Loading Modal Utilities (copied from crafting_manager.js for consistency) ---
