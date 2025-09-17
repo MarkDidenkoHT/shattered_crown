@@ -810,6 +810,7 @@ function loadCharacterManagerStyles() {
     width: 100%;
     overflow: hidden;
     position: relative;
+    max-height: 90vh;
 }
 
 .characters-slider {
