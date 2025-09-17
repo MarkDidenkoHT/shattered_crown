@@ -243,44 +243,66 @@ function setupDragSlider() {
   let currentX = 0;
   let scrollLeft = 0;
   let dragThreshold = 50;
+  let animationId = null;
 
   function getCardWidth() {
-    const card = cards[0];
-    const cardRect = card.getBoundingClientRect();
-    const sliderStyles = window.getComputedStyle(slider);
-    const gap = parseInt(sliderStyles.gap) || 24;
-    return cardRect.width + gap;
+    const containerWidth = slider.offsetWidth;
+    const gap = 16; // Fixed gap for mobile
+    return containerWidth - gap;
   }
 
-  function snapToCard(index) {
+  function snapToCard(index, immediate = false) {
     const cardWidth = getCardWidth();
     const targetScroll = index * cardWidth;
     
-    slider.style.scrollBehavior = 'smooth';
-    slider.scrollLeft = targetScroll;
+    // Cancel any existing animation
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
     
-    setTimeout(() => {
-      slider.style.scrollBehavior = '';
-    }, 300);
+    if (immediate) {
+      slider.scrollLeft = targetScroll;
+    } else {
+      // Use smooth scrolling
+      slider.style.scrollBehavior = 'smooth';
+      slider.scrollLeft = targetScroll;
+      
+      // Reset scroll behavior after animation
+      setTimeout(() => {
+        slider.style.scrollBehavior = 'auto';
+      }, 300);
+    }
     
     currentIndex = Math.max(0, Math.min(index, cards.length - 1));
   }
 
   function handleStart(clientX) {
     isDragging = true;
-    startX = clientX - slider.offsetLeft;
+    startX = clientX;
     currentX = clientX;
     scrollLeft = slider.scrollLeft;
     slider.style.cursor = 'grabbing';
-    slider.style.scrollBehavior = '';
+    slider.style.scrollBehavior = 'auto';
+    
+    // Cancel any existing animation
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
   }
 
   function handleMove(clientX) {
     if (!isDragging) return;
     
-    const x = clientX - slider.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    slider.scrollLeft = scrollLeft - walk;
+    const deltaX = clientX - startX;
+    const newScrollLeft = scrollLeft - deltaX;
+    
+    // Constrain scrolling within bounds
+    const maxScroll = slider.scrollWidth - slider.clientWidth;
+    const constrainedScroll = Math.max(0, Math.min(newScrollLeft, maxScroll));
+    
+    slider.scrollLeft = constrainedScroll;
     currentX = clientX;
   }
 
@@ -290,21 +312,30 @@ function setupDragSlider() {
     isDragging = false;
     slider.style.cursor = 'grab';
     
-    const dragDistance = currentX - (startX + slider.offsetLeft);
+    const dragDistance = currentX - startX;
+    const cardWidth = getCardWidth();
+    const currentScroll = slider.scrollLeft;
+    const nearestIndex = Math.round(currentScroll / cardWidth);
+    
+    // Determine target index based on drag distance and threshold
+    let targetIndex = nearestIndex;
     
     if (Math.abs(dragDistance) > dragThreshold) {
       if (dragDistance > 0 && currentIndex > 0) {
-        snapToCard(currentIndex - 1);
+        targetIndex = currentIndex - 1;
       } else if (dragDistance < 0 && currentIndex < cards.length - 1) {
-        snapToCard(currentIndex + 1);
-      } else {
-        snapToCard(currentIndex);
+        targetIndex = currentIndex + 1;
       }
-    } else {
-      snapToCard(currentIndex);
     }
+    
+    // Ensure target index is within bounds
+    targetIndex = Math.max(0, Math.min(targetIndex, cards.length - 1));
+    
+    // Snap to the determined index
+    snapToCard(targetIndex);
   }
 
+  // Mouse events
   slider.addEventListener('mousedown', (e) => {
     e.preventDefault();
     handleStart(e.clientX);
@@ -317,6 +348,7 @@ function setupDragSlider() {
   slider.addEventListener('mouseup', handleEnd);
   slider.addEventListener('mouseleave', handleEnd);
 
+  // Touch events
   slider.addEventListener('touchstart', (e) => {
     handleStart(e.touches[0].clientX);
   }, { passive: true });
@@ -325,8 +357,9 @@ function setupDragSlider() {
     handleMove(e.touches[0].clientX);
   }, { passive: true });
 
-  slider.addEventListener('touchend', handleEnd);
+  slider.addEventListener('touchend', handleEnd, { passive: true });
 
+  // Keyboard navigation
   slider.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' && currentIndex > 0) {
       e.preventDefault();
@@ -339,22 +372,17 @@ function setupDragSlider() {
 
   slider.tabIndex = 0;
 
-  let scrollTimeout;
-  slider.addEventListener('scroll', () => {
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => {
-      if (!isDragging) {
-        const cardWidth = getCardWidth();
-        const newIndex = Math.round(slider.scrollLeft / cardWidth);
-        if (newIndex !== currentIndex) {
-          currentIndex = Math.max(0, Math.min(newIndex, cards.length - 1));
-        }
-      }
-    }, 100);
+  // Handle window resize
+  window.addEventListener('resize', () => {
+    snapToCard(currentIndex, true);
   });
 
+  // Initialize slider
   slider.style.cursor = 'grab';
-  setTimeout(() => snapToCard(0), 100);
+  // Use requestAnimationFrame to ensure DOM is ready
+  requestAnimationFrame(() => {
+    snapToCard(0, true);
+  });
 }
 
 function setupEquipmentClickHandlers(section, characters) {
@@ -651,6 +679,7 @@ async function showEquipmentModal(character, slot, type) {
     displayMessage('Failed to load equipment options. Please try again.');
   }
 }
+
 async function equipItem(character, slot, itemName, craftingSessionId = null, isConsumable = false) {
   try {
     const response = await _apiCall('/api/supabase/functions/v1/equip_item', {
@@ -772,12 +801,12 @@ function loadCharacterManagerStyles() {
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
 .character-creation-section {
-    height: 100%;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 1rem;
+    padding: 0;
     position: relative;
     z-index: 2;
     background: rgba(0, 0, 0, 0.2);
@@ -788,15 +817,16 @@ function loadCharacterManagerStyles() {
 .character-creation-section .art-header {
     height: auto;
     background: none;
-    border-bottom: 1px solid rgba(196, 151, 90, 0.2);
-    margin-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(196, 151, 90, 0.3);
+    margin-bottom: 0;
     text-align: center;
     width: 100%;
     flex-shrink: 0;
+    padding: 1rem 1rem 0.8rem 1rem;
 }
 
 .character-creation-section .art-header h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
     margin-bottom: 0.5rem;
 }
 
@@ -810,21 +840,23 @@ function loadCharacterManagerStyles() {
     width: 100%;
     overflow: hidden;
     position: relative;
-    max-height: 90vh;
+    display: flex;
+    align-items: center;
 }
 
 .characters-slider {
     width: 100%;
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem;
     overflow-x: auto;
     overflow-y: hidden;
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
     scrollbar-width: none;
     scroll-snap-type: x mandatory;
     -ms-overflow-style: none;
     user-select: none;
-    height: 84vh;
+    padding: 1rem;
+    box-sizing: border-box;
 }
 
 .characters-slider::-webkit-scrollbar {
@@ -832,30 +864,36 @@ function loadCharacterManagerStyles() {
 }
 
 .character-card {
-    background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
+    background: linear-gradient(145deg, rgba(29,20,12,0.95), rgba(42,31,22,0.9));
     border: 2px solid #c4975a;
     border-radius: 12px;
     overflow: hidden;
     transition: all 0.3s;
     backdrop-filter: blur(3px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    padding: 1rem 1rem 0rem 1rem;
-    min-width: calc(100% - 2rem);
-    max-width: calc(100% - 2rem);
-    scroll-snap-align: start;
+    padding: 1rem;
+    min-width: calc(100vw - 4rem);
+    max-width: calc(100vw - 4rem);
+    scroll-snap-align: center;
     flex-shrink: 0;
     user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: calc(100vh - 8rem);
+    box-sizing: border-box;
 }
 
 .card-top-row {
     display: flex;
     gap: 1rem;
-    margin-bottom: 4px;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 .card-portrait {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
     overflow: hidden;
     border-radius: 8px;
     background: rgba(0,0,0,0.3);
@@ -890,30 +928,31 @@ function loadCharacterManagerStyles() {
 }
 
 .card-race-class {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     color: #b8b3a8;
     font-weight: 500;
     margin: 0;
 }
 
 .card-profession {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #9a8f7e;
     font-style: italic;
     margin: 0;
 }
 
 .card-exp {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #8a7f6e;
     margin: 0;
 }
 
 .stats-items-container {
     display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
-    padding-top: 8px;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .equipment-block, .stats-block {
@@ -924,25 +963,28 @@ function loadCharacterManagerStyles() {
     font-family: 'Cinzel', serif;
     color: #c4975a;
     font-size: 0.9rem;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.8rem;
     text-align: center;
     font-weight: 600;
+    border-bottom: 1px solid rgba(196, 151, 90, 0.2);
+    padding-bottom: 0.3rem;
 }
 
 .items-list, .stats-list {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
 }
 
 .items-list p, .stats-list p {
     color: #c4975a;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     display: flex;
     justify-content: space-between;
     margin: 0;
-    padding: 0.1rem 0;
-    height: 25px;
+    padding: 0.2rem 0;
+    min-height: 20px;
+    align-items: center;
 }
 
 .stats-list p span {
@@ -952,22 +994,42 @@ function loadCharacterManagerStyles() {
 
 .equipment-item {
     transition: color 0.2s ease;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
 }
 
 .character-actions {
     display: flex;
-    gap: 5px;
-    padding-top: 6px;
+    gap: 0.8rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(196, 151, 90, 0.2);
+    flex-shrink: 0;
 }
 
 .character-actions .fantasy-button {
     flex: 1;
-    padding: 0.6rem 1rem;
+    padding: 0.8rem 1rem;
     font-size: 0.9rem;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
+    min-height: 44px;
+}
+
+.top-right-buttons {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+}
+
+.top-right-buttons .fantasy-button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
 }
 
 .spellbook-overlay {
@@ -979,15 +1041,19 @@ function loadCharacterManagerStyles() {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
 }
 
 .spellbook-stage {
     position: relative;
     perspective: 1600px;
+    width: 100%;
+    max-width: 900px;
 }
 
 .spellbook {
-    width: min(900px, 92vw);
+    width: 100%;
     height: min(560px, 78vh);
     border-radius: 18px;
     transform-style: preserve-3d;
@@ -995,6 +1061,7 @@ function loadCharacterManagerStyles() {
     position: relative;
     background: linear-gradient(180deg, #7a5d2a, #5b4218);
     padding: 14px;
+    box-sizing: border-box;
 }
 
 .spellbook::before {
@@ -1062,8 +1129,8 @@ function loadCharacterManagerStyles() {
 .spells-grid {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
     margin-top: 10px;
     overflow-y: auto;
 }
@@ -1083,7 +1150,7 @@ function loadCharacterManagerStyles() {
 }
 
 .spell-icon {
-    font-size: 28px;
+    font-size: 24px;
     user-select: none;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
     transform: translateY(2px);
@@ -1091,12 +1158,12 @@ function loadCharacterManagerStyles() {
 
 .spell-badge {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 11px;
+    top: 4px;
+    right: 4px;
+    font-size: 9px;
     font-weight: 800;
-    padding: 4px 6px;
-    border-radius: 8px;
+    padding: 2px 4px;
+    border-radius: 6px;
     color: #0c0f14;
     background: linear-gradient(180deg, #c8e9ff, #86c8ff);
     box-shadow: 0 2px 6px rgba(0,0,0,.2);
@@ -1122,10 +1189,10 @@ function loadCharacterManagerStyles() {
     position: fixed;
     pointer-events: none;
     z-index: 110;
-    min-width: 220px;
-    max-width: 320px;
-    padding: 10px 12px;
-    border-radius: 10px;
+    min-width: 200px;
+    max-width: 280px;
+    padding: 8px 10px;
+    border-radius: 8px;
     color: #121418;
     background: linear-gradient(180deg, #fffef9, #f2e9d5);
     border: 1px solid rgba(0,0,0,.15);
@@ -1138,34 +1205,57 @@ function loadCharacterManagerStyles() {
     letter-spacing: .3px;
     color: #341f07;
     margin-bottom: 4px;
+    font-size: 13px;
 }
 
 .tooltip-desc {
-    font-size: 13px;
+    font-size: 12px;
     color: #3e2c14;
     margin-bottom: 4px;
     line-height: 1.3;
 }
 
 .tooltip-cooldown {
-    font-size: 12px;
+    font-size: 11px;
     color: #6b512f;
     font-style: italic;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
+    .character-creation-section .art-header h1 {
+        font-size: 1.6rem;
+    }
+    
+    .character-card {
+        min-width: calc(100vw - 3rem);
+        max-width: calc(100vw - 3rem);
+        height: calc(100vh - 7rem);
+    }
+    
     .card-portrait {
-        width: 100px;
-        height: 100px;
+        width: 80px;
+        height: 80px;
     }
     
     .stats-items-container {
-        flex-direction: row;
-        gap: 0.8rem;
+        gap: 0.6rem;
+    }
+    
+    .items-list p, .stats-list p {
+        font-size: 0.7rem;
+    }
+    
+    .equipment-item {
+        max-width: 50%;
     }
     
     .spells-grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    
+    .spell-icon {
+        font-size: 20px;
     }
     
     .spell-badge {
@@ -1173,18 +1263,19 @@ function loadCharacterManagerStyles() {
     }
 }
 
-@media (max-width: 480px) {
-    .characters-slider {
-        padding: 0.5rem;
+@media (orientation: landscape) and (max-height: 500px) {
+    .character-card {
+        height: calc(100vh - 4rem);
     }
     
-    .card-top-row {
+    .stats-items-container {
+        flex-direction: row;
         gap: 0.8rem;
     }
     
-    .card-portrait {
-        width: 80px;
-        height: 80px;
+    .items-list p, .stats-list p {
+        min-height: 18px;
+        font-size: 0.7rem;
     }
 }
 `;
