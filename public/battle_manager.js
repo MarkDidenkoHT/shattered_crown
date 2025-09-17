@@ -64,8 +64,6 @@ const processCharacterState = (charState) => {
         return acc;
     }, {});
 
-    const vitality = normalizedStats.vitality || 0;
-    
     return {
         id: charState.id,
         name: charState.name,
@@ -76,7 +74,7 @@ const processCharacterState = (charState) => {
         originalPosition: charState.current_position,
         stats: {
             strength: normalizedStats.strength || 0,
-            vitality: vitality,
+            vitality: normalizedStats.vitality || 0,
             spirit: normalizedStats.spirit || 0,
             dexterity: normalizedStats.dexterity || 0,
             intellect: normalizedStats.intellect || 0,
@@ -84,11 +82,14 @@ const processCharacterState = (charState) => {
             resistance: normalizedStats.resistance || 0
         },
         spriteName: charState.sprite_name,
-        portrait: charState.portrait, // <-- Add portrait field
+        portrait: charState.portrait,
         has_moved: charState.has_moved,
         has_acted: charState.has_acted,
-        current_hp: charState.current_hp || (vitality * 10),
-        max_hp: charState.max_hp || (vitality * 10),
+
+        // 🚫 no fallbacks, trust server data
+        current_hp: charState.current_hp,
+        max_hp: charState.max_hp,
+
         priority: charState.priority || 999,
         buffs: charState.buffs || [],
         debuffs: charState.debuffs || [],
