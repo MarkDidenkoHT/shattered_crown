@@ -957,11 +957,9 @@ const updateCharacterVisualState = (charEl, character) => {
     if (hpBar) {
         const hpFill = hpBar.querySelector('div');
         if (hpFill) {
-            const hpPercentage = Math.max(0, Math.min(100, Math.round((character.current_hp / character.max_hp) * 100)));
-            // Only update if not already transitioning
-            if (!hpFill.style.transition) {
-                hpFill.style.width = `${hpPercentage}%`;
-            }
+        const hpPercentage = Math.max(0, Math.min(100, Math.round((character.current_hp / character.max_hp) * 100)));
+        hpFill.style.transition = 'width 0.3s ease';
+        hpFill.style.width = `${hpPercentage}%`;
         }
     }
 };
