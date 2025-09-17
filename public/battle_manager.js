@@ -143,7 +143,12 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
     });
 };
 
-const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
+const animateHPChange = (hpBarEl, oldHP, newHP, maxHP, status) => {
+     if (status === "dead" || newHp <= 0) {
+        hpBar.style.width = "0%";
+        return;
+      }
+    
     if (!hpBarEl || oldHP === newHP) return;
 
     const hpFill = hpBarEl.querySelector('div');
@@ -901,7 +906,7 @@ async function updateCharactersWithAnimations(newCharacters) {
             if (oldChar.current_hp !== newChar.current_hp) {
                 const hpBar = charEl.querySelector('.character-hp-bar');
                 if (hpBar) {
-                    animateHPChange(hpBar, oldChar.current_hp, newChar.current_hp, newChar.max_hp);
+                    animateHPChange(hpBar, oldChar.current_hp, newChar.current_hp, newChar.max_hp, newChar.status);
                 }
             }
             
@@ -1112,7 +1117,7 @@ function renderBattleScreen(mode, level, layoutData) {
     `;
 
     renderBattleGrid(layoutData.layout);
-    renderCharacters();
+    s();
     createParticles();
 }
 
