@@ -384,6 +384,7 @@ function addCastleStyles() {
             color: #e0d8c9;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             max-width: 80%;
+            max-height: 95%;
             font-family: 'Cinzel', serif;
         }
 
