@@ -144,51 +144,52 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
 };
 
 const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
-    if (!hpBarEl || oldHP === newHP) return;
+    console.groupCollapsed(`[HP BAR UPDATE] Character HP Change`);
+    console.log("Old HP:", oldHP, "New HP:", newHP, "Max HP:", maxHP);
+
+    if (!hpBarEl) {
+        console.warn("❌ No hpBarEl found for this character.");
+        console.groupEnd();
+        return;
+    }
+    if (oldHP === newHP) {
+        console.info("ℹ️ HP unchanged, skipping animation.");
+        console.groupEnd();
+        return;
+    }
 
     const hpFill = hpBarEl.querySelector('div');
-    if (!hpFill) return;
+    if (!hpFill) {
+        console.warn("❌ No hpFill element inside hpBarEl.");
+        console.groupEnd();
+        return;
+    }
 
     const oldPercentage = Math.max(0, Math.min(100, Math.round((oldHP / maxHP) * 100)));
     const newPercentage = Math.max(0, Math.min(100, Math.round((newHP / maxHP) * 100)));
 
-    // Color transition
+    console.log("Old %:", oldPercentage, "New %:", newPercentage);
+
     let newColor = '#4CAF50';
     if (newPercentage <= 25) newColor = '#F44336';
     else if (newPercentage <= 50) newColor = '#FF9800';
     else if (newPercentage <= 75) newColor = '#FFC107';
 
+    console.log("Applied color:", newColor);
+
     hpFill.style.transition = `width ${ANIMATION_CONFIG.moveDuration * 0.6}ms ease-out, background-color 300ms ease`;
     hpFill.style.width = `${newPercentage}%`;
     hpFill.style.backgroundColor = newColor;
 
-    // Add damage/heal indicator
-    if (newHP !== oldHP) {
-        const indicator = document.createElement('div');
-        indicator.style.cssText = `
-            position: absolute;
-            top: -20px;
-            right: 0;
-            color: ${newHP > oldHP ? '#4CAF50' : '#F44336'};
-            font-size: 12px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 30;
-            animation: floatUp 1s ease-out forwards;
-        `;
-        indicator.textContent = `${newHP > oldHP ? '+' : ''}${newHP - oldHP}`;
-        
-        // Always keep hpBarEl position absolute
-        hpBarEl.style.position = 'absolute';
-        hpBarEl.appendChild(indicator);
-        
-        setTimeout(() => {
-            if (indicator.parentNode) {
-                indicator.parentNode.removeChild(indicator);
-            }
-        }, 1000);
+    // Indicator logs
+    const delta = newHP - oldHP;
+    if (delta !== 0) {
+        console.log("Indicator:", delta > 0 ? `Healing +${delta}` : `Damage ${delta}`);
     }
+
+    console.groupEnd();
 };
+
 
 // --- Loading Modal Utilities (copied from crafting_manager.js for consistency) ---
 function injectBattleLoadingStyles() {
