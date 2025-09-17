@@ -1020,18 +1020,6 @@ function loadCharacterManagerStyles() {
     min-height: 44px;
 }
 
-.top-right-buttons {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 10;
-}
-
-.top-right-buttons .fantasy-button {
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
-}
-
 .spellbook-overlay {
     position: fixed;
     inset: 0;
