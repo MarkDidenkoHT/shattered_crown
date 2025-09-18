@@ -184,8 +184,22 @@ function characterCardHTML(character) {
         <div class="equipment-block">
           <h4>Equipped Items</h4>
           <div class="items-list">
-            ${equipmentData.map(item => `
-              <p>${item.label}: 
+            ${equipmentData.map(item => {
+            const isEquipped = item.value !== 'None';
+            const rarityClass = isEquipped ? getGearRarity(item.value) : '';
+            const iconPath = isEquipped ? getItemIcon({ item: item.value }, item.value, item.type) : null;
+            
+            return `
+              <div class="equipment-row">
+                <div class="equipment-icon ${rarityClass}">
+                  ${isEquipped ? `
+                    <img src="${iconPath}" alt="${item.value}" 
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="equipment-placeholder">${item.type.substring(0, 2)}</div>
+                  ` : `
+                    <div class="equipment-placeholder empty">${item.type.substring(0, 2)}</div>
+                  `}
+                </div>
                 <span class="equipment-item" 
                       data-character-id="${character.id}" 
                       data-slot="${item.slot}" 
@@ -193,8 +207,9 @@ function characterCardHTML(character) {
                       style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
                   ${item.value}
                 </span>
-              </p>
-            `).join('')}
+              </div>
+            `;
+          }).join('')}
           </div>
         </div>
         
@@ -668,7 +683,9 @@ async function showEquipmentModal(character, slot, type) {
         selectedItem = option.dataset.item;
         selectedCraftingSessionId = option.dataset.craftingSessionId || null;
         isConsumable = option.dataset.isConsumable === 'true';
-        isTool = option.dataset.isTool === 'true';
+        const isTool = option.dataset.isTool === 'true'; // Declare isTool here
+        
+        equipBtn.disabled = false; // Enable the equip button
         
         if (selectedItem === 'none') {
           equipBtn.textContent = 'Unequip';
@@ -684,7 +701,11 @@ async function showEquipmentModal(character, slot, type) {
       equipBtn.textContent = 'Processing...';
       
       try {
-        await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem, selectedCraftingSessionId, isConsumable || isTool);
+        // Get the isTool value from the selected option
+        const selectedOption = modal.querySelector('.equipment-option.selected');
+        const isToolSelected = selectedOption ? selectedOption.dataset.isTool === 'true' : false;
+        
+        await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem, selectedCraftingSessionId, isConsumable || isToolSelected);
         modal.remove();
         await fetchAndRenderCharacters();
       } catch (error) {
@@ -706,6 +727,12 @@ async function showEquipmentModal(character, slot, type) {
   } catch (error) {
     displayMessage('Failed to load equipment options. Please try again.');
   }
+}
+
+function getGearRarity(itemName) {
+  const match = itemName.match(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i);
+  if (!match) return '';
+  return `rarity-${match[1].toLowerCase()}`;
 }
 
 async function equipItem(character, slot, itemName, craftingSessionId = null, isConsumable = false) {
@@ -1236,6 +1263,43 @@ function loadCharacterManagerStyles() {
     color: #6b512f;
     font-style: italic;
 }
+
+.equipment-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+
+.equipment-icon {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  border-radius: 3px;
+  border: 1px solid rgba(196, 151, 90, 0.3);
+}
+
+.equipment-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.equipment-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  color: #666;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.equipment-icon.rarity-uncommon { border-color: #1eff00; }
+.equipment-icon.rarity-rare { border-color: #0070dd; }
+.equipment-icon.rarity-epic { border-color: #a335ee; }
+.equipment-icon.rarity-legendary { border-color: #ff8000; }
 
 @media (max-width: 480px) {
     .character-creation-section .art-header h1 {
