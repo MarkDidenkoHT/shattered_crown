@@ -191,13 +191,21 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
     console.groupEnd();
 };
 
-
-// --- Loading Modal Utilities (copied from crafting_manager.js for consistency) ---
 function injectBattleLoadingStyles() {
     if (document.getElementById('battle-loading-styles')) return;
     const style = document.createElement('style');
     style.id = 'battle-loading-styles';
     style.textContent = `
+    .battle-result-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); display: flex;
+      align-items: center; justify-content: center; z-index: 9999;
+    }
+    .battle-result-content {
+      background: #222; padding: 20px; border-radius: 8px;
+      text-align: center; color: #fff;
+    }
+    
     .loading-modal {
       position: fixed;
       top: 0;
@@ -570,7 +578,14 @@ const setupRealtimeSubscription = () => {
 
 async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
-
+    
+    const status = BattleState.battleState.status;
+      if (status === 'victory' || status === 'defeat') {
+        await assignLoot(BattleState.battleState);
+        showBattleResultModal(status);
+        return; // stop further updates, battle is over
+      }
+        
     // Add guard for characters_state
     if (!BattleState.battleState.characters_state) {
         console.warn('Battle state missing characters_state:', BattleState.battleState);
@@ -2060,4 +2075,34 @@ export function cleanup() {
     
     const existingMessage = document.querySelector('.custom-message-box');
     if (existingMessage) existingMessage.remove();
+}
+
+function navigateToCastle() {
+  window.gameAuth.loadModule('castle'); // matches your existing navigation pattern
+}
+
+async function assignLoot(battleState) {
+  const loot = battleState.layout_data?.loot || [];
+  console.log('Assigning loot:', loot);
+  // later: actually push loot to player inventory
+}
+
+function showBattleResultModal(status) {
+  const modal = document.createElement('div');
+  modal.className = 'battle-result-modal';
+  modal.innerHTML = `
+    <div class="battle-result-content">
+      <h2>${status === 'victory' ? '🎉 Victory!' : '💀 Defeat'}</h2>
+      <p>${status === 'victory'
+        ? 'You have defeated the enemies!'
+        : 'Your party was defeated...'}</p>
+      <button id="resultConfirmBtn">Return to Castle</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('resultConfirmBtn').addEventListener('click', () => {
+    modal.remove();
+    navigateToCastle();
+  });
 }
