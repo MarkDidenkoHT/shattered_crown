@@ -192,7 +192,7 @@ function characterCardHTML(character) {
       
       <div class="stats-items-container">
         <div class="equipment-section">
-          <h4>Equipment</h4>
+          <h4>Equipment and Stats</h4>
           <div class="equipment-grid">
             ${equipmentData.map(item => {
               const isEquipped = item.value !== null;
@@ -222,7 +222,6 @@ function characterCardHTML(character) {
         </div>
         
         <div class="stats-section">
-          <h4>Stats</h4>
           <div class="stats-grid">
             ${statsData.map(stat => `
               <div class="stat-item">
@@ -1020,7 +1019,6 @@ function loadCharacterManagerStyles() {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 0.8rem;
     height: 100%;
     padding: 0.5rem;
 }
@@ -1032,8 +1030,8 @@ function loadCharacterManagerStyles() {
 }
 
 .equipment-icon {
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
     position: relative;
     border-radius: 4px;
     border: 2px solid rgba(196, 151, 90, 0.3);
@@ -1094,6 +1092,7 @@ function loadCharacterManagerStyles() {
     border-radius: 6px;
     padding: 0.4rem;
     text-align: center;
+    gap: 4px;
 }
 
 .stat-label {
@@ -1112,7 +1111,6 @@ function loadCharacterManagerStyles() {
 .character-actions {
     display: flex;
     gap: 0.8rem;
-    padding-top: 1rem;
     flex-shrink: 0;
 }
 
@@ -1320,11 +1318,6 @@ function loadCharacterManagerStyles() {
     .card-portrait {
         width: 80px;
         height: 80px;
-    }
-    
-    .equipment-icon {
-        width: 40px;
-        height: 40px;
     }
     
     .equipment-placeholder {
