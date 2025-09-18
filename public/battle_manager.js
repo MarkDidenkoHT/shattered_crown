@@ -2092,7 +2092,7 @@ function showBattleResultModal(status) {
   modal.className = 'battle-result-modal';
   modal.innerHTML = `
     <div class="battle-result-content">
-      <h2>${status === 'victory' ? '🎉 Victory!' : '💀 Defeat'}</h2>
+      <h2>${status === 'victory' ? 'Victory!' : 'Defeat'}</h2>
       <p>${status === 'victory'
         ? 'You have defeated the enemies!'
         : 'Your party was defeated...'}</p>
