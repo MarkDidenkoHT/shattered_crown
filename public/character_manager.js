@@ -869,22 +869,6 @@ function loadCharacterManagerStyles() {
     overflow: hidden;
 }
 
-.character-creation-section .art-header {
-    height: auto;
-    background: none;
-    border-bottom: 2px solid rgba(196, 151, 90, 0.3);
-    margin-bottom: 0;
-    text-align: center;
-    width: 100%;
-    flex-shrink: 0;
-    padding: 1rem 1rem 0.8rem 1rem;
-}
-
-.character-creation-section .art-header h1 {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-}
-
 .character-creation-section .subtitle {
     font-size: 0.9rem;
     color: #b8b3a8;
@@ -927,15 +911,15 @@ function loadCharacterManagerStyles() {
     backdrop-filter: blur(3px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     padding: 1rem;
-    min-width: calc(100vw - 4rem);
-    max-width: calc(100vw - 4rem);
+    min-width: calc(100vw - 2rem);
+    max-width: calc(100vw - 2rem);
     scroll-snap-align: center;
     flex-shrink: 0;
     user-select: none;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: calc(100vh - 8rem);
+    height: calc(100vh - 6rem);
     box-sizing: border-box;
 }
 
@@ -1010,8 +994,14 @@ function loadCharacterManagerStyles() {
     overflow-y: auto;
 }
 
-.equipment-block, .stats-block {
+.stats-block {
     flex: 1;
+    width: 25%;
+}
+
+.equipment-block,  {
+    flex: 1;
+    width: 75%;
 }
 
 .equipment-block h4, .stats-block h4 {
@@ -1025,10 +1015,16 @@ function loadCharacterManagerStyles() {
     padding-bottom: 0.3rem;
 }
 
-.items-list, .stats-list {
+.stats-list {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
+}
+
+.items-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem;
 }
 
 .items-list p, .stats-list p {
@@ -1272,8 +1268,8 @@ function loadCharacterManagerStyles() {
 }
 
 .equipment-icon {
-  width: 24px;
-  height: 24px;
+  width: 48px;
+  height: 48px;
   position: relative;
   border-radius: 3px;
   border: 1px solid rgba(196, 151, 90, 0.3);
@@ -1302,15 +1298,6 @@ function loadCharacterManagerStyles() {
 .equipment-icon.rarity-legendary { border-color: #ff8000; }
 
 @media (max-width: 480px) {
-    .character-creation-section .art-header h1 {
-        font-size: 1.6rem;
-    }
-    
-    .character-card {
-        min-width: calc(100vw - 3rem);
-        max-width: calc(100vw - 3rem);
-        height: calc(100vh - 7rem);
-    }
     
     .card-portrait {
         width: 80px;
