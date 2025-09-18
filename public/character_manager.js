@@ -137,29 +137,39 @@ function characterCardHTML(character) {
   const resistance = normalizedStats.resistance || 0;
   const hp = vitality * 10;
 
+  // Reorganized stats for two rows
   const statsData = [
-    { label: 'Strength', value: strength },
-    { label: 'Dexterity', value: dexterity },
-    { label: 'Vitality', value: vitality },
-    { label: 'Spirit', value: spirit },
-    { label: 'Intellect', value: intellect },
-    { label: 'HP', value: hp },
-    { label: 'Armor', value: armor },
-    { label: 'Resistance', value: resistance }
+    // First row
+    { label: 'HP', shortLabel: 'HP', value: hp, baseValue: (normalizedBaseStats.vitality || 0) * 10 },
+    { label: 'Strength', shortLabel: 'STR', value: strength, baseValue: normalizedBaseStats.strength || 0 },
+    { label: 'Intellect', shortLabel: 'INT', value: intellect, baseValue: normalizedBaseStats.intellect || 0 },
+    { label: 'Armor', shortLabel: 'ARM', value: armor, baseValue: normalizedBaseStats.armor || 0 },
+    // Second row
+    { label: 'Vitality', shortLabel: 'VIT', value: vitality, baseValue: normalizedBaseStats.vitality || 0 },
+    { label: 'Dexterity', shortLabel: 'DEX', value: dexterity, baseValue: normalizedBaseStats.dexterity || 0 },
+    { label: 'Spirit', shortLabel: 'SPI', value: spirit, baseValue: normalizedBaseStats.spirit || 0 },
+    { label: 'Resistance', shortLabel: 'RES', value: resistance, baseValue: normalizedBaseStats.resistance || 0 }
   ];
 
   const equippedItems = character.equipped_items || {};
+  // Extended equipment list for 12 slots arranged in 3 rows of 4
   const equipmentData = [
-  { label: 'Weapon', value: equippedItems.equipped_weapon || 'None', slot: 'equipped_weapon', type: 'Weapon' },
-  { label: 'Offhand', value: equippedItems.equipped_offhand || 'None', slot: 'equipped_offhand', type: 'Offhand' },
-  { label: 'Armor', value: equippedItems.equipped_armor || 'None', slot: 'equipped_armor', type: 'Armor' },
-  { label: 'Helmet', value: equippedItems.equipped_helmet || 'None', slot: 'equipped_helmet', type: 'Helmet' },
-  { label: 'Trinket', value: equippedItems.equipped_trinket || 'None', slot: 'equipped_trinket', type: 'Trinket' },
-  { label: 'Boots', value: equippedItems.equipped_boots || 'None', slot: 'equipped_boots', type: 'Boots' },
-  { label: 'Gloves', value: equippedItems.equipped_gloves || 'None', slot: 'equipped_gloves', type: 'Gloves' },
-  { label: 'Tool', value: equippedItems.equipped_tool || 'None', slot: 'equipped_tool', type: 'Tool' },
-  { label: 'Consumable', value: equippedItems.equipped_consumable || 'None', slot: 'equipped_consumable', type: 'Consumable' }
-];
+    // Row 1
+    { label: 'Weapon', slot: 'equipped_weapon', type: 'Weapon', value: equippedItems.equipped_weapon || null },
+    { label: 'Offhand', slot: 'equipped_offhand', type: 'Offhand', value: equippedItems.equipped_offhand || null },
+    { label: 'Armor', slot: 'equipped_armor', type: 'Armor', value: equippedItems.equipped_armor || null },
+    { label: 'Helmet', slot: 'equipped_helmet', type: 'Helmet', value: equippedItems.equipped_helmet || null },
+    // Row 2
+    { label: 'Trinket', slot: 'equipped_trinket', type: 'Trinket', value: equippedItems.equipped_trinket || null },
+    { label: 'Boots', slot: 'equipped_boots', type: 'Boots', value: equippedItems.equipped_boots || null },
+    { label: 'Gloves', slot: 'equipped_gloves', type: 'Gloves', value: equippedItems.equipped_gloves || null },
+    { label: 'Tool', slot: 'equipped_tool', type: 'Tool', value: equippedItems.equipped_tool || null },
+    // Row 3 - Future items
+    { label: 'Consumable', slot: 'equipped_consumable', type: 'Consumable', value: equippedItems.equipped_consumable || null },
+    { label: 'Amulet', slot: 'equipped_amulet', type: 'Amulet', value: equippedItems.equipped_amulet || null },
+    { label: 'Ring1', slot: 'equipped_ring1', type: 'Ring', value: equippedItems.equipped_ring1 || null },
+    { label: 'Ring2', slot: 'equipped_ring2', type: 'Ring', value: equippedItems.equipped_ring2 || null }
+  ];
 
   const raceName = character.races?.name || 'Race';
   const className = character.classes?.name || 'Class';
@@ -181,54 +191,51 @@ function characterCardHTML(character) {
       </div>
       
       <div class="stats-items-container">
-        <div class="equipment-block">
-          <h4>Equipped Items</h4>
-          <div class="items-list">
+        <div class="equipment-section">
+          <h4>Equipment</h4>
+          <div class="equipment-grid">
             ${equipmentData.map(item => {
-            const isEquipped = item.value !== 'None';
-            const rarityClass = isEquipped ? getGearRarity(item.value) : '';
-            const iconPath = isEquipped ? getItemIcon({ item: item.value }, item.value, item.type) : null;
-            
-            return `
-              <div class="equipment-row">
-                <div class="equipment-icon ${rarityClass}">
-                  ${isEquipped ? `
-                    <img src="${iconPath}" alt="${item.value}" 
-                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="equipment-placeholder">${item.type.substring(0, 2)}</div>
-                  ` : `
-                    <div class="equipment-placeholder empty">${item.type.substring(0, 2)}</div>
-                  `}
+              const isEquipped = item.value !== null;
+              const rarityClass = isEquipped ? getGearRarity(item.value) : '';
+              const iconPath = isEquipped ? getItemIcon({ item: item.value }, item.value, item.type) : null;
+              
+              return `
+                <div class="equipment-slot">
+                  <div class="equipment-icon ${rarityClass}" 
+                       data-character-id="${character.id}" 
+                       data-slot="${item.slot}" 
+                       data-type="${item.type}"
+                       style="cursor: pointer;" 
+                       title="${item.label}${isEquipped ? ': ' + item.value : ''}">
+                    ${isEquipped ? `
+                      <img src="${iconPath}" alt="${item.value}" 
+                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <div class="equipment-placeholder">${item.type.substring(0, 3)}</div>
+                    ` : `
+                      <div class="equipment-placeholder empty">${item.type.substring(0, 3)}</div>
+                    `}
+                  </div>
                 </div>
-                <span class="equipment-item" 
-                      data-character-id="${character.id}" 
-                      data-slot="${item.slot}" 
-                      data-type="${item.type}"
-                      style="cursor: pointer; color: ${item.value === 'None' ? '#999' : '#4CAF50'}; text-decoration: underline;">
-                  ${item.value}
-                </span>
-              </div>
-            `;
-          }).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
         
-        <div class="stats-block">
+        <div class="stats-section">
           <h4>Stats</h4>
-          <div class="stats-list">
+          <div class="stats-grid">
             ${statsData.map(stat => `
-              <p>
-                ${stat.label}: 
+              <div class="stat-item">
+                <span class="stat-label">${stat.shortLabel}:</span>
                 <span class="stat-value" 
                       data-character-id="${character.id}" 
                       data-stat-name="${stat.label}" 
                       data-total-value="${stat.value}"
-                      data-base-value="${stat.label === 'HP' ? (normalizedBaseStats.vitality || 0) * 10 : 
-                                        normalizedBaseStats[stat.label.toLowerCase()] || 0}"
+                      data-base-value="${stat.baseValue}"
                       style="cursor: pointer; text-decoration: underline;">
                   ${stat.value}
                 </span>
-              </p>
+              </div>
             `).join('')}
           </div>
         </div>
@@ -402,7 +409,8 @@ function setupDragSlider() {
 }
 
 function setupEquipmentClickHandlers(section, characters) {
-  section.querySelectorAll('.equipment-item').forEach(equipmentEl => {
+  // Updated to handle clicks on equipment icons instead of text
+  section.querySelectorAll('.equipment-icon').forEach(equipmentEl => {
     equipmentEl.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -988,23 +996,23 @@ function loadCharacterManagerStyles() {
 
 .stats-items-container {
     display: flex;
+    flex-direction: column;
     gap: 1rem;
-    margin-bottom: 1rem;
     flex: 1;
     overflow-y: auto;
 }
 
-.stats-block {
-    flex: 1;
-    width: 25%;
+.equipment-section {
+    flex: 0 0 70%;
+    min-height: 0;
 }
 
-.equipment-block,  {
-    flex: 1;
-    width: 75%;
+.stats-section {
+    flex: 0 0 30%;
+    min-height: 0;
 }
 
-.equipment-block h4, .stats-block h4 {
+.equipment-section h4, .stats-section h4 {
     font-family: 'Cinzel', serif;
     color: #c4975a;
     font-size: 0.9rem;
@@ -1015,41 +1023,98 @@ function loadCharacterManagerStyles() {
     padding-bottom: 0.3rem;
 }
 
-.stats-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+.equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0.8rem;
+    height: 100%;
+    padding: 0.5rem;
 }
 
-.items-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.2rem;
-}
-
-.items-list p, .stats-list p {
-    color: #c4975a;
-    font-size: 0.75rem;
+.equipment-slot {
     display: flex;
-    justify-content: space-between;
-    margin: 0;
-    padding: 0.2rem 0;
-    min-height: 20px;
     align-items: center;
+    justify-content: center;
 }
 
-.stats-list p span {
-    color: #c4975a;
+.equipment-icon {
+    width: 48px;
+    height: 48px;
+    position: relative;
+    border-radius: 4px;
+    border: 2px solid rgba(196, 151, 90, 0.3);
+    background: rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.equipment-icon:hover {
+    border-color: rgba(196, 151, 90, 0.6);
+    background: rgba(196, 151, 90, 0.1);
+}
+
+.equipment-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+}
+
+.equipment-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: #666;
+    background: transparent;
+    text-transform: uppercase;
     font-weight: bold;
 }
 
-.equipment-item {
-    transition: color 0.2s ease;
-    max-width: 60%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: right;
+.equipment-placeholder.empty {
+    color: #444;
+}
+
+.equipment-icon.rarity-uncommon { border-color: #1eff00; }
+.equipment-icon.rarity-rare { border-color: #0070dd; }
+.equipment-icon.rarity-epic { border-color: #a335ee; }
+.equipment-icon.rarity-legendary { border-color: #ff8000; }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 0.6rem;
+    padding: 0.5rem;
+    height: 100%;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(196, 151, 90, 0.2);
+    border-radius: 6px;
+    padding: 0.4rem;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #c4975a;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 0.8rem;
+    color: #4CAF50;
+    font-weight: bold;
 }
 
 .character-actions {
@@ -1260,60 +1325,35 @@ function loadCharacterManagerStyles() {
     font-style: italic;
 }
 
-.equipment-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.2rem 0;
-}
-
-.equipment-icon {
-  width: 48px;
-  height: 48px;
-  position: relative;
-  border-radius: 3px;
-  border: 1px solid rgba(196, 151, 90, 0.3);
-}
-
-.equipment-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.equipment-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.6rem;
-  color: #666;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.equipment-icon.rarity-uncommon { border-color: #1eff00; }
-.equipment-icon.rarity-rare { border-color: #0070dd; }
-.equipment-icon.rarity-epic { border-color: #a335ee; }
-.equipment-icon.rarity-legendary { border-color: #ff8000; }
-
 @media (max-width: 480px) {
-    
     .card-portrait {
         width: 80px;
         height: 80px;
     }
     
-    .stats-items-container {
+    .equipment-grid {
         gap: 0.6rem;
     }
     
-    .items-list p, .stats-list p {
-        font-size: 0.7rem;
+    .equipment-icon {
+        width: 40px;
+        height: 40px;
     }
     
-    .equipment-item {
-        max-width: 50%;
+    .equipment-placeholder {
+        font-size: 0.5rem;
+    }
+    
+    .stats-grid {
+        gap: 0.4rem;
+    }
+    
+    .stat-label {
+        font-size: 0.6rem;
+    }
+    
+    .stat-value {
+        font-size: 0.7rem;
     }
     
     .spells-grid {
@@ -1335,14 +1375,17 @@ function loadCharacterManagerStyles() {
         height: calc(100vh - 4rem);
     }
     
-    .stats-items-container {
-        flex-direction: row;
-        gap: 0.8rem;
+    .equipment-grid {
+        gap: 0.6rem;
     }
     
-    .items-list p, .stats-list p {
-        min-height: 18px;
-        font-size: 0.7rem;
+    .equipment-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .stats-grid {
+        gap: 0.4rem;
     }
 }
 `;
