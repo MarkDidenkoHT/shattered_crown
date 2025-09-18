@@ -232,7 +232,7 @@ function characterCardHTML(character) {
                       data-stat-name="${stat.label}" 
                       data-total-value="${stat.value}"
                       data-base-value="${stat.baseValue}"
-                      style="cursor: pointer; text-decoration: underline;">
+                      style="cursor: pointer;">
                   ${stat.value}
                 </span>
               </div>
@@ -927,14 +927,13 @@ function loadCharacterManagerStyles() {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: calc(100vh - 6rem);
+    height: calc(100vh - 4rem);
     box-sizing: border-box;
 }
 
 .card-top-row {
     display: flex;
     gap: 1rem;
-    margin-bottom: 1rem;
     flex-shrink: 0;
 }
 
@@ -1002,24 +1001,18 @@ function loadCharacterManagerStyles() {
     overflow-y: auto;
 }
 
-.equipment-section {
-    flex: 0 0 70%;
-    min-height: 0;
-}
-
 .stats-section {
     flex: 0 0 30%;
     min-height: 0;
+    margin-top: 4px;
 }
 
 .equipment-section h4, .stats-section h4 {
     font-family: 'Cinzel', serif;
     color: #c4975a;
     font-size: 0.9rem;
-    margin-bottom: 0.8rem;
     text-align: center;
     font-weight: 600;
-    border-bottom: 1px solid rgba(196, 151, 90, 0.2);
     padding-bottom: 0.3rem;
 }
 
@@ -1093,7 +1086,7 @@ function loadCharacterManagerStyles() {
 
 .stat-item {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.2);
@@ -1104,10 +1097,9 @@ function loadCharacterManagerStyles() {
 }
 
 .stat-label {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     color: #c4975a;
     font-weight: 600;
-    margin-bottom: 0.2rem;
     text-transform: uppercase;
 }
 
@@ -1121,7 +1113,6 @@ function loadCharacterManagerStyles() {
     display: flex;
     gap: 0.8rem;
     padding-top: 1rem;
-    border-top: 1px solid rgba(196, 151, 90, 0.2);
     flex-shrink: 0;
 }
 
@@ -1331,10 +1322,6 @@ function loadCharacterManagerStyles() {
         height: 80px;
     }
     
-    .equipment-grid {
-        gap: 0.6rem;
-    }
-    
     .equipment-icon {
         width: 40px;
         height: 40px;
@@ -1342,18 +1329,6 @@ function loadCharacterManagerStyles() {
     
     .equipment-placeholder {
         font-size: 0.5rem;
-    }
-    
-    .stats-grid {
-        gap: 0.4rem;
-    }
-    
-    .stat-label {
-        font-size: 0.6rem;
-    }
-    
-    .stat-value {
-        font-size: 0.7rem;
     }
     
     .spells-grid {
@@ -1367,25 +1342,6 @@ function loadCharacterManagerStyles() {
     
     .spell-badge {
         display: none;
-    }
-}
-
-@media (orientation: landscape) and (max-height: 500px) {
-    .character-card {
-        height: calc(100vh - 4rem);
-    }
-    
-    .equipment-grid {
-        gap: 0.6rem;
-    }
-    
-    .equipment-icon {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .stats-grid {
-        gap: 0.4rem;
     }
 }
 `;
