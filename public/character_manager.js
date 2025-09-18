@@ -150,15 +150,16 @@ function characterCardHTML(character) {
 
   const equippedItems = character.equipped_items || {};
   const equipmentData = [
-    { label: 'Weapon', value: equippedItems.equipped_weapon || 'None', slot: 'equipped_weapon', type: 'Weapon' },
-    { label: 'Offhand', value: equippedItems.equipped_offhand || 'None', slot: 'equipped_offhand', type: 'Offhand' },
-    { label: 'Armor', value: equippedItems.equipped_armor || 'None', slot: 'equipped_armor', type: 'Armor' },
-    { label: 'Helmet', value: equippedItems.equipped_helmet || 'None', slot: 'equipped_helmet', type: 'Helmet' },
-    { label: 'Trinket', value: equippedItems.equipped_trinket || 'None', slot: 'equipped_trinket', type: 'Trinket' },
-    { label: 'Boots', value: equippedItems.equipped_boots || 'None', slot: 'equipped_boots', type: 'Boots' },
-    { label: 'Gloves', value: equippedItems.equipped_gloves || 'None', slot: 'equipped_gloves', type: 'Gloves' },
-    { label: 'Consumable', value: equippedItems.equipped_consumable || 'None', slot: 'equipped_consumable', type: 'Consumable' }
-  ];
+  { label: 'Weapon', value: equippedItems.equipped_weapon || 'None', slot: 'equipped_weapon', type: 'Weapon' },
+  { label: 'Offhand', value: equippedItems.equipped_offhand || 'None', slot: 'equipped_offhand', type: 'Offhand' },
+  { label: 'Armor', value: equippedItems.equipped_armor || 'None', slot: 'equipped_armor', type: 'Armor' },
+  { label: 'Helmet', value: equippedItems.equipped_helmet || 'None', slot: 'equipped_helmet', type: 'Helmet' },
+  { label: 'Trinket', value: equippedItems.equipped_trinket || 'None', slot: 'equipped_trinket', type: 'Trinket' },
+  { label: 'Boots', value: equippedItems.equipped_boots || 'None', slot: 'equipped_boots', type: 'Boots' },
+  { label: 'Gloves', value: equippedItems.equipped_gloves || 'None', slot: 'equipped_gloves', type: 'Gloves' },
+  { label: 'Tool', value: equippedItems.equipped_tool || 'None', slot: 'equipped_tool', type: 'Tool' },
+  { label: 'Consumable', value: equippedItems.equipped_consumable || 'None', slot: 'equipped_consumable', type: 'Consumable' }
+];
 
   const raceName = character.races?.name || 'Race';
   const className = character.classes?.name || 'Class';
@@ -250,7 +251,7 @@ function setupDragSlider() {
     const gap = 16; // Fixed gap for mobile
     return containerWidth - gap;
   }
-
+  
   function snapToCard(index, immediate = false) {
     const cardWidth = getCardWidth();
     const targetScroll = index * cardWidth;
@@ -447,6 +448,28 @@ function setupStatsClickHandlers(section, characters) {
   });
 }
 
+function getItemIcon(item, itemName, itemType) {
+  // Define all gear types that should use gear icon logic
+  const gearTypes = ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand'];
+  
+  // If item is crafted gear, use gear icon logic
+  if (gearTypes.includes(itemType)) {
+    return getGearIconPath(itemName);
+  }
+  
+  // For consumables and tools, use recipe-based path
+  const spriteName = itemName.replace(/\s+/g, '');
+  return `assets/art/recipes/${spriteName}.png`;
+}
+
+function getGearIconPath(itemName) {
+  let baseName = itemName;
+  baseName = baseName.replace(/^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i, '');
+  baseName = baseName.replace(/\s+of\s+(the\s+)?.*$/i, '');
+  const spriteName = baseName.replace(/\s+/g, '');
+  return `assets/art/items/${spriteName}.png`;
+}
+
 async function openSpellbook(character) {
   try {
     let characterSpells = [];
@@ -536,24 +559,24 @@ async function showEquipmentModal(character, slot, type) {
     let availableItems = [];
     
     // Fetch items based on type
-    if (type === 'Consumable') {
-      // Consumables come from bank
-      const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
-      const bankItems = await response.json();
-      availableItems = bankItems.filter(item => item.amount > 0);
-    } else {
-      // All other gear comes from craft_sessions
-      const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
-      const craftedItems = await response.json();
-      // Transform craft_sessions data to match expected format
-      availableItems = craftedItems.map(item => ({
-        id: item.id,
-        item: item.result,
-        type: item.type,
-        stats: item.result_stats,
-        crafting_session_id: item.id
-      }));
-    }
+  if (type === 'Consumable' || type === 'Tool') {
+    // Consumables and Tools come from bank
+    const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
+    const bankItems = await response.json();
+    availableItems = bankItems.filter(item => item.amount > 0);
+  } else {
+    // All other gear comes from craft_sessions
+    const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
+    const craftedItems = await response.json();
+    // Transform craft_sessions data to match expected format
+    availableItems = craftedItems.map(item => ({
+      id: item.id,
+      item: item.result,
+      type: item.type,
+      stats: item.result_stats,
+      crafting_session_id: item.id
+    }));
+  }
     
     const currentItem = character.equipped_items?.[slot] || 'None';
     
@@ -583,7 +606,8 @@ async function showEquipmentModal(character, slot, type) {
           ? '<p style="color: #999; font-style: italic; text-align: center; padding: 2rem;">No items of this type available</p>'
           : availableItems.map(item => {
               const isConsumable = type === 'Consumable';
-              const isAvailable = isConsumable ? item.amount > 0 : true;
+              const isTool = type === 'Tool';
+              const isAvailable = (isConsumable || isTool) ? item.amount > 0 : true;
               const itemName = item.item || item.result;
               
               return `
@@ -591,9 +615,13 @@ async function showEquipmentModal(character, slot, type) {
                      data-item="${itemName}"
                      data-crafting-session-id="${item.crafting_session_id || ''}"
                      data-is-consumable="${isConsumable}"
+                     data-is-tool="${isTool}"
                      ${!isAvailable ? 'data-disabled="true"' : ''}
                      style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${itemName === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
                   <img src="assets/art/recipes/${itemName.replace(/\s+/g, '')}.png"
+                    style="width: 48px; height: 48px; border-radius: 4px;"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <img src="${getItemIcon(item, itemName, type)}"
                     style="width: 48px; height: 48px; border-radius: 4px;"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                   <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
@@ -601,7 +629,7 @@ async function showEquipmentModal(character, slot, type) {
                   </div>
                   <div style="flex: 1;">
                     <strong style="color: #4CAF50;">${itemName}</strong>
-                    ${isConsumable ? `<br><span style="color: #999; font-size: 0.8rem;">Qty: ${item.amount}</span>` : ''}
+                    ${(isConsumable || isTool) ? `<br><span style="color: #999; font-size: 0.8rem;">Qty: ${item.amount}</span>` : ''}
                     ${item.stats ? `<br><span style="color: #b8b3a8; font-size: 0.8rem;">${Object.entries(item.stats).map(([key, value]) => `${key}: ${value}`).join(', ')}</span>` : ''}
                   </div>
                 </div>
@@ -640,7 +668,7 @@ async function showEquipmentModal(character, slot, type) {
         selectedItem = option.dataset.item;
         selectedCraftingSessionId = option.dataset.craftingSessionId || null;
         isConsumable = option.dataset.isConsumable === 'true';
-        equipBtn.disabled = false;
+        isTool = option.dataset.isTool === 'true';
         
         if (selectedItem === 'none') {
           equipBtn.textContent = 'Unequip';
@@ -656,7 +684,7 @@ async function showEquipmentModal(character, slot, type) {
       equipBtn.textContent = 'Processing...';
       
       try {
-        await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem, selectedCraftingSessionId, isConsumable);
+        await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem, selectedCraftingSessionId, isConsumable || isTool);
         modal.remove();
         await fetchAndRenderCharacters();
       } catch (error) {
