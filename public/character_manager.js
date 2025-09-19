@@ -576,32 +576,35 @@ function positionSpellTooltip(e) {
   tooltip.style.top = e.clientY - 10 + 'px';
 }
 
+// Add this to your showEquipmentModal function to handle rings and amulets
+// This goes in the equipment fetching section where you have the type checks
+
 async function showEquipmentModal(character, slot, type) {
   try {
     let availableItems = [];
     
     // Fetch items based on type
-  if (type === 'Consumable' || type === 'Tool') {
-    // Consumables and Tools come from bank
-    const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
-    const bankItems = await response.json();
-    availableItems = bankItems.filter(item => item.amount > 0);
-  } else {
-    // All other gear comes from craft_sessions
-    const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
-    const craftedItems = await response.json();
-    // Transform craft_sessions data to match expected format
-    availableItems = craftedItems.map(item => ({
-      id: item.id,
-      item: item.result,
-      type: item.type,
-      stats: item.result_stats,
-      crafting_session_id: item.id
-    }));
-  }
+    if (type === 'Consumable' || type === 'Tool') {
+      // Consumables and Tools come from bank
+      const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
+      const bankItems = await response.json();
+      availableItems = bankItems.filter(item => item.amount > 0);
+    } else {
+      // All other gear (including rings and amulets) comes from craft_sessions
+      const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
+      const craftedItems = await response.json();
+      availableItems = craftedItems.map(item => ({
+        id: item.id,
+        item: item.result,
+        type: item.type,
+        stats: item.result_stats,
+        crafting_session_id: item.id
+      }));
+    }
     
     const currentItem = character.equipped_items?.[slot] || 'None';
     
+    // Rest of your modal code remains the same...
     const modal = document.createElement('div');
     modal.className = 'custom-message-box';
     modal.innerHTML = `
@@ -640,9 +643,6 @@ async function showEquipmentModal(character, slot, type) {
                      data-is-tool="${isTool}"
                      ${!isAvailable ? 'data-disabled="true"' : ''}
                      style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${itemName === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
-                  <img src="assets/art/recipes/${itemName.replace(/\s+/g, '')}.png"
-                    style="width: 48px; height: 48px; border-radius: 4px;"
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                   <img src="${getItemIcon(item, itemName, type)}"
                     style="width: 48px; height: 48px; border-radius: 4px;"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -669,7 +669,7 @@ async function showEquipmentModal(character, slot, type) {
     
     let selectedItem = null;
     let selectedCraftingSessionId = null;
-    let isConsumable = false;
+    let isFromBank = false; // NEW: Track if item comes from bank
     const equipBtn = modal.querySelector('.equip-btn');
     const cancelBtn = modal.querySelector('.cancel-btn');
     
@@ -689,10 +689,14 @@ async function showEquipmentModal(character, slot, type) {
         
         selectedItem = option.dataset.item;
         selectedCraftingSessionId = option.dataset.craftingSessionId || null;
-        isConsumable = option.dataset.isConsumable === 'true';
-        const isTool = option.dataset.isTool === 'true'; // Declare isTool here
         
-        equipBtn.disabled = false; // Enable the equip button
+        const isConsumable = option.dataset.isConsumable === 'true';
+        const isTool = option.dataset.isTool === 'true';
+        const isRingAmulet = option.dataset.isRingAmulet === 'true'; // NEW
+        
+        isFromBank = isConsumable || isTool || isRingAmulet; // UPDATED
+        
+        equipBtn.disabled = false;
         
         if (selectedItem === 'none') {
           equipBtn.textContent = 'Unequip';
@@ -708,11 +712,7 @@ async function showEquipmentModal(character, slot, type) {
       equipBtn.textContent = 'Processing...';
       
       try {
-        // Get the isTool value from the selected option
-        const selectedOption = modal.querySelector('.equipment-option.selected');
-        const isToolSelected = selectedOption ? selectedOption.dataset.isTool === 'true' : false;
-        
-        await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem, selectedCraftingSessionId, isConsumable || isToolSelected);
+        await equipItem(character, slot, selectedItem === 'none' ? 'none' : selectedItem, selectedCraftingSessionId, isFromBank);
         modal.remove();
         await fetchAndRenderCharacters();
       } catch (error) {
@@ -721,6 +721,7 @@ async function showEquipmentModal(character, slot, type) {
       }
     });
     
+    // Rest of cancel and click handlers remain the same...
     cancelBtn.addEventListener('click', () => {
       modal.remove();
     });
@@ -734,6 +735,21 @@ async function showEquipmentModal(character, slot, type) {
   } catch (error) {
     displayMessage('Failed to load equipment options. Please try again.');
   }
+}
+
+// Update your getItemIcon function to handle rings and amulets
+function getItemIcon(item, itemName, itemType) {
+  // Define all gear types that should use gear icon logic
+  const gearTypes = ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand'];
+  
+  // If item is crafted gear, use gear icon logic
+  if (gearTypes.includes(itemType)) {
+    return getGearIconPath(itemName);
+  }
+  
+  // For consumables, tools, rings, and amulets, use recipe-based path
+  const spriteName = itemName.replace(/\s+/g, '');
+  return `assets/art/recipes/${spriteName}.png`;
 }
 
 function getGearRarity(itemName) {
