@@ -708,12 +708,11 @@ function startAbilitySelection(caster, abilityRaw) {
   };
   BattleState.highlightedTiles = [];
 
-  // register tile as clickable for ability selection
+  // helper: register a tile as clickable for ability use
   function registerTile(tile, handler) {
     const wrapped = function (ev) {
       ev.stopPropagation();
 
-      // if in targeting mode → treat click as ability use, not character selection
       if (BattleState.selectingAbility) {
         try {
           handler(ev);
@@ -723,7 +722,7 @@ function startAbilitySelection(caster, abilityRaw) {
         return;
       }
 
-      // normal mode → clicking a tile with a character selects that character
+      // fallback: character selection
       const charEl = tile.querySelector('.character-token');
       if (charEl && charEl.dataset?.id) {
         const charId = charEl.dataset.id;
@@ -734,7 +733,6 @@ function startAbilitySelection(caster, abilityRaw) {
           } catch (err) {
             console.warn('handleCharacterSelection error', err);
           }
-          return;
         }
       }
     };
@@ -793,9 +791,16 @@ function startAbilitySelection(caster, abilityRaw) {
       const [cx, cy] = caster.position;
       const affected = [];
 
+      // highlight all affected tiles
       for (let ax = cx - ability.area; ax <= cx + ability.area; ax++) {
         for (let ay = cy - ability.area; ay <= cy + ability.area; ay++) {
           if (chebyshevDistance([cx, cy], [ax, ay]) > ability.area) continue;
+          const cell = getCellAt(ax, ay);
+          if (cell) {
+            cell.classList.add('highlight-area-affected');
+            BattleState.highlightedTiles.push(cell);
+          }
+
           const ch = getCharacterAt(ax, ay);
           if (!ch) continue;
           const eff = computeEffect(caster, ability, ch);
@@ -804,26 +809,32 @@ function startAbilitySelection(caster, abilityRaw) {
       }
 
       if (affected.length > 0) {
-        const payload = {
-          abilityName: ability.name,
-          casterId: caster.id,
-          casterPos: caster.position,
-          targetCenter: [cx, cy],
-          affectedTargets: affected.map(a => ({
-            id: a.char.id,
-            pos: a.char.position,
-            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-            intendedEffect: a.eff
-          }))
-        };
-        console.log('[ABILITY USED]', payload);
-        handleAbilityUse(payload);
-        clearAbilitySelection();
+        // confirm click anywhere in the highlighted area
+        for (const tile of BattleState.highlightedTiles) {
+          registerTile(tile, () => {
+            const payload = {
+              abilityName: ability.name,
+              casterId: caster.id,
+              casterPos: caster.position,
+              targetCenter: [cx, cy],
+              affectedTargets: affected.map(a => ({
+                id: a.char.id,
+                pos: a.char.position,
+                faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+                intendedEffect: a.eff
+              }))
+            };
+            console.log('[ABILITY USED]', payload);
+            handleAbilityUse(payload);
+            clearAbilitySelection();
+          });
+        }
       }
+
       return; // ✅ skip normal targeting UI
     }
 
-    // Normal AoE targeting (requires selecting a tile within range)
+    // --- Normal AoE targeting (range > 0) ---
     const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
     for (const cell of cells) {
       const x = +cell.dataset.x,
@@ -831,9 +842,13 @@ function startAbilitySelection(caster, abilityRaw) {
       if (chebyshevDistance(caster.position, [x, y]) > ability.range) continue;
 
       const affected = [];
+      const affectedTiles = [];
       for (let ax = x - ability.area; ax <= x + ability.area; ax++) {
         for (let ay = y - ability.area; ay <= y + ability.area; ay++) {
           if (chebyshevDistance([x, y], [ax, ay]) > ability.area) continue;
+          const cell2 = getCellAt(ax, ay);
+          if (cell2) affectedTiles.push(cell2);
+
           const ch = getCharacterAt(ax, ay);
           if (!ch) continue;
           const eff = computeEffect(caster, ability, ch);
@@ -844,30 +859,28 @@ function startAbilitySelection(caster, abilityRaw) {
       if (!affected.length) continue;
       cell.classList.add('highlight-area-center');
 
-      registerTile(cell, () => {
-        const payload = {
-          abilityName: ability.name,
-          casterId: caster.id,
-          casterPos: caster.position,
-          targetCenter: [x, y],
-          affectedTargets: affected.map(a => ({
-            id: a.char.id,
-            pos: a.char.position,
-            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-            intendedEffect: a.eff
-          }))
-        };
-        console.log('[ABILITY USED]', payload);
-        handleAbilityUse(payload);
-        clearAbilitySelection();
-      });
+      // confirm cast when player taps any affected tile
+      for (const tile of affectedTiles) {
+        registerTile(tile, () => {
+          const payload = {
+            abilityName: ability.name,
+            casterId: caster.id,
+            casterPos: caster.position,
+            targetCenter: [x, y],
+            affectedTargets: affected.map(a => ({
+              id: a.char.id,
+              pos: a.char.position,
+              faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+              intendedEffect: a.eff
+            }))
+          };
+          console.log('[ABILITY USED]', payload);
+          handleAbilityUse(payload);
+          clearAbilitySelection();
+        });
+      }
     }
   }
-
-  BattleState._abilityEscHandler = e => {
-    if (e.key === 'Escape') clearAbilitySelection();
-  };
-  document.addEventListener('keydown', BattleState._abilityEscHandler);
 }
 
 function computeEffect(caster, ability, target) {
