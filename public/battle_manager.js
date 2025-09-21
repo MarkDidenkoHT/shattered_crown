@@ -710,39 +710,39 @@ function startAbilitySelection(caster, abilityRaw) {
 
   // register tile as clickable for ability selection
   function registerTile(tile, handler) {
-  const wrapped = function (ev) {
-    ev.stopPropagation();
+    const wrapped = function (ev) {
+      ev.stopPropagation();
 
-    // if in targeting mode → treat click as ability use, not character selection
-    if (BattleState.selectingAbility) {
-      try {
-        handler(ev);
-      } catch (err) {
-        console.error('ability handler error', err);
-      }
-      return;
-    }
-
-    // normal mode → clicking a tile with a character selects that character
-    const charEl = tile.querySelector('.character-token');
-    if (charEl && charEl.dataset?.id) {
-      const charId = charEl.dataset.id;
-      const char = BattleState.characters.find(c => c.id === charId);
-      if (char) {
+      // if in targeting mode → treat click as ability use, not character selection
+      if (BattleState.selectingAbility) {
         try {
-          handleCharacterSelection(char, tile);
+          handler(ev);
         } catch (err) {
-          console.warn('handleCharacterSelection error', err);
+          console.error('ability handler error', err);
         }
         return;
       }
-    }
-  };
 
-  tile._abilityTargetHandler = wrapped;
-  tile.addEventListener('click', wrapped);
-  BattleState.highlightedTiles.push(tile);
-}
+      // normal mode → clicking a tile with a character selects that character
+      const charEl = tile.querySelector('.character-token');
+      if (charEl && charEl.dataset?.id) {
+        const charId = charEl.dataset.id;
+        const char = BattleState.characters.find(c => c.id === charId);
+        if (char) {
+          try {
+            handleCharacterSelection(char, tile);
+          } catch (err) {
+            console.warn('handleCharacterSelection error', err);
+          }
+          return;
+        }
+      }
+    };
+
+    tile._abilityTargetHandler = wrapped;
+    tile.addEventListener('click', wrapped);
+    BattleState.highlightedTiles.push(tile);
+  }
 
   // --- SINGLE target logic ---
   if (ability.targeting === 'single') {
@@ -765,7 +765,7 @@ function startAbilitySelection(caster, abilityRaw) {
 
       registerTile(cell, () => {
         const eff = computeEffect(caster, ability, ch);
-        console.log('[ABILITY USED]', {
+        const payload = {
           abilityName: ability.name,
           casterId: caster.id,
           casterPos: caster.position,
@@ -778,22 +778,8 @@ function startAbilitySelection(caster, abilityRaw) {
               intendedEffect: eff
             }
           ]
-        });
-        const payload = {
-        abilityName: ability.name,
-        casterId: caster.id,
-        casterPos: caster.position,
-        targetCenter: ch.position,
-        affectedTargets: [
-            {
-            id: ch.id,
-            pos: ch.position,
-            faction: isAlly(caster, ch) ? 'ally' : 'enemy',
-            intendedEffect: eff
-            }
-        ]
         };
-
+        console.log('[ABILITY USED]', payload);
         handleAbilityUse(payload);
         clearAbilitySelection();
       });
@@ -802,6 +788,42 @@ function startAbilitySelection(caster, abilityRaw) {
 
   // --- AREA target logic ---
   if (ability.targeting === 'area') {
+    // 🔥 Special case: self-centered AoE (range 0)
+    if (+ability.range === 0) {
+      const [cx, cy] = caster.position;
+      const affected = [];
+
+      for (let ax = cx - ability.area; ax <= cx + ability.area; ax++) {
+        for (let ay = cy - ability.area; ay <= cy + ability.area; ay++) {
+          if (chebyshevDistance([cx, cy], [ax, ay]) > ability.area) continue;
+          const ch = getCharacterAt(ax, ay);
+          if (!ch) continue;
+          const eff = computeEffect(caster, ability, ch);
+          if (eff) affected.push({ char: ch, eff });
+        }
+      }
+
+      if (affected.length > 0) {
+        const payload = {
+          abilityName: ability.name,
+          casterId: caster.id,
+          casterPos: caster.position,
+          targetCenter: [cx, cy],
+          affectedTargets: affected.map(a => ({
+            id: a.char.id,
+            pos: a.char.position,
+            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+            intendedEffect: a.eff
+          }))
+        };
+        console.log('[ABILITY USED]', payload);
+        handleAbilityUse(payload);
+        clearAbilitySelection();
+      }
+      return; // ✅ skip normal targeting UI
+    }
+
+    // Normal AoE targeting (requires selecting a tile within range)
     const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
     for (const cell of cells) {
       const x = +cell.dataset.x,
@@ -823,7 +845,7 @@ function startAbilitySelection(caster, abilityRaw) {
       cell.classList.add('highlight-area-center');
 
       registerTile(cell, () => {
-        console.log('[ABILITY USED]', {
+        const payload = {
           abilityName: ability.name,
           casterId: caster.id,
           casterPos: caster.position,
@@ -834,23 +856,8 @@ function startAbilitySelection(caster, abilityRaw) {
             faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
             intendedEffect: a.eff
           }))
-        });
-
-        const payload = {
-        abilityName: ability.name,
-        casterId: caster.id,
-        casterPos: caster.position,
-        targetCenter: ch.position,
-        affectedTargets: [
-            {
-            id: ch.id,
-            pos: ch.position,
-            faction: isAlly(caster, ch) ? 'ally' : 'enemy',
-            intendedEffect: eff
-            }
-        ]
         };
-
+        console.log('[ABILITY USED]', payload);
         handleAbilityUse(payload);
         clearAbilitySelection();
       });
