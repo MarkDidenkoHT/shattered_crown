@@ -1448,25 +1448,19 @@ const handleTileClick = throttle((event) => {
     }
 
     if (charInCell) {
-        // ✅ full character info first
+        // Character found - show character info first
         handleCharacterSelection(charInCell, clickedTileEl);
     } else {
-        // ✅ show tile info first
+        // No character - handle movement/deselection and show tile info
         handleMovementOrDeselect(clickedTileEl, targetX, targetY);
-
-        const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
-        const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
-        const tileData = BattleState.tileMap.get(tileKey);
-        if (tileData) {
-            showEntityInfo({ tile: tileData });
-        }
     }
 
-    // ✅ append environment objects AFTER panel reset
+    // Always append environment items after the main info is set
     const envList = document.getElementById('envList');
-    if (envList) envList.innerHTML = ''; // clear old env
+    if (envList) envList.innerHTML = ''; // clear old environment items
+    
     itemsInCell.forEach(item => {
-        showEntityInfo({ item });
+        showEntityInfo({ item }); // This appends to environment section only
     });
 }, 150);
 
@@ -1558,9 +1552,13 @@ function highlightWalkableTiles(character) {
                     return;
                 }
                 
-                // check if another character is standing here
+                // check if another LIVING character is standing here
                 const isOccupied = BattleState.characters.some(c => 
-                    Array.isArray(c.position) && c.position[0] === newX && c.position[1] === newY
+                    Array.isArray(c.position) && 
+                    c.position[0] === newX && 
+                    c.position[1] === newY &&
+                    c.current_hp > 0 && 
+                    c.status !== 'dead'
                 );
                 if (!isOccupied) {
                     tileEl.classList.add('highlight-walkable');
@@ -1582,22 +1580,6 @@ function unhighlightAllTiles() {
     document.querySelectorAll('.character-selected').forEach(el => {
         el.classList.remove('character-selected');
     });
-}
-
-function debugConsumableLoading() {
-    console.log('=== CONSUMABLE DEBUG ===');
-    console.log('Current turn character:', BattleState.currentTurnCharacter);
-    console.log('All characters:', BattleState.characters);
-    
-    BattleState.characters.forEach(char => {
-        console.log(`Character ${char.name}:`, {
-            id: char.id,
-            isPlayerControlled: char.isPlayerControlled,
-            equipped_items: char.equipped_items,
-            equipped_consumable: char.equipped_items?.equipped_consumable
-        });
-    });
-    console.log('========================');
 }
 
 const attemptMoveCharacter = async (character, targetX, targetY) => {
