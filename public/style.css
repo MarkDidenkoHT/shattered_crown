@@ -369,7 +369,8 @@
 }
 
 .card-info-block {
-    padding: 0.7rem 1rem 0.7rem 1rem;
+    padding: 5px;
+    height: 60px;
 }
 
 .card-name {

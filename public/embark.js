@@ -51,6 +51,7 @@ function renderEmbarkScreen() {
         ${createEmbarkCard('Mountain', 'Mountain', 'assets/art/embark/mountain.png')}
         ${createEmbarkCard('Dungeon', 'Dungeon', 'assets/art/embark/dungeon.png')}
         ${createEmbarkCard('PvP Arena', 'PvP', 'assets/art/embark/pvp.png')}
+        ${createEmbarkCard('Trials', 'Trials', 'assets/art/embark/trials.png')}
       </div>
     </div>
   `;
@@ -83,6 +84,12 @@ function renderEmbarkScreen() {
 }
 
 function createEmbarkCard(title, mode, imgSrc) {
+  // Extra info per mode
+  const modeExtras = {
+    PvP: '<p class="coming-soon-text">Coming soon!</p>',
+    Trials: '<p class="coming-soon-text">Coming not so soon</p>'
+  };
+
   return `
     <div class="selection-card clickable-card" data-mode="${mode}">
       <div class="card-art-block">
@@ -90,7 +97,7 @@ function createEmbarkCard(title, mode, imgSrc) {
       </div>
       <div class="card-info-block">
         <h3 class="card-name">${title}</h3>
-        ${mode === 'PvP' ? '<p class="coming-soon-text">Coming Soon</p>' : ''}
+        ${modeExtras[mode] || ''}
       </div>
     </div>
   `;
