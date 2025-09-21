@@ -573,17 +573,9 @@ const setupRealtimeSubscription = () => {
                 BattleState.battleState = payload.new;
                 await updateGameStateFromRealtime();
 
-                // ⬇️ NEW: render environment items (like corpses) from layout_data
+                // ⬇️ Render environment items (like corpses) from layout_data
                 const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos || {};
                 renderEnvironmentItems(layoutItems);
-
-                // ⬇️ Optional: toast/notification when a corpse is created
-                const newEvents = BattleState.battleState?.events || [];
-                newEvents
-                    .filter(ev => ev.type === 'corpse_created')
-                    .forEach(ev => {
-                        displayMessage(`${ev.character_name} fell — corpse at [${ev.position}]`, 'info');
-                    });
             }, 100)
         )
         .subscribe();
@@ -1222,7 +1214,8 @@ function renderCharacters() {
     container.querySelectorAll('.character-token').forEach(token => token.remove());
 
     BattleState.characters.forEach(char => {
-        if (!Array.isArray(char.position)) return;
+        // ⬇️ Skip characters without positions OR with 0 HP (dead)
+        if (!Array.isArray(char.position) || char.hp <= 0) return;
 
         const [x, y] = char.position;
         const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
