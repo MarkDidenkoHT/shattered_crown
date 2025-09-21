@@ -8,7 +8,8 @@ const BattleState = {
     battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false,
     characterElements: new Map(), // Track character DOM elements for animations
     isMoveQueued: false, // Add a flag to track if a move is queued and awaiting confirmation
-    characterAbilities: {} // key: characterId → array of ability objects
+    characterAbilities: {}, // key: characterId → array of ability objects
+    environmentItems: {}
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -571,6 +572,18 @@ const setupRealtimeSubscription = () => {
             throttle(async (payload) => {
                 BattleState.battleState = payload.new;
                 await updateGameStateFromRealtime();
+
+                // ⬇️ NEW: render environment items (like corpses) from layout_data
+                const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos || {};
+                renderEnvironmentItems(layoutItems);
+
+                // ⬇️ Optional: toast/notification when a corpse is created
+                const newEvents = BattleState.battleState?.events || [];
+                newEvents
+                    .filter(ev => ev.type === 'corpse_created')
+                    .forEach(ev => {
+                        displayMessage(`${ev.character_name} fell — corpse at [${ev.position}]`, 'info');
+                    });
             }, 100)
         )
         .subscribe();
@@ -605,11 +618,6 @@ async function updateGameStateFromRealtime() {
     
     handleTurnLogic();
 }
-
-// === UTILS / HELPERS ===
-// -------------------------------
-// Targeting System (selection + highlighting)
-// -------------------------------
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
 BattleState._abilityEscHandler = null;
@@ -1228,6 +1236,29 @@ function renderCharacters() {
     });
 }
 
+function renderEnvironmentItems(layoutEnvItems) {
+    // layoutEnvItems expected as object: { id1: itemObj, id2: itemObj, ... }
+    BattleState.environmentItems = layoutEnvItems || {};
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    if (!container) return;
+
+    // Remove existing environment item DOMs
+    container.querySelectorAll('.environment-item').forEach(el => el.remove());
+
+    // For each item, attach to the correct cell
+    Object.values(BattleState.environmentItems).forEach(item => {
+        if (!Array.isArray(item.position)) return;
+        const [x, y] = item.position;
+        const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
+        if (!cell) return;
+
+        const itemEl = createEnvironmentItemElement(item);
+        // ensure environment items appear behind characters but above tile
+        // If you want corpses to be under characters, keep zIndex < character zIndex.
+        cell.appendChild(itemEl);
+    });
+}
+
 const createCharacterElement = (char) => {
     const charEl = document.createElement('div');
     charEl.className = `character-token ${char.type}`;
@@ -1293,6 +1324,52 @@ const createHPBar = (char) => {
     return hpBar;
 };
 
+function createEnvironmentItemElement(item) {
+    const el = document.createElement('div');
+    el.className = `environment-item item-${(item.sprite || 'unknown').toLowerCase()}`;
+    el.dataset.itemId = item.id;
+    el.dataset.walkable = item.walkable ? 'true' : 'false';
+    el.style.position = 'absolute';
+    el.style.top = '0';
+    el.style.left = '0';
+    el.style.width = '100%';
+    el.style.height = '100%';
+    el.style.zIndex = '8'; // under characters (characters are zIndex 5+)
+    el.title = item.name + (item.character_name ? ` — ${item.character_name}` : '');
+
+    // sprite image (fallback to placeholder)
+    const img = document.createElement('img');
+    const sprite = item.sprite ? item.sprite.toLowerCase() : 'placeholder';
+    img.src = `assets/art/environment/${sprite}.png`; // keep consistent asset path
+    img.alt = item.name || 'Item';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'contain';
+    img.style.opacity = item.walkable ? '0.95' : '1';
+    el.appendChild(img);
+
+    // optional small badge for "corpse"
+    if ((item.name || '').toLowerCase() === 'corpse') {
+        const badge = document.createElement('div');
+        badge.textContent = '🕯';
+        Object.assign(badge.style, {
+            position: 'absolute', bottom: '4px', right: '4px', fontSize: '12px', zIndex: '20'
+        });
+        el.appendChild(badge);
+    }
+
+    // click handler (inspect / attempt loot)
+    el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        // choose a small UX: show details in the info panel and/or call API to loot
+        showEntityInfo({ item }); // reuse your showEntityInfo pattern for tiles/characters
+        // you may also dispatch a custom event:
+        // handleInteractEnvironmentItem(item.id);
+    });
+
+    return el;
+}
+
 const createTurnIndicator = () => {
     const indicator = document.createElement('div');
     indicator.className = 'turn-done-indicator';
@@ -1315,8 +1392,15 @@ const handleTileClick = throttle((event) => {
     const clickedTileEl = event.currentTarget;
     const targetX = parseInt(clickedTileEl.dataset.x);
     const targetY = parseInt(clickedTileEl.dataset.y);
+
     const charInCell = BattleState.characters.find(c => 
         Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY
+    );
+
+    const itemInCell = Object.values(BattleState.environmentItems).find(it =>
+        Array.isArray(it.position) &&
+        it.position[0] === targetX &&
+        it.position[1] === targetY
     );
 
     if (BattleState.battleState?.current_turn === 'AI') {
@@ -1326,11 +1410,13 @@ const handleTileClick = throttle((event) => {
 
     if (charInCell) {
         handleCharacterSelection(charInCell, clickedTileEl);
+    } else if (itemInCell) {
+        // clicking a corpse or other environment item
+        showEntityInfo({ item: itemInCell });
     } else {
         handleMovementOrDeselect(clickedTileEl, targetX, targetY);
     }
 }, 150);
-
 
 const handleCharacterSelection = (character, tileEl) => {
     // Prevent selecting another character if a move is queued
