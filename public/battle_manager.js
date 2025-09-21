@@ -1552,20 +1552,10 @@ function highlightWalkableTiles(character) {
             if (tileEl && tileEl.dataset.walkable === 'true') {
                 
                 // 🔥 check environment items at this tile
-                const envItem = Object.values(BattleState.environmentItems).find(it =>
-                    Array.isArray(it.position) &&
-                    it.position[0] === newX &&
-                    it.position[1] === newY
-                );
-                
-                // Fixed: Check the DOM element's dataset.walkable instead of envItem.walkable
-                if (envItem) {
-                    // Find the corresponding DOM element for this environment item
-                    const envItemEl = tileEl.querySelector('.environment-item');
-                    if (envItemEl && envItemEl.dataset.walkable !== 'true') {
-                        // blocked by obstacle (e.g. rock, chest) - but corpses should be walkable
-                        return;
-                    }
+                const envItemEl = tileEl.querySelector('.environment-item');
+                if (envItemEl && envItemEl.dataset.walkable !== 'true') {
+                    // blocked by obstacle (e.g. rock, chest) - but corpses should be walkable
+                    return;
                 }
                 
                 // check if another character is standing here
