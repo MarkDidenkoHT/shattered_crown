@@ -609,6 +609,8 @@ async function updateGameStateFromRealtime() {
     });
     
     handleTurnLogic();
+    const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos || {};
+    renderEnvironmentItems(layoutItems);
 }
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
@@ -1166,6 +1168,10 @@ function renderBattleScreen(mode, level, layoutData) {
                             <div style="font-size: 12px; color: #F44336; margin-bottom: 2px;">Debuffs:</div>
                             <div id="debuffsList" style="font-size: 9px; color: #FFB6C1;"></div>
                         </div>
+                            <div id="envContainer" style="margin-top: 6px;">
+                                <div style="font-size: 12px; color: #87CEEB; margin-bottom: 2px;">Environment:</div>
+                                <div id="envList" style="font-size: 9px; color: #ADD8E6;"></div>
+                            </div>
                     </div>
                 </div>
             </div>
@@ -1177,6 +1183,7 @@ function renderBattleScreen(mode, level, layoutData) {
     renderBattleGrid(layoutData.layout);
     renderCharacters();
     createParticles();
+    renderEnvironmentItems(BattleState.battleState?.layout_data?.environment_items_pos);
 
     const turnStatusEl = document.getElementById('turnStatus');
     if (turnStatusEl) {
@@ -1430,7 +1437,7 @@ const handleTileClick = throttle((event) => {
         Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY
     );
 
-    const itemInCell = Object.values(BattleState.environmentItems).find(it =>
+    const itemsInCell = Object.values(BattleState.environmentItems).filter(it =>
         Array.isArray(it.position) &&
         it.position[0] === targetX &&
         it.position[1] === targetY
@@ -1443,11 +1450,15 @@ const handleTileClick = throttle((event) => {
 
     if (charInCell) {
         handleCharacterSelection(charInCell, clickedTileEl);
-    } else if (itemInCell) {
-        // clicking a corpse or other environment item
-        showEntityInfo({ item: itemInCell });
     } else {
         handleMovementOrDeselect(clickedTileEl, targetX, targetY);
+    }
+
+    // ✅ Always show environment items if present
+    if (itemsInCell.length > 0) {
+        itemsInCell.forEach(item => {
+            showEntityInfo({ item });
+        });
     }
 }, 150);
 
@@ -1945,6 +1956,8 @@ function showEntityInfo(entity) {
     const statsEl = document.getElementById('infoStats');
     const buffsList = document.getElementById('buffsList');
     const debuffsList = document.getElementById('debuffsList');
+    const envList = document.getElementById('envList');
+    if (envList) envList.innerHTML = '';
 
     if (!entity) {
         clearEntityInfo();
@@ -1954,9 +1967,37 @@ function showEntityInfo(entity) {
     nameEl.textContent = entity.name || 'Unnamed';
 
     if (entity.type === 'player' || entity.type === 'enemy') {
+        // Character info
         displayCharacterInfo(entity, portrait, hpEl, statsEl, buffsList, debuffsList);
     } else if (entity.tile) {
+        // Tile info
         displayTileInfo(entity.tile, portrait, hpEl, statsEl, buffsList, debuffsList);
+    } else if (entity.item) {
+        // Environment item info → append to envList
+        if (envList) {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.marginBottom = '2px';
+
+            const icon = document.createElement('img');
+            const sprite = entity.item.sprite ? entity.item.sprite.toLowerCase() : 'placeholder';
+            icon.src = `assets/art/environment/${sprite}.png`;
+            icon.alt = entity.item.name || 'Item';
+            Object.assign(icon.style, {
+                width: '14px',
+                height: '14px',
+                marginRight: '4px',
+                objectFit: 'contain'
+            });
+
+            const label = document.createElement('span');
+            label.textContent = entity.item.name + (entity.item.character_name ? ` — ${entity.item.character_name}` : '');
+
+            wrapper.appendChild(icon);
+            wrapper.appendChild(label);
+            envList.appendChild(wrapper);
+        }
     }
 }
 
