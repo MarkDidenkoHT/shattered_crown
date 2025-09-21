@@ -1491,6 +1491,19 @@ function highlightWalkableTiles(character) {
         if (newX >= 0 && newX < GRID_SIZE.cols && newY >= 0 && newY < GRID_SIZE.rows) {
             const tileEl = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
             if (tileEl && tileEl.dataset.walkable === 'true') {
+                
+                // 🔥 check environment items at this tile
+                const envItem = Object.values(BattleState.environmentItems).find(it =>
+                    Array.isArray(it.position) &&
+                    it.position[0] === newX &&
+                    it.position[1] === newY
+                );
+                if (envItem && envItem.walkable === false) {
+                    // blocked by obstacle (e.g. rock, chest)
+                    return;
+                }
+                
+                // check if another character is standing here
                 const isOccupied = BattleState.characters.some(c => 
                     Array.isArray(c.position) && c.position[0] === newX && c.position[1] === newY
                 );
