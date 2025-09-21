@@ -1003,7 +1003,7 @@ function loadCharacterManagerStyles() {
 .stats-section {
     flex: 0 0 30%;
     min-height: 0;
-    margin-top: 4px;
+    margin: auto;
 }
 
 .equipment-section h4, .stats-section h4 {
@@ -1092,7 +1092,7 @@ function loadCharacterManagerStyles() {
     border-radius: 6px;
     padding: 0.4rem;
     text-align: center;
-    gap: 4px;
+    gap: 11px;
 }
 
 .stat-label {

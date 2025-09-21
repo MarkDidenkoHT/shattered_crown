@@ -1072,16 +1072,6 @@ const handleAITurn = async () => {
   }
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  const turnStatusEl = document.getElementById('turnStatus');
-  if (turnStatusEl) {
-    turnStatusEl.style.cursor = "pointer";
-    turnStatusEl.title = "Click to refresh if frozen";
-    turnStatusEl.addEventListener("click", handleRefresh);
-  }
-});
-
-
 function renderBattleScreen(mode, level, layoutData) {
     BattleState.main.innerHTML = `
         <style>
@@ -1139,13 +1129,21 @@ function renderBattleScreen(mode, level, layoutData) {
                     </div>
                 </div>
             </div>
-            <div class="battle-bottom-ui" style="display: block; width: 97vw; margin: auto;"></div>
+            <div classs="tooltip-container"></div>
+            <div class="battle-bottom-ui" style="display: block; width: 97vw; margin: auto; position: fixed; bottom: 4px;"></div>
         </div>
     `;
 
     renderBattleGrid(layoutData.layout);
     renderCharacters();
     createParticles();
+
+    const turnStatusEl = document.getElementById('turnStatus');
+    if (turnStatusEl) {
+        turnStatusEl.style.cursor = "pointer";
+        turnStatusEl.title = "Click to refresh if frozen";
+        turnStatusEl.addEventListener("click", handleRefresh);
+    }
 }
 
 function renderBattleGrid(layoutJson) {
@@ -1851,7 +1849,7 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     
     const stats = entity.stats || {};
     
-    // Updated layout: Row 1: HP-VIT, Row 2: STR-DEX, Row 3: INT-SPR, Row 4: ARM-RES
+    // === HP + Stats ===
     hpEl.innerHTML = `
         <div style="font-size: 12px; line-height: 1.2;">
             <!-- Row 1: HP - VIT -->
@@ -1870,7 +1868,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
 
     statsEl.innerHTML = `
         <div style="font-size: 12px; line-height: 1.2;">
-            
             <!-- Row 2: STR - DEX -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                 <div style="display: flex; flex: 1;">
@@ -1909,47 +1906,53 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         </div>
     `;
 
-    const buffs = entity.buffs || [];
-    if (buffs.length > 0) {
-        buffsList.innerHTML = buffs.map(buff => `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1px; padding: 1px 3px; background: rgba(76, 175, 80, 0.1); border-radius: 2px;">
-                <span>${buff.name || 'Unknown Buff'}</span>
-                <span style="color: #90EE90;">${buff.duration || '∞'}</span>
-            </div>
-        `).join('');
+    // === Buffs ===
+    buffsList.innerHTML = "";
+    if (entity.buffs && Object.keys(entity.buffs).length > 0) {
+        for (const [buffName, buffData] of Object.entries(entity.buffs)) {
+            const stacks = buffData.stacks ?? 1;
+            const duration = buffData.duration ?? "∞";
+            const buffEl = document.createElement("div");
+            buffEl.style.cssText = "display:flex;justify-content:space-between;margin-bottom:1px;padding:1px 3px;background:rgba(76,175,80,0.1);border-radius:2px;font-size:11px;";
+            buffEl.innerHTML = `
+                <span>${buffName} (x${stacks})</span>
+                <span style="color:#90EE90;">${duration}t</span>
+            `;
+            buffsList.appendChild(buffEl);
+        }
     } else {
-        buffsList.innerHTML = '<div style="color: #666; font-style: italic;">None</div>';
+        buffsList.innerHTML = '<div style="color:#666;font-style:italic;">None</div>';
     }
 
-    const debuffs = entity.debuffs || [];
-    if (debuffs.length > 0) {
-        debuffsList.innerHTML = debuffs.map(debuff => `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1px; padding: 1px 3px; background: rgba(244, 67, 54, 0.1); border-radius: 2px;">
-                <span>${debuff.name || 'Unknown Debuff'}</span>
-                <span style="color: #FFB6C1;">${debuff.duration || '∞'}</span>
-            </div>
-        `).join('');
+    // === Debuffs ===
+    debuffsList.innerHTML = "";
+    if (entity.debuffs && Object.keys(entity.debuffs).length > 0) {
+        for (const [debuffName, debuffData] of Object.entries(entity.debuffs)) {
+            const stacks = debuffData.stacks ?? 1;
+            const duration = debuffData.duration ?? "∞";
+            const debuffEl = document.createElement("div");
+            debuffEl.style.cssText = "display:flex;justify-content:space-between;margin-bottom:1px;padding:1px 3px;background:rgba(244,67,54,0.1);border-radius:2px;font-size:11px;";
+            debuffEl.innerHTML = `
+                <span>${debuffName} (x${stacks})</span>
+                <span style="color:#FFB6C1;">${duration}t</span>
+            `;
+            debuffsList.appendChild(debuffEl);
+        }
     } else {
-        debuffsList.innerHTML = '<div style="color: #666; font-style: italic;">None</div>';
+        debuffsList.innerHTML = '<div style="color:#666;font-style:italic;">None</div>';
     }
 
-    // 🔥 FIXED: Portrait loading logic
-    console.log('Entity portrait value:', entity.portrait); // Debug log
-    
+    // === Portrait ===
     if (entity.portrait && entity.portrait !== 'none') {
-        const portraitPath = `assets/art/portraits/${entity.portrait}.png`;
-        console.log('Loading portrait from:', portraitPath); // Debug log
-        
-        portrait.src = portraitPath;
+        portrait.src = `assets/art/portraits/${entity.portrait}.png`;
         portrait.onerror = () => {
-            console.log('Portrait failed to load, using placeholder'); // Debug log
             portrait.src = 'assets/art/portraits/placeholder.png';
         };
     } else {
-        console.log('No portrait specified, using placeholder'); // Debug log
         portrait.src = 'assets/art/portraits/placeholder.png';
     }
 };
+
 
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
