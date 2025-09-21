@@ -750,6 +750,8 @@ function startAbilitySelection(caster, abilityRaw) {
       const dist = chebyshevDistance(caster.position, ch.position);
       if (dist > ability.range) continue;
 
+      if (ch.current_hp <= 0 || ch.status === 'dead') continue;
+
       let allowed = false;
       if (ability.target_type === 'any') allowed = true;
       else if (ability.target_type === 'ally') allowed = isAlly(caster, ch);
@@ -1449,17 +1451,25 @@ const handleTileClick = throttle((event) => {
     }
 
     if (charInCell) {
+        // ✅ selecting a character shows full character info
         handleCharacterSelection(charInCell, clickedTileEl);
     } else {
+        // ✅ handle empty tile or environment-only tile
         handleMovementOrDeselect(clickedTileEl, targetX, targetY);
+
+        // always show tile info in the panel
+        const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
+        const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
+        const tileData = BattleState.tileMap.get(tileKey);
+        if (tileData) {
+            showEntityInfo({ tile: tileData });
+        }
     }
 
-    // ✅ Always show environment items if present
-    if (itemsInCell.length > 0) {
-        itemsInCell.forEach(item => {
-            showEntityInfo({ item });
-        });
-    }
+    // ✅ append environment objects (corpses, chests, etc.) to info panel
+    itemsInCell.forEach(item => {
+        showEntityInfo({ item });
+    });
 }, 150);
 
 const handleCharacterSelection = (character, tileEl) => {
