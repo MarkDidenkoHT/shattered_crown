@@ -897,22 +897,42 @@ async function updateCharactersWithAnimations(newCharacters) {
     if (!container) return;
 
     const animations = [];
-    
+
     // Process each character for potential animation
     for (const newChar of newCharacters) {
         const oldChar = BattleState.characters.find(c => c.id === newChar.id);
         const charEl = BattleState.characterElements.get(newChar.id);
-        
+
+        // 🔥 Skip rendering dead characters (remove them if they exist)
+        if (newChar.current_hp <= 0 || newChar.status === 'dead') {
+            if (charEl) {
+                animations.push(new Promise(resolve => {
+                    charEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeOutDuration}ms ease-out`;
+                    charEl.style.opacity = '0';
+                    setTimeout(() => {
+                        if (charEl.parentNode) {
+                            charEl.parentNode.removeChild(charEl);
+                        }
+                        BattleState.characterElements.delete(newChar.id);
+                        resolve();
+                    }, ANIMATION_CONFIG.fadeOutDuration);
+                }));
+            }
+            continue; // don’t process further
+        }
+
         if (!oldChar) {
             // New character - create and fade in
             const newCharEl = createCharacterElement(newChar);
-            const targetCell = container.querySelector(`td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`);
-            
+            const targetCell = container.querySelector(
+                `td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`
+            );
+
             if (targetCell) {
                 newCharEl.style.opacity = '0';
                 targetCell.appendChild(newCharEl);
                 BattleState.characterElements.set(newChar.id, newCharEl);
-                
+
                 animations.push(new Promise(resolve => {
                     newCharEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeInDuration}ms ease-in`;
                     newCharEl.style.opacity = '1';
@@ -923,17 +943,17 @@ async function updateCharactersWithAnimations(newCharacters) {
             // Existing character - check for movement or stat changes
             const [oldX, oldY] = oldChar.position;
             const [newX, newY] = newChar.position;
-            
+
             if (oldX !== newX || oldY !== newY) {
                 // Character moved - animate movement
                 const fromCell = container.querySelector(`td[data-x="${oldX}"][data-y="${oldY}"]`);
                 const toCell = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
-                
+
                 if (fromCell && toCell) {
                     animations.push(animateCharacterMovement(charEl, fromCell, toCell));
                 }
             }
-            
+
             // Update HP bar if HP changed
             if (oldChar.current_hp !== newChar.current_hp) {
                 const hpBar = charEl.querySelector('.character-hp-bar');
@@ -941,13 +961,13 @@ async function updateCharactersWithAnimations(newCharacters) {
                     animateHPChange(hpBar, oldChar.current_hp, newChar.current_hp, newChar.max_hp);
                 }
             }
-            
+
             // Update other visual states (turn indicators, etc.)
             updateCharacterVisualState(charEl, newChar);
         }
     }
-    
-    // Remove characters that no longer exist
+
+    // Remove characters that no longer exist in newCharacters
     for (const oldChar of BattleState.characters) {
         if (!newCharacters.find(c => c.id === oldChar.id)) {
             const charEl = BattleState.characterElements.get(oldChar.id);
@@ -966,10 +986,10 @@ async function updateCharactersWithAnimations(newCharacters) {
             }
         }
     }
-    
+
     // Wait for all animations to complete
     await Promise.all(animations);
-    
+
     // Update stored character state
     BattleState.characters = newCharacters;
 }
@@ -1235,7 +1255,7 @@ function renderCharacters() {
 
     BattleState.characters.forEach(char => {
         // ⬇️ Skip characters without positions OR with 0 HP (dead)
-        if (!Array.isArray(char.position) || char.hp <= 0) return;
+        if (!Array.isArray(char.position) || char.current_hp <= 0) return;
 
         const [x, y] = char.position;
         const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
