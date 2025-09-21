@@ -1452,7 +1452,33 @@ const handleTileClick = throttle((event) => {
         handleCharacterSelection(charInCell, clickedTileEl);
     } else {
         // No character - handle movement/deselection and show tile info
-        handleMovementOrDeselect(clickedTileEl, targetX, targetY);
+        // First, explicitly get and show tile info
+        const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
+        const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
+        const tileData = BattleState.tileMap.get(tileKey);
+        
+        console.log('Tile clicked - tileName:', tileName, 'tileKey:', tileKey, 'tileData:', tileData);
+        
+        // Show tile info FIRST, before calling handleMovementOrDeselect
+        showEntityInfo({ 
+            tile: tileData || { 
+                name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' 
+            } 
+        });
+        
+        // Then handle movement/deselection logic without calling showEntityInfo again
+        if (BattleState.selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
+            attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
+        } else {
+            unhighlightAllTiles();
+            
+            if (BattleState.selectedCharacterEl) {
+                BattleState.selectedCharacterEl.classList.remove('character-selected');
+                BattleState.selectedCharacterEl = null;
+            }
+            
+            BattleState.selectedPlayerCharacter = null;
+        }
     }
 
     // Always append environment items after the main info is set
