@@ -1046,28 +1046,41 @@ const handleTurnLogic = () => {
 };
 
 const handleAITurn = async () => {
-    if (BattleState.isProcessingAITurn) return;
-    
-    BattleState.isProcessingAITurn = true;
-    
-    try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const aiTurnRes = await BattleState.apiCall('/functions/v1/ai-turn', 'POST', {
-            battleId: BattleState.battleId
-        });
-        
-        const result = await aiTurnRes.json();
-        
-        if (!result.success) {
-            displayMessage(`AI turn failed: ${result.message}`);
-        }
-    } catch (error) {
-        displayMessage('Error during AI turn. Please try ending the turn manually.');
-    } finally {
-        BattleState.isProcessingAITurn = false;
+  if (BattleState.isProcessingAITurn) return;
+  BattleState.isProcessingAITurn = true;
+
+  const timeout = setTimeout(() => {
+    if (BattleState.isProcessingAITurn) {
+      console.warn("AI turn timeout, forcing refresh...");
+      handleRefresh();
+      BattleState.isProcessingAITurn = false;
     }
+  }, 8000); // 8s safety
+
+  try {
+    await new Promise(res => setTimeout(res, 1000));
+    const aiTurnRes = await BattleState.apiCall('/functions/v1/ai-turn', 'POST', {
+      battleId: BattleState.battleId
+    });
+    const result = await aiTurnRes.json();
+    if (!result.success) displayMessage(`AI turn failed: ${result.message}`);
+  } catch (err) {
+    displayMessage('Error during AI turn. Try manual refresh.');
+  } finally {
+    clearTimeout(timeout);
+    BattleState.isProcessingAITurn = false;
+  }
 };
+
+document.addEventListener("DOMContentLoaded", () => {
+  const turnStatusEl = document.getElementById('turnStatus');
+  if (turnStatusEl) {
+    turnStatusEl.style.cursor = "pointer";
+    turnStatusEl.title = "Click to refresh if frozen";
+    turnStatusEl.addEventListener("click", handleRefresh);
+  }
+});
+
 
 function renderBattleScreen(mode, level, layoutData) {
     BattleState.main.innerHTML = `
