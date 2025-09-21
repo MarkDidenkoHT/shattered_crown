@@ -1426,10 +1426,7 @@ const createTurnIndicator = () => {
 };
 
 const handleTileClick = throttle((event) => {
-    // ⬇️ prevent normal selection when aiming an ability
-    if (BattleState.selectingAbility) {
-        return; 
-    }
+    if (BattleState.selectingAbility) return; 
 
     const clickedTileEl = event.currentTarget;
     const targetX = parseInt(clickedTileEl.dataset.x);
@@ -1451,13 +1448,12 @@ const handleTileClick = throttle((event) => {
     }
 
     if (charInCell) {
-        // ✅ selecting a character shows full character info
+        // ✅ full character info first
         handleCharacterSelection(charInCell, clickedTileEl);
     } else {
-        // ✅ handle empty tile or environment-only tile
+        // ✅ show tile info first
         handleMovementOrDeselect(clickedTileEl, targetX, targetY);
 
-        // always show tile info in the panel
         const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
         const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
         const tileData = BattleState.tileMap.get(tileKey);
@@ -1466,7 +1462,9 @@ const handleTileClick = throttle((event) => {
         }
     }
 
-    // ✅ append environment objects (corpses, chests, etc.) to info panel
+    // ✅ append environment objects AFTER panel reset
+    const envList = document.getElementById('envList');
+    if (envList) envList.innerHTML = ''; // clear old env
     itemsInCell.forEach(item => {
         showEntityInfo({ item });
     });
@@ -1559,9 +1557,15 @@ function highlightWalkableTiles(character) {
                     it.position[0] === newX &&
                     it.position[1] === newY
                 );
-                if (envItem && envItem.walkable === false) {
-                    // blocked by obstacle (e.g. rock, chest)
-                    return;
+                
+                // Fixed: Check the DOM element's dataset.walkable instead of envItem.walkable
+                if (envItem) {
+                    // Find the corresponding DOM element for this environment item
+                    const envItemEl = tileEl.querySelector('.environment-item');
+                    if (envItemEl && envItemEl.dataset.walkable !== 'true') {
+                        // blocked by obstacle (e.g. rock, chest) - but corpses should be walkable
+                        return;
+                    }
                 }
                 
                 // check if another character is standing here
@@ -1967,47 +1971,51 @@ function showEntityInfo(entity) {
     const buffsList = document.getElementById('buffsList');
     const debuffsList = document.getElementById('debuffsList');
     const envList = document.getElementById('envList');
-    if (envList) envList.innerHTML = '';
 
     if (!entity) {
         clearEntityInfo();
         return;
     }
 
-    nameEl.textContent = entity.name || 'Unnamed';
-
+    // === TILE / CHARACTER (reset panel) ===
     if (entity.type === 'player' || entity.type === 'enemy') {
-        // Character info
+        nameEl.textContent = entity.name || 'Unnamed';
         displayCharacterInfo(entity, portrait, hpEl, statsEl, buffsList, debuffsList);
-    } else if (entity.tile) {
-        // Tile info
+        if (envList) envList.innerHTML = '';
+        return;
+    }
+
+    if (entity.tile) {
+        nameEl.textContent = entity.tile.name || 'Unknown Tile';
         displayTileInfo(entity.tile, portrait, hpEl, statsEl, buffsList, debuffsList);
-    } else if (entity.item) {
-        // Environment item info → append to envList
-        if (envList) {
-            const wrapper = document.createElement('div');
-            wrapper.style.display = 'flex';
-            wrapper.style.alignItems = 'center';
-            wrapper.style.marginBottom = '2px';
+        if (envList) envList.innerHTML = '';
+        return;
+    }
 
-            const icon = document.createElement('img');
-            const sprite = entity.item.sprite ? entity.item.sprite.toLowerCase() : 'placeholder';
-            icon.src = `assets/art/environment/${sprite}.png`;
-            icon.alt = entity.item.name || 'Item';
-            Object.assign(icon.style, {
-                width: '14px',
-                height: '14px',
-                marginRight: '4px',
-                objectFit: 'contain'
-            });
+    // === ENVIRONMENT ITEMS (append only) ===
+    if (entity.item && envList) {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.marginBottom = '2px';
 
-            const label = document.createElement('span');
-            label.textContent = entity.item.name + (entity.item.character_name ? ` — ${entity.item.character_name}` : '');
+        const icon = document.createElement('img');
+        const sprite = entity.item.sprite ? entity.item.sprite.toLowerCase() : 'placeholder';
+        icon.src = `assets/art/environment/${sprite}.png`;
+        icon.alt = entity.item.name || 'Item';
+        Object.assign(icon.style, {
+            width: '14px',
+            height: '14px',
+            marginRight: '4px',
+            objectFit: 'contain'
+        });
 
-            wrapper.appendChild(icon);
-            wrapper.appendChild(label);
-            envList.appendChild(wrapper);
-        }
+        const label = document.createElement('span');
+        label.textContent = entity.item.name + (entity.item.character_name ? ` — ${entity.item.character_name}` : '');
+
+        wrapper.appendChild(icon);
+        wrapper.appendChild(label);
+        envList.appendChild(wrapper);
     }
 }
 
