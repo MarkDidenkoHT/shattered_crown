@@ -6,9 +6,9 @@ const BattleState = {
     selectedPlayerCharacter: null, currentTurnCharacter: null,
     highlightedTiles: [], supabaseClient: null, battleState: null,
     battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false,
-    characterElements: new Map(), // Track character DOM elements for animations
-    isMoveQueued: false, // Add a flag to track if a move is queued and awaiting confirmation
-    characterAbilities: {}, // key: characterId → array of ability objects
+    characterElements: new Map(),
+    isMoveQueued: false,
+    characterAbilities: {},
     environmentItems: {}
 };
 
@@ -19,10 +19,10 @@ const MOVEMENT_OFFSETS = [
 ];
 
 const ANIMATION_CONFIG = {
-    moveDuration: 500, // ms
+    moveDuration: 500, 
     fadeInDuration: 300,
     fadeOutDuration: 200,
-    easingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' // easeOutQuad
+    easingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
 };
 
 const debounce = (func, wait) => {
@@ -87,7 +87,6 @@ const processCharacterState = (charState) => {
         has_moved: charState.has_moved,
         has_acted: charState.has_acted,
 
-        // 🚫 no fallbacks, trust server data
         current_hp: charState.current_hp,
         max_hp: charState.max_hp,
 
@@ -98,7 +97,6 @@ const processCharacterState = (charState) => {
     };
 };
 
-// Animation utilities
 const animateCharacterMovement = (characterEl, fromCell, toCell) => {
     return new Promise((resolve) => {
         if (!characterEl || !fromCell || !toCell) {
@@ -107,12 +105,9 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
         }
 
         const fromRect = fromCell.getBoundingClientRect();
-        const toRect = toCell.getBoundingClientRect();
-        
+        const toRect = toCell.getBoundingClientRect(); 
         const deltaX = toRect.left - fromRect.left;
         const deltaY = toRect.top - fromRect.top;
-
-        // Create a clone for animation
         const animationClone = characterEl.cloneNode(true);
         animationClone.style.position = 'fixed';
         animationClone.style.zIndex = '1000';
@@ -122,12 +117,9 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
         animationClone.style.width = fromRect.width + 'px';
         animationClone.style.height = fromRect.height + 'px';
         
-        // Hide original during animation
         characterEl.style.opacity = '0';
-        
         document.body.appendChild(animationClone);
 
-        // Animate the clone
         animationClone.style.transition = `transform ${ANIMATION_CONFIG.moveDuration}ms ${ANIMATION_CONFIG.easingFunction}`;
         
         requestAnimationFrame(() => {
@@ -135,7 +127,6 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
         });
 
         setTimeout(() => {
-            // Remove clone and show original in new position
             document.body.removeChild(animationClone);
             toCell.appendChild(characterEl);
             characterEl.style.opacity = '1';
@@ -183,7 +174,6 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
     hpFill.style.width = `${newPercentage}%`;
     hpFill.style.backgroundColor = newColor;
 
-    // Indicator logs
     const delta = newHP - oldHP;
     if (delta !== 0) {
         console.log("Indicator:", delta > 0 ? `Healing +${delta}` : `Damage ${delta}`);
@@ -588,10 +578,9 @@ async function updateGameStateFromRealtime() {
       if (status === 'victory' || status === 'defeat') {
         await assignLoot(BattleState.battleState);
         showBattleResultModal(status);
-        return; // stop further updates, battle is over
+        return; 
       }
         
-    // Add guard for characters_state
     if (!BattleState.battleState.characters_state) {
         console.warn('Battle state missing characters_state:', BattleState.battleState);
         return;
@@ -600,7 +589,6 @@ async function updateGameStateFromRealtime() {
     const newCharacters = Object.values(BattleState.battleState.characters_state)
         .map(processCharacterState);
     
-    // Handle character updates with animations
     await updateCharactersWithAnimations(newCharacters);
     
     requestAnimationFrame(() => {
@@ -2272,7 +2260,7 @@ export function cleanup() {
         characters: [], selectedCharacterEl: null, selectedPlayerCharacter: null,
         currentTurnCharacter: null, highlightedTiles: [], supabaseClient: null,
         battleState: null, battleId: null, unsubscribeFromBattle: null,
-        isProcessingAITurn: false, isMoveQueued: false // Reset move queued flag
+        isProcessingAITurn: false, isMoveQueued: false
     });
     
     BattleState.tileMap.clear();
@@ -2283,7 +2271,7 @@ export function cleanup() {
 }
 
 function navigateToCastle() {
-  window.gameAuth.loadModule('castle'); // matches your existing navigation pattern
+  window.gameAuth.loadModule('castle');
 }
 
 async function assignLoot(battleState) {

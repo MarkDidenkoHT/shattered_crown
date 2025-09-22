@@ -19,33 +19,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
     <div class="main-app-container">
       <div class="particles"></div>
       <div class="character-creation-section"></div>
-      <div id="spellbookOverlay" class="spellbook-overlay" style="display: none;">
-        <div class="spellbook-stage">
-          <div class="spellbook">
-            <button class="spellbook-close-btn">✕</button>
-            <div class="spellbook-inner">
-              <div class="spellbook-spine"></div>
-              <section class="spellbook-page">
-                <header class="spellbook-header">
-                  <div class="spellbook-title">Spell Grimoire</div>
-                </header>
-                <div class="spellbook-filters" id="spellFilters"></div>
-                <div id="selectedSpellArea" style="margin-top:14px; color:#2b1c0c;">
-                  <div style="font-weight:800;">Selected:</div>
-                  <div id="selectedSpellText" style="margin-top:4px; opacity:.8">None</div>
-                </div>
-              </section>
-              <section class="spellbook-page">
-                <header class="spellbook-header">
-                  <div class="spellbook-title">Available Spells</div>
-                </header>
-                <div class="spells-grid" id="spellsGrid"></div>
-              </section>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="spellTooltip" class="spell-tooltip" style="display: none;"></div>
     </div>
   `;
 
@@ -110,7 +83,6 @@ function renderCharacters(characters) {
   });
 
   setupEquipmentClickHandlers(section, characters);
-  setupSpellbookHandlers(section, characters);
   setupStatsClickHandlers(section, characters);
   setupDragSlider();
 }
@@ -128,6 +100,7 @@ function characterCardHTML(character) {
   for (const [key, value] of Object.entries(baseStats)) {
     normalizedBaseStats[key.toLowerCase()] = value;
   }
+  
   const strength = normalizedStats.strength || 0;
   const vitality = normalizedStats.vitality || 0;
   const spirit = normalizedStats.spirit || 0;
@@ -152,7 +125,7 @@ function characterCardHTML(character) {
   ];
 
   const equippedItems = character.equipped_items || {};
-  // Extended equipment list for 12 slots arranged in 3 rows of 4
+  // Equipment slots arranged in 3 rows of 4
   const equipmentData = [
     // Row 1
     { label: 'Weapon', slot: 'equipped_weapon', type: 'Weapon', value: equippedItems.equipped_weapon || null },
@@ -164,7 +137,7 @@ function characterCardHTML(character) {
     { label: 'Boots', slot: 'equipped_boots', type: 'Boots', value: equippedItems.equipped_boots || null },
     { label: 'Gloves', slot: 'equipped_gloves', type: 'Gloves', value: equippedItems.equipped_gloves || null },
     { label: 'Tool', slot: 'equipped_tool', type: 'Tool', value: equippedItems.equipped_tool || null },
-    // Row 3 - Future items
+    // Row 3
     { label: 'Consumable', slot: 'equipped_consumable', type: 'Consumable', value: equippedItems.equipped_consumable || null },
     { label: 'Amulet', slot: 'equipped_amulet', type: 'Amulet', value: equippedItems.equipped_amulet || null },
     { label: 'Ring1', slot: 'equipped_ring1', type: 'Ring', value: equippedItems.equipped_ring1 || null },
@@ -239,15 +212,6 @@ function characterCardHTML(character) {
           </div>
         </div>
       </div>
-      
-      <div class="character-actions">
-        <button class="fantasy-button spellbook-btn" data-character-id="${character.id}">
-          Spellbook
-        </button>
-        <button class="fantasy-button talents-btn" data-character-id="${character.id}">
-          Talents
-        </button>
-      </div>
     </div>
   `;
 }
@@ -264,12 +228,12 @@ function setupDragSlider() {
   let startX = 0;
   let currentX = 0;
   let scrollLeft = 0;
-  let dragThreshold = 50;
+  const dragThreshold = 50;
   let animationId = null;
 
   function getCardWidth() {
     const containerWidth = slider.offsetWidth;
-    const gap = 16; // Fixed gap for mobile
+    const gap = 16;
     return containerWidth - gap;
   }
   
@@ -277,7 +241,6 @@ function setupDragSlider() {
     const cardWidth = getCardWidth();
     const targetScroll = index * cardWidth;
     
-    // Cancel any existing animation
     if (animationId) {
       cancelAnimationFrame(animationId);
       animationId = null;
@@ -286,11 +249,9 @@ function setupDragSlider() {
     if (immediate) {
       slider.scrollLeft = targetScroll;
     } else {
-      // Use smooth scrolling
       slider.style.scrollBehavior = 'smooth';
       slider.scrollLeft = targetScroll;
       
-      // Reset scroll behavior after animation
       setTimeout(() => {
         slider.style.scrollBehavior = 'auto';
       }, 300);
@@ -307,7 +268,6 @@ function setupDragSlider() {
     slider.style.cursor = 'grabbing';
     slider.style.scrollBehavior = 'auto';
     
-    // Cancel any existing animation
     if (animationId) {
       cancelAnimationFrame(animationId);
       animationId = null;
@@ -319,8 +279,6 @@ function setupDragSlider() {
     
     const deltaX = clientX - startX;
     const newScrollLeft = scrollLeft - deltaX;
-    
-    // Constrain scrolling within bounds
     const maxScroll = slider.scrollWidth - slider.clientWidth;
     const constrainedScroll = Math.max(0, Math.min(newScrollLeft, maxScroll));
     
@@ -337,10 +295,7 @@ function setupDragSlider() {
     const dragDistance = currentX - startX;
     const cardWidth = getCardWidth();
     const currentScroll = slider.scrollLeft;
-    const nearestIndex = Math.round(currentScroll / cardWidth);
-    
-    // Determine target index based on drag distance and threshold
-    let targetIndex = nearestIndex;
+    let targetIndex = Math.round(currentScroll / cardWidth);
     
     if (Math.abs(dragDistance) > dragThreshold) {
       if (dragDistance > 0 && currentIndex > 0) {
@@ -350,10 +305,7 @@ function setupDragSlider() {
       }
     }
     
-    // Ensure target index is within bounds
     targetIndex = Math.max(0, Math.min(targetIndex, cards.length - 1));
-    
-    // Snap to the determined index
     snapToCard(targetIndex);
   }
 
@@ -401,14 +353,12 @@ function setupDragSlider() {
 
   // Initialize slider
   slider.style.cursor = 'grab';
-  // Use requestAnimationFrame to ensure DOM is ready
   requestAnimationFrame(() => {
     snapToCard(0, true);
   });
 }
 
 function setupEquipmentClickHandlers(section, characters) {
-  // Updated to handle clicks on equipment icons instead of text
   section.querySelectorAll('.equipment-icon').forEach(equipmentEl => {
     equipmentEl.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -422,30 +372,6 @@ function setupEquipmentClickHandlers(section, characters) {
       if (!character) return;
       
       await showEquipmentModal(character, slot, type);
-    });
-  });
-}
-
-function setupSpellbookHandlers(section, characters) {
-  section.querySelectorAll('.spellbook-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const characterId = btn.dataset.characterId;
-      const character = characters.find(c => c.id == characterId);
-      if (character) {
-        await openSpellbook(character);
-      }
-    });
-  });
-
-  section.querySelectorAll('.talents-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      displayMessage('Talents system coming soon!');
     });
   });
 }
@@ -471,15 +397,12 @@ function setupStatsClickHandlers(section, characters) {
 }
 
 function getItemIcon(item, itemName, itemType) {
-  // Define all gear types that should use gear icon logic
   const gearTypes = ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand'];
   
-  // If item is crafted gear, use gear icon logic
   if (gearTypes.includes(itemType)) {
     return getGearIconPath(itemName);
   }
   
-  // For consumables and tools, use recipe-based path
   const spriteName = itemName.replace(/\s+/g, '');
   return `assets/art/recipes/${spriteName}.png`;
 }
@@ -492,113 +415,25 @@ function getGearIconPath(itemName) {
   return `assets/art/items/${spriteName}.png`;
 }
 
-async function openSpellbook(character) {
-  try {
-    let characterSpells = [];
-    if (character.starting_abilities && character.starting_abilities.length > 0) {
-      const spellNames = character.starting_abilities.map(name => `"${name}"`).join(',');
-      const response = await _apiCall(`/api/supabase/rest/v1/spells?name=in.(${spellNames})`);
-      characterSpells = await response.json();
-    }
-    
-    const overlay = _main.querySelector('#spellbookOverlay');
-    const spellsGrid = _main.querySelector('#spellsGrid');
-    
-    spellsGrid.innerHTML = '';
-    if (characterSpells.length === 0) {
-      spellsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #666; padding: 2rem;">No spells available</div>';
-    } else {
-      characterSpells.forEach(spell => {
-        const spellCard = document.createElement('button');
-        spellCard.className = 'spell-card';
-        spellCard.innerHTML = `
-          <div class="spell-icon">${spell.sprite || '✨'}</div>
-          <div class="spell-badge">Spell</div>
-        `;
-        spellCard.addEventListener('click', () => selectSpell(spell, spellCard));
-        spellCard.addEventListener('mouseenter', (e) => showSpellTooltip(e, spell));
-        spellCard.addEventListener('mouseleave', hideSpellTooltip);
-        spellCard.addEventListener('mousemove', positionSpellTooltip);
-        spellsGrid.appendChild(spellCard);
-      });
-    }
-    
-    overlay.style.display = 'flex';
-    
-    const closeBtn = _main.querySelector('.spellbook-close-btn');
-    closeBtn.onclick = () => {
-      overlay.style.display = 'none';
-    };
-    
-    overlay.onclick = (e) => {
-      if (e.target === overlay) {
-        overlay.style.display = 'none';
-      }
-    };
-    
-  } catch (error) {
-    displayMessage('Failed to load spellbook. Please try again.');
-  }
-}
-
-function selectSpell(spell, element) {
-  const selectedText = _main.querySelector('#selectedSpellText');
-  selectedText.textContent = `${spell.name} — ${spell.description ? spell.description.substring(0, 50) + '...' : 'No description'}`;
-  
-  element.style.transform = 'scale(1.05)';
-  element.style.border = '2px solid #c4975a';
-  
-  setTimeout(() => {
-    element.style.transform = '';
-    element.style.border = '';
-  }, 200);
-}
-
-function showSpellTooltip(e, spell) {
-  const tooltip = _main.querySelector('#spellTooltip');
-  tooltip.innerHTML = `
-    <div class="tooltip-name">${spell.name}</div>
-    <div class="tooltip-desc">${spell.description || 'No description available'}</div>
-    ${spell.cooldown ? `<div class="tooltip-cooldown">Cooldown: ${spell.cooldown}s</div>` : ''}
-  `;
-  tooltip.style.display = 'block';
-  positionSpellTooltip(e);
-}
-
-function hideSpellTooltip() {
-  const tooltip = _main.querySelector('#spellTooltip');
-  tooltip.style.display = 'none';
-}
-
-function positionSpellTooltip(e) {
-  const tooltip = _main.querySelector('#spellTooltip');
-  tooltip.style.left = e.clientX + 10 + 'px';
-  tooltip.style.top = e.clientY - 10 + 'px';
-}
-
 async function showEquipmentModal(character, slot, type) {
   try {
     let availableItems = [];
     
-    // Fetch items based on type
-  if (type === 'Consumable' || type === 'Tool') {
-    // Consumables and Tools come from bank
-    const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
-    const bankItems = await response.json();
-    availableItems = bankItems.filter(item => item.amount > 0);
-  } else {
-    // All other gear comes from craft_sessions
-    const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
-    const craftedItems = await response.json();
-    // Transform craft_sessions data to match expected format
-    availableItems = craftedItems.map(item => ({
-      id: item.id,
-      item: item.result,
-      type: item.type,
-      stats: item.result_stats,
-      crafting_session_id: item.id
-    }));
-  }
+    if (type === 'Consumable' || type === 'Tool') {
+      const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
+      const bankItems = await response.json();
+      availableItems = bankItems.filter(item => item.amount > 0);
+    } else {
+      const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
+      const craftedItems = await response.json();
+      availableItems = craftedItems.map(item => ({
+        id: item.id,
+        item: item.result,
+        type: item.type,
+        stats: item.result_stats,
+        crafting_session_id: item.id
+      }));
+    }
     
     const currentItem = character.equipped_items?.[slot] || 'None';
     
@@ -640,9 +475,6 @@ async function showEquipmentModal(character, slot, type) {
                      data-is-tool="${isTool}"
                      ${!isAvailable ? 'data-disabled="true"' : ''}
                      style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${itemName === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
-                  <img src="assets/art/recipes/${itemName.replace(/\s+/g, '')}.png"
-                    style="width: 48px; height: 48px; border-radius: 4px;"
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                   <img src="${getItemIcon(item, itemName, type)}"
                     style="width: 48px; height: 48px; border-radius: 4px;"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -690,15 +522,10 @@ async function showEquipmentModal(character, slot, type) {
         selectedItem = option.dataset.item;
         selectedCraftingSessionId = option.dataset.craftingSessionId || null;
         isConsumable = option.dataset.isConsumable === 'true';
-        const isTool = option.dataset.isTool === 'true'; // Declare isTool here
+        const isTool = option.dataset.isTool === 'true';
         
-        equipBtn.disabled = false; // Enable the equip button
-        
-        if (selectedItem === 'none') {
-          equipBtn.textContent = 'Unequip';
-        } else {
-          equipBtn.textContent = 'Equip';
-        }
+        equipBtn.disabled = false;
+        equipBtn.textContent = selectedItem === 'none' ? 'Unequip' : 'Equip';
       });
     });
     
@@ -708,7 +535,6 @@ async function showEquipmentModal(character, slot, type) {
       equipBtn.textContent = 'Processing...';
       
       try {
-        // Get the isTool value from the selected option
         const selectedOption = modal.querySelector('.equipment-option.selected');
         const isToolSelected = selectedOption ? selectedOption.dataset.isTool === 'true' : false;
         
@@ -854,7 +680,6 @@ function displayMessage(message) {
 }
 
 function loadCharacterManagerStyles() {
-    // Check if styles are already loaded to prevent duplicates
     if (document.getElementById('character-manager-styles')) {
         return;
     }
@@ -1106,236 +931,6 @@ function loadCharacterManagerStyles() {
     font-size: 0.8rem;
     color: #4CAF50;
     font-weight: bold;
-}
-
-.character-actions {
-    display: flex;
-    gap: 0.8rem;
-    flex-shrink: 0;
-}
-
-.character-actions .fantasy-button {
-    flex: 1;
-    padding: 0.8rem 1rem;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 44px;
-}
-
-.spellbook-overlay {
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(1200px 800px at 50% -10%, rgba(110,195,255,.12), rgba(0,0,0,.76) 40%, rgba(0,0,0,.86));
-    backdrop-filter: blur(2px);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    box-sizing: border-box;
-}
-
-.spellbook-stage {
-    position: relative;
-    perspective: 1600px;
-    width: 100%;
-    max-width: 900px;
-}
-
-.spellbook {
-    width: 100%;
-    height: min(560px, 78vh);
-    border-radius: 18px;
-    transform-style: preserve-3d;
-    box-shadow: 0 30px 100px rgba(0,0,0,.55);
-    position: relative;
-    background: linear-gradient(180deg, #7a5d2a, #5b4218);
-    padding: 14px;
-    box-sizing: border-box;
-}
-
-.spellbook::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 18px;
-    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 2px, rgba(0,0,0,.06) 2px 4px);
-    mix-blend-mode: soft-light;
-    pointer-events: none;
-}
-
-.spellbook-inner {
-    position: absolute;
-    inset: 14px;
-    border-radius: 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    background: linear-gradient(90deg, #e9ddc6 0 50%, #d2c6a8 50% 100%);
-    overflow: hidden;
-}
-
-.spellbook-spine {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(50% - 1px);
-    width: 2px;
-    background: rgba(0,0,0,.12);
-    box-shadow: 0 0 0 1px rgba(0,0,0,.06);
-    z-index: 2;
-}
-
-.spellbook-page {
-    position: relative;
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.spellbook-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 1rem;
-}
-
-.spellbook-title {
-    color: #2a1e0f;
-    font-weight: 800;
-    letter-spacing: .6px;
-    text-transform: uppercase;
-    font-size: 13px;
-}
-
-.spellbook-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.spells-grid {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-top: 10px;
-    overflow-y: auto;
-}
-
-.spell-card {
-    background: linear-gradient(180deg, #1e2430, #0f131a);
-    border-radius: 12px;
-    position: relative;
-    aspect-ratio: 1/1;
-    cursor: pointer;
-    box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), inset 0 10px 20px rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.2);
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border: none;
-    transition: all 0.2s ease;
-}
-
-.spell-icon {
-    font-size: 24px;
-    user-select: none;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
-    transform: translateY(2px);
-}
-
-.spell-badge {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    font-size: 9px;
-    font-weight: 800;
-    padding: 2px 4px;
-    border-radius: 6px;
-    color: #0c0f14;
-    background: linear-gradient(180deg, #c8e9ff, #86c8ff);
-    box-shadow: 0 2px 6px rgba(0,0,0,.2);
-}
-
-.spellbook-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 3;
-    border: 0;
-    cursor: pointer;
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-weight: 800;
-    color: #1a1006;
-    background: linear-gradient(180deg, #ffd7a1, #f0c47d);
-    box-shadow: 0 6px 16px rgba(0,0,0,.25);
-    transition: transform 0.2s ease;
-}
-
-.spell-tooltip {
-    position: fixed;
-    pointer-events: none;
-    z-index: 110;
-    min-width: 200px;
-    max-width: 280px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    color: #121418;
-    background: linear-gradient(180deg, #fffef9, #f2e9d5);
-    border: 1px solid rgba(0,0,0,.15);
-    box-shadow: 0 12px 40px rgba(0,0,0,.35);
-    transform: translate(-50%, calc(-100% - 14px));
-}
-
-.tooltip-name {
-    font-weight: 900;
-    letter-spacing: .3px;
-    color: #341f07;
-    margin-bottom: 4px;
-    font-size: 13px;
-}
-
-.tooltip-desc {
-    font-size: 12px;
-    color: #3e2c14;
-    margin-bottom: 4px;
-    line-height: 1.3;
-}
-
-.tooltip-cooldown {
-    font-size: 11px;
-    color: #6b512f;
-    font-style: italic;
-}
-
-@media (max-width: 480px) {
-    .card-portrait {
-        width: 80px;
-        height: 80px;
-    }
-    
-    .equipment-placeholder {
-        font-size: 0.5rem;
-    }
-    
-    .spells-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-    }
-    
-    .spell-icon {
-        font-size: 20px;
-    }
-    
-    .spell-badge {
-        display: none;
-    }
 }
 `;
     document.head.appendChild(styleEl);
