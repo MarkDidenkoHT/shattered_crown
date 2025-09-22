@@ -425,85 +425,93 @@ app.post('/api/auction/create', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get items from bank with type column
-    const bankUrl = `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}&select=*`;
-    const bankResponse = await fetch(bankUrl, {
+    // --- Step 1: Try to find crafted item (unique gear) ---
+    const craftUrl = `${process.env.SUPABASE_URL}/rest/v1/craft_sessions?player_id=eq.${seller_id}&result=eq.${item_selling}&is_auctioned=is.false&select=*`;
+    const craftResponse = await fetch(craftUrl, {
       headers: {
         'apikey': process.env.SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
       }
     });
 
-    console.log('Bank response status:', bankResponse.status);
+    const craftItems = craftResponse.ok ? await craftResponse.json() : [];
+    let usingCrafted = false;
+    let itemSellingType = 'unknown';
 
-    if (!bankResponse.ok) {
-      const errorText = await bankResponse.text();
-      console.log('❌ Bank query failed:', errorText);
-      return res.status(500).json({ error: 'Failed to check bank items' });
-    }
+    if (craftItems.length > 0) {
+      // ✅ Crafted item found (unique)
+      const craftItem = craftItems[0];
+      usingCrafted = true;
+      itemSellingType = craftItem.type || 'crafted';
 
-    const bankItems = await bankResponse.json();
-    const totalAmount = bankItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-
-    if (totalAmount < amount_selling) {
-      console.log('❌ Insufficient items in bank');
-      return res.status(400).json({ error: 'Insufficient items in bank' });
-    }
-
-    // Get the item type from the bank entry
-    const itemSellingType = bankItems[0]?.type || 'unknown';
-
-    // Remove items (bank items first, then craft items)
-    let remainingToRemove = amount_selling;
-    
-    // Remove from bank first
-    for (const bankItem of bankItems) {
-      if (remainingToRemove <= 0) break;
-
-      const amountToTake = Math.min(remainingToRemove, bankItem.amount);
-      remainingToRemove -= amountToTake;
-
-      if (amountToTake === bankItem.amount) {
-        // Remove entire entry
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': process.env.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-          }
-        });
-      } else {
-        // Update amount
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': process.env.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({ amount: bankItem.amount - amountToTake })
-        });
-      }
-    }
-    
-    // Remove from craft_sessions if needed
-    for (const craftItem of craftItems) {
-      if (remainingToRemove <= 0) break;
-      
-      remainingToRemove -= 1;
-      
-      // Delete the craft session
+      // Reserve it by marking as auctioned
       await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItem.id}`, {
-        method: 'DELETE',
+        method: 'PATCH',
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ is_auctioned: true })
+      });
+
+    } else {
+      // --- Step 2: Otherwise check bank items ---
+      const bankUrl = `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}&select=*`;
+      const bankResponse = await fetch(bankUrl, {
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
         }
       });
+
+      if (!bankResponse.ok) {
+        const errorText = await bankResponse.text();
+        console.log('❌ Bank query failed:', errorText);
+        return res.status(500).json({ error: 'Failed to check bank items' });
+      }
+
+      const bankItems = await bankResponse.json();
+      const totalAmount = bankItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+      if (totalAmount < amount_selling) {
+        console.log('❌ Insufficient items in bank');
+        return res.status(400).json({ error: 'Insufficient items in bank' });
+      }
+
+      itemSellingType = bankItems[0]?.type || 'unknown';
+
+      let remainingToRemove = amount_selling;
+      for (const bankItem of bankItems) {
+        if (remainingToRemove <= 0) break;
+        const amountToTake = Math.min(remainingToRemove, bankItem.amount);
+        remainingToRemove -= amountToTake;
+
+        if (amountToTake === bankItem.amount) {
+          await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': process.env.SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+          });
+        } else {
+          await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': process.env.SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ amount: bankItem.amount - amountToTake })
+          });
+        }
+      }
     }
 
-    // Create auction with type from bank table
+    // --- Step 3: Create auction entry ---
     const auctionData = {
       seller_id,
       item_selling,
@@ -515,9 +523,6 @@ app.post('/api/auction/create', async (req, res) => {
     };
 
     const auctionUrl = `${process.env.SUPABASE_URL}/rest/v1/auction`;
-    console.log('Auction creation URL:', auctionUrl);
-    console.log('Auction data:', auctionData);
-
     const auctionResponse = await fetch(auctionUrl, {
       method: 'POST',
       headers: {
@@ -530,38 +535,51 @@ app.post('/api/auction/create', async (req, res) => {
     });
 
     const responseText = await auctionResponse.text();
-    console.log('Auction response body (text):', responseText);
-
     let newAuction;
     try {
       newAuction = JSON.parse(responseText);
-      console.log('Auction response body (parsed):', newAuction);
-    } catch (parseError) {
-      console.log('❌ Failed to parse auction response as JSON:', parseError);
+    } catch {
+      console.log('❌ Failed to parse auction response:', responseText);
+
+      // Rollback crafted reservation if needed
+      if (usingCrafted && craftItems[0]) {
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItems[0].id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ is_auctioned: false })
+        });
+      }
+
       return res.status(500).json({ error: 'Invalid response from database' });
     }
 
-    if (!auctionResponse.ok) {
-      try {
-        await addItemsToBank(seller_id, item_selling, amount_selling);
-        console.log('✅ Items restored to bank');
-      } catch (restoreError) {
-        console.log('❌ Failed to restore items:', restoreError);
-      }
-      return res.status(auctionResponse.status).json({ error: newAuction.message || 'Failed to create auction' });
-    }
+    if (!auctionResponse.ok || !newAuction || newAuction.length === 0) {
+      console.log('❌ Auction creation failed');
 
-    if (!newAuction || newAuction.length === 0) {
-      try {
+      // Rollback crafted reservation if needed
+      if (usingCrafted && craftItems[0]) {
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItems[0].id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ is_auctioned: false })
+        });
+      } else {
         await addItemsToBank(seller_id, item_selling, amount_selling);
-        console.log('✅ Items restored to bank');
-      } catch (restoreError) {
-        console.log('❌ Failed to restore items:', restoreError);
       }
-      return res.status(500).json({ error: 'No auction data returned' });
+
+      return res.status(500).json({ error: 'Failed to create auction' });
     }
 
     res.json({ success: true, auction: newAuction[0] });
+
   } catch (error) {
     console.error('❌ [AUCTION CREATE ERROR]', error);
     res.status(500).json({ error: 'Failed to create auction', details: error.message });

@@ -1378,25 +1378,6 @@ function createEnvironmentItemElement(item) {
     img.style.opacity = item.walkable ? '0.95' : '1';
     el.appendChild(img);
 
-    // optional small badge for "corpse"
-    if ((item.name || '').toLowerCase() === 'corpse') {
-        const badge = document.createElement('div');
-        badge.textContent = '🕯';
-        Object.assign(badge.style, {
-            position: 'absolute', bottom: '4px', right: '4px', fontSize: '12px', zIndex: '20'
-        });
-        el.appendChild(badge);
-    }
-
-    // click handler (inspect / attempt loot)
-    el.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        // choose a small UX: show details in the info panel and/or call API to loot
-        showEntityInfo({ item }); // reuse your showEntityInfo pattern for tiles/characters
-        // you may also dispatch a custom event:
-        // handleInteractEnvironmentItem(item.id);
-    });
-
     return el;
 }
 
@@ -1421,7 +1402,11 @@ const handleTileClick = throttle((event) => {
     const targetY = parseInt(clickedTileEl.dataset.y);
 
     const charInCell = BattleState.characters.find(c => 
-        Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY
+        Array.isArray(c.position) && 
+        c.position[0] === targetX && 
+        c.position[1] === targetY &&
+        c.current_hp > 0 && 
+        c.status !== 'dead'
     );
 
     const itemsInCell = Object.values(BattleState.environmentItems).filter(it =>
@@ -1616,8 +1601,13 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
+    // Only check for LIVING characters occupying the tile
     const isOccupied = BattleState.characters.some(c => 
-        Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY
+        Array.isArray(c.position) && 
+        c.position[0] === targetX && 
+        c.position[1] === targetY &&
+        c.current_hp > 0 && 
+        c.status !== 'dead'
     );
     
     if (isOccupied) {
