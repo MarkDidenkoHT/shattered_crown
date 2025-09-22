@@ -1613,8 +1613,13 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
+    // Only check for LIVING characters occupying the tile
     const isOccupied = BattleState.characters.some(c => 
-        Array.isArray(c.position) && c.position[0] === targetX && c.position[1] === targetY
+        Array.isArray(c.position) && 
+        c.position[0] === targetX && 
+        c.position[1] === targetY &&
+        c.current_hp > 0 && 
+        c.status !== 'dead'
     );
     
     if (isOccupied) {
