@@ -1399,16 +1399,6 @@ function createEnvironmentItemElement(item) {
         });
         el.appendChild(badge);
     }
-
-    // click handler (inspect / attempt loot)
-    el.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        // choose a small UX: show details in the info panel and/or call API to loot
-        showEntityInfo({ item }); // reuse your showEntityInfo pattern for tiles/characters
-        // you may also dispatch a custom event:
-        // handleInteractEnvironmentItem(item.id);
-    });
-
     return el;
 }
 
