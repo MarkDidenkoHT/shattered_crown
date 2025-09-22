@@ -213,6 +213,12 @@ function characterCardHTML(character) {
           </div>
         </div>
       </div>
+      
+      <div class="character-actions">
+        <button class="fantasy-button talents-btn" data-character-id="${character.id}">
+          Talents
+        </button>
+      </div>
     </div>
   `;
 }
@@ -943,6 +949,23 @@ function loadCharacterManagerStyles() {
     font-size: 0.8rem;
     color: #4CAF50;
     font-weight: bold;
+}
+
+.character-actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-shrink: 0;
+}
+
+.character-actions .fantasy-button {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 44px;
 }
 `;
     document.head.appendChild(styleEl);
