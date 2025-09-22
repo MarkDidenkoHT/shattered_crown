@@ -83,6 +83,7 @@ function renderCharacters(characters) {
   });
 
   setupEquipmentClickHandlers(section, characters);
+  setupTalentsClickHandlers(section, characters);
   setupStatsClickHandlers(section, characters);
   setupDragSlider();
 }
@@ -372,6 +373,17 @@ function setupEquipmentClickHandlers(section, characters) {
       if (!character) return;
       
       await showEquipmentModal(character, slot, type);
+    });
+  });
+}
+
+function setupTalentsClickHandlers(section, characters) {
+  section.querySelectorAll('.talents-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      displayMessage('Talents system coming soon!');
     });
   });
 }
