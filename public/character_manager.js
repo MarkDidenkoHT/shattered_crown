@@ -536,34 +536,41 @@ function initializeTalentTree(character, modal) {
     pointsDisplay.textContent = talentPoints;
   }
   
-  function getNextAvailableSlot(column) {
-    const columnNum = column.dataset.column;
-    const abilities = talentAbilities[columnNum] || [];
-    const slots = column.querySelectorAll('.talent-slot');
+  function startHold(targetSlot) {
+    console.log('startHold called for slot:', targetSlot);
     
-    for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
-      const row = parseInt(slot.dataset.row);
-      const ability = abilities[row];
-      
-      if (ability && !slot.classList.contains('filled')) {
-        return slot;
-      }
+    if (talentPoints <= 0) {
+      console.log('No talent points');
+      return;
     }
-    return null;
-  }
-  
-  function startHold(targetColumn) {
-    if (talentPoints <= 0) return;
     
-    const nextSlot = getNextAvailableSlot(targetColumn);
-    if (!nextSlot) return;
+    // Check if this slot can be learned
+    if (targetSlot.classList.contains('filled')) {
+      console.log('Slot already filled');
+      return;
+    }
     
-    currentSlot = nextSlot;
-    holdProgress = nextSlot.querySelector('.hold-progress');
+    // Check if slot has an ability
+    const column = parseInt(targetSlot.dataset.column);
+    const row = parseInt(targetSlot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+    
+    if (!ability) {
+      console.log('No ability in this slot');
+      return;
+    }
+    
+    console.log('Starting hold animation for ability:', ability.name);
+    
+    currentSlot = targetSlot;
+    holdProgress = targetSlot.querySelector('.hold-progress');
     startTime = Date.now();
     
-    targetColumn.classList.add('column-active');
+    // Add visual feedback to the column
+    const parentColumn = targetSlot.closest('.talent-column');
+    if (parentColumn) {
+      parentColumn.classList.add('column-active');
+    }
     
     holdTimer = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -575,63 +582,6 @@ function initializeTalentTree(character, modal) {
       }
     }, 16);
   }
-  
-async function completeHold() {
-  if (!currentSlot) return;
-
-  const column = parseInt(currentSlot.dataset.column);
-  const row = parseInt(currentSlot.dataset.row);
-  const ability = talentAbilities[column]?.[row];
-
-  if (!ability) return;
-
-  try {
-    // Call the edge function to learn the talent
-    const response = await _apiCall('/api/supabase/functions/v1/learn_talent', {
-      method: 'POST',
-      body: {
-        character_id: character.id,
-        ability_name: ability.name,
-        ability_type: ability.type,
-        player_id: _profile.id
-      }
-    });
-
-    if (!response.ok) {
-      const errorResult = await response.json();
-      throw new Error(errorResult.error || 'Failed to learn talent');
-    }
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to learn talent');
-    }
-
-    // Update local state
-    talentPoints = result.remaining_talent_points;
-    updatePoints();
-
-    // Update UI
-    currentSlot.classList.add('filled', 'level-up-flash');
-    const abilityImage = currentSlot.querySelector('img');
-    if (abilityImage) {
-      abilityImage.style.opacity = '1';
-    }
-
-    setTimeout(() => {
-      currentSlot.classList.remove('level-up-flash');
-    }, 1000);
-
-    displayMessage(result.message);
-
-  } catch (error) {
-    console.error('Error learning talent:', error);
-    displayMessage(error.message || 'Failed to learn talent. Please try again.');
-  }
-
-  cancelHold();
-}
   
   function cancelHold() {
     if (holdTimer) {
@@ -654,24 +604,105 @@ async function completeHold() {
     }
   }
   
-  modal.querySelectorAll('.talent-column').forEach(column => {
-    column.addEventListener('mousedown', (e) => {
+  async function completeHold() {
+    if (!currentSlot) return;
+
+    const column = parseInt(currentSlot.dataset.column);
+    const row = parseInt(currentSlot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+
+    if (!ability) return;
+
+    try {
+      const response = await _apiCall('/api/supabase/functions/v1/learn_talent', {
+        method: 'POST',
+        body: {
+          character_id: character.id,
+          ability_name: ability.name,
+          ability_type: ability.type,
+          player_id: _profile.id
+        }
+      });
+
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || 'Failed to learn talent');
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to learn talent');
+      }
+
+      talentPoints = result.remaining_talent_points;
+      updatePoints();
+
+      currentSlot.classList.add('filled', 'level-up-flash');
+      const abilityImage = currentSlot.querySelector('img');
+      if (abilityImage) {
+        abilityImage.style.opacity = '1';
+      }
+
+      setTimeout(() => {
+        currentSlot.classList.remove('level-up-flash');
+      }, 1000);
+
+      displayMessage(result.message);
+
+    } catch (error) {
+      console.error('Error learning talent:', error);
+      displayMessage(error.message || 'Failed to learn talent. Please try again.');
+    }
+
+    cancelHold();
+  }
+  
+  // Attach events to individual talent slots instead of columns
+  modal.querySelectorAll('.talent-slot').forEach(slot => {
+    // Only add events to slots that have abilities
+    const column = parseInt(slot.dataset.column);
+    const row = parseInt(slot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+    
+    if (!ability) return; // Skip empty slots
+    
+    slot.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      startHold(column);
+      e.stopPropagation();
+      console.log('mousedown on slot');
+      startHold(slot);
     });
-    
-    column.addEventListener('mouseup', cancelHold);
-    column.addEventListener('mouseleave', cancelHold);
-    
-    column.addEventListener('touchstart', (e) => {
+
+    slot.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      startHold(column);
+      e.stopPropagation();
+      cancelHold();
     });
-    
-    column.addEventListener('touchend', cancelHold);
-    column.addEventListener('touchcancel', cancelHold);
+
+    slot.addEventListener('mouseleave', (e) => {
+      cancelHold();
+    });
+
+    slot.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('touchstart on slot');
+      startHold(slot);
+    }, { passive: false });
+
+    slot.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelHold();
+    }, { passive: false });
+
+    slot.addEventListener('touchcancel', (e) => {
+      cancelHold();
+    });
   });
   
+  // Global cleanup events
   document.addEventListener('mouseup', cancelHold);
   document.addEventListener('touchend', cancelHold);
 }
