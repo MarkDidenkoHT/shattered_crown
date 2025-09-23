@@ -407,58 +407,91 @@ function setupStatsClickHandlers(section, characters) {
   });
 }
 
-function showTalentModal(character) {
+async function showTalentModal(character) {
   const className = character.classes?.name?.toLowerCase() || 'paladin';
   const talentAbilities = character.classes?.talent_abilities || {};
   const learnedAbilities = character.learned_abilities || { basic: [], passive: [], ultimate: [] };
   const talentPoints = character.points?.talent || 0;
   
-  const modal = document.createElement('div');
-  modal.className = 'custom-message-box';
-  modal.innerHTML = `
-    <div class="talent-modal-content">
-      <div class="talent-container" data-class="${className}">
-        <div class="talent-points">Talent Points: <span id="talentPointsCount">${talentPoints}</span></div>
-        
-        <div class="talent-grid">
-          <div class="talent-column">
-            ${generateTalentColumn(talentAbilities['1'] || [], learnedAbilities, 1)}
+  try {
+    // Fetch complete ability data
+    const abilityNames = [];
+    Object.values(talentAbilities).forEach(columnAbilities => {
+      columnAbilities.forEach(ability => {
+        if (ability.name) abilityNames.push(ability.name);
+      });
+    });
+    
+    // Get complete ability data from database
+    const response = await _apiCall(`/api/supabase/rest/v1/abilities?name=in.(${abilityNames.map(name => `"${name}"`).join(',')})&select=*`);
+    const completeAbilities = await response.json();
+    
+    // Create lookup map
+    const abilityLookup = {};
+    completeAbilities.forEach(ability => {
+      abilityLookup[ability.name] = ability;
+    });
+    
+    // Merge complete data with talent structure
+    const enrichedTalentAbilities = {};
+    Object.keys(talentAbilities).forEach(column => {
+      enrichedTalentAbilities[column] = talentAbilities[column].map(basicAbility => {
+        const completeAbility = abilityLookup[basicAbility.name];
+        return completeAbility || basicAbility; // Use complete data if available, fallback to basic
+      });
+    });
+    
+    const modal = document.createElement('div');
+    modal.className = 'custom-message-box';
+    modal.innerHTML = `
+      <div class="talent-modal-content">
+        <div class="talent-container" data-class="${className}">
+          <div class="talent-points">Talent Points: <span id="talentPointsCount">${talentPoints}</span></div>
+          
+          <div class="talent-grid">
+            <div class="talent-column">
+              ${generateTalentColumn(enrichedTalentAbilities['1'] || [], learnedAbilities, 1)}
+            </div>
+            
+            <div class="talent-column">
+              ${generateTalentColumn(enrichedTalentAbilities['2'] || [], learnedAbilities, 2)}
+            </div>
+            
+            <div class="talent-column">
+              ${generateTalentColumn(enrichedTalentAbilities['3'] || [], learnedAbilities, 3)}
+            </div>
           </div>
           
-          <div class="talent-column">
-            ${generateTalentColumn(talentAbilities['2'] || [], learnedAbilities, 2)}
+          <div class="instructions">
+            Hold column for 1.5s to spend talent point<br>
+            <small>Talents unlock from bottom to top</small>
           </div>
           
-          <div class="talent-column">
-            ${generateTalentColumn(talentAbilities['3'] || [], learnedAbilities, 3)}
+          <div style="display: flex; justify-content: center; margin-top: 1rem;">
+            <button class="help-tutorial-close-button">X</button>
           </div>
-        </div>
-        
-        <div class="instructions">
-          Hold column for 1.5s to spend talent point<br>
-          <small>Talents unlock from bottom to top</small>
-        </div>
-        
-        <div style="display: flex; justify-content: center; margin-top: 1rem;">
-          <button class="help-tutorial-close-button">X</button>
         </div>
       </div>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-  
-  initializeTalentTree(character, modal);
-  
-  modal.querySelector('.help-tutorial-close-button').addEventListener('click', () => {
-    modal.remove();
-  });
-  
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
+    `;
+    
+    document.body.appendChild(modal);
+    
+    initializeTalentTree(character, modal);
+    
+    modal.querySelector('.help-tutorial-close-button').addEventListener('click', () => {
       modal.remove();
-    }
-  });
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error loading talent abilities:', error);
+    displayMessage('Failed to load talent data. Please try again.');
+  }
 }
 
 function generateTalentColumn(abilities, learnedAbilities, column) {
