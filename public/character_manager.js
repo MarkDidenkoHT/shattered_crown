@@ -177,7 +177,6 @@ function characterCardHTML(character) {
                        title="${item.label}${isEquipped ? ': ' + item.value : ''}">
                     ${isEquipped ? `
                       <img src="${iconPath}" alt="${item.value}" 
-                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                       <div class="equipment-placeholder">${item.type.substring(0, 3)}</div>
                     ` : `
                       <div class="equipment-placeholder empty">${item.type.substring(0, 3)}</div>
@@ -512,7 +511,6 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
       ${hasAbility ? `
         <img src="assets/art/abilities/${ability.sprite}.png" 
             alt="${ability.name}"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
             style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
         <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
       ` : ''}
@@ -766,7 +764,6 @@ async function showEquipmentModal(character, slot, type) {
                      style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${itemName === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
                   <img src="${getItemIcon(item, itemName, type)}"
                     style="width: 48px; height: 48px; border-radius: 4px;"
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                   <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
                     ${type.toUpperCase()}
                   </div>
