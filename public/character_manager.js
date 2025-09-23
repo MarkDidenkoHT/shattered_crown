@@ -75,13 +75,7 @@ function renderCharacters(characters) {
     window.gameAuth.loadModule('castle');
   });
 
-  const characterImages = section.querySelectorAll('.card-art');
-  characterImages.forEach(img => {
-    img.addEventListener('error', function() {
-      this.src = 'assets/art/portraits/placeholder.png';
-    });
-  });
-
+  setupImageErrorHandling(section);
   setupEquipmentClickHandlers(section, characters);
   setupTalentsClickHandlers(section, characters);
   setupStatsClickHandlers(section, characters);
@@ -176,8 +170,7 @@ function characterCardHTML(character) {
                        style="cursor: pointer;" 
                        title="${item.label}${isEquipped ? ': ' + item.value : ''}">
                     ${isEquipped ? `
-                      <img src="${iconPath}" alt="${item.value}" 
-                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <img src="${iconPath}" alt="${item.value}">
                       <div class="equipment-placeholder">${item.type.substring(0, 3)}</div>
                     ` : `
                       <div class="equipment-placeholder empty">${item.type.substring(0, 3)}</div>
@@ -510,9 +503,7 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
         ${hasAbility ? `title="${ability.name} (${ability.type})"` : ''}>
       <div class="hold-progress"></div>
       ${hasAbility ? `
-        <img src="assets/art/abilities/${ability.sprite}.png" 
-            alt="${ability.name}"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+        <img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}"
             style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
         <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
       ` : ''}
@@ -765,8 +756,7 @@ async function showEquipmentModal(character, slot, type) {
                      ${!isAvailable ? 'data-disabled="true"' : ''}
                      style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${itemName === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
                   <img src="${getItemIcon(item, itemName, type)}"
-                    style="width: 48px; height: 48px; border-radius: 4px;"
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    style="width: 48px; height: 48px; border-radius: 4px;">
                   <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
                     ${type.toUpperCase()}
                   </div>
@@ -887,6 +877,21 @@ async function equipItem(character, slot, itemName, craftingSessionId = null, is
   } catch (error) {
     displayMessage(error.message || 'Failed to update equipment. Please try again.');
   }
+}
+
+function setupImageErrorHandling(container) {
+  container.querySelectorAll('img').forEach(img => {
+    img.addEventListener('error', function() {
+      if (this.classList.contains('card-art')) {
+        this.src = 'assets/art/portraits/placeholder.png';
+      } else {
+        this.style.display = 'none';
+        if (this.nextElementSibling) {
+          this.nextElementSibling.style.display = 'flex';
+        }
+      }
+    });
+  });
 }
 
 function showStatsBreakdown(character, statName, baseValue, itemBonus, totalValue) {
