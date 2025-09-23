@@ -1536,3 +1536,6 @@ function loadCharacterManagerStyles() {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 `;
+ document.head.appendChild(styleEl);
+    console.log('Character Manager styles loaded successfully');
+}
