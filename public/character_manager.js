@@ -514,12 +514,15 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
   return html;
 }
 
-function isAbilityLearned(ability, learnedAbilities) {
-  return Object.values(learnedAbilities)
-    .flat()
-    .filter(Boolean) // Remove null values
-    .includes(ability.name);
-}
+  function isAbilityLearned(ability, learnedAbilities) {
+    return Object.values(learnedAbilities)
+      .flat()
+      .filter(Boolean) // Remove null values
+      .includes(ability.name);
+  }
+
+
+  // Replace the event listener setup in initializeTalentTree with this:
 
 function initializeTalentTree(character, modal) {
   let talentPoints = character.points?.talent || 0;
@@ -578,6 +581,8 @@ function initializeTalentTree(character, modal) {
       holdProgress.style.width = progress + '%';
       
       if (elapsed >= 1500) {
+        clearInterval(holdTimer);
+        holdTimer = null;
         completeHold();
       }
     }, 16);
