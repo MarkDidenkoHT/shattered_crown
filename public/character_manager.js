@@ -524,8 +524,10 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
 }
 
 function isAbilityLearned(ability, learnedAbilities) {
-  const typeAbilities = learnedAbilities[ability.type] || [];
-  return typeAbilities.includes(ability.name);
+  return Object.values(learnedAbilities)
+    .flat()
+    .filter(Boolean) // Remove null values
+    .includes(ability.name);
 }
 
 function initializeTalentTree(character, modal) {
