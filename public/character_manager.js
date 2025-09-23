@@ -89,7 +89,6 @@ function renderCharacters(characters) {
 }
 
 function characterCardHTML(character) {
-  // Use total_stats if available, fallback to base stats
   const stats = character.total_stats || character.stats || {};
   const baseStats = character.stats || {};
   const normalizedStats = {};
@@ -111,14 +110,11 @@ function characterCardHTML(character) {
   const resistance = normalizedStats.resistance || 0;
   const hp = vitality * 10;
 
-  // Reorganized stats for two rows
   const statsData = [
-    // First row
     { label: 'HP', shortLabel: 'HP', value: hp, baseValue: (normalizedBaseStats.vitality || 0) * 10 },
     { label: 'Strength', shortLabel: 'STR', value: strength, baseValue: normalizedBaseStats.strength || 0 },
     { label: 'Intellect', shortLabel: 'INT', value: intellect, baseValue: normalizedBaseStats.intellect || 0 },
     { label: 'Armor', shortLabel: 'ARM', value: armor, baseValue: normalizedBaseStats.armor || 0 },
-    // Second row
     { label: 'Vitality', shortLabel: 'VIT', value: vitality, baseValue: normalizedBaseStats.vitality || 0 },
     { label: 'Dexterity', shortLabel: 'DEX', value: dexterity, baseValue: normalizedBaseStats.dexterity || 0 },
     { label: 'Spirit', shortLabel: 'SPI', value: spirit, baseValue: normalizedBaseStats.spirit || 0 },
@@ -126,19 +122,15 @@ function characterCardHTML(character) {
   ];
 
   const equippedItems = character.equipped_items || {};
-  // Equipment slots arranged in 3 rows of 4
   const equipmentData = [
-    // Row 1
     { label: 'Weapon', slot: 'equipped_weapon', type: 'Weapon', value: equippedItems.equipped_weapon || null },
     { label: 'Offhand', slot: 'equipped_offhand', type: 'Offhand', value: equippedItems.equipped_offhand || null },
     { label: 'Armor', slot: 'equipped_armor', type: 'Armor', value: equippedItems.equipped_armor || null },
     { label: 'Helmet', slot: 'equipped_helmet', type: 'Helmet', value: equippedItems.equipped_helmet || null },
-    // Row 2
     { label: 'Trinket', slot: 'equipped_trinket', type: 'Trinket', value: equippedItems.equipped_trinket || null },
     { label: 'Boots', slot: 'equipped_boots', type: 'Boots', value: equippedItems.equipped_boots || null },
     { label: 'Gloves', slot: 'equipped_gloves', type: 'Gloves', value: equippedItems.equipped_gloves || null },
     { label: 'Tool', slot: 'equipped_tool', type: 'Tool', value: equippedItems.equipped_tool || null },
-    // Row 3
     { label: 'Consumable', slot: 'equipped_consumable', type: 'Consumable', value: equippedItems.equipped_consumable || null },
     { label: 'Amulet', slot: 'equipped_amulet', type: 'Amulet', value: equippedItems.equipped_amulet || null },
     { label: 'Ring1', slot: 'equipped_ring1', type: 'Ring', value: equippedItems.equipped_ring1 || null },
@@ -152,7 +144,7 @@ function characterCardHTML(character) {
   const talentPoints = character.points?.talent || 0;
 
   return `
-    <div class="character-card" data-character-id="${character.id}">
+    <div class="character-card" data-character-id="${character.id}" data-class="${className.toLowerCase()}">
       <div class="card-top-row">
         <div class="card-portrait">
           <img src="assets/art/portraits/${character.portrait}.png" class="card-art">
@@ -318,7 +310,6 @@ function setupDragSlider() {
     snapToCard(targetIndex);
   }
 
-  // Mouse events
   slider.addEventListener('mousedown', (e) => {
     e.preventDefault();
     handleStart(e.clientX);
@@ -331,7 +322,6 @@ function setupDragSlider() {
   slider.addEventListener('mouseup', handleEnd);
   slider.addEventListener('mouseleave', handleEnd);
 
-  // Touch events
   slider.addEventListener('touchstart', (e) => {
     handleStart(e.touches[0].clientX);
   }, { passive: true });
@@ -342,7 +332,6 @@ function setupDragSlider() {
 
   slider.addEventListener('touchend', handleEnd, { passive: true });
 
-  // Keyboard navigation
   slider.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' && currentIndex > 0) {
       e.preventDefault();
@@ -355,12 +344,10 @@ function setupDragSlider() {
 
   slider.tabIndex = 0;
 
-  // Handle window resize
   window.addEventListener('resize', () => {
     snapToCard(currentIndex, true);
   });
 
-  // Initialize slider
   slider.style.cursor = 'grab';
   requestAnimationFrame(() => {
     snapToCard(0, true);
@@ -430,30 +417,21 @@ function showTalentModal(character) {
   modal.className = 'custom-message-box';
   modal.innerHTML = `
     <div class="talent-modal-content">
-      <div class="talent-container">
+      <div class="talent-container" data-class="${className}">
         <div class="talent-points">Talent Points: <span id="talentPointsCount">${talentPoints}</span></div>
         
-        <div class="talent-grid" data-class="${className}">
-          <!-- Support Column (Column 1) -->
-          <div class="talent-column" data-column="1" data-role="support">
+        <div class="talent-grid">
+          <div class="talent-column">
             ${generateTalentColumn(talentAbilities['1'] || [], learnedAbilities, 1)}
           </div>
           
-          <!-- Tank Column (Column 2) -->
-          <div class="talent-column" data-column="2" data-role="tank">
+          <div class="talent-column">
             ${generateTalentColumn(talentAbilities['2'] || [], learnedAbilities, 2)}
           </div>
           
-          <!-- DPS Column (Column 3) -->
-          <div class="talent-column" data-column="3" data-role="dps">
+          <div class="talent-column">
             ${generateTalentColumn(talentAbilities['3'] || [], learnedAbilities, 3)}
           </div>
-        </div>
-        
-        <div class="role-row">
-          <div class="role-slot support">SUPPORT</div>
-          <div class="role-slot tank">TANK</div>
-          <div class="role-slot dps">DPS</div>
         </div>
         
         <div class="instructions">
@@ -461,8 +439,8 @@ function showTalentModal(character) {
           <small>Talents unlock from bottom to top</small>
         </div>
         
-        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;">
-          <button class="fantasy-button talent-close-btn">Close</button>
+        <div style="display: flex; justify-content: center; margin-top: 1rem;">
+          <button class="help-tutorial-close-button">X</button>
         </div>
       </div>
     </div>
@@ -470,15 +448,12 @@ function showTalentModal(character) {
   
   document.body.appendChild(modal);
   
-  // Initialize talent tree functionality
   initializeTalentTree(character, modal);
   
-  // Close button handler
-  modal.querySelector('.talent-close-btn').addEventListener('click', () => {
+  modal.querySelector('.help-tutorial-close-button').addEventListener('click', () => {
     modal.remove();
   });
   
-  // Click outside to close
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.remove();
@@ -490,7 +465,7 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
   const maxSlots = 7;
   let html = '';
   
-  for (let row = 0; row < maxSlots; row++) {
+  for (let row = maxSlots - 1; row >= 0; row--) {
     const ability = abilities[row];
     const hasAbility = ability !== undefined;
     const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
@@ -501,7 +476,13 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
            data-row="${row}"
            ${hasAbility ? `title="${ability.name} (${ability.type})"` : ''}>
         <div class="hold-progress"></div>
-        ${hasAbility && !isLearned ? `<div class="ability-preview">${ability.name.substring(0, 3).toUpperCase()}</div>` : ''}
+        ${hasAbility ? `
+          <img src="assets/art/abilities/${ability.name}.png" 
+               alt="${ability.name}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+               style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
+          <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
+        ` : ''}
       </div>
     `;
   }
@@ -534,8 +515,7 @@ function initializeTalentTree(character, modal) {
     const abilities = talentAbilities[columnNum] || [];
     const slots = column.querySelectorAll('.talent-slot');
     
-    // Find the first unfilled slot from bottom to top that has an ability
-    for (let i = slots.length - 1; i >= 0; i--) {
+    for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
       const row = parseInt(slot.dataset.row);
       const ability = abilities[row];
@@ -580,14 +560,15 @@ function initializeTalentTree(character, modal) {
     if (!ability) return;
     
     try {
-      // Here you would make an API call to spend the talent point
-      // For now, we'll simulate it
       talentPoints--;
       updatePoints();
       
       currentSlot.classList.add('filled', 'level-up-flash');
+      const abilityImage = currentSlot.querySelector('img');
+      if (abilityImage) {
+        abilityImage.style.opacity = '1';
+      }
       
-      // Remove level up flash after animation
       setTimeout(() => {
         currentSlot.classList.remove('level-up-flash');
       }, 1000);
@@ -613,9 +594,6 @@ function initializeTalentTree(character, modal) {
     }
     
     if (currentSlot) {
-      const talentGrid = modal.querySelector('.talent-grid');
-      talentGrid.classList.remove(`glow-${className}`, 'glow-active');
-      
       const activeColumn = modal.querySelector('.talent-column.column-active');
       if (activeColumn) {
         activeColumn.classList.remove('column-active');
@@ -625,9 +603,7 @@ function initializeTalentTree(character, modal) {
     }
   }
   
-  // Add event listeners
   modal.querySelectorAll('.talent-column').forEach(column => {
-    // Mouse events
     column.addEventListener('mousedown', (e) => {
       e.preventDefault();
       startHold(column);
@@ -636,7 +612,6 @@ function initializeTalentTree(character, modal) {
     column.addEventListener('mouseup', cancelHold);
     column.addEventListener('mouseleave', cancelHold);
     
-    // Touch events
     column.addEventListener('touchstart', (e) => {
       e.preventDefault();
       startHold(column);
@@ -646,7 +621,6 @@ function initializeTalentTree(character, modal) {
     column.addEventListener('touchcancel', cancelHold);
   });
   
-  // Global handlers
   document.addEventListener('mouseup', cancelHold);
   document.addEventListener('touchend', cancelHold);
 }
@@ -942,7 +916,6 @@ function loadCharacterManagerStyles() {
     const styleEl = document.createElement('style');
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
-/* Existing character manager styles */
 .character-creation-section {
     height: 100vh;
     display: flex;
@@ -992,7 +965,6 @@ function loadCharacterManagerStyles() {
 
 .character-card {
     background: linear-gradient(145deg, rgba(29,20,12,0.95), rgba(42,31,22,0.9));
-    border: 2px solid #c4975a;
     border-radius: 12px;
     overflow: hidden;
     transition: all 0.3s;
@@ -1009,6 +981,35 @@ function loadCharacterManagerStyles() {
     justify-content: space-between;
     height: calc(100vh - 4rem);
     box-sizing: border-box;
+    border: 2px solid #c4975a;
+}
+
+.character-card[data-class="paladin"] {
+    border: 2px solid rgba(255, 255, 200, 0.8);
+}
+
+.character-card[data-class="warrior"] {
+    border: 2px solid rgba(200, 0, 0, 0.8);
+}
+
+.character-card[data-class="mage"] {
+    border: 2px solid rgba(100, 150, 255, 0.8);
+}
+
+.character-card[data-class="rogue"] {
+    border: 2px solid rgba(128, 0, 128, 0.8);
+}
+
+.character-card[data-class="priest"] {
+    border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.character-card[data-class="hunter"] {
+    border: 2px solid rgba(0, 128, 0, 0.8);
+}
+
+.character-card[data-class="shaman"] {
+    border: 2px solid rgba(0, 128, 255, 0.8);
 }
 
 .card-top-row {
@@ -1213,24 +1214,51 @@ function loadCharacterManagerStyles() {
     min-height: 44px;
 }
 
-/* Talent Modal Styles */
 .talent-modal-content {
     width: 95%;
     max-width: 450px;
-    max-height: 90vh;
+    max-height: 95vh;
     overflow-y: auto;
 }
 
 .talent-container {
     background: linear-gradient(135deg, #A0522D, #8B4513);
-    border: 3px solid #DAA520;
     border-radius: 15px;
-    padding: 20px;
+    padding: 10px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+    border: 3px solid #DAA520;
+}
+
+.talent-container[data-class="paladin"] {
+    border: 3px solid rgba(255, 255, 200, 0.8);
+}
+
+.talent-container[data-class="warrior"] {
+    border: 3px solid rgba(200, 0, 0, 0.8);
+}
+
+.talent-container[data-class="mage"] {
+    border: 3px solid rgba(100, 150, 255, 0.8);
+}
+
+.talent-container[data-class="rogue"] {
+    border: 3px solid rgba(128, 0, 128, 0.8);
+}
+
+.talent-container[data-class="priest"] {
+    border: 3px solid rgba(255, 255, 255, 0.8);
+}
+
+.talent-container[data-class="hunter"] {
+    border: 3px solid rgba(0, 128, 0, 0.8);
+}
+
+.talent-container[data-class="shaman"] {
+    border: 3px solid rgba(0, 128, 255, 0.8);
 }
 
 .talent-points {
@@ -1238,7 +1266,7 @@ function loadCharacterManagerStyles() {
     color: #FFD700;
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 20px;
+    margin-bottom: 5px;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -1254,9 +1282,12 @@ function loadCharacterManagerStyles() {
     flex-direction: column;
     gap: 8px;
     position: relative;
+    align-items: center;
 }
 
 .talent-slot {
+    max-width: 60px;
+    max-height: 60px;
     width: 100%;
     aspect-ratio: 1;
     background: linear-gradient(135deg, #654321, #8B4513);
@@ -1282,13 +1313,6 @@ function loadCharacterManagerStyles() {
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
 }
 
-.talent-slot.filled::after {
-    content: '★';
-    color: #FFF;
-    font-size: 20px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
 .ability-preview {
     font-size: 0.6rem;
     color: #FFD700;
@@ -1297,167 +1321,11 @@ function loadCharacterManagerStyles() {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-/* Class-based border colors */
-.talent-grid[data-class="paladin"] .talent-column {
-    border-left: 3px solid rgba(255, 255, 200, 0.3);
-}
-
-.talent-grid[data-class="warrior"] .talent-column {
-    border-left: 3px solid rgba(200, 0, 0, 0.3);
-}
-
-.talent-grid[data-class="mage"] .talent-column {
-    border-left: 3px solid rgba(100, 150, 255, 0.3);
-}
-
-.talent-grid[data-class="rogue"] .talent-column {
-    border-left: 3px solid rgba(128, 0, 128, 0.3);
-}
-
-.talent-grid[data-class="priest"] .talent-column {
-    border-left: 3px solid rgba(255, 255, 255, 0.3);
-}
-
-.talent-grid[data-class="hunter"] .talent-column {
-    border-left: 3px solid rgba(0, 128, 0, 0.3);
-}
-
-.talent-grid[data-class="shaman"] .talent-column {
-    border-left: 3px solid rgba(0, 128, 255, 0.3);
-}
-
-/* Class-based glow effects */
-.talent-grid.glow-paladin .talent-column {
-    animation: holyLightGlow 1.5s ease-in-out;
-}
-
-.talent-grid.glow-warrior .talent-column {
-    animation: warriorGlow 1.5s ease-in-out;
-}
-
-.talent-grid.glow-mage .talent-column {
-    animation: mageGlow 1.5s ease-in-out;
-}
-
-.talent-grid.glow-rogue .talent-column {
-    animation: rogueGlow 1.5s ease-in-out;
-}
-
-.talent-grid.glow-priest .talent-column {
-    animation: priestGlow 1.5s ease-in-out;
-}
-
-.talent-grid.glow-hunter .talent-column {
-    animation: hunterGlow 1.5s ease-in-out;
-}
-
-.talent-grid.glow-shaman .talent-column {
-    animation: shamanGlow 1.5s ease-in-out;
-}
-
-@keyframes holyLightGlow {
-    0% {
-        filter: drop-shadow(0 0 0px rgba(255, 255, 200, 0));
-    }
-    50% {
-        filter: drop-shadow(0 0 25px rgba(255, 255, 200, 1)) drop-shadow(0 0 50px rgba(255, 215, 0, 0.6));
-        transform: scale(1.02);
-    }
-    100% {
-        filter: drop-shadow(0 0 0px rgba(255, 255, 200, 0));
-    }
-}
-
-@keyframes warriorGlow {
-    0% {
-        filter: drop-shadow(0 0 0px rgba(200, 0, 0, 0));
-    }
-    50% {
-        filter: drop-shadow(0 0 25px rgba(200, 0, 0, 1));
-        transform: scale(1.02);
-    }
-    100% {
-        filter: drop-shadow(0 0 0px rgba(200, 0, 0, 0));
-    }
-}
-
-@keyframes mageGlow {
-    0% {
-        filter: drop-shadow(0 0 0px rgba(100, 150, 255, 0));
-    }
-    50% {
-        filter: drop-shadow(0 0 25px rgba(100, 150, 255, 1));
-        transform: scale(1.02);
-    }
-    100% {
-        filter: drop-shadow(0 0 0px rgba(100, 150, 255, 0));
-    }
-}
-
-@keyframes rogueGlow {
-    0% {
-        filter: drop-shadow(0 0 0px rgba(128, 0, 128, 0));
-    }
-    50% {
-        filter: drop-shadow(0 0 25px rgba(128, 0, 128, 1));
-        transform: scale(1.02);
-    }
-    100% {
-        filter: drop-shadow(0 0 0px rgba(128, 0, 128, 0));
-    }
-}
-
-@keyframes priestGlow {
-    0% {
-        filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
-    }
-    50% {
-        filter: drop-shadow(0 0 25px rgba(255, 255, 255, 1));
-        transform: scale(1.02);
-    }
-    100% {
-        filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
-    }
-}
-
-@keyframes hunterGlow {
-    0% {
-        filter: drop-shadow(0 0 0px rgba(0, 128, 0, 0));
-    }
-    50% {
-        filter: drop-shadow(0 0 25px rgba(0, 128, 0, 1));
-        transform: scale(1.02);
-    }
-    100% {
-        filter: drop-shadow(0 0 0px rgba(0, 128, 0, 0));
-    }
-}
-
-@keyframes shamanGlow {
-    0% {
-        filter: drop-shadow(0 0 0px rgba(0, 128, 255, 0));
-    }
-    50% {
-        filter: drop-shadow(0 0 25px rgba(0, 128, 255, 1));
-        transform: scale(1.02);
-    }
-    100% {
-        filter: drop-shadow(0 0 0px rgba(0, 128, 255, 0));
-    }
-}
-
-/* Active glow state - applies to all columns when holding */
-.talent-grid.glow-active .talent-column {
-    filter: drop-shadow(0 0 10px rgba(255, 255, 200, 0.4)) drop-shadow(0 0 20px rgba(255, 215, 0, 0.2));
-}
-
-/* Highlight the specific column being clicked */
 .talent-column.column-active {
     filter: drop-shadow(0 0 20px rgba(255, 255, 200, 0.9)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.6)) !important;
     transform: scale(1.02);
 }
 
-/* WoW-style level up flash effect */
 @keyframes levelUpFlash {
     0% {
         box-shadow: 0 0 0px rgba(255, 215, 0, 0);
@@ -1481,7 +1349,6 @@ function loadCharacterManagerStyles() {
     animation: levelUpFlash 1s ease-out;
 }
 
-/* Hold progress indicator */
 .hold-progress {
     position: absolute;
     bottom: 0;
@@ -1491,40 +1358,6 @@ function loadCharacterManagerStyles() {
     border-radius: 2px;
     transition: width 0.1s linear;
     width: 0%;
-}
-
-.role-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.role-slot {
-    padding: 12px 8px;
-    background: linear-gradient(135deg, #654321, #8B4513);
-    border: 2px solid #CD853F;
-    border-radius: 8px;
-    text-align: center;
-    color: #FFD700;
-    font-weight: bold;
-    font-size: 12px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.role-slot.support {
-    border-color: #90EE90;
-    color: #90EE90;
-}
-
-.role-slot.tank {
-    border-color: #87CEEB;
-    color: #87CEEB;
-}
-
-.role-slot.dps {
-    border-color: #FFB6C1;
-    color: #FFB6C1;
 }
 
 .instructions {
