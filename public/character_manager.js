@@ -471,20 +471,20 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
     const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
     
     html += `
-      <div class="talent-slot ${isLearned ? 'filled' : ''}" 
-           data-column="${column}" 
-           data-row="${row}"
-           ${hasAbility ? `title="${ability.name} (${ability.type})"` : ''}>
-        <div class="hold-progress"></div>
-        ${hasAbility ? `
-          <img src="assets/art/abilities/${ability.name}.png" 
-               alt="${ability.name}"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-               style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
-          <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
-        ` : ''}
-      </div>
-    `;
+    <div class="talent-slot ${isLearned ? 'filled' : ''}" 
+        data-column="${column}" 
+        data-row="${row}"
+        ${hasAbility ? `title="${ability.name} (${ability.type})"` : ''}>
+      <div class="hold-progress"></div>
+      ${hasAbility ? `
+        <img src="assets/art/abilities/${ability.sprite}.png" 
+            alt="${ability.name}"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
+        <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
+      ` : ''}
+    </div>
+  `;
   }
   
   return html;
@@ -550,37 +550,62 @@ function initializeTalentTree(character, modal) {
     }, 16);
   }
   
-  async function completeHold() {
-    if (!currentSlot) return;
-    
-    const column = parseInt(currentSlot.dataset.column);
-    const row = parseInt(currentSlot.dataset.row);
-    const ability = talentAbilities[column]?.[row];
-    
-    if (!ability) return;
-    
-    try {
-      talentPoints--;
-      updatePoints();
-      
-      currentSlot.classList.add('filled', 'level-up-flash');
-      const abilityImage = currentSlot.querySelector('img');
-      if (abilityImage) {
-        abilityImage.style.opacity = '1';
+async function completeHold() {
+  if (!currentSlot) return;
+
+  const column = parseInt(currentSlot.dataset.column);
+  const row = parseInt(currentSlot.dataset.row);
+  const ability = talentAbilities[column]?.[row];
+
+  if (!ability) return;
+
+  try {
+    // Call the edge function to learn the talent
+    const response = await _apiCall('/api/supabase/functions/v1/learn_talent', {
+      method: 'POST',
+      body: {
+        character_id: character.id,
+        ability_name: ability.name,
+        ability_type: ability.type,
+        player_id: _profile.id
       }
-      
-      setTimeout(() => {
-        currentSlot.classList.remove('level-up-flash');
-      }, 1000);
-      
-      displayMessage(`Learned ${ability.name}!`);
-      
-    } catch (error) {
-      displayMessage('Failed to learn talent. Please try again.');
+    });
+
+    if (!response.ok) {
+      const errorResult = await response.json();
+      throw new Error(errorResult.error || 'Failed to learn talent');
     }
-    
-    cancelHold();
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to learn talent');
+    }
+
+    // Update local state
+    talentPoints = result.remaining_talent_points;
+    updatePoints();
+
+    // Update UI
+    currentSlot.classList.add('filled', 'level-up-flash');
+    const abilityImage = currentSlot.querySelector('img');
+    if (abilityImage) {
+      abilityImage.style.opacity = '1';
+    }
+
+    setTimeout(() => {
+      currentSlot.classList.remove('level-up-flash');
+    }, 1000);
+
+    displayMessage(result.message);
+
+  } catch (error) {
+    console.error('Error learning talent:', error);
+    displayMessage(error.message || 'Failed to learn talent. Please try again.');
   }
+
+  cancelHold();
+}
   
   function cancelHold() {
     if (holdTimer) {
