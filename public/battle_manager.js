@@ -778,101 +778,82 @@ function startAbilitySelection(caster, abilityRaw) {
 
   // --- AREA target logic ---
   if (ability.targeting === 'area') {
-    // 🔥 Special case: self-centered AoE (range 0)
-    if (+ability.range === 0) {
-      const [cx, cy] = caster.position;
-      const affected = [];
+  const area = ability.area;
+  const range = ability.range;
 
-      // highlight all affected tiles
-      for (let ax = cx - ability.area; ax <= cx + ability.area; ax++) {
-        for (let ay = cy - ability.area; ay <= cy + ability.area; ay++) {
-          if (chebyshevDistance([cx, cy], [ax, ay]) > ability.area) continue;
-          const cell = getCellAt(ax, ay);
-          if (cell) {
-            cell.classList.add('highlight-area-affected');
-            BattleState.highlightedTiles.push(cell);
-          }
+  // 🔹 figure out which cells can be "centers" for this AoE
+  let potentialCenters = [];
 
-          const ch = getCharacterAt(ax, ay);
-          if (!ch) continue;
-          const eff = computeEffect(caster, ability, ch);
-          if (eff) affected.push({ char: ch, eff });
-        }
-      }
-
-      if (affected.length > 0) {
-        // confirm click anywhere in the highlighted area
-        for (const tile of BattleState.highlightedTiles) {
-          registerTile(tile, () => {
-            const payload = {
-              abilityName: ability.name,
-              casterId: caster.id,
-              casterPos: caster.position,
-              targetCenter: [cx, cy],
-              affectedTargets: affected.map(a => ({
-                id: a.char.id,
-                pos: a.char.position,
-                faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-                intendedEffect: a.eff
-              }))
-            };
-            console.log('[ABILITY USED]', payload);
-            handleAbilityUse(payload);
-            clearAbilitySelection();
-          });
-        }
-      }
-
-      return; // ✅ skip normal targeting UI
-    }
-
-    // --- Normal AoE targeting (range > 0) ---
+  if (range === 0) {
+    // self-centered AoE → only caster position
+    potentialCenters = [caster.position];
+  } else {
+    // normal AoE → every tile within range of caster
     const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
     for (const cell of cells) {
-      const x = +cell.dataset.x,
-        y = +cell.dataset.y;
-      if (chebyshevDistance(caster.position, [x, y]) > ability.range) continue;
-
-      const affected = [];
-      const affectedTiles = [];
-      for (let ax = x - ability.area; ax <= x + ability.area; ax++) {
-        for (let ay = y - ability.area; ay <= y + ability.area; ay++) {
-          if (chebyshevDistance([x, y], [ax, ay]) > ability.area) continue;
-          const cell2 = getCellAt(ax, ay);
-          if (cell2) affectedTiles.push(cell2);
-
-          const ch = getCharacterAt(ax, ay);
-          if (!ch) continue;
-          const eff = computeEffect(caster, ability, ch);
-          if (eff) affected.push({ char: ch, eff });
-        }
-      }
-
-      if (!affected.length) continue;
-      cell.classList.add('highlight-area-center');
-
-      // confirm cast when player taps any affected tile
-      for (const tile of affectedTiles) {
-        registerTile(tile, () => {
-          const payload = {
-            abilityName: ability.name,
-            casterId: caster.id,
-            casterPos: caster.position,
-            targetCenter: [x, y],
-            affectedTargets: affected.map(a => ({
-              id: a.char.id,
-              pos: a.char.position,
-              faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-              intendedEffect: a.eff
-            }))
-          };
-          console.log('[ABILITY USED]', payload);
-          handleAbilityUse(payload);
-          clearAbilitySelection();
-        });
+      const x = +cell.dataset.x, y = +cell.dataset.y;
+      if (chebyshevDistance(caster.position, [x, y]) <= range) {
+        potentialCenters.push([x, y]);
       }
     }
   }
+
+  // 🔹 for each potential center, compute affected tiles + chars
+  for (const [cx, cy] of potentialCenters) {
+    const affected = [];
+    const affectedTiles = [];
+
+    for (let ax = cx - area; ax <= cx + area; ax++) {
+      for (let ay = cy - area; ay <= cy + area; ay++) {
+        if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
+
+        const cell2 = getCellAt(ax, ay);
+        if (cell2) affectedTiles.push(cell2);
+
+        const ch = getCharacterAt(ax, ay);
+        if (!ch) continue;
+
+        const eff = computeEffect(caster, ability, ch);
+        if (eff) affected.push({ char: ch, eff });
+      }
+    }
+
+    if (!affected.length) continue;
+
+    // highlight AoE center if it's a targeted AoE
+    if (range > 0) {
+      const centerCell = getCellAt(cx, cy);
+      if (centerCell) centerCell.classList.add('highlight-area-center');
+    } else {
+      // self-centered → highlight affected area instead
+      for (const t of affectedTiles) {
+        t.classList.add('highlight-area-affected');
+      }
+    }
+
+    // 🔹 confirm cast when clicking any affected tile
+    for (const tile of affectedTiles) {
+      registerTile(tile, () => {
+        const payload = {
+          abilityName: ability.name,
+          casterId: caster.id,
+          casterPos: caster.position,
+          targetCenter: [cx, cy],
+          affectedTargets: affected.map(a => ({
+            id: a.char.id,
+            pos: a.char.position,
+            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+            intendedEffect: a.eff
+          }))
+        };
+        console.log('[ABILITY USED]', payload);
+        handleAbilityUse(payload);
+        clearAbilitySelection();
+      });
+    }
+  }
+}
+
 }
 
 function computeEffect(caster, ability, target) {
