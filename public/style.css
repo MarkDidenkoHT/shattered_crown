@@ -1309,6 +1309,8 @@
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
     pointer-events: none;
+    margin: auto;
+    width: 98%;
 }
 
 .ability-tooltip.visible {

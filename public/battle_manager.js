@@ -1407,25 +1407,12 @@ const handleTileClick = throttle((event) => {
         // Character found - show character info first
         handleCharacterSelection(charInCell, clickedTileEl);
     } else {
-        // No character - handle movement/deselection and show tile info
-        // First, explicitly get and show tile info
-        const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
-        const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
-        const tileData = BattleState.tileMap.get(tileKey);
-        
-        console.log('Tile clicked - tileName:', tileName, 'tileKey:', tileKey, 'tileData:', tileData);
-        
-        // Show tile info FIRST, before calling handleMovementOrDeselect
-        showEntityInfo({ 
-            tile: tileData || { 
-                name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' 
-            } 
-        });
-        
-        // Then handle movement/deselection logic without calling showEntityInfo again
+        // No character - handle movement/deselection
         if (BattleState.selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
+            // Moving to a highlighted tile - keep character selected and info displayed
             attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
         } else {
+            // Clicking empty tile when no character selected or not a valid move - show tile info
             unhighlightAllTiles();
             
             if (BattleState.selectedCharacterEl) {
@@ -1434,6 +1421,17 @@ const handleTileClick = throttle((event) => {
             }
             
             BattleState.selectedPlayerCharacter = null;
+            
+            // Show tile info only when deselecting
+            const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
+            const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
+            const tileData = BattleState.tileMap.get(tileKey);
+            
+            showEntityInfo({ 
+                tile: tileData || { 
+                    name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' 
+                } 
+            });
         }
     }
 
