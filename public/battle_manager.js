@@ -1148,7 +1148,7 @@ function renderBattleScreen(mode, level, layoutData) {
                     </div>
                 </div>
             </div>
-            <div classs="tooltip-container"></div>
+            <div class="tooltip-container"></div>
             <div class="battle-bottom-ui" style="display: block; width: 97vw; margin: auto; position: fixed; bottom: 4px;"></div>
         </div>
     `;
