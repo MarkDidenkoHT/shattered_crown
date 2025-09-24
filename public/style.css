@@ -1331,8 +1331,8 @@
 }
 
 .ability-tooltip-body {
-    display: grid;
-    gap: 4px;
+    display: flex;
+    gap: 5px;
     font-size: 11px;
     line-height: 1.3;
 }
