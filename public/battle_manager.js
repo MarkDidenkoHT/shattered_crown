@@ -648,6 +648,7 @@ function clearAbilitySelection() {
   BattleState.selectingAbility = null;
 
   resetAbilityButtonsUI(); // 🔥 reset ability button state
+  hideAbilityTooltip();
 }
 
 function toggleAbilitySelection(caster, ability) {
@@ -660,6 +661,7 @@ function toggleAbilitySelection(caster, ability) {
 
   startAbilitySelection(caster, ability);
   highlightSelectedAbilityButton(ability.name);
+  showAbilityTooltip(ability);
 }
 
 function highlightSelectedAbilityButton(abilityName) {
@@ -1769,6 +1771,8 @@ const handleAbilityUse = async (abilityPayload) => {
         data: abilityPayload
     };
 
+    hideAbilityTooltip();
+
     try {
         const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
             battleId: BattleState.battleId,
@@ -1810,6 +1814,8 @@ const handleEndTurn = async () => {
     const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
     const targetPosition = activeCharacter.position;
     const action = activeCharacter.pendingAction || null;
+
+    hideAbilityTooltip();
 
     try {
         const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
@@ -2101,6 +2107,78 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     }
 };
 
+function showAbilityTooltip(ability) {
+    // Remove existing tooltip
+    hideAbilityTooltip();
+    
+    const tooltip = document.createElement('div');
+    tooltip.className = 'ability-tooltip';
+    tooltip.id = 'abilityTooltip';
+    
+    // Normalize ability data
+    const normalizedAbility = normalizeAbility(ability);
+    
+    // Create tooltip content
+    tooltip.innerHTML = `
+        <div class="ability-tooltip-header">
+            <div class="ability-tooltip-name">${normalizedAbility.name}</div>
+        </div>
+        <div class="ability-tooltip-body">
+            <div class="ability-tooltip-stat">
+                <span class="ability-tooltip-stat-label">Range:</span>
+                <span class="ability-tooltip-stat-value ability-tooltip-range">${normalizedAbility.range}</span>
+            </div>
+            <div class="ability-tooltip-stat">
+                <span class="ability-tooltip-stat-label">Area:</span>
+                <span class="ability-tooltip-stat-value ability-tooltip-area">${normalizedAbility.area}</span>
+            </div>
+            <div class="ability-tooltip-stat">
+                <span class="ability-tooltip-stat-label">Targeting:</span>
+                <span class="ability-tooltip-stat-value ability-tooltip-targeting">${capitalizeFirst(normalizedAbility.targeting)}</span>
+            </div>
+            <div class="ability-tooltip-stat">
+                <span class="ability-tooltip-stat-label">Target Type:</span>
+                <span class="ability-tooltip-stat-value">${capitalizeFirst(normalizedAbility.target_type)}</span>
+            </div>
+            <div class="ability-tooltip-stat">
+                <span class="ability-tooltip-stat-label">Effects:</span>
+                <span class="ability-tooltip-stat-value ability-tooltip-effects">${capitalizeFirst(normalizedAbility.effects)}</span>
+            </div>
+            ${normalizedAbility.description ? 
+                `<div class="ability-tooltip-description">${normalizedAbility.description}</div>` : 
+                ''
+            }
+        </div>
+    `;
+    
+    document.body.appendChild(tooltip);
+    
+    // Show with animation
+    requestAnimationFrame(() => {
+        tooltip.classList.add('visible');
+    });
+}
+
+// Function to hide tooltip
+function hideAbilityTooltip() {
+    const existingTooltip = document.getElementById('abilityTooltip');
+    if (existingTooltip) {
+        existingTooltip.classList.remove('visible');
+        setTimeout(() => {
+            if (existingTooltip.parentNode) {
+                existingTooltip.remove();
+            }
+        }, 300);
+    }
+}
+
+// Helper function to capitalize first letter
+function capitalizeFirst(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+
 
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
@@ -2239,6 +2317,8 @@ export function cleanup() {
     
     const existingMessage = document.querySelector('.custom-message-box');
     if (existingMessage) existingMessage.remove();
+
+    hideAbilityTooltip();
 }
 
 function navigateToCastle() {
