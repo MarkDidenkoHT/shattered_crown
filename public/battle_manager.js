@@ -2111,6 +2111,13 @@ function showAbilityTooltip(ability) {
     // Remove existing tooltip
     hideAbilityTooltip();
     
+    // Find the tooltip container
+    const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
+    if (!tooltipContainer) {
+        console.warn('Tooltip container not found');
+        return;
+    }
+    
     const tooltip = document.createElement('div');
     tooltip.className = 'ability-tooltip';
     tooltip.id = 'abilityTooltip';
@@ -2151,7 +2158,7 @@ function showAbilityTooltip(ability) {
         </div>
     `;
     
-    document.body.appendChild(tooltip);
+    tooltipContainer.appendChild(tooltip);
     
     // Show with animation
     requestAnimationFrame(() => {
