@@ -2151,11 +2151,11 @@ function showAbilityTooltip(ability) {
                 <span class="ability-tooltip-stat-label">Effects:</span>
                 <span class="ability-tooltip-stat-value ability-tooltip-effects">${capitalizeFirst(normalizedAbility.effects)}</span>
             </div>
-            ${normalizedAbility.description ? 
+        </div>
+          ${normalizedAbility.description ? 
                 `<div class="ability-tooltip-description">${normalizedAbility.description}</div>` : 
                 ''
             }
-        </div>
     `;
     
     tooltipContainer.appendChild(tooltip);
