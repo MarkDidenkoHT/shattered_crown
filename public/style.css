@@ -146,8 +146,20 @@
     }
 
     .ui-btn {
-      max-width: 20%;
-      min-height: 55px;
+        max-width: 60px;
+        max-height: 60px;
+        width: 100%;
+        aspect-ratio: 1;
+        background: linear-gradient(135deg, #654321, #8B4513);
+        border: 2px solid #CD853F;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
 
     .battle-status {

@@ -43,10 +43,6 @@ function renderCharacters(characters) {
 
   if (!characters || characters.length === 0) {
     section.innerHTML = `
-      <div class="art-header">
-        <h1>Your Champions</h1>
-        <p class="subtitle">You have no champions yet. Create some to start your journey.</p>
-      </div>
       <div class="top-right-buttons">
         <button class="fantasy-button return-btn">Return</button>
       </div>
@@ -457,10 +453,9 @@ async function showTalentModal(character) {
           
           <div class="instructions">
             Hold column for 1.5s to spend talent point<br>
-            <small>Talents unlock from bottom to top</small>
           </div>
           
-          <div style="display: flex; justify-content: center; margin-top: 1rem;">
+          <div>
             <button class="help-tutorial-close-button">X</button>
           </div>
         </div>
@@ -568,9 +563,6 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
       .filter(Boolean) // Remove null values
       .includes(ability.name);
   }
-
-
-  // Replace the event listener setup in initializeTalentTree with this:
 
 function initializeTalentTree(character, modal) {
   let talentPoints = character.points?.talent || 0;
@@ -1065,25 +1057,6 @@ function loadCharacterManagerStyles() {
     const styleEl = document.createElement('style');
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
-.character-creation-section {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    padding: 0;
-    position: relative;
-    z-index: 2;
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(10px);
-    overflow: hidden;
-}
-
-.character-creation-section .subtitle {
-    font-size: 0.9rem;
-    color: #b8b3a8;
-}
-
 .characters-slider-container {
     flex: 1;
     width: 100%;
@@ -1128,7 +1101,7 @@ function loadCharacterManagerStyles() {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: calc(100vh - 4rem);
+    height: calc(100vh - 3rem);
     box-sizing: border-box;
     border: 2px solid #c4975a;
 }
@@ -1141,24 +1114,8 @@ function loadCharacterManagerStyles() {
     border: 2px solid rgba(200, 0, 0, 0.8);
 }
 
-.character-card[data-class="mage"] {
-    border: 2px solid rgba(100, 150, 255, 0.8);
-}
-
-.character-card[data-class="rogue"] {
-    border: 2px solid rgba(128, 0, 128, 0.8);
-}
-
 .character-card[data-class="priest"] {
     border: 2px solid rgba(255, 255, 255, 0.8);
-}
-
-.character-card[data-class="hunter"] {
-    border: 2px solid rgba(0, 128, 0, 0.8);
-}
-
-.character-card[data-class="shaman"] {
-    border: 2px solid rgba(0, 128, 255, 0.8);
 }
 
 .card-top-row {
@@ -1189,8 +1146,6 @@ function loadCharacterManagerStyles() {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 0.3rem;
 }
 
 .card-name {
@@ -1373,7 +1328,7 @@ function loadCharacterManagerStyles() {
 .talent-container {
     background: linear-gradient(135deg, rgba(160, 82, 45, 0.8), rgba(139, 69, 19, 0.8));
     border-radius: 15px;
-    padding: 10px;
+    padding: 2px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     user-select: none;
     -webkit-user-select: none;

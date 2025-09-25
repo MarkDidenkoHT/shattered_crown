@@ -534,9 +534,6 @@ styleEl.textContent = `
   .offering-panel {
     max-height: 75vh;
     flex: 1;
-    background: linear-gradient(145deg, rgba(29,20,12,0.9), rgba(42,31,22,0.8));
-    border: 2px solid #3d2914;
-    border-radius: 15px;
     padding: 8px;
     backdrop-filter: blur(5px);
     box-shadow: 
