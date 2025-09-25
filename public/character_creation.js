@@ -198,6 +198,55 @@ function renderRaceSelection() {
     });
 }
 
+function loadClassSelectionBackgrounds() {
+    const slides = _main.querySelectorAll('.selection-slide[data-type="class"]');
+    
+    slides.forEach(slide => {
+        const classId = parseInt(slide.dataset.id);
+        const selectedClass = _classes.find(c => c.id === classId);
+        if (!selectedClass) return;
+        
+        const className = selectedClass.name.toLowerCase().replace(/\s+/g, '_');
+        const backgroundImagePath = `assets/art/classes/backgrounds/${className}_bg.png`;
+        
+        // Create and test the image
+        const testImage = new Image();
+        testImage.onload = function() {
+            // Image exists, apply it with overlay for readability
+            slide.style.backgroundImage = `
+                linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)),
+                url('${backgroundImagePath}')
+            `;
+            slide.style.backgroundSize = 'cover';
+            slide.style.backgroundPosition = 'center';
+            slide.style.backgroundRepeat = 'no-repeat';
+            
+            // Apply class-specific border
+            applyClassBorderToSlide(slide, className);
+        };
+        
+        testImage.onerror = function() {
+            // Image doesn't exist, keep default background and apply border
+            console.log(`Class background image not found: ${backgroundImagePath}`);
+            applyClassBorderToSlide(slide, className);
+        };
+        
+        testImage.src = backgroundImagePath;
+    });
+}
+
+function applyClassBorderToSlide(slide, className) {
+    const borderColors = {
+        'paladin': 'rgba(255, 255, 200, 0.8)',
+        'warrior': 'rgba(200, 0, 0, 0.8)',
+        'priest': 'rgba(255, 255, 255, 0.8)'
+    };
+    
+    const borderColor = borderColors[className] || 'rgba(196, 151, 90, 0.8)';
+    slide.style.border = `3px solid ${borderColor}`;
+    slide.style.borderRadius = '12px';
+}
+
 function showClassDescription(classInfo) {
     const modal = document.createElement('div');
     modal.className = 'class-description-modal';
@@ -441,6 +490,10 @@ function renderClassSelection() {
     `;
 
     initializeSelectionSlider();
+
+    setTimeout(() => {
+        loadClassSelectionBackgrounds();
+    }, 100);
 
     section.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
         button.addEventListener('click', (e) => {

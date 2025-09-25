@@ -643,7 +643,7 @@
 
         .selection-slide {
             min-width: 100%;
-            min-height: 75vh;
+            min-height: 85vh;
             background: linear-gradient(145deg, rgb(109 64 25 / 90%), rgba(42, 31, 22, 0.8));
             border: 2px solid #e59745;
             border-radius: 8px;
@@ -727,24 +727,6 @@
             }
         }
 
-        @media (max-width: 480px) {
-            .selection-slide .card-art-block {
-                height: 100px;
-            }
-            .character-creation-section .art-header h1 {
-                font-size: 1.1rem;
-            }
-            .character-creation-section .subtitle {
-                font-size: 0.7rem;
-            }
-            .summary-art-block {
-                height: 100px;
-            }
-            .summary-card h2 {
-                font-size: 1.1rem;
-            }
-        }
-
         /* Styles for Sex and Profession Selection Cards (similar to Race/Class) */
     .sex-selection, .profession-selection {
         width: 100%;
@@ -817,6 +799,12 @@
     .selection-slider.mobile-view .selection-slide[data-type="profession"] .card-art-block {
         height: 200px; /* Match desktop card art height */
     }
+    .selection-slide[data-type="class"] {
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
 
 /* Movement highlighting */
 .movement-highlight {
