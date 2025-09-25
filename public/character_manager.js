@@ -468,7 +468,9 @@ async function showTalentModal(character) {
     `;
     
     document.body.appendChild(modal);
-    
+    const talentContainer = modal.querySelector('.talent-container');
+    loadTalentBackground(modal, className);
+    applyClassBorder(talentContainer, className);
     initializeTalentTree(character, modal);
     
     modal.querySelector('.help-tutorial-close-button').addEventListener('click', () => {
@@ -485,6 +487,52 @@ async function showTalentModal(character) {
     console.error('Error loading talent abilities:', error);
     displayMessage('Failed to load talent data. Please try again.');
   }
+}
+
+function loadTalentBackground(modal, className) {
+  const talentContainer = modal.querySelector('.talent-container');
+  const backgroundImagePath = `assets/art/classes/background/${className}_bg.png`;
+  
+  // Create and test the image
+  const testImage = new Image();
+  testImage.onload = function() {
+    // Image exists, apply it with overlay for readability
+    talentContainer.style.backgroundImage = `
+      linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)),
+      url('${backgroundImagePath}')
+    `;
+    talentContainer.style.backgroundSize = 'cover';
+    talentContainer.style.backgroundPosition = 'center';
+    talentContainer.style.backgroundRepeat = 'no-repeat';
+    
+    // Add a subtle animation when the background loads
+    talentContainer.style.transition = 'background-image 0.5s ease-in-out';
+  };
+  
+  testImage.onerror = function() {
+    // Image doesn't exist, keep the default gradient background
+    console.log(`Background image not found for ${className}: ${backgroundImagePath}`);
+    // Fallback to enhanced gradient based on class
+    applyFallbackBackground(talentContainer, className);
+  };
+  
+  testImage.src = backgroundImagePath;
+}
+
+function applyFallbackBackground(container, className) {
+  // Use the existing background color from your current CSS
+  container.style.backgroundImage = 'linear-gradient(135deg, #A0522D, #8B4513)';
+}
+
+function applyClassBorder(container, className) {
+  const borderColors = {
+    'paladin': 'rgba(255, 255, 200, 0.8)',
+    'warrior': 'rgba(200, 0, 0, 0.8)',
+    'priest': 'rgba(255, 255, 255, 0.8)'
+  };
+  
+  const borderColor = borderColors[className] || '#DAA520';
+  container.style.border = `3px solid ${borderColor}`;
 }
 
 function generateTalentColumn(abilities, learnedAbilities, column) {
@@ -1323,7 +1371,7 @@ function loadCharacterManagerStyles() {
 }
 
 .talent-container {
-    background: linear-gradient(135deg, #A0522D, #8B4513);
+    background: linear-gradient(135deg, rgba(160, 82, 45, 0.8), rgba(139, 69, 19, 0.8));
     border-radius: 15px;
     padding: 10px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -1332,34 +1380,8 @@ function loadCharacterManagerStyles() {
     -moz-user-select: none;
     -ms-user-select: none;
     border: 3px solid #DAA520;
-}
-
-.talent-container[data-class="paladin"] {
-    border: 3px solid rgba(255, 255, 200, 0.8);
-}
-
-.talent-container[data-class="warrior"] {
-    border: 3px solid rgba(200, 0, 0, 0.8);
-}
-
-.talent-container[data-class="mage"] {
-    border: 3px solid rgba(100, 150, 255, 0.8);
-}
-
-.talent-container[data-class="rogue"] {
-    border: 3px solid rgba(128, 0, 128, 0.8);
-}
-
-.talent-container[data-class="priest"] {
-    border: 3px solid rgba(255, 255, 255, 0.8);
-}
-
-.talent-container[data-class="hunter"] {
-    border: 3px solid rgba(0, 128, 0, 0.8);
-}
-
-.talent-container[data-class="shaman"] {
-    border: 3px solid rgba(0, 128, 255, 0.8);
+    position: relative;
+    transition: background-image 0.5s ease-in-out;
 }
 
 .talent-points {
