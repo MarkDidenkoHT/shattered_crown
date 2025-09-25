@@ -1122,7 +1122,7 @@ function renderBattleScreen(mode, level, layoutData) {
                 <div id="turnStatus" style="width: 25%; text-align: center; font-size: 16px; background: rgba(0,0,0,0.3); border-radius: 4px;">—</div>
             </div>
             <div class="battle-info-panel" id="entityInfoPanel">
-                <div style="display: flex; width: 100%; height: 100%; max-height: 17vh; min-height: 17vh;">
+                <div style="display: flex; width: 100%; height: 100%; max-height: 15vh; min-height: 15vh;">
                     <div style="width: 25%; display: flex; align-items: center; justify-content: center;">
                         <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 80px; max-height: 80px; object-fit: contain;" />
                     </div>
@@ -1131,7 +1131,7 @@ function renderBattleScreen(mode, level, layoutData) {
                         <div id="infoHP" style="font-size: 12px;"></div>
                         <div id="infoStats" style="font-size: 12px;"></div>
                     </div>
-                    <div id="statusEffects" style="width: 25%; padding-left: 8px; display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto;">
+                    <div id="statusEffects" style="width: 25%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center; overflow-y: auto;">
                         <div id="buffsContainer" style="margin-bottom: 6px;">
                             <div style="font-size: 12px; color: #4CAF50; margin-bottom: 2px;">Buffs:</div>
                             <div id="buffsList" style="font-size: 9px; color: #90EE90;"></div>
