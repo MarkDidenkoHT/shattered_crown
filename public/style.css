@@ -653,10 +653,10 @@
                 inset 0 1px 0 rgba(196, 151, 90, 0.1),
                 0 2px 8px rgba(0, 0, 0, 0.3);
         }
-
+/* 
         .selection-slide .card-art-block {
             height: 300px;
-        }
+        } */
 
         .selection-slide .card-info-block {
             padding: 0.5rem;

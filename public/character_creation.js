@@ -458,9 +458,6 @@ function renderClassSelection() {
                     <div class="slider-track">
                         ${_classes.map(cls => `
                             <div class="selection-slide" data-id="${cls.id}" data-type="class">
-                                <div class="card-art-block">
-                                    <img src="assets/art/classes/${cls.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${cls.name}" class="card-art">
-                                </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${cls.name}</h3>
                                     <p class="card-description">${cls.description}</p>
