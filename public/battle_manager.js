@@ -1655,26 +1655,32 @@ async function renderBottomUI() {
     BattleState.characterAbilities = BattleState.characterAbilities || {};
 
     // === Load or reuse abilities for this character ===
-    let abilityObjs = [];
+    let abilityObjs = {};
     if (BattleState.characterAbilities[currentChar.id]) {
-        // ✅ Already cached
         abilityObjs = BattleState.characterAbilities[currentChar.id];
     } else {
-        // First time → build ability list from battle state
-        let abilityNames = [];
-        if (BattleState.battleState?.player_abilities?.[currentChar.id]) {
-            abilityNames = Object.keys(
-                BattleState.battleState.player_abilities[currentChar.id]
-            ).slice(0, 3);
+        abilityObjs = { basic: [], passive: null, ultimate: null };
+
+        const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
+
+        // load basics
+        for (const abilityName of Object.keys(charAbilities.basic || {})) {
+            const ability = await getAbility(abilityName);
+            if (ability) abilityObjs.basic.push(ability);
         }
 
-        abilityObjs = [];
-        for (const abilityName of abilityNames) {
-            const ability = await getAbility(abilityName); // uses local cache per name
-            if (ability) abilityObjs.push(ability);
+        // load passive (only one)
+        const passiveNames = Object.keys(charAbilities.passive || {});
+        if (passiveNames[0]) {
+            abilityObjs.passive = await getAbility(passiveNames[0]);
         }
 
-        // Store in cache
+        // load ultimate (only one)
+        const ultimateNames = Object.keys(charAbilities.ultimate || {});
+        if (ultimateNames[0]) {
+            abilityObjs.ultimate = await getAbility(ultimateNames[0]);
+        }
+
         BattleState.characterAbilities[currentChar.id] = abilityObjs;
     }
 
@@ -1688,16 +1694,25 @@ async function renderBottomUI() {
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
 
-            if (btnIndex < abilityObjs.length) {
-                const ability = abilityObjs[btnIndex];
-                if (ability?.sprite) {
+            let ability = null;
+
+            if (btnIndex < 3) {
+                ability = abilityObjs.basic[btnIndex] || null;
+            } else if (btnIndex === 3) {
+                ability = abilityObjs.ultimate;
+            } else if (btnIndex === 6) {
+                ability = abilityObjs.passive;
+            }
+
+            if (ability) {
+                if (ability.sprite) {
                     btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:32px;height:32px;'>`;
                     btn.title = ability.name;
                 } else {
-                    btn.textContent = ability?.name || 'Unknown';
+                    btn.textContent = ability.name || 'Unknown';
                 }
-            
-                btn.dataset.abilityName = ability.name; // 🔥 important
+
+                btn.dataset.abilityName = ability.name;
                 btn.disabled = false;
                 btn.addEventListener('click', debounce(() => {
                     const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
@@ -1707,8 +1722,6 @@ async function renderBottomUI() {
                 btn.textContent = 'Refresh';
                 btn.id = 'refreshButtonBottom';
                 btn.disabled = false;
-
-            // Consumable
             } else if (btnIndex === 5) {
                 const consumable = currentChar?.equipped_items?.equipped_consumable;
                 if (consumable && consumable !== 'none') {
@@ -1722,14 +1735,10 @@ async function renderBottomUI() {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
                 }
-
-            // End Turn
             } else if (btnIndex === 9) {
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
-
-            // Filler
             } else {
                 btn.textContent = `Btn ${btnIndex + 1}`;
                 btn.disabled = true;
@@ -1749,7 +1758,6 @@ async function renderBottomUI() {
     const refreshBtnBottom = document.getElementById('refreshButtonBottom');
     if (refreshBtnBottom) refreshBtnBottom.addEventListener('click', debounce(handleRefresh, 300));
 }
-
 
 const handleAbilityUse = async (abilityPayload) => {
     const activeCharacter = BattleState.currentTurnCharacter;
