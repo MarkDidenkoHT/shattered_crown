@@ -1126,13 +1126,12 @@ function renderBattleScreen(mode, level, layoutData) {
                     <div style="width: 25%; display: flex; align-items: center; justify-content: center;">
                         <img id="infoPortrait" src="assets/art/sprites/placeholder.png" style="max-width: 80px; max-height: 80px; object-fit: contain;" />
                     </div>
-                    <div class="info-text" style="width: 35%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center;">
+                    <div class="info-text" style="width: 25%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center;">
                         <h3 id="infoName" style="font-size: 14px;">—</h3>
                         <div id="infoHP" style="font-size: 12px;"></div>
                         <div id="infoStats" style="font-size: 12px;"></div>
                     </div>
-                    <div id="statusEffects" style="width: 40%; padding-left: 8px; display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto;">
-                        <div style="font-size: 11px; font-weight: bold; color: #B8860B; margin-bottom: 4px;">Status Effects</div>
+                    <div id="statusEffects" style="width: 25%; padding-left: 8px; display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto;">
                         <div id="buffsContainer" style="margin-bottom: 6px;">
                             <div style="font-size: 12px; color: #4CAF50; margin-bottom: 2px;">Buffs:</div>
                             <div id="buffsList" style="font-size: 9px; color: #90EE90;"></div>
@@ -1141,15 +1140,15 @@ function renderBattleScreen(mode, level, layoutData) {
                             <div style="font-size: 12px; color: #F44336; margin-bottom: 2px;">Debuffs:</div>
                             <div id="debuffsList" style="font-size: 9px; color: #FFB6C1;"></div>
                         </div>
-                            <div id="envContainer" style="margin-top: 6px;">
-                                <div style="font-size: 12px; color: #87CEEB; margin-bottom: 2px;">Environment:</div>
-                                <div id="envList" style="font-size: 9px; color: #ADD8E6;"></div>
-                            </div>
                     </div>
+                        <div id="envContainer" style="width: 25%; padding-left: 8px; display: flex; flex-direction: column; justify-content: center;">
+                            <div style="font-size: 12px; color: #87CEEB; margin-bottom: 2px;">Environment:</div>
+                            <div id="envList" style="font-size: 9px; color: #ADD8E6;"></div>
+                        </div>
                 </div>
             </div>
             <div class="tooltip-container"></div>
-            <div class="battle-bottom-ui" style="display: block; width: 97vw; margin: auto; position: fixed; bottom: 4px;"></div>
+            <div class="battle-bottom-ui" style="display: block; width: 100%; margin: auto; position: fixed; bottom: 4px;"></div>
         </div>
     `;
 
@@ -1706,7 +1705,7 @@ async function renderBottomUI() {
 
             if (ability) {
                 if (ability.sprite) {
-                    btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:32px;height:32px;'>`;
+                    btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:100%;height:100%;'>`;
                     btn.title = ability.name;
                 } else {
                     btn.textContent = ability.name || 'Unknown';
