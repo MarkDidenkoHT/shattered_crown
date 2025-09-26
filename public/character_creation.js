@@ -26,6 +26,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 
     await initializeCharacterData();
     _main.innerHTML = `<div class="main-app-container"><div class="particles"></div><div class="character-creation-section"></div></div>`;
+    addStyles();
     createParticles();
     await startCharacterCreationFlow();
 }
@@ -57,27 +58,23 @@ function renderNameSelection() {
     const section = _main.querySelector('.character-creation-section');
     const currentCharacterNumber = _existingCharacterCount + 1;
     section.innerHTML = `
-        <div class="art-header">
+        <div class="header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name Your Champion</h1>
         </div>
-        <div class="name-selection-block">
-            <label for="character-name-input">Enter a name for your champion:</label>
-            <input type="text" id="character-name-input" maxlength="24" placeholder="Champion Name" class="fantasy-input" value="${_characterName}">
-            <div class="name-error-message" style="color: red; display: none;"></div>
-            <button class="fantasy-button name-confirm-btn">Confirm Name</button>
+        <div class="content">
+            <label>Enter a name for your champion:</label>
+            <input type="text" id="character-name-input" maxlength="24" placeholder="Champion Name" value="${_characterName}">
+            <div class="error-message" style="display: none;"></div>
+            <button class="btn confirm-btn">Confirm Name</button>
         </div>
     `;
+    
     const input = section.querySelector('#character-name-input');
-    const errorMsg = section.querySelector('.name-error-message');
-    section.querySelector('.name-confirm-btn').addEventListener('click', () => {
+    const errorMsg = section.querySelector('.error-message');
+    section.querySelector('.confirm-btn').addEventListener('click', () => {
         const name = input.value.trim();
-        if (!name) {
-            errorMsg.textContent = 'Please enter a name.';
-            errorMsg.style.display = 'block';
-            return;
-        }
-        if (name.length < 2) {
-            errorMsg.textContent = 'Name must be at least 2 characters.';
+        if (!name || name.length < 2) {
+            errorMsg.textContent = name ? 'Name must be at least 2 characters.' : 'Please enter a name.';
             errorMsg.style.display = 'block';
             return;
         }
@@ -89,23 +86,15 @@ function renderNameSelection() {
 
 async function fetchRacesAndRenderSelection() {
     try {
-        if (!_godId || _godId === null || _godId === 'null') {
-            window.gameAuth.loadModule('god_selection');
-            return;
-        }
-
         const response = await fetch(`/api/races/${_godId}`);
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to fetch races');
-        }
-
+        if (!response.ok) throw new Error('Failed to fetch races');
+        
         _races = await response.json();
         if (_races.length === 0) {
             displayMessage('No races available for your chosen deity. Please contact support.');
             return;
         }
-
+        
         await fetchAllClassesForRaces();
         renderRaceSelection();
     } catch (error) {
@@ -123,9 +112,7 @@ async function fetchAllClassesForRaces() {
             race.available_classes = allClasses.filter(cls => cls.race_id === race.id);
         });
     } catch (error) {
-        _races.forEach(race => {
-            race.available_classes = [];
-        });
+        _races.forEach(race => { race.available_classes = []; });
     }
 }
 
@@ -134,310 +121,30 @@ function renderRaceSelection() {
     const currentCharacterNumber = _existingCharacterCount + 1;
     
     section.innerHTML = `
-        <div class="art-header">
+        <div class="header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Race</h1>
         </div>
-        <div class="selection-section">
-            <div class="selection-slider">
-                <div class="slider-container">
-                    <div class="slider-track">
-                        ${_races.map(race => `
-                            <div class="selection-slide" data-id="${race.id}" data-type="race">
-                                <div class="card-art-block">
-                                    <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${race.name}" class="card-art">
-                                </div>
-                                <div class="card-info-block">
-                                    <h3 class="card-name">${race.name}</h3>
-                                    <p class="card-description">${race.description}</p>
-                                    
-                                    ${race.available_classes && race.available_classes.length > 0 ? `
-                                        <div class="available-classes-block">
-                                            <h4>Available Classes:</h4>
-                                            <div class="class-list">
-                                                ${race.available_classes.map(cls => `
-                                                    <span class="class-tag" data-class-id="${cls.id}" title="${cls.description}">${cls.name}</span>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    <div class="stats-block">
-                                        <h4>Base Stats:</h4>
-                                        ${Object.entries(race.base_stats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
-                                    </div>
-                                    <button class="fantasy-button select-btn" data-id="${race.id}" data-type="race">Select ${race.name}</button>
-                                </div>
-                            </div>
-                        `).join('')}
+        <div class="slider">
+            <div class="slider-track">
+                ${_races.map(race => `
+                    <div class="slide">
+                        <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${race.name}">
+                        <h3>${race.name}</h3>
+                        <p>${race.description}</p>
+                        <div class="stats">
+                            <h4>Base Stats:</h4>
+                            ${Object.entries(race.base_stats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
+                        </div>
+                        <button class="btn" onclick="handleRaceSelection(${race.id})">Select ${race.name}</button>
                     </div>
-                </div>
-                
-                <div class="slider-dots">
-                    ${_races.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
-                </div>
+                `).join('')}
+            </div>
+            <div class="dots">
+                ${_races.map((_, i) => `<button class="dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></button>`).join('')}
             </div>
         </div>
     `;
-
-    initializeSelectionSlider();
-    section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const raceId = parseInt(e.target.dataset.id);
-            handleRaceSelection(raceId);
-        });
-    });
-
-    section.querySelectorAll('.class-tag').forEach(tag => {
-        tag.addEventListener('click', (e) => {
-            const classId = parseInt(e.target.dataset.classId);
-            const race = _races.find(r => r.available_classes.some(c => c.id === classId));
-            const classInfo = race?.available_classes.find(c => c.id === classId);
-            
-            if (classInfo) showClassDescription(classInfo);
-        });
-    });
-}
-
-function loadClassSelectionBackgrounds() {
-    const slides = _main.querySelectorAll('.selection-slide[data-type="class"]');
-    
-    slides.forEach(slide => {
-        const classId = parseInt(slide.dataset.id);
-        const selectedClass = _classes.find(c => c.id === classId);
-        if (!selectedClass) return;
-        
-        const className = selectedClass.name.toLowerCase().replace(/\s+/g, '_');
-        const backgroundImagePath = `assets/art/classes/backgrounds/${className}_bg.png`;
-        
-        // Create and test the image
-        const testImage = new Image();
-        testImage.onload = function() {
-            // Image exists, apply it with overlay for readability
-            slide.style.backgroundImage = `
-                linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)),
-                url('${backgroundImagePath}')
-            `;
-            slide.style.backgroundSize = 'cover';
-            slide.style.backgroundPosition = 'center';
-            slide.style.backgroundRepeat = 'no-repeat';
-            
-            // Apply class-specific border
-            applyClassBorderToSlide(slide, className);
-        };
-        
-        testImage.onerror = function() {
-            // Image doesn't exist, keep default background and apply border
-            console.log(`Class background image not found: ${backgroundImagePath}`);
-            applyClassBorderToSlide(slide, className);
-        };
-        
-        testImage.src = backgroundImagePath;
-    });
-}
-
-function applyClassBorderToSlide(slide, className) {
-    const borderColors = {
-        'paladin': 'rgba(255, 255, 200, 0.8)',
-        'warrior': 'rgba(200, 0, 0, 0.8)',
-        'priest': 'rgba(255, 255, 255, 0.8)'
-    };
-    
-    const borderColor = borderColors[className] || 'rgba(196, 151, 90, 0.8)';
-    slide.style.border = `3px solid ${borderColor}`;
-    slide.style.borderRadius = '12px';
-}
-
-function showClassDescription(classInfo) {
-    const modal = document.createElement('div');
-    modal.className = 'class-description-modal';
-    modal.innerHTML = `
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>${classInfo.name}</h3>
-                <button class="modal-close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="class-description">${classInfo.description}</p>
-                
-                ${classInfo.stat_bonuses ? `
-                    <div class="stats-block">
-                        <h4>Stat Bonuses:</h4>
-                        ${Object.entries(classInfo.stat_bonuses).map(([stat, value]) => `<p>${stat}: <span>+${value}</span></p>`).join('')}
-                    </div>
-                ` : ''}
-                
-                ${classInfo.starting_abilities && classInfo.starting_abilities.length > 0 ? `
-                    <div class="abilities-block">
-                        <h4>Starting Abilities:</h4>
-                        <ul>${classInfo.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
-                    </div>
-                ` : ''}
-            </div>
-            <div class="modal-footer">
-                <button class="fantasy-button modal-ok-btn">OK</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    const closeModal = () => modal.remove();
-    modal.querySelector('.modal-close-btn').addEventListener('click', closeModal);
-    modal.querySelector('.modal-ok-btn').addEventListener('click', closeModal);
-    modal.querySelector('.modal-overlay').addEventListener('click', closeModal);
-}
-
-function initializeSelectionSlider() {
-    const sliderTrack = _main.querySelector('.slider-track');
-    const dots = _main.querySelectorAll('.slider-dot');
-    
-    if (!sliderTrack || !dots.length) return;
-    
-    let currentSlide = 0;
-    const totalSlides = dots.length;
-    
-    function updateSlider() {
-        const translateX = -currentSlide * 100;
-        sliderTrack.style.transform = `translateX(${translateX}%)`;
-        dots.forEach((dot, index) => {
-            dot.classList.toggle('active', index === currentSlide);
-        });
-    }
-    
-    function nextSlide() {
-        currentSlide = (currentSlide + 1) % totalSlides;
-        updateSlider();
-    }
-    
-    function prevSlide() {
-        currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
-        updateSlider();
-    }
-    
-    dots.forEach((dot, index) => {
-        dot.addEventListener('click', () => {
-            currentSlide = index;
-            updateSlider();
-        });
-    });
-    
-    let startX = 0, currentX = 0, isDragging = false, startTime = 0;
-    
-    sliderTrack.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        currentX = startX;
-        isDragging = true;
-        startTime = Date.now();
-        sliderTrack.style.transition = 'none';
-    }, { passive: true });
-    
-    sliderTrack.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        currentX = e.touches[0].clientX;
-        const diffX = currentX - startX;
-        const currentTranslate = -currentSlide * 100;
-        const newTranslate = currentTranslate + (diffX / sliderTrack.offsetWidth) * 100;
-        sliderTrack.style.transform = `translateX(${newTranslate}%)`;
-        e.preventDefault();
-    }, { passive: false });
-    
-    sliderTrack.addEventListener('touchend', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-        const endX = e.changedTouches[0].clientX;
-        const diffX = startX - endX;
-        const diffTime = Date.now() - startTime;
-        const velocity = Math.abs(diffX) / diffTime;
-        
-        sliderTrack.style.transition = 'transform 0.3s ease-out';
-        const threshold = 50;
-        const velocityThreshold = 0.3;
-        
-        if (Math.abs(diffX) > threshold || velocity > velocityThreshold) {
-            if (diffX > 0) nextSlide();
-            else prevSlide();
-        } else {
-            updateSlider();
-        }
-    });
-
-    let isMouseDown = false;
-    
-    sliderTrack.addEventListener('mousedown', (e) => {
-        startX = e.clientX;
-        currentX = startX;
-        isMouseDown = true;
-        startTime = Date.now();
-        sliderTrack.style.transition = 'none';
-        e.preventDefault();
-    });
-    
-    sliderTrack.addEventListener('mousemove', (e) => {
-        if (!isMouseDown) return;
-        currentX = e.clientX;
-        const diffX = currentX - startX;
-        const currentTranslate = -currentSlide * 100;
-        const newTranslate = currentTranslate + (diffX / sliderTrack.offsetWidth) * 100;
-        sliderTrack.style.transform = `translateX(${newTranslate}%)`;
-        e.preventDefault();
-    });
-    
-    sliderTrack.addEventListener('mouseup', (e) => {
-        if (!isMouseDown) return;
-        isMouseDown = false;
-        const endX = e.clientX;
-        const diffX = startX - endX;
-        const diffTime = Date.now() - startTime;
-        const velocity = Math.abs(diffX) / diffTime;
-        
-        sliderTrack.style.transition = 'transform 0.3s ease-out';
-        const threshold = 50;
-        const velocityThreshold = 0.3;
-        
-        if (Math.abs(diffX) > threshold || velocity > velocityThreshold) {
-            if (diffX > 0) nextSlide();
-            else prevSlide();
-        } else {
-            updateSlider();
-        }
-    });
-    
-    sliderTrack.addEventListener('mouseleave', () => {
-        if (isMouseDown) {
-            isMouseDown = false;
-            sliderTrack.style.transition = 'transform 0.3s ease-out';
-            updateSlider();
-        }
-    });
-}
-
-async function handleRaceSelection(raceId) {
-    _selectedRace = _races.find(r => r.id === raceId);
-    if (!_selectedRace) {
-        displayMessage('Selected race not found. Please try again.');
-        return;
-    }
-
-    fetchClassesAndRenderSelection();
-}
-
-async function fetchClassesAndRenderSelection() {
-    try {
-        const response = await _apiCall(`/api/supabase/rest/v1/classes?race_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
-        _classes = await response.json();
-
-        if (_classes.length === 0) {
-            displayMessage('No classes available for this race. Please select another race.');
-            _selectedRace = null;
-            renderRaceSelection();
-            return;
-        }
-        renderClassSelection();
-    } catch (error) {
-        displayMessage('Failed to load classes. Please try again.');
-        _selectedRace = null;
-        renderRaceSelection();
-    }
+    initializeSlider();
 }
 
 function renderClassSelection() {
@@ -445,161 +152,54 @@ function renderClassSelection() {
     const currentCharacterNumber = _existingCharacterCount + 1;
     
     section.innerHTML = `
-        <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Your Class</h1>
+        <div class="header">
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Class</h1>
+            <div class="summary">Selected Race: ${_selectedRace.name}</div>
         </div>
-        <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name}</h3>
-            <p>${_selectedRace.description}</p>
-        </div>
-        <div class="selection-section">
-            <div class="selection-slider">
-                <div class="slider-container">
-                    <div class="slider-track">
-                        ${_classes.map(cls => `
-                            <div class="selection-slide" data-id="${cls.id}" data-type="class">
-                                <div class="card-info-block">
-                                    <h3 class="card-name">${cls.name}</h3>
-                                    <p class="card-description">${cls.description}</p>
-                                    <div class="stats-block">
-                                        <h4>Stat Bonuses:</h4>
-                                        ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `<p>${stat}: <span>+${value}</span></p>`).join('')}
-                                    </div>
-                                    <div class="abilities-block">
-                                        <h4>Starting Abilities:</h4>
-                                        <ul>${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
-                                    </div>
-                                    <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
-                                </div>
-                            </div>
-                        `).join('')}
+        <div class="slider">
+            <div class="slider-track">
+                ${_classes.map(cls => `
+                    <div class="slide">
+                        <h3>${cls.name}</h3>
+                        <p>${cls.description}</p>
+                        <div class="stats">
+                            <h4>Stat Bonuses:</h4>
+                            ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `<p>${stat}: <span>+${value}</span></p>`).join('')}
+                        </div>
+                        <button class="btn" onclick="handleClassSelection(${cls.id})">Select ${cls.name}</button>
                     </div>
-                </div>
-                
-                <div class="slider-dots">
-                    ${_classes.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
-                </div>
+                `).join('')}
+            </div>
+            <div class="dots">
+                ${_classes.map((_, i) => `<button class="dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></button>`).join('')}
             </div>
         </div>
-        <div class="top-right-buttons">
-            <button class="fantasy-button return-btn">Return</button>
-        </div>
+        <button class="btn return-btn" onclick="renderRaceSelection()">Return</button>
     `;
-
-    initializeSelectionSlider();
-
-    setTimeout(() => {
-        loadClassSelectionBackgrounds();
-    }, 100);
-
-    section.querySelectorAll('.select-btn[data-type="class"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const classId = parseInt(e.target.dataset.id);
-            handleClassSelection(classId);
-        });
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', () => {
-        _selectedClass = null;
-        renderRaceSelection();
-    });
+    initializeSlider();
 }
 
-function handleClassSelection(classId) {
-    _selectedClass = _classes.find(c => c.id === classId);
-    if (!_selectedClass) {
-        displayMessage('Selected class not found. Please try again.');
-        return;
-    }
-    renderPortraitSelection();
-}
-
-async function renderPortraitSelection() {
+function renderPortraitSelection() {
     const section = _main.querySelector('.character-creation-section');
     const currentCharacterNumber = _existingCharacterCount + 1;
     const className = _selectedClass.name.toLowerCase().replace(/\s+/g, '_');
-    
-    const portraits = [
-        `${className}_portrait_1`,
-        `${className}_portrait_2`,
-        `${className}_portrait_3`,
-        `${className}_portrait_4`
-    ];
+    const portraits = [`${className}_portrait_1`, `${className}_portrait_2`, `${className}_portrait_3`, `${className}_portrait_4`];
     
     section.innerHTML = `
-        <div class="art-header">
+        <div class="header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Portrait</h1>
+            <div class="summary">Race: ${_selectedRace.name} | Class: ${_selectedClass.name}</div>
         </div>
-        <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name}</h3>
-            <p><strong>Class:</strong> ${_selectedClass.name}</p>
-            <p>${_selectedClass.description}</p>
-        </div>
-        <div class="selection-section">
-            <div class="selection-slider">
-                <div class="slider-container">
-                    <div class="slider-track">
-                        ${portraits.map(portrait => `
-                            <div class="selection-slide" data-portrait="${portrait}">
-                                <div class="card-art-block">
-                                    <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${portrait}.png" 
-                                         alt="${portrait}" 
-                                         class="card-art portrait-art">
-                                </div>
-                                <div class="card-info-block">
-                                    <h3 class="card-name">Portrait ${portrait.slice(-1)}</h3>
-                                    <button class="fantasy-button select-btn" data-portrait="${portrait}" data-type="portrait">Select This Portrait</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
+        <div class="grid">
+            ${portraits.map(portrait => `
+                <div class="grid-item" onclick="handlePortraitSelection('${portrait}')">
+                    <img src="assets/art/classes/portraits/${className}/${portrait}.png" alt="${portrait}">
+                    <div>Portrait ${portrait.slice(-1)}</div>
                 </div>
-                
-                <div class="slider-dots">
-                    ${portraits.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
-                </div>
-            </div>
+            `).join('')}
         </div>
-        <div class="top-right-buttons">
-            <button class="fantasy-button return-btn">Return</button>
-        </div>
+        <button class="btn return-btn" onclick="renderClassSelection()">Return</button>
     `;
-
-    initializeSelectionSlider();
-
-    section.querySelectorAll('.select-btn[data-type="portrait"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const portrait = e.target.dataset.portrait;
-            handlePortraitSelection(portrait);
-        });
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', () => {
-        _selectedPortrait = null;
-        renderClassSelection();
-    });
-}
-
-function handlePortraitSelection(portrait) {
-    _selectedPortrait = portrait;
-    fetchProfessionsAndRenderSelection();
-}
-
-async function fetchProfessionsAndRenderSelection() {
-    try {
-        const response = await _apiCall(`/api/supabase/rest/v1/professions?select=id,name,description`);
-        _professions = await response.json();
-
-        if (_professions.length === 0) {
-            displayMessage('No professions available. Please contact support.');
-            renderPortraitSelection();
-            return;
-        }
-        renderProfessionSelection();
-    } catch (error) {
-        displayMessage('Failed to load professions. Please try again.');
-        renderPortraitSelection();
-    }
 }
 
 function renderProfessionSelection() {
@@ -609,95 +209,31 @@ function renderProfessionSelection() {
     
     if (availableProfessions.length === 0) {
         section.innerHTML = `
-            <div class="art-header">
-                <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
+            <div class="header">
+                <h1>No Available Professions</h1>
+                <p>All professions have been selected by other characters.</p>
             </div>
-            <div class="selected-race-summary">
-                <h3>Selected Race: ${_selectedRace.name}</h3>
-                <p><strong>Class:</strong> ${_selectedClass.name}</p>
-                <p>${_selectedClass.description}</p>
-            </div>
-            <div class="no-professions-message">
-                <h3>No Available Professions</h3>
-                <p>All professions have already been selected by your other characters. Each character must have a unique profession.</p>
-            </div>
-            <div class="top-right-buttons">
-                <button class="fantasy-button return-btn">Return</button>
-            </div>
+            <button class="btn" onclick="renderPortraitSelection()">Return</button>
         `;
-        
-        section.querySelector('.return-btn').addEventListener('click', () => {
-            _selectedProfession = null;
-            renderPortraitSelection();
-        });
         return;
     }
 
     section.innerHTML = `
-        <div class="art-header">
+        <div class="header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
-            ${_usedProfessionIds.length > 0 ? `
-                <div class="profession-note">
-                    <p><em>Note: ${_usedProfessionIds.length} profession(s) already selected by other characters</em></p>
+            <div class="summary">Race: ${_selectedRace.name} | Class: ${_selectedClass.name}</div>
+        </div>
+        <div class="grid">
+            ${availableProfessions.map(profession => `
+                <div class="grid-item" onclick="handleProfessionSelection(${profession.id})">
+                    <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${profession.name}">
+                    <h4>${profession.name}</h4>
+                    <p>${profession.description}</p>
                 </div>
-            ` : ''}
+            `).join('')}
         </div>
-        <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name}</h3>
-            <p><strong>Class:</strong> ${_selectedClass.name}</p>
-            <p>${_selectedClass.description}</p>
-        </div>
-        <div class="selection-section">
-            <div class="selection-slider">
-                <div class="slider-container">
-                    <div class="slider-track">
-                        ${availableProfessions.map(profession => `
-                            <div class="selection-slide" data-id="${profession.id}" data-type="profession">
-                                <div class="card-art-block">
-                                    <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${profession.name}" class="card-art">
-                                </div>
-                                <div class="card-info-block">
-                                    <h3 class="card-name">${profession.name}</h3>
-                                    <p class="card-description">${profession.description}</p>
-                                    <button class="fantasy-button select-btn" data-id="${profession.id}" data-type="profession">Select ${profession.name}</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <div class="slider-dots">
-                    ${availableProfessions.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
-                </div>
-            </div>
-        </div>
-        <div class="top-right-buttons">
-            <button class="fantasy-button return-btn">Return</button>
-        </div>
+        <button class="btn return-btn" onclick="renderPortraitSelection()">Return</button>
     `;
-
-    initializeSelectionSlider();
-
-    section.querySelectorAll('.select-btn[data-type="profession"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const professionId = parseInt(e.target.dataset.id);
-            handleProfessionSelection(professionId);
-        });
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', () => {
-        _selectedProfession = null;
-        renderPortraitSelection();
-    });
-}
-
-function handleProfessionSelection(professionId) {
-    _selectedProfession = _professions.find(p => p.id === professionId);
-    if (!_selectedProfession) {
-        displayMessage('Selected profession not found. Please try again.');
-        return;
-    }
-    renderCharacterSummary();
 }
 
 function renderCharacterSummary() {
@@ -706,110 +242,130 @@ function renderCharacterSummary() {
     const currentCharacterNumber = _existingCharacterCount + 1;
 
     section.innerHTML = `
-        <div class="art-header">
+        <div class="header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Summary</h1>
         </div>
         <div class="summary-card">
-            <div class="summary-art-block">
-                <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${_selectedPortrait}.png" 
-                    alt="${_selectedRace.name} ${_selectedClass.name}" 
-                    class="summary-art">
-            </div>
-            <div class="summary-info-block">
-                <h2>${_selectedRace.name} ${_selectedClass.name}</h2>
-                <p><strong>Race Description:</strong> ${_selectedRace.description}</p>
-                <p><strong>Class Description:</strong> ${_selectedClass.description}</p>
-                <p><strong>Profession:</strong> ${_selectedProfession.name} - ${_selectedProfession.description}</p>
-                <div class="stats-block">
-                    <h4>Final Stats:</h4>
-                    ${Object.entries(finalStats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
-                </div>
-                <div class="abilities-block">
-                    <h4>Starting Abilities:</h4>
-                    <ul>${_selectedClass.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
-                </div>
+            <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${_selectedPortrait}.png" alt="Character">
+            <h2>${_characterName}</h2>
+            <p><strong>Race:</strong> ${_selectedRace.name}</p>
+            <p><strong>Class:</strong> ${_selectedClass.name}</p>
+            <p><strong>Profession:</strong> ${_selectedProfession.name}</p>
+            <div class="stats">
+                <h4>Final Stats:</h4>
+                ${Object.entries(finalStats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
             </div>
         </div>
-        <div class="confirm-return-buttons">
-            <button type="button" class="fantasy-button confirm-btn">Confirm Champion</button>
-            <button type="button" class="fantasy-button return-btn">Return</button>
+        <div class="buttons">
+            <button class="btn confirm-btn" onclick="confirmCharacter()">Confirm Champion</button>
+            <button class="btn" onclick="renderProfessionSelection()">Return</button>
         </div>
     `;
-
-    section.querySelector('.confirm-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        confirmCharacter();
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        renderProfessionSelection();
-    });
 }
 
-function calculateFinalStats(baseStats, statBonuses) {
-    const finalStats = { ...baseStats };
-    for (const stat in statBonuses) {
-        if (finalStats.hasOwnProperty(stat)) {
-            finalStats[stat] += statBonuses[stat];
-        } else {
-            finalStats[stat] = statBonuses[stat];
-        }
-    }
-    finalStats.Armor = 0;
-    finalStats.Resistance = 0;
-    return finalStats;
-}
+// Event Handlers
+window.handleRaceSelection = async (raceId) => {
+    _selectedRace = _races.find(r => r.id === raceId);
+    if (!_selectedRace) return;
+    
+    const response = await _apiCall(`/api/supabase/rest/v1/classes?race_id=eq.${_selectedRace.id}&select=id,name,description,stat_bonuses,starting_abilities`);
+    _classes = await response.json();
+    renderClassSelection();
+};
 
-async function confirmCharacter() {
+window.handleClassSelection = (classId) => {
+    _selectedClass = _classes.find(c => c.id === classId);
+    if (_selectedClass) renderPortraitSelection();
+};
+
+window.handlePortraitSelection = async (portrait) => {
+    _selectedPortrait = portrait;
+    const response = await _apiCall(`/api/supabase/rest/v1/professions?select=id,name,description`);
+    _professions = await response.json();
+    renderProfessionSelection();
+};
+
+window.handleProfessionSelection = (professionId) => {
+    _selectedProfession = _professions.find(p => p.id === professionId);
+    if (_selectedProfession) renderCharacterSummary();
+};
+
+window.confirmCharacter = async () => {
     try {
-        const characterCreationData = {
-            player_id: _profile.id,
-            race_id: _selectedRace.id,
-            class_id: _selectedClass.id,
-            portrait: _selectedPortrait,
-            profession_id: _selectedProfession.id,
-            name: _characterName
-        };
-
         const response = await _apiCall(`${window.gameAuth.supabaseConfig?.SUPABASE_URL}/functions/v1/create-character`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${window.gameAuth.supabaseConfig?.SUPABASE_ANON_KEY}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(characterCreationData)
+            body: JSON.stringify({
+                player_id: _profile.id,
+                race_id: _selectedRace.id,
+                class_id: _selectedClass.id,
+                portrait: _selectedPortrait,
+                profession_id: _selectedProfession.id,
+                name: _characterName
+            })
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                throw new Error(errorData.error || `Edge function call failed with status ${response.status}`);
-            } catch {
-                throw new Error(`Edge function call failed with status ${response.status}: ${errorText}`);
-            }
-        }
-
-        const result = await response.json();
+        if (!response.ok) throw new Error('Failed to create character');
         
+        const result = await response.json();
         if (result.success) {
             _usedProfessionIds.push(_selectedProfession.id);
             _existingCharacterCount++;
-            displayMessage(`Character ${_existingCharacterCount} (${result.character.race} ${result.character.class}) created! (${_existingCharacterCount}/${_maxCharacters})`);
-            
-            setTimeout(() => {
-                startCharacterCreationFlow();
-            }, 1000);
-        } else {
-            throw new Error(result.error || 'Unknown error occurred during character creation');
+            displayMessage(`${_characterName} created! (${_existingCharacterCount}/${_maxCharacters})`);
+            setTimeout(() => startCharacterCreationFlow(), 1500);
         }
-
     } catch (error) {
         displayMessage(`Failed to save character: ${error.message}`);
     }
+};
+
+// Utility Functions
+let currentSlide = 0;
+window.goToSlide = (index) => {
+    currentSlide = index;
+    document.querySelector('.slider-track').style.transform = `translateX(-${currentSlide * 100}%)`;
+    document.querySelectorAll('.dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+    });
+};
+
+function initializeSlider() {
+    const track = document.querySelector('.slider-track');
+    let startX = 0;
+    
+    track.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+    });
+    
+    track.addEventListener('touchend', (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+        if (Math.abs(diff) > 50) {
+            const totalSlides = document.querySelectorAll('.dot').length;
+            if (diff > 0 && currentSlide < totalSlides - 1) goToSlide(currentSlide + 1);
+            else if (diff < 0 && currentSlide > 0) goToSlide(currentSlide - 1);
+        }
+    });
+}
+
+function calculateFinalStats(baseStats, statBonuses) {
+    const finalStats = { ...baseStats };
+    for (const stat in statBonuses) {
+        finalStats[stat] = (finalStats[stat] || 0) + statBonuses[stat];
+    }
+    finalStats.Armor = 0;
+    finalStats.Resistance = 0;
+    return finalStats;
+}
+
+function displayMessage(message) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-content"><p>${message}</p><button class="btn" onclick="this.parentElement.parentElement.remove()">OK</button></div>`;
+    document.body.appendChild(modal);
 }
 
 function createParticles() {
@@ -817,8 +373,7 @@ function createParticles() {
     if (!particlesContainer) return;
 
     particlesContainer.innerHTML = '';
-    const particleCount = 20;
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < 15; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.left = Math.random() * 100 + '%';
@@ -829,18 +384,56 @@ function createParticles() {
     }
 }
 
-function displayMessage(message) {
-    const messageBox = document.createElement('div');
-    messageBox.className = 'custom-message-box';
-    messageBox.innerHTML = `
-        <div class="message-content">
-            <p>${message}</p>
-            <button class="fantasy-button message-ok-btn">OK</button>
-        </div>
+function addStyles() {
+    if (document.getElementById('char-creation-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'char-creation-styles';
+    style.textContent = `
+        .main-app-container { background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%); min-height: 100vh; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 2px solid rgba(196,151,90,0.3); }
+        .header h1 { color: #c4975a; margin: 0; font-size: 22px; }
+        .summary { color: #fff; margin-top: 10px; font-size: 14px; }
+        .content { background: rgba(0,0,0,0.4); padding: 30px 20px; border-radius: 15px; border: 2px solid rgba(196,151,90,0.3); }
+        .content label { color: #fff; font-size: 16px; display: block; margin-bottom: 15px; }
+        .content input { width: 100%; padding: 15px; font-size: 16px; border: 2px solid rgba(196,151,90,0.5); border-radius: 10px; background: rgba(0,0,0,0.3); color: #fff; box-sizing: border-box; }
+        .content input:focus { outline: none; border-color: #c4975a; }
+        .error-message { color: #ff6b6b; font-size: 14px; margin: 10px 0; }
+        .btn { background: linear-gradient(135deg, #c4975a 0%, #8b6914 100%); color: #fff; border: none; padding: 15px 30px; font-size: 16px; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 15px; font-weight: bold; }
+        .btn:active { transform: scale(0.95); }
+        .return-btn { background: rgba(196,151,90,0.8); position: fixed; top: 20px; right: 20px; width: auto; margin: 0; padding: 10px 15px; font-size: 14px; }
+        .slider { margin-bottom: 20px; }
+        .slider-track { display: flex; transition: transform 0.3s ease; }
+        .slide { min-width: 100%; padding: 20px; background: rgba(0,0,0,0.4); border-radius: 12px; margin: 0 10px; text-align: center; }
+        .slide img { width: 100px; height: 100px; border-radius: 8px; margin-bottom: 15px; }
+        .slide h3 { color: #c4975a; margin: 15px 0; }
+        .slide p { color: #fff; margin-bottom: 15px; }
+        .stats { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .stats h4 { color: #c4975a; margin: 0 0 10px 0; }
+        .stats p { color: #fff; margin: 5px 0; display: flex; justify-content: space-between; }
+        .stats span { color: #c4975a; font-weight: bold; }
+        .dots { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgba(196,151,90,0.5); background: transparent; cursor: pointer; }
+        .dot.active { background: #c4975a; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0; }
+        .grid-item { background: rgba(0,0,0,0.4); border: 2px solid rgba(196,151,90,0.5); border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; }
+        .grid-item:active { transform: scale(0.95); }
+        .grid-item.selected { border-color: #c4975a; background: rgba(196,151,90,0.2); }
+        .grid-item img { width: 80px; height: 80px; border-radius: 8px; margin-bottom: 10px; }
+        .grid-item h4 { color: #c4975a; margin: 10px 0 5px 0; font-size: 16px; }
+        .grid-item p { color: #fff; font-size: 12px; margin: 0; }
+        .grid-item div { color: #c4975a; font-weight: bold; }
+        .summary-card { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 2px solid rgba(196,151,90,0.3); text-align: center; margin-bottom: 20px; }
+        .summary-card img { width: 120px; height: 120px; border-radius: 10px; margin-bottom: 15px; }
+        .summary-card h2 { color: #c4975a; margin: 15px 0; }
+        .summary-card p { color: #fff; margin: 10px 0; }
+        .buttons { display: flex; gap: 15px; }
+        .buttons .btn { flex: 1; margin: 0; }
+        .confirm-btn { background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal-content { background: #1a1a2e; border: 2px solid #c4975a; border-radius: 15px; padding: 30px 20px; text-align: center; }
+        .modal-content p { color: #fff; margin: 0 0 20px 0; }
+        .modal-content .btn { width: auto; margin: 0; padding: 10px 30px; }
     `;
-    document.body.appendChild(messageBox);
-
-    messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
-        messageBox.remove();
-    });
+    document.head.appendChild(style);
 }
