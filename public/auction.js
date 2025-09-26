@@ -272,7 +272,11 @@ async function loadSellView(container) {
         if (itemsResponse.ok) {
             const allItems = await itemsResponse.json();
             console.log('[Auction] /api/auction/items response:', allItems);
-            _availableItems = allItems.filter(i => i.type === 'Ingredient' || i.type === 'Consumable');
+            // Updated to use lowercase matching
+            _availableItems = allItems.filter(i => 
+                i.type.toLowerCase() === 'ingredient' || 
+                i.type.toLowerCase() === 'consumable'
+            );
             console.log('[Auction] Filtered available items:', _availableItems);
         }
 
@@ -568,24 +572,40 @@ async function handleSellClick(itemId) {
     const item = _bankItems.find(i => i.id == itemId);
     if (!item) return;
 
+    // Determine table name based on item properties
+    const tableName = item.isGear ? 'craft_sessions' : 'bank';
+    const isGearItem = item.isGear;
+
     try {
         const response = await fetch('/api/auction/items');
         if (!response.ok) throw new Error('Failed to load items');
         
         const allItems = await response.json();
-        _availableItems = allItems.filter(i => i.type === 'Ingredient' || i.type === 'Consumable');
+        _availableItems = allItems.filter(i => i.type === 'ingredient' || i.type === 'consumable');
 
         document.getElementById('sell-item-icon').src = item.spritePath;
         document.getElementById('sell-item-name').textContent = item.item;
-        document.getElementById('sell-item-available').textContent = item.amount;
+        document.getElementById('sell-item-available').textContent = isGearItem ? '1' : item.amount;
 
         const sellAmountInput = document.getElementById('sell-amount');
-        sellAmountInput.max = item.amount;
-        sellAmountInput.value = Math.min(1, item.amount);
+        if (isGearItem) {
+            // Crafted items can only be sold as 1
+            sellAmountInput.max = 1;
+            sellAmountInput.value = 1;
+            sellAmountInput.disabled = true;
+        } else {
+            sellAmountInput.max = item.amount;
+            sellAmountInput.value = Math.min(1, item.amount);
+            sellAmountInput.disabled = false;
+        }
 
         renderWantedItemPicker(_availableItems);
 
-        document.querySelector('.confirm-sell').dataset.itemId = itemId;
+        // Store both itemId and tableName in the confirm button
+        const confirmBtn = document.querySelector('.confirm-sell');
+        confirmBtn.dataset.itemId = itemId;
+        confirmBtn.dataset.tableName = tableName;
+        
         document.getElementById('sell-modal').style.display = 'block';
         
         const filterEl = document.getElementById('wanted-filter');
@@ -604,10 +624,16 @@ function renderWantedItemPicker(items) {
     const filterValue = document.getElementById('wanted-filter').value;
     const searchQuery = document.getElementById('wanted-search').value.toLowerCase();
 
-    const filtered = items.filter(item =>
-        (filterValue === 'all' || item.type === filterValue) &&
-        (!searchQuery || item.name.toLowerCase().includes(searchQuery))
-    );
+    const filtered = items.filter(item => {
+        // Match against the type field from the updated items endpoint
+        const typeMatch = filterValue === 'all' || 
+                         item.type.toLowerCase() === filterValue.toLowerCase();
+        
+        const searchMatch = !searchQuery || 
+                           item.name.toLowerCase().includes(searchQuery);
+        
+        return typeMatch && searchMatch;
+    });
 
     container.innerHTML = filtered.map(item => `
         <div class="wanted-card" data-name="${item.name}">
@@ -635,13 +661,8 @@ async function handleConfirmSell() {
     const itemId = document.querySelector('.confirm-sell').dataset.itemId;
     const tableName = document.querySelector('.confirm-sell').dataset.tableName;
 
-    // Find item based on table name
-    let item;
-    if (tableName === 'bank') {
-        item = _bankItems.find(i => i.id == itemId);
-    } else if (tableName === 'craft_sessions') {
-        item = _craftItems.find(i => i.id == itemId);
-    }
+    // Find item from _bankItems (which now includes both bank items and craft items)
+    const item = _bankItems.find(i => i.id == itemId);
 
     if (!item) {
         displayMessage('Item not found.');
@@ -680,7 +701,7 @@ async function handleConfirmSell() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 seller_id: _profile.id,
-                item_selling: tableName === 'craft_sessions' ? item.result : item.item,
+                item_selling: tableName === 'craft_sessions' ? item.item : item.item, // Both use item.item now
                 amount_selling: sellAmount,
                 item_wanted: wantedItem,
                 amount_wanted: wantedAmount,
