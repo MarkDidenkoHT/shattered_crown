@@ -76,10 +76,18 @@ async function playMainTheme() {
   } catch (error) {
     // Handle autoplay restrictions
     if (error.name === 'NotAllowedError') {
-      console.log('[AUDIO] Autoplay blocked by browser policy');
-      // We'll try to play on first user interaction
-      document.addEventListener('click', handleFirstUserInteraction, { once: true });
-      document.addEventListener('touchstart', handleFirstUserInteraction, { once: true });
+      console.log('[AUDIO] Autoplay blocked, waiting for user interaction');
+      // Set up listeners for any user interaction
+      const startAudioOnInteraction = () => {
+        playMainTheme();
+        document.removeEventListener('click', startAudioOnInteraction);
+        document.removeEventListener('touchstart', startAudioOnInteraction);
+        document.removeEventListener('keydown', startAudioOnInteraction);
+      };
+      
+      document.addEventListener('click', startAudioOnInteraction);
+      document.addEventListener('touchstart', startAudioOnInteraction);
+      document.addEventListener('keydown', startAudioOnInteraction);
     } else {
       console.error('[AUDIO] Error playing main theme:', error);
     }
