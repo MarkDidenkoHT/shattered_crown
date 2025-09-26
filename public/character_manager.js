@@ -54,9 +54,6 @@ function renderCharacters(characters) {
   }
 
   section.innerHTML = `
-    <div class="art-header">
-      <h1>Your Champions</h1>
-    </div>
     <div class="characters-slider-container">
       <div class="characters-slider" id="charactersSlider">
         ${characters.map(character => characterCardHTML(character)).join('')}
