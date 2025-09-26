@@ -354,34 +354,37 @@ app.get('/api/auction/bank/:playerId', async (req, res) => {
 // Get all unique items from recipes and ingredients for trade selection
 app.get('/api/auction/items', async (req, res) => {
   try {
-    // Get unique items from both tables
+    // Get unique items from both tables with their IDs
     const [recipesResponse, ingredientsResponse] = await Promise.all([
-      fetch(`${process.env.SUPABASE_URL}/rest/v1/recipes?select=name,sprite,type`, {
+      fetch(`${process.env.SUPABASE_URL}/rest/v1/recipes?select=id,name,sprite,type`, {
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
         }
       }),
-      fetch(`${process.env.SUPABASE_URL}/rest/v1/ingridients?select=name,sprite`, {
+      fetch(`${process.env.SUPABASE_URL}/rest/v1/ingridients?select=id,name,sprite`, {
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
         }
       })
     ]);
-
+    
     const [recipes, ingredients] = await Promise.all([
       recipesResponse.json(),
       ingredientsResponse.json()
     ]);
 
-    // Combine and deduplicate items
+    // Combine items with table information
     const itemMap = new Map();
-
-    // Add ingredients
+    
+    // Add ingredients with table info
     ingredients.forEach(item => {
-      if (item.name) {
-        itemMap.set(item.name, {
+      if (item.name && item.id) {
+        const key = `ingredient_${item.name}`; // Use table prefix to avoid conflicts
+        itemMap.set(key, {
+          id: item.id,
+          tableName: 'ingridients',
           name: item.name,
           sprite: item.sprite,
           spritePath: item.sprite
@@ -391,11 +394,14 @@ app.get('/api/auction/items', async (req, res) => {
         });
       }
     });
-
-    // Add recipes (may override ingredients if same name)
+    
+    // Add recipes with table info
     recipes.forEach(item => {
-      if (item.name) {
-        itemMap.set(item.name, {
+      if (item.name && item.id) {
+        const key = `recipe_${item.name}`; // Use table prefix to avoid conflicts
+        itemMap.set(key, {
+          id: item.id,
+          tableName: 'recipes',
           name: item.name,
           sprite: item.sprite,
           spritePath: item.sprite
@@ -405,10 +411,11 @@ app.get('/api/auction/items', async (req, res) => {
         });
       }
     });
-
+    
     const uniqueItems = Array.from(itemMap.values()).sort((a, b) =>
       a.name.localeCompare(b.name)
     );
+    
     res.json(uniqueItems);
   } catch (error) {
     console.error('[AUCTION ITEMS]', error);
