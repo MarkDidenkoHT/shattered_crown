@@ -1,5 +1,109 @@
 let supabaseConfig = null;
 let currentProfile = null;
+let mainThemeAudio = null;
+let audioInitialized = false;
+
+function initializeAudio() {
+  if (audioInitialized) return;
+  
+  try {
+    mainThemeAudio = document.getElementById('mainTheme');
+    if (!mainThemeAudio) return;
+    
+    // Set initial volume to 30%
+    mainThemeAudio.volume = 0.3;
+    
+    // Handle audio loading and playback
+    mainThemeAudio.addEventListener('canplaythrough', () => {
+      // Audio can play through without stopping
+      console.log('[AUDIO] Main theme ready to play');
+    });
+    
+    mainThemeAudio.addEventListener('loadstart', () => {
+      console.log('[AUDIO] Started loading main theme');
+    });
+    
+    mainThemeAudio.addEventListener('progress', () => {
+      if (mainThemeAudio.buffered.length > 0) {
+        const bufferedEnd = mainThemeAudio.buffered.end(mainThemeAudio.buffered.length - 1);
+        const duration = mainThemeAudio.duration;
+        if (duration > 0) {
+          const bufferedPercent = (bufferedEnd / duration) * 100;
+          // Start playing when we have at least 10% buffered
+          if (bufferedPercent > 10 && mainThemeAudio.paused) {
+            playMainTheme();
+          }
+        }
+      }
+    });
+    
+    mainThemeAudio.addEventListener('error', (e) => {
+      console.error('[AUDIO] Error loading main theme:', e);
+    });
+    
+    // Handle audio interruptions gracefully
+    mainThemeAudio.addEventListener('stalled', () => {
+      console.log('[AUDIO] Audio stalled, will resume when buffer fills');
+    });
+    
+    mainThemeAudio.addEventListener('waiting', () => {
+      console.log('[AUDIO] Audio waiting for data');
+    });
+    
+    audioInitialized = true;
+    
+    // Start loading the audio
+    mainThemeAudio.load();
+    
+  } catch (error) {
+    console.error('[AUDIO] Failed to initialize audio:', error);
+  }
+}
+
+async function playMainTheme() {
+  if (!mainThemeAudio || audioInitialized === false) return;
+  
+  try {
+    // Check if we have enough buffered content to start playing
+    if (mainThemeAudio.readyState >= 2) { // HAVE_CURRENT_DATA
+      const playPromise = mainThemeAudio.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('[AUDIO] Main theme started playing');
+      }
+    }
+  } catch (error) {
+    // Handle autoplay restrictions
+    if (error.name === 'NotAllowedError') {
+      console.log('[AUDIO] Autoplay blocked by browser policy');
+      // We'll try to play on first user interaction
+      document.addEventListener('click', handleFirstUserInteraction, { once: true });
+      document.addEventListener('touchstart', handleFirstUserInteraction, { once: true });
+    } else {
+      console.error('[AUDIO] Error playing main theme:', error);
+    }
+  }
+}
+
+function handleFirstUserInteraction() {
+  console.log('[AUDIO] User interaction detected, attempting to play audio');
+  playMainTheme();
+}
+
+function pauseMainTheme() {
+  if (mainThemeAudio && !mainThemeAudio.paused) {
+    mainThemeAudio.pause();
+    console.log('[AUDIO] Main theme paused');
+  }
+}
+
+function setMainThemeVolume(volume) {
+  if (mainThemeAudio) {
+    mainThemeAudio.volume = Math.max(0, Math.min(1, volume));
+    console.log('[AUDIO] Volume set to:', mainThemeAudio.volume);
+  }
+}
 
 // Language management functions
 function getCurrentLanguage() {
@@ -89,6 +193,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => {
     initializeLanguageDetection();
   }, 1000);
+
+  setTimeout(() => {
+    initializeAudio();
+  }, 1500);
 
   try {
     const response = await fetch('/api/config');
@@ -549,5 +657,9 @@ window.gameAuth = {
   loadModule,
   supabaseConfig: null,
   getCurrentLanguage,
-  switchLanguage
+  switchLanguage,
+  // Audio controls
+  playMainTheme,
+  pauseMainTheme,
+  setMainThemeVolume
 };
