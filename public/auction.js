@@ -633,8 +633,20 @@ function getSelectedWantedItem() {
 
 async function handleConfirmSell() {
     const itemId = document.querySelector('.confirm-sell').dataset.itemId;
-    const item = _bankItems.find(i => i.id == itemId);
-    if (!item) return;
+    const tableName = document.querySelector('.confirm-sell').dataset.tableName;
+
+    // Find item based on table name
+    let item;
+    if (tableName === 'bank') {
+        item = _bankItems.find(i => i.id == itemId);
+    } else if (tableName === 'craft_sessions') {
+        item = _craftItems.find(i => i.id == itemId);
+    }
+
+    if (!item) {
+        displayMessage('Item not found.');
+        return;
+    }
 
     const sellAmount = parseInt(document.getElementById('sell-amount').value);
     const wantedItem = getSelectedWantedItem();
@@ -645,6 +657,21 @@ async function handleConfirmSell() {
         return;
     }
 
+    // Validation based on table type
+    if (tableName === 'craft_sessions') {
+        // For crafted items, amount should always be 1
+        if (sellAmount !== 1) {
+            displayMessage('Crafted items can only be sold individually.');
+            return;
+        }
+    } else if (tableName === 'bank') {
+        // For bank items, check available amount
+        if (sellAmount > item.amount) {
+            displayMessage(`Not enough items available. You have ${item.amount}.`);
+            return;
+        }
+    }
+
     try {
         displayMessage('Creating auction listing...');
 
@@ -653,10 +680,12 @@ async function handleConfirmSell() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 seller_id: _profile.id,
-                item_selling: item.item,
+                item_selling: tableName === 'craft_sessions' ? item.result : item.item,
                 amount_selling: sellAmount,
                 item_wanted: wantedItem,
-                amount_wanted: wantedAmount
+                amount_wanted: wantedAmount,
+                table_name: tableName,
+                item_id: itemId
             })
         });
 
@@ -665,7 +694,8 @@ async function handleConfirmSell() {
         if (result.success) {
             displayMessage('Auction listing created successfully!');
             document.getElementById('sell-modal').style.display = 'none';
-
+            
+            // Refresh the appropriate view
             if (_currentView === 'sell') {
                 await loadSellView(document.getElementById('auctionItemsList'));
             } else if (_currentView === 'return') {
@@ -674,6 +704,7 @@ async function handleConfirmSell() {
         } else {
             displayMessage(result.error || 'Failed to create auction listing.');
         }
+
     } catch (error) {
         console.error('Failed to create auction:', error);
         displayMessage('Failed to create auction listing. Please try again.');
