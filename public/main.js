@@ -2,6 +2,8 @@ let supabaseConfig = null;
 let currentProfile = null;
 let mainThemeAudio = null;
 let audioInitialized = false;
+let audioContext = null;
+let audioUnlocked = false;
 
 function initializeAudio() {
   if (audioInitialized) return;
@@ -13,32 +15,30 @@ function initializeAudio() {
     // Set initial volume to 30%
     mainThemeAudio.volume = 0.3;
     
+    // Android Chrome specific: Force load immediately
+    mainThemeAudio.preload = 'auto';
+    mainThemeAudio.load();
+    
     // Handle audio loading and playback
     mainThemeAudio.addEventListener('canplaythrough', () => {
-      // Audio can play through without stopping
       console.log('[AUDIO] Main theme ready to play');
+      // Don't auto-play here, wait for user interaction
+    });
+    
+    mainThemeAudio.addEventListener('loadeddata', () => {
+      console.log('[AUDIO] Audio data loaded');
     });
     
     mainThemeAudio.addEventListener('loadstart', () => {
       console.log('[AUDIO] Started loading main theme');
     });
     
-    mainThemeAudio.addEventListener('progress', () => {
-      if (mainThemeAudio.buffered.length > 0) {
-        const bufferedEnd = mainThemeAudio.buffered.end(mainThemeAudio.buffered.length - 1);
-        const duration = mainThemeAudio.duration;
-        if (duration > 0) {
-          const bufferedPercent = (bufferedEnd / duration) * 100;
-          // Start playing when we have at least 10% buffered
-          if (bufferedPercent > 10 && mainThemeAudio.paused) {
-            playMainTheme();
-          }
-        }
-      }
-    });
-    
     mainThemeAudio.addEventListener('error', (e) => {
       console.error('[AUDIO] Error loading main theme:', e);
+      console.error('[AUDIO] Error details:', {
+        code: e.target?.error?.code,
+        message: e.target?.error?.message
+      });
     });
     
     // Handle audio interruptions gracefully
@@ -52,18 +52,92 @@ function initializeAudio() {
     
     audioInitialized = true;
     
-    // Start loading the audio
-    mainThemeAudio.load();
+    // Set up user interaction listeners immediately
+    setupUserInteractionListeners();
     
   } catch (error) {
     console.error('[AUDIO] Failed to initialize audio:', error);
   }
 }
 
+function setupUserInteractionListeners() {
+  console.log('[AUDIO] Setting up interaction listeners');
+  
+  const events = ['touchstart', 'touchend', 'click', 'keydown'];
+  
+  const unlockAudio = async (e) => {
+    console.log('[AUDIO] User interaction detected:', e.type);
+    
+    if (audioUnlocked) return;
+    
+    try {
+      // Create AudioContext if needed (Android Chrome requirement)
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log('[AUDIO] AudioContext created');
+      }
+      
+      // Resume AudioContext if suspended
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+        console.log('[AUDIO] AudioContext resumed');
+      }
+      
+      // Try to play the audio
+      if (mainThemeAudio && mainThemeAudio.readyState >= 2) {
+        const playPromise = mainThemeAudio.play();
+        
+        if (playPromise !== undefined) {
+          try {
+            await playPromise;
+            console.log('[AUDIO] Audio unlocked and playing!');
+            audioUnlocked = true;
+            
+            // Remove listeners once successful
+            events.forEach(event => {
+              document.removeEventListener(event, unlockAudio, { passive: false });
+              document.body.removeEventListener(event, unlockAudio, { passive: false });
+            });
+            
+          } catch (playError) {
+            console.error('[AUDIO] Play failed:', playError);
+            // Don't remove listeners, keep trying
+          }
+        }
+      } else {
+        console.log('[AUDIO] Audio not ready yet, readyState:', mainThemeAudio?.readyState);
+      }
+      
+    } catch (error) {
+      console.error('[AUDIO] Error in unlockAudio:', error);
+    }
+  };
+  
+  // Add listeners to document and body for better coverage
+  events.forEach(event => {
+    document.addEventListener(event, unlockAudio, { passive: false });
+    document.body.addEventListener(event, unlockAudio, { passive: false });
+  });
+  
+  // Special handling for Telegram WebApp button clicks
+  if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+    Telegram.WebApp.onEvent('mainButtonClicked', unlockAudio);
+    Telegram.WebApp.onEvent('backButtonClicked', unlockAudio);
+  }
+}
+
 async function playMainTheme() {
-  if (!mainThemeAudio || audioInitialized === false) return;
+  if (!mainThemeAudio || audioInitialized === false) {
+    console.log('[AUDIO] Audio not initialized');
+    return;
+  }
   
   try {
+    // Ensure AudioContext is running
+    if (audioContext && audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    
     // Check if we have enough buffered content to start playing
     if (mainThemeAudio.readyState >= 2) { // HAVE_CURRENT_DATA
       const playPromise = mainThemeAudio.play();
@@ -71,31 +145,26 @@ async function playMainTheme() {
       if (playPromise !== undefined) {
         await playPromise;
         console.log('[AUDIO] Main theme started playing');
+        audioUnlocked = true;
       }
+    } else {
+      console.log('[AUDIO] Audio not ready, readyState:', mainThemeAudio.readyState);
     }
   } catch (error) {
-    // Handle autoplay restrictions
+    console.error('[AUDIO] Error playing main theme:', error);
+    
     if (error.name === 'NotAllowedError') {
-      console.log('[AUDIO] Autoplay blocked, waiting for user interaction');
-      // Set up listeners for any user interaction
-      const startAudioOnInteraction = () => {
-        playMainTheme();
-        document.removeEventListener('click', startAudioOnInteraction);
-        document.removeEventListener('touchstart', startAudioOnInteraction);
-        document.removeEventListener('keydown', startAudioOnInteraction);
-      };
-      
-      document.addEventListener('click', startAudioOnInteraction);
-      document.addEventListener('touchstart', startAudioOnInteraction);
-      document.addEventListener('keydown', startAudioOnInteraction);
-    } else {
-      console.error('[AUDIO] Error playing main theme:', error);
+      console.log('[AUDIO] Autoplay blocked, need user interaction');
+    } else if (error.name === 'AbortError') {
+      console.log('[AUDIO] Play aborted, likely due to new play request');
+    } else if (error.name === 'NotSupportedError') {
+      console.log('[AUDIO] Audio format not supported');
     }
   }
 }
 
 function handleFirstUserInteraction() {
-  console.log('[AUDIO] User interaction detected, attempting to play audio');
+  console.log('[AUDIO] Manual user interaction handler called');
   playMainTheme();
 }
 
@@ -111,6 +180,21 @@ function setMainThemeVolume(volume) {
     mainThemeAudio.volume = Math.max(0, Math.min(1, volume));
     console.log('[AUDIO] Volume set to:', mainThemeAudio.volume);
   }
+}
+
+// Add debug function to check audio state
+function debugAudioState() {
+  console.log('[AUDIO DEBUG] State check:', {
+    audioInitialized,
+    audioUnlocked,
+    readyState: mainThemeAudio?.readyState,
+    paused: mainThemeAudio?.paused,
+    currentTime: mainThemeAudio?.currentTime,
+    duration: mainThemeAudio?.duration,
+    volume: mainThemeAudio?.volume,
+    audioContextState: audioContext?.state,
+    userAgent: navigator.userAgent
+  });
 }
 
 // Language management functions
@@ -202,9 +286,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeLanguageDetection();
   }, 1000);
 
+  // Initialize audio earlier and more aggressively on Android
   setTimeout(() => {
     initializeAudio();
-  }, 1500);
+    // Add debug button for testing (remove in production)
+    if (window.location.hostname === 'localhost' || window.location.hostname.includes('test')) {
+      const debugBtn = document.createElement('button');
+      debugBtn.textContent = 'Debug Audio';
+      debugBtn.style.position = 'fixed';
+      debugBtn.style.top = '10px';
+      debugBtn.style.right = '10px';
+      debugBtn.style.zIndex = '9999';
+      debugBtn.onclick = debugAudioState;
+      document.body.appendChild(debugBtn);
+    }
+  }, 500); // Earlier initialization
 
   try {
     const response = await fetch('/api/config');
@@ -333,6 +429,9 @@ function addTutorialEventListeners() {
       
       if (!action) return;
       
+      // This click should trigger audio unlock
+      console.log('[AUDIO] Tutorial button clicked:', action);
+      
       switch (action) {
         case 'next':
           nextSlide();
@@ -434,6 +533,7 @@ function addTutorialStyles() {
       cursor: pointer;
       transition: all 0.3s ease;
       backdrop-filter: blur(5px);
+      touch-action: manipulation; /* Better touch handling */
     }
 
     .tutorial-btn:disabled {
@@ -454,6 +554,7 @@ function addTutorialStyles() {
       transition: all 0.3s ease;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
       box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      touch-action: manipulation; /* Better touch handling */
     }
   `;
   document.head.appendChild(style);
@@ -669,5 +770,7 @@ window.gameAuth = {
   // Audio controls
   playMainTheme,
   pauseMainTheme,
-  setMainThemeVolume
+  setMainThemeVolume,
+  // Debug function
+  debugAudioState
 };
