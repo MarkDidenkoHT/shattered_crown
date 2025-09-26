@@ -425,34 +425,41 @@ app.get('/api/auction/items', async (req, res) => {
 
 app.post('/api/auction/create', async (req, res) => {
   try {
-    const { seller_id, item_selling, amount_selling, item_wanted, amount_wanted } = req.body;
+    const { seller_id, item_selling, amount_selling, item_wanted, amount_wanted, table_name, item_id } = req.body;
 
-    if (!seller_id || !item_selling || !amount_selling || !item_wanted || !amount_wanted) {
+    if (!seller_id || !item_selling || !amount_selling || !item_wanted || !amount_wanted || !table_name || !item_id) {
       console.log('❌ Missing required fields');
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // --- Step 1: Try to find crafted item (unique gear) ---
-    const craftUrl = `${process.env.SUPABASE_URL}/rest/v1/craft_sessions?player_id=eq.${seller_id}&result=eq.${item_selling}&is_auctioned=is.false&select=*`;
-    const craftResponse = await fetch(craftUrl, {
-      headers: {
-        'apikey': process.env.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-      }
-    });
-
-    const craftItems = craftResponse.ok ? await craftResponse.json() : [];
     let usingCrafted = false;
     let itemSellingType = 'unknown';
+    let sourceItemId = item_id;
 
-    if (craftItems.length > 0) {
-      // ✅ Crafted item found (unique)
+    // --- Step 1: Handle based on table name ---
+    if (table_name === 'craft_sessions') {
+      // --- Crafted item (unique gear) ---
+      const craftUrl = `${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${item_id}&player_id=eq.${seller_id}&result=eq.${item_selling}&is_auctioned=is.false&select=*`;
+      const craftResponse = await fetch(craftUrl, {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      });
+
+      const craftItems = craftResponse.ok ? await craftResponse.json() : [];
+
+      if (craftItems.length === 0) {
+        console.log('❌ Crafted item not found or already auctioned');
+        return res.status(400).json({ error: 'Crafted item not found or already auctioned' });
+      }
+
       const craftItem = craftItems[0];
       usingCrafted = true;
       itemSellingType = craftItem.type || 'crafted';
 
       // Reserve it by marking as auctioned
-      await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItem.id}`, {
+      const updateResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItem.id}`, {
         method: 'PATCH',
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
@@ -463,8 +470,13 @@ app.post('/api/auction/create', async (req, res) => {
         body: JSON.stringify({ is_auctioned: true })
       });
 
-    } else {
-      // --- Step 2: Otherwise check bank items ---
+      if (!updateResponse.ok) {
+        console.log('❌ Failed to reserve crafted item');
+        return res.status(500).json({ error: 'Failed to reserve crafted item' });
+      }
+
+    } else if (table_name === 'bank') {
+      // --- Bank items (stackable) ---
       const bankUrl = `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${seller_id}&item=eq.${item_selling}&select=*`;
       const bankResponse = await fetch(bankUrl, {
         headers: {
@@ -489,6 +501,7 @@ app.post('/api/auction/create', async (req, res) => {
 
       itemSellingType = bankItems[0]?.type || 'unknown';
 
+      // Remove items from bank
       let remainingToRemove = amount_selling;
       for (const bankItem of bankItems) {
         if (remainingToRemove <= 0) break;
@@ -516,9 +529,16 @@ app.post('/api/auction/create', async (req, res) => {
           });
         }
       }
+
+      // For bank items, we can use the first bank item's ID or a generic identifier
+      sourceItemId = bankItems[0]?.id?.toString() || item_id;
+
+    } else {
+      console.log('❌ Invalid table name');
+      return res.status(400).json({ error: 'Invalid table name. Must be either "craft_sessions" or "bank"' });
     }
 
-    // --- Step 3: Create auction entry ---
+    // --- Step 2: Create auction entry ---
     const auctionData = {
       seller_id,
       item_selling,
@@ -526,7 +546,9 @@ app.post('/api/auction/create', async (req, res) => {
       item_wanted,
       amount_wanted,
       type: itemSellingType,
-      status: false
+      status: false,
+      table: table_name,
+      item_id: sourceItemId
     };
 
     const auctionUrl = `${process.env.SUPABASE_URL}/rest/v1/auction`;
@@ -549,8 +571,8 @@ app.post('/api/auction/create', async (req, res) => {
       console.log('❌ Failed to parse auction response:', responseText);
 
       // Rollback crafted reservation if needed
-      if (usingCrafted && craftItems[0]) {
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItems[0].id}`, {
+      if (usingCrafted && table_name === 'craft_sessions') {
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${item_id}`, {
           method: 'PATCH',
           headers: {
             'apikey': process.env.SUPABASE_ANON_KEY,
@@ -567,9 +589,10 @@ app.post('/api/auction/create', async (req, res) => {
     if (!auctionResponse.ok || !newAuction || newAuction.length === 0) {
       console.log('❌ Auction creation failed');
 
-      // Rollback crafted reservation if needed
-      if (usingCrafted && craftItems[0]) {
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${craftItems[0].id}`, {
+      // Rollback operations
+      if (usingCrafted && table_name === 'craft_sessions') {
+        // Rollback crafted reservation
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${item_id}`, {
           method: 'PATCH',
           headers: {
             'apikey': process.env.SUPABASE_ANON_KEY,
@@ -578,7 +601,8 @@ app.post('/api/auction/create', async (req, res) => {
           },
           body: JSON.stringify({ is_auctioned: false })
         });
-      } else {
+      } else if (table_name === 'bank') {
+        // Rollback bank items removal
         await addItemsToBank(seller_id, item_selling, amount_selling);
       }
 
@@ -589,6 +613,24 @@ app.post('/api/auction/create', async (req, res) => {
 
   } catch (error) {
     console.error('❌ [AUCTION CREATE ERROR]', error);
+
+    // Emergency rollback in case of unexpected error
+    if (req.body?.table_name === 'craft_sessions' && req.body?.item_id) {
+      try {
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/craft_sessions?id=eq.${req.body.item_id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ is_auctioned: false })
+        });
+      } catch (rollbackError) {
+        console.error('❌ Failed to rollback crafted item reservation:', rollbackError);
+      }
+    }
+
     res.status(500).json({ error: 'Failed to create auction', details: error.message });
   }
 });
