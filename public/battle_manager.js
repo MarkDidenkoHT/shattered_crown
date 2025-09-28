@@ -926,10 +926,16 @@ async function updateCharactersWithAnimations(newCharacters) {
 
     // Process each character for potential animation
     for (const newChar of newCharacters) {
+        // Add validation for character position
+        if (!newChar || !Array.isArray(newChar.position) || newChar.position.length < 2) {
+            console.warn('Character missing valid position:', newChar);
+            continue;
+        }
+
         const oldChar = BattleState.characters.find(c => c.id === newChar.id);
         const charEl = BattleState.characterElements.get(newChar.id);
 
-        // 🔥 Skip rendering dead characters (remove them if they exist)
+        // Skip rendering dead characters (remove them if they exist)
         if (newChar.current_hp <= 0 || newChar.status === 'dead') {
             if (charEl) {
                 animations.push(new Promise(resolve => {
@@ -944,7 +950,7 @@ async function updateCharactersWithAnimations(newCharacters) {
                     }, ANIMATION_CONFIG.fadeOutDuration);
                 }));
             }
-            continue; // don’t process further
+            continue;
         }
 
         if (!oldChar) {
@@ -966,6 +972,12 @@ async function updateCharactersWithAnimations(newCharacters) {
                 }));
             }
         } else if (charEl) {
+            // Add validation for old character position too
+            if (!Array.isArray(oldChar.position) || oldChar.position.length < 2) {
+                console.warn('Old character missing valid position:', oldChar);
+                continue;
+            }
+
             // Existing character - check for movement or stat changes
             const [oldX, oldY] = oldChar.position;
             const [newX, newY] = newChar.position;
