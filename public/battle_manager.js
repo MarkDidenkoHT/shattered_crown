@@ -775,7 +775,7 @@ function startAbilitySelection(caster, abilityRaw) {
           casterId: caster.id,
           casterPos: caster.position,
           targetCenter: [x, y],
-          affectedTargets: [{ position: [x, y], intendedEffect: 'dispel' }]
+        //   affectedTargets: [{ position: [x, y], intendedEffect: 'dispel' }]
         };
 
         console.log('[DISPEL USED]', payload);
