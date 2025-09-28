@@ -563,9 +563,8 @@ const setupRealtimeSubscription = () => {
                 BattleState.battleState = payload.new;
                 await updateGameStateFromRealtime();
 
-                // ⬇️ Render environment items (like corpses) from layout_data
-                const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos || {};
-                renderEnvironmentItems(layoutItems);
+                if (layoutItems && Object.keys(layoutItems).length)
+                 renderEnvironmentItems(layoutItems);
             }, 100)
         )
         .subscribe();
@@ -597,8 +596,8 @@ async function updateGameStateFromRealtime() {
     });
     
     handleTurnLogic();
-    const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos || {};
-    renderEnvironmentItems(layoutItems);
+    if (layoutItems && Object.keys(layoutItems).length)
+      renderEnvironmentItems(layoutItems);
 }
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
@@ -1249,26 +1248,38 @@ function renderCharacters() {
 }
 
 function renderEnvironmentItems(layoutEnvItems) {
-    // layoutEnvItems expected as object: { id1: itemObj, id2: itemObj, ... }
-    BattleState.environmentItems = layoutEnvItems || {};
-    const container = BattleState.main.querySelector('.battle-grid-container');
-    if (!container) return;
+  const container = BattleState.main.querySelector('.battle-grid-container');
+  if (!container) return;
 
-    // Remove existing environment item DOMs
-    container.querySelectorAll('.environment-item').forEach(el => el.remove());
+  // if new data missing or empty, do not clear corpses
+  if (!layoutEnvItems || Object.keys(layoutEnvItems).length === 0) {
+    console.debug("Skipping environment re-render (no data).");
+    return;
+  }
 
-    // For each item, attach to the correct cell
-    Object.values(BattleState.environmentItems).forEach(item => {
-        if (!Array.isArray(item.position)) return;
-        const [x, y] = item.position;
-        const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
-        if (!cell) return;
+  // Merge instead of wipe
+  const oldItems = BattleState.environmentItems || {};
+  BattleState.environmentItems = { ...oldItems, ...layoutEnvItems };
 
-        const itemEl = createEnvironmentItemElement(item);
-        // ensure environment items appear behind characters but above tile
-        // If you want corpses to be under characters, keep zIndex < character zIndex.
-        cell.appendChild(itemEl);
-    });
+  // Remove only items that are gone
+  Object.keys(oldItems).forEach(id => {
+    if (!layoutEnvItems[id]) {
+      const el = container.querySelector(`.environment-item[data-item-id="${id}"]`);
+      if (el) el.remove();
+    }
+  });
+
+  // Add or update items
+  Object.values(layoutEnvItems).forEach(item => {
+    const existing = container.querySelector(`.environment-item[data-item-id="${item.id}"]`);
+    if (existing) return; // already rendered
+    if (!Array.isArray(item.position)) return;
+    const [x, y] = item.position;
+    const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
+    if (!cell) return;
+    const itemEl = createEnvironmentItemElement(item);
+    cell.appendChild(itemEl);
+  });
 }
 
 const createCharacterElement = (char) => {
