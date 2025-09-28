@@ -870,6 +870,7 @@ function startAbilitySelection(caster, abilityRaw) {
     }
   }
 }
+    console.log("Dispellable items available:", BattleState.environmentItems);
     if (ability.effects === 'dispel' && ability.target_type === 'tile') {
   const container = BattleState.main.querySelector('.battle-grid-container');
   if (!container) return;
