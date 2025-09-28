@@ -59,24 +59,6 @@ const getSupabaseClient = (config) => {
 };
 
 const processCharacterState = (charState) => {
-    // DEFENSIVE FIX: Validate character state before processing
-    if (!charState || typeof charState !== 'object') {
-        console.error('Invalid character state received:', charState);
-        return null; // Return null for invalid characters
-    }
-
-    // Check for required fields
-    if (!charState.id || !charState.name || charState.type === undefined) {
-        console.error('Character state missing required fields:', charState);
-        return null; // Return null for corrupted characters
-    }
-
-    // Validate position
-    if (!Array.isArray(charState.current_position) || charState.current_position.length !== 2) {
-        console.error('Character state missing valid position:', charState);
-        return null; // Return null for characters without valid positions
-    }
-
     const stats = charState.stats || {};
     const normalizedStats = Object.entries(stats).reduce((acc, [key, value]) => {
         acc[key.toLowerCase()] = value;
@@ -104,13 +86,14 @@ const processCharacterState = (charState) => {
         portrait: charState.portrait,
         has_moved: charState.has_moved,
         has_acted: charState.has_acted,
+
         current_hp: charState.current_hp,
         max_hp: charState.max_hp,
+
         priority: charState.priority || 999,
         buffs: charState.buffs || [],
         debuffs: charState.debuffs || [],
-        pendingAction: null,
-        status: charState.status || 'alive' // Add status field
+        pendingAction: null
     };
 };
 
@@ -592,28 +575,19 @@ async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
     
     const status = BattleState.battleState.status;
-    if (status === 'victory' || status === 'defeat') {
+      if (status === 'victory' || status === 'defeat') {
         await assignLoot(BattleState.battleState);
         showBattleResultModal(status);
         return; 
-    }
+      }
         
     if (!BattleState.battleState.characters_state) {
         console.warn('Battle state missing characters_state:', BattleState.battleState);
         return;
     }
 
-    // DEFENSIVE FIX: Filter out null/corrupted characters
     const newCharacters = Object.values(BattleState.battleState.characters_state)
-        .map(processCharacterState)
-        .filter(char => char !== null); // Remove corrupted characters
-    
-    // Log if we filtered out any corrupted characters
-    const originalCount = Object.values(BattleState.battleState.characters_state).length;
-    const filteredCount = newCharacters.length;
-    if (originalCount !== filteredCount) {
-        console.warn(`Filtered out ${originalCount - filteredCount} corrupted characters`);
-    }
+        .map(processCharacterState);
     
     await updateCharactersWithAnimations(newCharacters);
     
@@ -624,9 +598,8 @@ async function updateGameStateFromRealtime() {
     
     handleTurnLogic();
     const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
-    if (layoutItems !== undefined && layoutItems !== null) {
-        renderEnvironmentItems(layoutItems, true);
-    }
+    if (layoutItems && Object.keys(layoutItems).length)
+      renderEnvironmentItems(layoutItems);
 }
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
@@ -675,17 +648,8 @@ function clearAbilitySelection() {
   }
   BattleState.selectingAbility = null;
 
-  resetAbilityButtonsUI();
+  resetAbilityButtonsUI(); // 🔥 reset ability button state
   hideAbilityTooltip();
-}
-
-function clearDispelHighlights() {
-  const tiles = BattleState.main.querySelectorAll('.highlight-dispellable');
-  tiles.forEach(t => {
-    t.classList.remove('highlight-dispellable');
-    t.style.cursor = '';
-    t.replaceWith(t.cloneNode(true));
-  });
 }
 
 function toggleAbilitySelection(caster, ability) {
@@ -771,52 +735,6 @@ function startAbilitySelection(caster, abilityRaw) {
     BattleState.highlightedTiles.push(tile);
   }
 
-  // === DISPEL logic - Handle first to prevent conflicts ===
-  if (ability.effects === 'dispel' && ability.target_type === 'tile') {
-    const container = BattleState.main.querySelector('.battle-grid-container');
-    if (!container) return;
-
-    console.log("Dispellable items available:", BattleState.environmentItems);
-    
-    // highlight tiles that contain dispellable environment items
-    Object.entries(BattleState.environmentItems || {}).forEach(([id, item]) => {
-      if (!item || !Array.isArray(item.position)) return;
-      const [x, y] = item.position;
-      const tile = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
-      console.log("Trying to highlight item:", item.id, "pos", item.position, "-> tile:", tile);
-      
-      if (!tile) return;
-
-      // optional filter if your items have dispellable flag
-      if (item.dispellable === false) return;
-
-      tile.classList.add('highlight-dispellable');
-      tile.style.cursor = 'pointer';
-
-      // FIXED: Use the registerTile helper function with proper payload structure
-      registerTile(tile, async () => {
-        const payload = {
-          abilityName: ability.name,
-          casterId: caster.id,
-          casterPos: caster.position,
-          targetCenter: [x, y],
-          // FIXED: For tile-based dispel, provide position-based target instead of character targets
-          affectedTargets: [{
-            position: [x, y],
-            targetPosition: [x, y], // Add both for compatibility
-            intendedEffect: 'dispel'
-          }]
-        };
-
-        console.log('[DISPEL USED]', payload);
-        await handleAbilityUse(payload);
-        clearAbilitySelection();
-      });
-    });
-
-    return; // Exit early to prevent other targeting logic from running
-  }
-
   // --- SINGLE target logic ---
   if (ability.targeting === 'single') {
     for (const ch of BattleState.characters) {
@@ -863,82 +781,84 @@ function startAbilitySelection(caster, abilityRaw) {
 
   // --- AREA target logic ---
   if (ability.targeting === 'area') {
-    const area = ability.area;
-    const range = ability.range;
+  const area = ability.area;
+  const range = ability.range;
 
-    // figure out which cells can be "centers" for this AoE
-    let potentialCenters = [];
+  // 🔹 figure out which cells can be "centers" for this AoE
+  let potentialCenters = [];
 
-    if (range === 0) {
-      // self-centered AoE → only caster position
-      potentialCenters = [caster.position];
-    } else {
-      // normal AoE → every tile within range of caster
-      const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
-      for (const cell of cells) {
-        const x = +cell.dataset.x, y = +cell.dataset.y;
-        if (chebyshevDistance(caster.position, [x, y]) <= range) {
-          potentialCenters.push([x, y]);
-        }
-      }
-    }
-
-    // for each potential center, compute affected tiles + chars
-    for (const [cx, cy] of potentialCenters) {
-      const affected = [];
-      const affectedTiles = [];
-
-      for (let ax = cx - area; ax <= cx + area; ax++) {
-        for (let ay = cy - area; ay <= cy + area; ay++) {
-          if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
-
-          const cell2 = getCellAt(ax, ay);
-          if (cell2) affectedTiles.push(cell2);
-
-          const ch = getCharacterAt(ax, ay);
-          if (!ch) continue;
-
-          const eff = computeEffect(caster, ability, ch);
-          if (eff) affected.push({ char: ch, eff });
-        }
-      }
-
-      if (!affected.length) continue;
-
-      // highlight AoE center if it's a targeted AoE
-      if (range > 0) {
-        const centerCell = getCellAt(cx, cy);
-        if (centerCell) centerCell.classList.add('highlight-area-center');
-      } else {
-        // self-centered → highlight affected area instead
-        for (const t of affectedTiles) {
-          t.classList.add('highlight-area-affected');
-        }
-      }
-
-      // confirm cast when clicking any affected tile
-      for (const tile of affectedTiles) {
-        registerTile(tile, () => {
-          const payload = {
-            abilityName: ability.name,
-            casterId: caster.id,
-            casterPos: caster.position,
-            targetCenter: [cx, cy],
-            affectedTargets: affected.map(a => ({
-              id: a.char.id,
-              pos: a.char.position,
-              faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-              intendedEffect: a.eff
-            }))
-          };
-          console.log('[ABILITY USED]', payload);
-          handleAbilityUse(payload);
-          clearAbilitySelection();
-        });
+  if (range === 0) {
+    // self-centered AoE → only caster position
+    potentialCenters = [caster.position];
+  } else {
+    // normal AoE → every tile within range of caster
+    const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
+    for (const cell of cells) {
+      const x = +cell.dataset.x, y = +cell.dataset.y;
+      if (chebyshevDistance(caster.position, [x, y]) <= range) {
+        potentialCenters.push([x, y]);
       }
     }
   }
+
+  // 🔹 for each potential center, compute affected tiles + chars
+  for (const [cx, cy] of potentialCenters) {
+    const affected = [];
+    const affectedTiles = [];
+
+    for (let ax = cx - area; ax <= cx + area; ax++) {
+      for (let ay = cy - area; ay <= cy + area; ay++) {
+        if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
+
+        const cell2 = getCellAt(ax, ay);
+        if (cell2) affectedTiles.push(cell2);
+
+        const ch = getCharacterAt(ax, ay);
+        if (!ch) continue;
+
+        const eff = computeEffect(caster, ability, ch);
+        if (eff) affected.push({ char: ch, eff });
+      }
+    }
+
+    if (!affected.length) continue;
+
+    // highlight AoE center if it's a targeted AoE
+    if (range > 0) {
+      const centerCell = getCellAt(cx, cy);
+      if (centerCell) centerCell.classList.add('highlight-area-center');
+    } else {
+      // self-centered → highlight affected area instead
+      for (const t of affectedTiles) {
+        t.classList.add('highlight-area-affected');
+      }
+    }
+
+    // 🔹 confirm cast when clicking any affected tile
+    for (const tile of affectedTiles) {
+      registerTile(tile, () => {
+        const payload = {
+          abilityName: ability.name,
+          casterId: caster.id,
+          casterPos: caster.position,
+          targetCenter: [cx, cy],
+          affectedTargets: affected.map(a => ({
+            id: a.char.id,
+            pos: a.char.position,
+            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+            intendedEffect: a.eff
+          }))
+        };
+        console.log('[ABILITY USED]', payload);
+        handleAbilityUse(payload);
+        clearAbilitySelection();
+      });
+    }
+  }
 }
+
+}
+
 function computeEffect(caster, ability, target) {
   const ally = isAlly(caster, target);
   const eff = ability.effects.toLowerCase();
@@ -956,16 +876,10 @@ async function updateCharactersWithAnimations(newCharacters) {
 
     // Process each character for potential animation
     for (const newChar of newCharacters) {
-        // Add validation for character position
-        if (!newChar || !Array.isArray(newChar.position) || newChar.position.length < 2) {
-            console.warn('Character missing valid position:', newChar);
-            continue;
-        }
-
         const oldChar = BattleState.characters.find(c => c.id === newChar.id);
         const charEl = BattleState.characterElements.get(newChar.id);
 
-        // Skip rendering dead characters (remove them if they exist)
+        // 🔥 Skip rendering dead characters (remove them if they exist)
         if (newChar.current_hp <= 0 || newChar.status === 'dead') {
             if (charEl) {
                 animations.push(new Promise(resolve => {
@@ -980,7 +894,7 @@ async function updateCharactersWithAnimations(newCharacters) {
                     }, ANIMATION_CONFIG.fadeOutDuration);
                 }));
             }
-            continue;
+            continue; // don’t process further
         }
 
         if (!oldChar) {
@@ -1002,12 +916,6 @@ async function updateCharactersWithAnimations(newCharacters) {
                 }));
             }
         } else if (charEl) {
-            // Add validation for old character position too
-            if (!Array.isArray(oldChar.position) || oldChar.position.length < 2) {
-                console.warn('Old character missing valid position:', oldChar);
-                continue;
-            }
-
             // Existing character - check for movement or stat changes
             const [oldX, oldY] = oldChar.position;
             const [newX, newY] = newChar.position;
@@ -1341,34 +1249,36 @@ function renderCharacters() {
     });
 }
 
-function renderEnvironmentItems(layoutEnvItems, replaceAll = false) {
+function renderEnvironmentItems(layoutEnvItems) {
   const container = BattleState.main.querySelector('.battle-grid-container');
   if (!container) return;
 
-  if (replaceAll) {
-    // Remove all previously rendered items if they no longer exist
-    const oldItems = BattleState.environmentItems || {};
-    Object.keys(oldItems).forEach(id => {
-      if (!layoutEnvItems[id]) {
-        const el = container.querySelector(`.environment-item[data-item-id="${id}"]`);
-        if (el) el.remove();
-      }
-    });
+  // if new data missing or empty, do not clear corpses
+  if (!layoutEnvItems || Object.keys(layoutEnvItems).length === 0) {
+    console.debug("Skipping environment re-render (no data).");
+    return;
   }
 
-  // Update local cache
-  BattleState.environmentItems = { ...layoutEnvItems };
+  // Merge instead of wipe
+  const oldItems = BattleState.environmentItems || {};
+  BattleState.environmentItems = { ...oldItems, ...layoutEnvItems };
 
-  // Re-render existing ones
-  Object.entries(layoutEnvItems).forEach(([id, item]) => {
+  // Remove only items that are gone
+  Object.keys(oldItems).forEach(id => {
+    if (!layoutEnvItems[id]) {
+      const el = container.querySelector(`.environment-item[data-item-id="${id}"]`);
+      if (el) el.remove();
+    }
+  });
+
+  // Add or update items
+  Object.values(layoutEnvItems).forEach(item => {
+    const existing = container.querySelector(`.environment-item[data-item-id="${item.id}"]`);
+    if (existing) return; // already rendered
     if (!Array.isArray(item.position)) return;
     const [x, y] = item.position;
     const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
     if (!cell) return;
-
-    // Skip if already rendered
-    if (cell.querySelector(`.environment-item[data-item-id="${id}"]`)) return;
-
     const itemEl = createEnvironmentItemElement(item);
     cell.appendChild(itemEl);
   });
@@ -2274,6 +2184,7 @@ function showAbilityTooltip(ability) {
     });
 }
 
+// Function to hide tooltip
 function hideAbilityTooltip() {
     const existingTooltip = document.getElementById('abilityTooltip');
     if (existingTooltip) {
@@ -2286,10 +2197,13 @@ function hideAbilityTooltip() {
     }
 }
 
+// Helper function to capitalize first letter
 function capitalizeFirst(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+
 
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
