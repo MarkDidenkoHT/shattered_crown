@@ -745,6 +745,48 @@ function startAbilitySelection(caster, abilityRaw) {
     BattleState.highlightedTiles.push(tile);
   }
 
+  // === DISPEL logic - Handle first to prevent conflicts ===
+  if (ability.effects === 'dispel' && ability.target_type === 'tile') {
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    if (!container) return;
+
+    console.log("Dispellable items available:", BattleState.environmentItems);
+    
+    // highlight tiles that contain dispellable environment items
+    Object.entries(BattleState.environmentItems || {}).forEach(([id, item]) => {
+      if (!item || !Array.isArray(item.position)) return;
+      const [x, y] = item.position;
+      const tile = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
+      console.log("Trying to highlight item:", item.id, "pos", item.position,
+        "-> tile:", tile);
+      
+      if (!tile) return;
+
+      // optional filter if your items have dispellable flag
+      if (item.dispellable === false) return;
+
+      tile.classList.add('highlight-dispellable');
+      tile.style.cursor = 'pointer';
+
+      // Use the registerTile helper function
+      registerTile(tile, async () => {
+        const payload = {
+          abilityName: ability.name,
+          casterId: caster.id,
+          casterPos: caster.position,
+          targetCenter: [x, y],
+          affectedTargets: [{ position: [x, y], intendedEffect: 'dispel' }]
+        };
+
+        console.log('[DISPEL USED]', payload);
+        await handleAbilityUse(payload);
+        clearAbilitySelection();
+      });
+    });
+
+    return; // Exit early to prevent other targeting logic from running
+  }
+
   // --- SINGLE target logic ---
   if (ability.targeting === 'single') {
     for (const ch of BattleState.characters) {
@@ -791,129 +833,82 @@ function startAbilitySelection(caster, abilityRaw) {
 
   // --- AREA target logic ---
   if (ability.targeting === 'area') {
-  const area = ability.area;
-  const range = ability.range;
+    const area = ability.area;
+    const range = ability.range;
 
-  // 🔹 figure out which cells can be "centers" for this AoE
-  let potentialCenters = [];
+    // figure out which cells can be "centers" for this AoE
+    let potentialCenters = [];
 
-  if (range === 0) {
-    // self-centered AoE → only caster position
-    potentialCenters = [caster.position];
-  } else {
-    // normal AoE → every tile within range of caster
-    const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
-    for (const cell of cells) {
-      const x = +cell.dataset.x, y = +cell.dataset.y;
-      if (chebyshevDistance(caster.position, [x, y]) <= range) {
-        potentialCenters.push([x, y]);
-      }
-    }
-  }
-
-  // 🔹 for each potential center, compute affected tiles + chars
-  for (const [cx, cy] of potentialCenters) {
-    const affected = [];
-    const affectedTiles = [];
-
-    for (let ax = cx - area; ax <= cx + area; ax++) {
-      for (let ay = cy - area; ay <= cy + area; ay++) {
-        if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
-
-        const cell2 = getCellAt(ax, ay);
-        if (cell2) affectedTiles.push(cell2);
-
-        const ch = getCharacterAt(ax, ay);
-        if (!ch) continue;
-
-        const eff = computeEffect(caster, ability, ch);
-        if (eff) affected.push({ char: ch, eff });
-      }
-    }
-
-    if (!affected.length) continue;
-
-    // highlight AoE center if it's a targeted AoE
-    if (range > 0) {
-      const centerCell = getCellAt(cx, cy);
-      if (centerCell) centerCell.classList.add('highlight-area-center');
+    if (range === 0) {
+      // self-centered AoE → only caster position
+      potentialCenters = [caster.position];
     } else {
-      // self-centered → highlight affected area instead
-      for (const t of affectedTiles) {
-        t.classList.add('highlight-area-affected');
+      // normal AoE → every tile within range of caster
+      const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
+      for (const cell of cells) {
+        const x = +cell.dataset.x, y = +cell.dataset.y;
+        if (chebyshevDistance(caster.position, [x, y]) <= range) {
+          potentialCenters.push([x, y]);
+        }
       }
     }
 
-    // 🔹 confirm cast when clicking any affected tile
-    for (const tile of affectedTiles) {
-      registerTile(tile, () => {
-        const payload = {
-          abilityName: ability.name,
-          casterId: caster.id,
-          casterPos: caster.position,
-          targetCenter: [cx, cy],
-          affectedTargets: affected.map(a => ({
-            id: a.char.id,
-            pos: a.char.position,
-            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-            intendedEffect: a.eff
-          }))
-        };
-        console.log('[ABILITY USED]', payload);
-        handleAbilityUse(payload);
-        clearAbilitySelection();
-      });
+    // for each potential center, compute affected tiles + chars
+    for (const [cx, cy] of potentialCenters) {
+      const affected = [];
+      const affectedTiles = [];
+
+      for (let ax = cx - area; ax <= cx + area; ax++) {
+        for (let ay = cy - area; ay <= cy + area; ay++) {
+          if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
+
+          const cell2 = getCellAt(ax, ay);
+          if (cell2) affectedTiles.push(cell2);
+
+          const ch = getCharacterAt(ax, ay);
+          if (!ch) continue;
+
+          const eff = computeEffect(caster, ability, ch);
+          if (eff) affected.push({ char: ch, eff });
+        }
+      }
+
+      if (!affected.length) continue;
+
+      // highlight AoE center if it's a targeted AoE
+      if (range > 0) {
+        const centerCell = getCellAt(cx, cy);
+        if (centerCell) centerCell.classList.add('highlight-area-center');
+      } else {
+        // self-centered → highlight affected area instead
+        for (const t of affectedTiles) {
+          t.classList.add('highlight-area-affected');
+        }
+      }
+
+      // confirm cast when clicking any affected tile
+      for (const tile of affectedTiles) {
+        registerTile(tile, () => {
+          const payload = {
+            abilityName: ability.name,
+            casterId: caster.id,
+            casterPos: caster.position,
+            targetCenter: [cx, cy],
+            affectedTargets: affected.map(a => ({
+              id: a.char.id,
+              pos: a.char.position,
+              faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+              intendedEffect: a.eff
+            }))
+          };
+          console.log('[ABILITY USED]', payload);
+          handleAbilityUse(payload);
+          clearAbilitySelection();
+        });
+      }
     }
   }
 }
-    console.log("Dispellable items available:", BattleState.environmentItems);
-    if (ability.effects === 'dispel' && ability.target_type === 'tile') {
-  const container = BattleState.main.querySelector('.battle-grid-container');
-  if (!container) return;
-
-  const caster = BattleState.selectedPlayerCharacter;
-  if (!caster) return;
-
-  // highlight tiles that contain dispellable environment items
-  Object.entries(BattleState.environmentItems || {}).forEach(([id, item]) => {
-    if (!item || !Array.isArray(item.position)) return;
-    const [x, y] = item.position;
-    const tile = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
-    console.log("Trying to highlight item:", item.id, "pos", item.position,
-    "-> tile:", container.querySelector(`td[data-x="${item.position[0]}"][data-y="${item.position[1]}"]`)
-    );
-    if (!tile) return;
-
-    // optional filter if your items have dispellable flag
-    if (item.dispellable === false) return;
-
-    tile.classList.add('highlight-dispellable');
-    tile.style.cursor = 'pointer';
-
-    // attach click handler
-    tile.addEventListener('click', async function onClick() {
-      tile.removeEventListener('click', onClick);
-      clearDispelHighlights();
-
-      const payload = {
-        abilityName: ability.name,
-        casterId: caster.id,
-        casterPos: caster.position,
-        targetCenter: [x, y],
-        affectedTargets: [{ position: [x, y], intendedEffect: 'dispel' }]
-      };
-
-      console.log('[DISPEL USED]', payload);
-      await handleAbilityUse(payload);
-      clearAbilitySelection();
-    });
-  });
-
-  return; // prevent other targeting branches from triggering
-}
-
-}
-
 function computeEffect(caster, ability, target) {
   const ally = isAlly(caster, target);
   const eff = ability.effects.toLowerCase();
