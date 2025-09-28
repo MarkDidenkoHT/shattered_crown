@@ -562,7 +562,8 @@ const setupRealtimeSubscription = () => {
             throttle(async (payload) => {
                 BattleState.battleState = payload.new;
                 await updateGameStateFromRealtime();
-
+                
+                const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
                 if (layoutItems && Object.keys(layoutItems).length)
                  renderEnvironmentItems(layoutItems);
             }, 100)
@@ -596,6 +597,7 @@ async function updateGameStateFromRealtime() {
     });
     
     handleTurnLogic();
+    const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
     if (layoutItems && Object.keys(layoutItems).length)
       renderEnvironmentItems(layoutItems);
 }
