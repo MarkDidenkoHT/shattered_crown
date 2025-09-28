@@ -187,6 +187,10 @@ function injectBattleLoadingStyles() {
     const style = document.createElement('style');
     style.id = 'battle-loading-styles';
     style.textContent = `
+    .highlight-dispellable {
+        outline: 2px solid #8ef !important;
+        box-shadow: 0 0 6px #8ef inset;
+    }
     .battle-result-modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.7); display: flex;
@@ -598,8 +602,9 @@ async function updateGameStateFromRealtime() {
     
     handleTurnLogic();
     const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
-    if (layoutItems && Object.keys(layoutItems).length)
-      renderEnvironmentItems(layoutItems);
+    if (layoutItems !== undefined && layoutItems !== null) {
+        renderEnvironmentItems(layoutItems, true);
+    }
 }
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
@@ -648,8 +653,17 @@ function clearAbilitySelection() {
   }
   BattleState.selectingAbility = null;
 
-  resetAbilityButtonsUI(); // 🔥 reset ability button state
+  resetAbilityButtonsUI();
   hideAbilityTooltip();
+}
+
+function clearDispelHighlights() {
+  const tiles = BattleState.main.querySelectorAll('.highlight-dispellable');
+  tiles.forEach(t => {
+    t.classList.remove('highlight-dispellable');
+    t.style.cursor = '';
+    t.replaceWith(t.cloneNode(true));
+  });
 }
 
 function toggleAbilitySelection(caster, ability) {
@@ -855,6 +869,47 @@ function startAbilitySelection(caster, abilityRaw) {
       });
     }
   }
+}
+    if (ability.effects === 'dispel' && ability.target_type === 'tile') {
+  const container = BattleState.main.querySelector('.battle-grid-container');
+  if (!container) return;
+
+  const caster = BattleState.selectedPlayerCharacter;
+  if (!caster) return;
+
+  // highlight tiles that contain dispellable environment items
+  Object.entries(BattleState.environmentItems || {}).forEach(([id, item]) => {
+    if (!item || !Array.isArray(item.position)) return;
+    const [x, y] = item.position;
+    const tile = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
+    if (!tile) return;
+
+    // optional filter if your items have dispellable flag
+    if (item.dispellable === false) return;
+
+    tile.classList.add('highlight-dispellable');
+    tile.style.cursor = 'pointer';
+
+    // attach click handler
+    tile.addEventListener('click', async function onClick() {
+      tile.removeEventListener('click', onClick);
+      clearDispelHighlights();
+
+      const payload = {
+        abilityName: ability.name,
+        casterId: caster.id,
+        casterPos: caster.position,
+        targetCenter: [x, y],
+        affectedTargets: [{ position: [x, y], intendedEffect: 'dispel' }]
+      };
+
+      console.log('[DISPEL USED]', payload);
+      await handleAbilityUse(payload);
+      clearAbilitySelection();
+    });
+  });
+
+  return; // prevent other targeting branches from triggering
 }
 
 }
@@ -1249,36 +1304,34 @@ function renderCharacters() {
     });
 }
 
-function renderEnvironmentItems(layoutEnvItems) {
+function renderEnvironmentItems(layoutEnvItems, replaceAll = false) {
   const container = BattleState.main.querySelector('.battle-grid-container');
   if (!container) return;
 
-  // if new data missing or empty, do not clear corpses
-  if (!layoutEnvItems || Object.keys(layoutEnvItems).length === 0) {
-    console.debug("Skipping environment re-render (no data).");
-    return;
+  if (replaceAll) {
+    // Remove all previously rendered items if they no longer exist
+    const oldItems = BattleState.environmentItems || {};
+    Object.keys(oldItems).forEach(id => {
+      if (!layoutEnvItems[id]) {
+        const el = container.querySelector(`.environment-item[data-item-id="${id}"]`);
+        if (el) el.remove();
+      }
+    });
   }
 
-  // Merge instead of wipe
-  const oldItems = BattleState.environmentItems || {};
-  BattleState.environmentItems = { ...oldItems, ...layoutEnvItems };
+  // Update local cache
+  BattleState.environmentItems = { ...layoutEnvItems };
 
-  // Remove only items that are gone
-  Object.keys(oldItems).forEach(id => {
-    if (!layoutEnvItems[id]) {
-      const el = container.querySelector(`.environment-item[data-item-id="${id}"]`);
-      if (el) el.remove();
-    }
-  });
-
-  // Add or update items
-  Object.values(layoutEnvItems).forEach(item => {
-    const existing = container.querySelector(`.environment-item[data-item-id="${item.id}"]`);
-    if (existing) return; // already rendered
+  // Re-render existing ones
+  Object.entries(layoutEnvItems).forEach(([id, item]) => {
     if (!Array.isArray(item.position)) return;
     const [x, y] = item.position;
     const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
     if (!cell) return;
+
+    // Skip if already rendered
+    if (cell.querySelector(`.environment-item[data-item-id="${id}"]`)) return;
+
     const itemEl = createEnvironmentItemElement(item);
     cell.appendChild(itemEl);
   });
@@ -2184,7 +2237,6 @@ function showAbilityTooltip(ability) {
     });
 }
 
-// Function to hide tooltip
 function hideAbilityTooltip() {
     const existingTooltip = document.getElementById('abilityTooltip');
     if (existingTooltip) {
@@ -2197,13 +2249,10 @@ function hideAbilityTooltip() {
     }
 }
 
-// Helper function to capitalize first letter
 function capitalizeFirst(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
-
-
 
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
