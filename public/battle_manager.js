@@ -757,8 +757,7 @@ function startAbilitySelection(caster, abilityRaw) {
       if (!item || !Array.isArray(item.position)) return;
       const [x, y] = item.position;
       const tile = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
-      console.log("Trying to highlight item:", item.id, "pos", item.position,
-        "-> tile:", tile);
+      console.log("Trying to highlight item:", item.id, "pos", item.position, "-> tile:", tile);
       
       if (!tile) return;
 
@@ -768,14 +767,19 @@ function startAbilitySelection(caster, abilityRaw) {
       tile.classList.add('highlight-dispellable');
       tile.style.cursor = 'pointer';
 
-      // Use the registerTile helper function
+      // FIXED: Use the registerTile helper function with proper payload structure
       registerTile(tile, async () => {
         const payload = {
           abilityName: ability.name,
           casterId: caster.id,
           casterPos: caster.position,
           targetCenter: [x, y],
-        //   affectedTargets: [{ position: [x, y], intendedEffect: 'dispel' }]
+          // FIXED: For tile-based dispel, provide position-based target instead of character targets
+          affectedTargets: [{
+            position: [x, y],
+            targetPosition: [x, y], // Add both for compatibility
+            intendedEffect: 'dispel'
+          }]
         };
 
         console.log('[DISPEL USED]', payload);
