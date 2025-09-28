@@ -1377,3 +1377,8 @@
 .ability-tooltip-effects {
     color: #F44336;
 }
+
+.highlight-dispellable {
+    outline: 2px solid #8ef !important;
+    box-shadow: 0 0 6px #8ef inset;
+}

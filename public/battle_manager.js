@@ -187,10 +187,6 @@ function injectBattleLoadingStyles() {
     const style = document.createElement('style');
     style.id = 'battle-loading-styles';
     style.textContent = `
-    .highlight-dispellable {
-        outline: 2px solid #8ef !important;
-        box-shadow: 0 0 6px #8ef inset;
-    }
     .battle-result-modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.7); display: flex;
@@ -883,6 +879,9 @@ function startAbilitySelection(caster, abilityRaw) {
     if (!item || !Array.isArray(item.position)) return;
     const [x, y] = item.position;
     const tile = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
+    console.log("Trying to highlight item:", item.id, "pos", item.position,
+    "-> tile:", container.querySelector(`td[data-x="${item.position[0]}"][data-y="${item.position[1]}"]`)
+    );
     if (!tile) return;
 
     // optional filter if your items have dispellable flag
