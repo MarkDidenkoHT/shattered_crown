@@ -59,6 +59,24 @@ const getSupabaseClient = (config) => {
 };
 
 const processCharacterState = (charState) => {
+    // DEFENSIVE FIX: Validate character state before processing
+    if (!charState || typeof charState !== 'object') {
+        console.error('Invalid character state received:', charState);
+        return null; // Return null for invalid characters
+    }
+
+    // Check for required fields
+    if (!charState.id || !charState.name || charState.type === undefined) {
+        console.error('Character state missing required fields:', charState);
+        return null; // Return null for corrupted characters
+    }
+
+    // Validate position
+    if (!Array.isArray(charState.current_position) || charState.current_position.length !== 2) {
+        console.error('Character state missing valid position:', charState);
+        return null; // Return null for characters without valid positions
+    }
+
     const stats = charState.stats || {};
     const normalizedStats = Object.entries(stats).reduce((acc, [key, value]) => {
         acc[key.toLowerCase()] = value;
@@ -86,14 +104,13 @@ const processCharacterState = (charState) => {
         portrait: charState.portrait,
         has_moved: charState.has_moved,
         has_acted: charState.has_acted,
-
         current_hp: charState.current_hp,
         max_hp: charState.max_hp,
-
         priority: charState.priority || 999,
         buffs: charState.buffs || [],
         debuffs: charState.debuffs || [],
-        pendingAction: null
+        pendingAction: null,
+        status: charState.status || 'alive' // Add status field
     };
 };
 
@@ -575,19 +592,28 @@ async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
     
     const status = BattleState.battleState.status;
-      if (status === 'victory' || status === 'defeat') {
+    if (status === 'victory' || status === 'defeat') {
         await assignLoot(BattleState.battleState);
         showBattleResultModal(status);
         return; 
-      }
+    }
         
     if (!BattleState.battleState.characters_state) {
         console.warn('Battle state missing characters_state:', BattleState.battleState);
         return;
     }
 
+    // DEFENSIVE FIX: Filter out null/corrupted characters
     const newCharacters = Object.values(BattleState.battleState.characters_state)
-        .map(processCharacterState);
+        .map(processCharacterState)
+        .filter(char => char !== null); // Remove corrupted characters
+    
+    // Log if we filtered out any corrupted characters
+    const originalCount = Object.values(BattleState.battleState.characters_state).length;
+    const filteredCount = newCharacters.length;
+    if (originalCount !== filteredCount) {
+        console.warn(`Filtered out ${originalCount - filteredCount} corrupted characters`);
+    }
     
     await updateCharactersWithAnimations(newCharacters);
     
