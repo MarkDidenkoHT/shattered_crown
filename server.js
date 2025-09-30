@@ -1995,3 +1995,30 @@ app.all('/functions/v1/*', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Proxy error', details: error.message });
     }
 });
+
+app.post('/api/battle/assign-loot', async (req, res) => {
+    try {
+        const { battle_id } = req.body;
+        
+        if (!battle_id) {
+            return res.status(400).json({ success: false, error: 'Missing battle_id' });
+        }
+
+        // Call Supabase Edge Function
+        const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/assign_battle_loot`, {
+            method: 'POST',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ battle_id })
+        });
+
+        const data = await response.json();
+        return res.status(response.status).json(data);
+    } catch (error) {
+        console.error('[ASSIGN LOOT]', error);
+        return res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});

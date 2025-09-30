@@ -2351,9 +2351,31 @@ function navigateToCastle() {
 }
 
 async function assignLoot(battleState) {
-  const loot = battleState.layout_data?.loot || [];
-  console.log('Assigning loot:', loot);
-  // later: actually push loot to player inventory
+  const battle_id = battleState.id; // Assuming battleState has an id
+  
+  try {
+    const response = await fetch('/api/battle/assign-loot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ battle_id })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('Loot assigned successfully:', data);
+      // Update UI or state as needed
+      return data;
+    } else {
+      console.error('Failed to assign loot:', data.error);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error assigning loot:', error);
+    return null;
+  }
 }
 
 function showBattleResultModal(status) {
