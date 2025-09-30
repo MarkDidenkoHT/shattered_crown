@@ -53,7 +53,7 @@ function addGridSelectionStyles() {
         }
 
         .grid-item {
-            background: rgba(20, 15, 30, 0.9);
+            background: rgba(85, 54, 27, 0.9);
             border: 2px solid rgba(196, 151, 90, 0.6);
             border-radius: 10px;
             padding: 12px;
@@ -580,7 +580,7 @@ function renderClassSelection() {
     
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Your Class</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Class</h1>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name}</h3>
@@ -844,8 +844,8 @@ function renderCharacterSummary() {
                 <p><strong>Race Description:</strong> ${_selectedRace.description}</p>
                 <p><strong>Class Description:</strong> ${_selectedClass.description}</p>
                 <p><strong>Profession:</strong> ${_selectedProfession.name} - ${_selectedProfession.description}</p>
+                <h4>Final Stats:</h4>
                 <div class="stats-block">
-                    <h4>Final Stats:</h4>
                     ${Object.entries(finalStats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
                 </div>
                 <div class="abilities-block">
@@ -855,7 +855,7 @@ function renderCharacterSummary() {
             </div>
         </div>
         <div class="confirm-return-buttons">
-            <button type="button" class="fantasy-button confirm-btn">Confirm Champion</button>
+            <button type="button" class="fantasy-button confirm-btn">Confirm</button>
             <button type="button" class="fantasy-button return-btn">Return</button>
         </div>
     `;

@@ -346,16 +346,6 @@
             max-width: 1600px;
         }
 
-        /* Desktop grid view */
-        .desktop-view {
-            display: block;
-        }
-
-        /* Hide mobile slider by default */
-        .mobile-view {
-            display: none;
-        }
-
         .selection-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -412,14 +402,6 @@
  .abilities-block {
     width: 100%;
     min-height: 26vh;
-}
-
-.stats-block h4, .abilities-block h4 {
-    font-family: 'Cinzel', serif;
-    color: #c4975a;
-    font-size: 0.95rem;
-    margin-bottom: 0.3rem;
-    text-align: center;
 }
 
 .stats-block p, .stats-block ul, .abilities-block p {
@@ -569,12 +551,6 @@
             margin-bottom: 2rem;
         }
 
-        .summary-art-block {
-            width: 100%;
-            height: 300px;
-            overflow: hidden;
-        }
-
         .summary-art {
             width: 100%;
             height: 100%;
@@ -595,13 +571,12 @@
         }
         .summary-card p {
             color: #b8b3a8;
-            margin-bottom: 0.5rem;
             font-size: 1rem;
         }
         .summary-card .stats-block, .summary-card .abilities-block {
             text-align: left;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
+            margin-top: 5px;
+            padding-top: 5px;
             border-top: 1px solid rgba(196, 151, 90, 0.2);
         }
         .summary-card .stats-block h4, .summary-card .abilities-block h4 {
@@ -643,7 +618,7 @@
 
         .selection-slide {
             min-width: 100%;
-            min-height: 85vh;
+            min-height: 80vh;
             background: linear-gradient(145deg, rgb(109 64 25 / 90%), rgba(42, 31, 22, 0.8));
             border: 2px solid #e59745;
             border-radius: 8px;
@@ -703,12 +678,6 @@
         }
 
         @media (max-width: 768px) {
-            .desktop-view {
-                display: none;
-            }
-            .mobile-view {
-                display: block;
-            }
             .art-header h1 {
                 font-size: 1.3rem;
             }
@@ -716,8 +685,11 @@
                 max-width: 100%;
             }
             .summary-art-block {
-                height: 180px;
+                width: 100%;
+                height: 100px;
+                overflow: hidden;
             }
+
             .summary-info-block {
                 padding: 1rem;
             }
@@ -794,11 +766,6 @@
         font-size: 0.85rem;
     }
 
-    /* Mobile adjustments for sex/profession sliders */
-    .selection-slider.mobile-view .selection-slide[data-type="sex"] .card-art-block,
-    .selection-slider.mobile-view .selection-slide[data-type="profession"] .card-art-block {
-        height: 200px; /* Match desktop card art height */
-    }
     .selection-slide[data-type="class"] {
         background-size: cover;
         background-position: center;
@@ -1381,4 +1348,10 @@
 .highlight-dispellable {
     outline: 2px solid #8ef !important;
     box-shadow: 0 0 6px #8ef inset;
+}
+
+.name-selection-block {
+    display: flex;
+    flex-direction: column;
+    gap: 5px
 }
