@@ -1431,6 +1431,7 @@ function loadCharacterManagerStyles() {
 }
 
 .talent-container {
+    height: 100%;
     background: linear-gradient(135deg, rgba(160, 82, 45, 0.8), rgba(139, 69, 19, 0.8));
     border-radius: 15px;
     padding: 2px;
