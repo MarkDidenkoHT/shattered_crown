@@ -38,7 +38,7 @@ async function fetchAndRenderCharacters() {
   }
 }
 
-function renderCharacters(characters) {
+async function renderCharacters(characters) {
   const section = _main.querySelector('.character-creation-section');
 
   if (!characters || characters.length === 0) {
@@ -73,6 +73,61 @@ function renderCharacters(characters) {
   setupTalentsClickHandlers(section, characters);
   setupStatsClickHandlers(section, characters);
   setupDragSlider();
+  
+  // Add this new line:
+  const availableCounts = await checkAvailableItems(characters);
+  updateAvailabilityLabels(section, availableCounts);
+}
+async function checkAvailableItems(characters) {
+  try {
+    // Check consumables and tools
+    const bankResponse = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=type,amount`);
+    const bankItems = await bankResponse.json();
+    
+    const availableCounts = {};
+    bankItems.forEach(item => {
+      if (item.amount > 0) {
+        availableCounts[item.type] = (availableCounts[item.type] || 0) + 1;
+      }
+    });
+    
+    // Check crafted gear
+    const gearResponse = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&equipped_by=is.null&select=type`);
+    const gearItems = await gearResponse.json();
+    
+    gearItems.forEach(item => {
+      availableCounts[item.type] = (availableCounts[item.type] || 0) + 1;
+    });
+    
+    return availableCounts;
+  } catch (error) {
+    console.error('Error checking available items:', error);
+    return {};
+  }
+}
+
+function updateAvailabilityLabels(section, availableCounts) {
+  section.querySelectorAll('.equipment-icon').forEach(icon => {
+    const type = icon.dataset.type;
+    const count = availableCounts[type] || 0;
+    
+    icon.dataset.hasItems = count > 0 ? 'true' : 'false';
+    
+    // Add or update label
+    let label = icon.querySelector('.availability-label');
+    if (!label) {
+      label = document.createElement('div');
+      label.className = 'availability-label';
+      icon.appendChild(label);
+    }
+    
+    if (count > 0) {
+      label.textContent = `${count} available`;
+      label.style.display = 'block';
+    } else {
+      label.style.display = 'none';
+    }
+  });
 }
 
 function characterCardHTML(character) {
@@ -156,12 +211,13 @@ function characterCardHTML(character) {
               
               return `
                 <div class="equipment-slot">
-                  <div class="equipment-icon ${rarityClass}" 
-                       data-character-id="${character.id}" 
-                       data-slot="${item.slot}" 
-                       data-type="${item.type}"
-                       style="cursor: pointer;" 
-                       title="${item.label}${isEquipped ? ': ' + item.value : ''}">
+                <div class="equipment-icon ${rarityClass}" 
+                    data-character-id="${character.id}" 
+                    data-slot="${item.slot}" 
+                    data-type="${item.type}"
+                    data-has-items="false"
+                    style="cursor: pointer;" 
+                    title="${item.label}${isEquipped ? ': ' + item.value : ''}">
                     ${isEquipped ? `
                       <img src="${iconPath}" alt="${item.value}">
                       <div class="equipment-placeholder">${item.type.substring(0, 3)}</div>
@@ -181,13 +237,12 @@ function characterCardHTML(character) {
               <div class="stat-item">
                 <span class="stat-label">${stat.shortLabel}:</span>
                 <span class="stat-value" 
-                      data-character-id="${character.id}" 
-                      data-stat-name="${stat.label}" 
-                      data-total-value="${stat.value}"
-                      data-base-value="${stat.baseValue}"
-                      style="cursor: pointer;">
-                  ${stat.value}
-                </span>
+                    data-character-id="${character.id}" 
+                    data-stat-name="${stat.label}" 
+                    data-total-value="${stat.value}"
+                    data-base-value="${stat.baseValue}">
+                ${stat.value}
+              </span>
               </div>
             `).join('')}
           </div>
@@ -374,15 +429,19 @@ function setupTalentsClickHandlers(section, characters) {
 }
 
 function setupStatsClickHandlers(section, characters) {
-  section.querySelectorAll('.stat-value').forEach(statEl => {
-    statEl.addEventListener('click', (e) => {
+  section.querySelectorAll('.stat-item').forEach(statItemEl => {
+    statItemEl.style.cursor = 'pointer';
+    statItemEl.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       
-      const characterId = statEl.dataset.characterId;
-      const statName = statEl.dataset.statName;
-      const totalValue = parseInt(statEl.dataset.totalValue);
-      const baseValue = parseInt(statEl.dataset.baseValue);
+      const statValueEl = statItemEl.querySelector('.stat-value');
+      if (!statValueEl) return;
+      
+      const characterId = statValueEl.dataset.characterId;
+      const statName = statValueEl.dataset.statName;
+      const totalValue = parseInt(statValueEl.dataset.totalValue);
+      const baseValue = parseInt(statValueEl.dataset.baseValue);
       const itemBonus = totalValue - baseValue;
       
       const character = characters.find(c => c.id == characterId);
@@ -768,6 +827,23 @@ function getGearIconPath(itemName) {
   return `assets/art/items/${spriteName}.png`;
 }
 
+function formatItemStats(stats) {
+  if (!stats) return '';
+  
+  // Handle array format: [{ name: "Vitality", value: 3 }, ...]
+  if (Array.isArray(stats)) {
+    return stats.map(stat => `${stat.name}: +${stat.value}`).join(', ');
+  }
+  
+  // Handle object format: { vitality: 3, strength: 2, ... }
+  return Object.entries(stats)
+    .map(([key, value]) => {
+      const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+      return `${capitalizedKey}: +${value}`;
+    })
+    .join(', ');
+}
+
 async function showEquipmentModal(character, slot, type) {
   try {
     let availableItems = [];
@@ -821,13 +897,13 @@ async function showEquipmentModal(character, slot, type) {
               const itemName = item.item || item.result;
               
               return `
-                <div class="equipment-option ${itemName === currentItem ? 'selected' : ''}" 
+                <div class="equipment-option ${itemName === currentItem ? 'selected' : ''} ${getGearRarity(itemName)}" 
                      data-item="${itemName}"
                      data-crafting-session-id="${item.crafting_session_id || ''}"
                      data-is-consumable="${isConsumable}"
                      data-is-tool="${isTool}"
                      ${!isAvailable ? 'data-disabled="true"' : ''}
-                     style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border: 2px solid ${itemName === currentItem ? '#4CAF50' : '#444'}; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
+                     style="display: flex; align-items: center; gap: 1rem; padding: 0.8rem; margin-bottom: 0.5rem; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: ${!isAvailable ? 'not-allowed' : 'pointer'}; opacity: ${!isAvailable ? '0.5' : '1'};">
                   <img src="${getItemIcon(item, itemName, type)}"
                     style="width: 48px; height: 48px; border-radius: 4px;">
                   <div style="width: 48px; height: 48px; border: 2px solid #666; border-radius: 4px; background: rgba(255,255,255,0.1); display: none; align-items: center; justify-content: center; font-size: 0.7rem; color: #666;">
@@ -836,7 +912,7 @@ async function showEquipmentModal(character, slot, type) {
                   <div style="flex: 1;">
                     <strong style="color: #4CAF50;">${itemName}</strong>
                     ${(isConsumable || isTool) ? `<br><span style="color: #999; font-size: 0.8rem;">Qty: ${item.amount}</span>` : ''}
-                    ${item.stats ? `<br><span style="color: #b8b3a8; font-size: 0.8rem;">${Object.entries(item.stats).map(([key, value]) => `${key}: ${value}`).join(', ')}</span>` : ''}
+                    ${item.stats ? `<br><span style="color: #b8b3a8; font-size: 0.8rem;">${formatItemStats(item.stats)}</span>` : ''}
                   </div>
                 </div>
               `;
@@ -1054,6 +1130,38 @@ function loadCharacterManagerStyles() {
     const styleEl = document.createElement('style');
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
+.equipment-option {
+    border: 2px solid #444;
+}
+
+.equipment-option.selected {
+    border-color: #4CAF50 !important;
+}
+
+.equipment-option.rarity-uncommon { border-color: #1eff00; }
+.equipment-option.rarity-rare { border-color: #0070dd; }
+.equipment-option.rarity-epic { border-color: #a335ee; }
+.equipment-option.rarity-legendary { border-color: #ff8000; }
+
+.availability-label {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.55rem;
+    color: #4CAF50;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.equipment-icon[data-has-items="false"] .availability-label {
+    display: none;
+}
+
 .characters-slider-container {
     flex: 1;
     width: 100%;
