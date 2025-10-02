@@ -856,6 +856,44 @@ function startAbilitySelection(caster, abilityRaw) {
     }
   }
 }
+      // --- TILE targeting logic (environment abilities like Sanctify) ---
+  if (ability.targeting === 'tile') {
+    const range = ability.range || 1;
+
+    for (let x = 0; x < GRID_SIZE.cols; x++) {
+      for (let y = 0; y < GRID_SIZE.rows; y++) {
+        const dist = chebyshevDistance(caster.position, [x, y]);
+        if (dist > range) continue;
+
+        const cell = getCellAt(x, y);
+        if (!cell) continue;
+
+        // Check if this tile has an environment item (corpse, chest, etc.)
+        const envItem = Object.values(BattleState.environmentItems || {}).find(item =>
+          item.position?.[0] === x && item.position?.[1] === y
+        );
+
+        // Highlight tiles that contain interactable environment objects
+        if (envItem) {
+          cell.classList.add('highlight-target-enemy');
+
+          registerTile(cell, () => {
+            const payload = {
+              abilityName: ability.name,
+              casterId: caster.id,
+              casterPos: caster.position,
+              targetCenter: [x, y],
+              affectedTargets: [], // No character targets
+              environmentTarget: envItem.id // Used for backend environment actions
+            };
+            console.log('[ENVIRONMENT ABILITY USED]', payload);
+            handleAbilityUse(payload);
+            clearAbilitySelection();
+          });
+        }
+      }
+    }
+  }
 
 }
 
