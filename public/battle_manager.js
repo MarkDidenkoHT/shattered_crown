@@ -1619,7 +1619,6 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
     }
 
     character.position = [targetX, targetY];
-    character.originalPosition = [targetX, targetY];
     BattleState.isMoveQueued = true;
     unhighlightAllTiles();
 
