@@ -415,11 +415,9 @@ function removeBattleLoadingModal(modal) {
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
 
-    // Show loading modal
     const loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
     const loadingStartTime = Date.now();
 
-    // Simulate progress steps for consistency
     updateBattleLoadingProgress(loadingModal, "Connecting to server...", "Authenticating player...", 10);
 
     BattleState.profile = BattleState.getCurrentProfile();
@@ -469,7 +467,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         return;
     }
 
-    // Ensure minimum loading time for smooth animation
     const minTime = 2000;
     const elapsed = Date.now() - loadingStartTime;
     await new Promise(resolve => setTimeout(resolve, Math.max(0, minTime - elapsed)));
@@ -482,7 +479,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
     renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState.layout_data);
     await updateGameStateFromRealtime();
-    // renderBottomUI();
 }
 
 const loadTileData = async () => {
@@ -515,15 +511,12 @@ const reconnectToBattle = async (battleId) => {
         throw new Error('Failed to reconnect to existing battle.');
     }
     
-    // Verify player is in this battle
     if (!battleState.players?.includes(BattleState.profile.id)) {
         throw new Error('You are not a participant in this battle.');
     }
     
     BattleState.battleId = battleId;
     BattleState.battleState = battleState;
-    
-    displayMessage('Reconnected to ongoing battle!', 'success');
 };
 
 const initializeBattle = async (selectedMode, areaLevel) => {
@@ -648,12 +641,11 @@ function clearAbilitySelection() {
   }
   BattleState.selectingAbility = null;
 
-  resetAbilityButtonsUI(); // 🔥 reset ability button state
+  resetAbilityButtonsUI();
   hideAbilityTooltip();
 }
 
 function toggleAbilitySelection(caster, ability) {
-  // if same ability already selected → cancel
   if (BattleState.selectingAbility?.ability?.name === ability.name) {
     clearAbilitySelection();
     resetAbilityButtonsUI();
@@ -671,10 +663,10 @@ function highlightSelectedAbilityButton(abilityName) {
     if (btn.dataset.abilityName) {
       if (btn.dataset.abilityName === abilityName) {
         btn.classList.add('ability-selected');
-        btn.disabled = false; // keep selected one usable
+        btn.disabled = false;
       } else {
         btn.classList.remove('ability-selected');
-        btn.disabled = true; // disable others
+        btn.disabled = true;
       }
     }
   });
@@ -685,7 +677,7 @@ function resetAbilityButtonsUI() {
   allBtns.forEach(btn => {
     btn.classList.remove('ability-selected');
     if (btn.dataset.abilityName) {
-      btn.disabled = false; // re-enable all ability buttons
+      btn.disabled = false;
     }
   });
 }
@@ -701,7 +693,6 @@ function startAbilitySelection(caster, abilityRaw) {
   };
   BattleState.highlightedTiles = [];
 
-  // helper: register a tile as clickable for ability use
   function registerTile(tile, handler) {
     const wrapped = function (ev) {
       ev.stopPropagation();
@@ -715,7 +706,6 @@ function startAbilitySelection(caster, abilityRaw) {
         return;
       }
 
-      // fallback: character selection
       const charEl = tile.querySelector('.character-token');
       if (charEl && charEl.dataset?.id) {
         const charId = charEl.dataset.id;
@@ -735,7 +725,6 @@ function startAbilitySelection(caster, abilityRaw) {
     BattleState.highlightedTiles.push(tile);
   }
 
-  // --- SINGLE target logic ---
   if (ability.targeting === 'single') {
     for (const ch of BattleState.characters) {
       const dist = chebyshevDistance(caster.position, ch.position);
@@ -779,19 +768,15 @@ function startAbilitySelection(caster, abilityRaw) {
     }
   }
 
-  // --- AREA target logic ---
   if (ability.targeting === 'area') {
   const area = ability.area;
   const range = ability.range;
 
-  // 🔹 figure out which cells can be "centers" for this AoE
   let potentialCenters = [];
 
   if (range === 0) {
-    // self-centered AoE → only caster position
     potentialCenters = [caster.position];
   } else {
-    // normal AoE → every tile within range of caster
     const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
     for (const cell of cells) {
       const x = +cell.dataset.x, y = +cell.dataset.y;
@@ -801,7 +786,6 @@ function startAbilitySelection(caster, abilityRaw) {
     }
   }
 
-  // 🔹 for each potential center, compute affected tiles + chars
   for (const [cx, cy] of potentialCenters) {
     const affected = [];
     const affectedTiles = [];
@@ -823,18 +807,15 @@ function startAbilitySelection(caster, abilityRaw) {
 
     if (!affected.length) continue;
 
-    // highlight AoE center if it's a targeted AoE
     if (range > 0) {
       const centerCell = getCellAt(cx, cy);
       if (centerCell) centerCell.classList.add('highlight-area-center');
     } else {
-      // self-centered → highlight affected area instead
       for (const t of affectedTiles) {
         t.classList.add('highlight-area-affected');
       }
     }
 
-    // 🔹 confirm cast when clicking any affected tile
     for (const tile of affectedTiles) {
       registerTile(tile, () => {
         const payload = {
@@ -856,7 +837,7 @@ function startAbilitySelection(caster, abilityRaw) {
     }
   }
 }
-      // --- TILE targeting logic (environment abilities like Sanctify) ---
+
   if (ability.targeting === 'tile') {
     const range = ability.range || 1;
 
@@ -868,12 +849,10 @@ function startAbilitySelection(caster, abilityRaw) {
         const cell = getCellAt(x, y);
         if (!cell) continue;
 
-        // Check if this tile has an environment item (corpse, chest, etc.)
         const envItem = Object.values(BattleState.environmentItems || {}).find(item =>
           item.position?.[0] === x && item.position?.[1] === y
         );
 
-        // Highlight tiles that contain interactable environment objects
         if (envItem) {
           cell.classList.add('highlight-target-enemy');
 
@@ -883,8 +862,8 @@ function startAbilitySelection(caster, abilityRaw) {
               casterId: caster.id,
               casterPos: caster.position,
               targetCenter: [x, y],
-              affectedTargets: [], // No character targets
-              environmentTarget: envItem.id // Used for backend environment actions
+              affectedTargets: [],
+              environmentTarget: envItem.id
             };
             console.log('[ENVIRONMENT ABILITY USED]', payload);
             handleAbilityUse(payload);
@@ -894,7 +873,6 @@ function startAbilitySelection(caster, abilityRaw) {
       }
     }
   }
-
 }
 
 function computeEffect(caster, ability, target) {
@@ -912,12 +890,10 @@ async function updateCharactersWithAnimations(newCharacters) {
 
     const animations = [];
 
-    // Process each character for potential animation
     for (const newChar of newCharacters) {
         const oldChar = BattleState.characters.find(c => c.id === newChar.id);
         const charEl = BattleState.characterElements.get(newChar.id);
 
-        // 🔥 Skip rendering dead characters (remove them if they exist)
         if (newChar.current_hp <= 0 || newChar.status === 'dead') {
             if (charEl) {
                 animations.push(new Promise(resolve => {
@@ -932,11 +908,10 @@ async function updateCharactersWithAnimations(newCharacters) {
                     }, ANIMATION_CONFIG.fadeOutDuration);
                 }));
             }
-            continue; // don’t process further
+            continue;
         }
 
         if (!oldChar) {
-            // New character - create and fade in
             const newCharEl = createCharacterElement(newChar);
             const targetCell = container.querySelector(
                 `td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`
@@ -954,12 +929,10 @@ async function updateCharactersWithAnimations(newCharacters) {
                 }));
             }
         } else if (charEl) {
-            // Existing character - check for movement or stat changes
             const [oldX, oldY] = oldChar.position;
             const [newX, newY] = newChar.position;
 
             if (oldX !== newX || oldY !== newY) {
-                // Character moved - animate movement
                 const fromCell = container.querySelector(`td[data-x="${oldX}"][data-y="${oldY}"]`);
                 const toCell = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
 
@@ -968,7 +941,6 @@ async function updateCharactersWithAnimations(newCharacters) {
                 }
             }
 
-            // Update HP bar if HP changed
             if (oldChar.current_hp !== newChar.current_hp) {
                 const hpBar = charEl.querySelector('.character-hp-bar');
                 if (hpBar) {
@@ -976,12 +948,10 @@ async function updateCharactersWithAnimations(newCharacters) {
                 }
             }
 
-            // Update other visual states (turn indicators, etc.)
             updateCharacterVisualState(charEl, newChar);
         }
     }
 
-    // Remove characters that no longer exist in newCharacters
     for (const oldChar of BattleState.characters) {
         if (!newCharacters.find(c => c.id === oldChar.id)) {
             const charEl = BattleState.characterElements.get(oldChar.id);
@@ -1001,18 +971,13 @@ async function updateCharactersWithAnimations(newCharacters) {
         }
     }
 
-    // Wait for all animations to complete
     await Promise.all(animations);
-
-    // Update stored character state
     BattleState.characters = newCharacters;
 }
 
 const updateCharacterVisualState = (charEl, character) => {
-    // Update tooltip
     charEl.title = `${character.name} (${character.current_hp}/${character.max_hp} HP)`;
     
-    // Update turn completion indicator
     const existingIndicator = charEl.querySelector('.turn-done-indicator');
     if (character.has_moved && character.has_acted) {
         if (!existingIndicator) {
@@ -1023,13 +988,11 @@ const updateCharacterVisualState = (charEl, character) => {
         existingIndicator.remove();
     }
     
-    // Update HP bar content (not animated here, done in animateHPChange)
     const hpBar = charEl.querySelector('.character-hp-bar');
     if (hpBar) {
         const hpFill = hpBar.querySelector('div');
         if (hpFill) {
             const hpPercentage = Math.max(0, Math.min(100, Math.round((character.current_hp / character.max_hp) * 100)));
-            // Only update if not already transitioning
             if (!hpFill.style.transition) {
                 hpFill.style.width = `${hpPercentage}%`;
             }
@@ -1109,7 +1072,7 @@ const handleAITurn = async () => {
       handleRefresh();
       BattleState.isProcessingAITurn = false;
     }
-  }, 8000); // 8s safety
+  }, 8000);
 
   try {
     await new Promise(res => setTimeout(res, 1000));
