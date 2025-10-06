@@ -1610,7 +1610,6 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
-    // Perform smooth movement animation for player moves
     const charEl = BattleState.characterElements.get(character.id);
     const fromCell = container.querySelector(`td[data-x="${startX}"][data-y="${startY}"]`);
     const toCell = targetTileEl;
@@ -1619,12 +1618,9 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         await animateCharacterMovement(charEl, fromCell, toCell);
     }
 
-    // Update character position
     character.position = [targetX, targetY];
-
-    // Set move queued flag
+    character.originalPosition = [targetX, targetY];
     BattleState.isMoveQueued = true;
-
     unhighlightAllTiles();
 
     if (BattleState.selectedCharacterEl) {
@@ -1664,10 +1660,7 @@ async function renderBottomUI() {
         return;
     }
 
-    // Ensure cache container exists
     BattleState.characterAbilities = BattleState.characterAbilities || {};
-
-    // === Load or reuse abilities for this character ===
     let abilityObjs = {};
     if (BattleState.characterAbilities[currentChar.id]) {
         abilityObjs = BattleState.characterAbilities[currentChar.id];
@@ -1676,19 +1669,16 @@ async function renderBottomUI() {
 
         const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
 
-        // load basics
         for (const abilityName of Object.keys(charAbilities.basic || {})) {
             const ability = await getAbility(abilityName);
             if (ability) abilityObjs.basic.push(ability);
         }
 
-        // load passive (only one)
         const passiveNames = Object.keys(charAbilities.passive || {});
         if (passiveNames[0]) {
             abilityObjs.passive = await getAbility(passiveNames[0]);
         }
 
-        // load ultimate (only one)
         const ultimateNames = Object.keys(charAbilities.ultimate || {});
         if (ultimateNames[0]) {
             abilityObjs.ultimate = await getAbility(ultimateNames[0]);
@@ -1697,7 +1687,6 @@ async function renderBottomUI() {
         BattleState.characterAbilities[currentChar.id] = abilityObjs;
     }
 
-    // === Render 2 rows of 5 buttons ===
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
@@ -1764,7 +1753,6 @@ async function renderBottomUI() {
 
     ui.appendChild(fragment);
 
-    // Hook up buttons
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
     if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
 
@@ -1784,7 +1772,6 @@ const handleAbilityUse = async (abilityPayload) => {
         return;
     }
 
-    // Store action as "pendingAction" on character
     activeCharacter.pendingAction = {
         type: 'ability',
         data: abilityPayload
