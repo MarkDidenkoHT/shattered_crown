@@ -1194,24 +1194,38 @@ function renderBattleGrid(layoutJson) {
         tr.style.height = `${100 / GRID_SIZE.rows}%`;
         
         for (let x = 0; x < GRID_SIZE.cols; x++) {
-            const tileName = tiles[y]?.[x] || 'Plain';
+            const tileDataRaw = tiles[y]?.[x] || 'Plain';
+            let tileName, art;
+
+            if (typeof tileDataRaw === 'object' && tileDataRaw !== null) {
+                tileName = tileDataRaw.name || 'Plain';
+                art = tileDataRaw.art || 'placeholder';
+            } else {
+                tileName = tileDataRaw;
+                const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
+                const tileData = BattleState.tileMap.get(normalized);
+                art = tileData?.art || 'placeholder';
+            }
+
             const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
-            const tileData = BattleState.tileMap.get(normalized);
-            const art = tileData?.art || 'placeholder';
+            const tileMeta = BattleState.tileMap.get(normalized);
 
             const td = document.createElement('td');
             td.className = `battle-tile tile-${normalized}`;
             Object.assign(td.dataset, {
                 x: x.toString(), y: y.toString(),
-                walkable: tileData?.walkable ? 'true' : 'false'
+                walkable: tileMeta?.walkable ? 'true' : 'false'
             });
             td.title = tileName;
 
             Object.assign(td.style, {
                 backgroundImage: `url(assets/art/tiles/${art}.png)`,
-                backgroundSize: 'cover', backgroundPosition: 'center',
-                width: `${100 / GRID_SIZE.cols}%`, padding: '0', margin: '0',
-                position: 'relative', boxSizing: 'border-box',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                width: `${100 / GRID_SIZE.cols}%`,
+                padding: '0', margin: '0',
+                position: 'relative',
+                boxSizing: 'border-box',
                 border: '1px solid #666',
                 transition: 'box-shadow 200ms ease, background-color 200ms ease'
             });
