@@ -590,8 +590,6 @@ function showClassDescription(classInfo) {
     modal.querySelector('.modal-close-btn').addEventListener('click', closeModal);
     modal.querySelector('.modal-ok-btn').addEventListener('click', closeModal);
     modal.querySelector('.modal-overlay').addEventListener('click', closeModal);
-    
-    // Add ability tooltip handlers
     modal.querySelectorAll('.ability-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -619,74 +617,14 @@ async function showAbilityTooltip(abilityName) {
             <div class="ability-tooltip-overlay"></div>
             <div class="ability-tooltip-content">
                 <div class="ability-tooltip-header">
-                    <div class="ability-header-left">
+                    <div class="ability-header-content">
                         <img src="${abilityIconPath}" alt="${ability.name}" class="ability-icon" onerror="this.style.display='none'">
                         <h3>${ability.name}</h3>
                     </div>
                     <button class="ability-tooltip-close">&times;</button>
                 </div>
                 <div class="ability-tooltip-body">
-                    ${ability.type ? `<p><strong>Type:</strong> ${ability.type}</p>` : ''}
-                    ${ability.damage_type ? `<p><strong>Damage Type:</strong> ${ability.damage_type}</p>` : ''}
                     ${ability.description ? `<p class="ability-description">${ability.description}</p>` : ''}
-                    
-                    ${ability.cooldown || ability.range || ability.area || ability.base_value ? `
-                        <div class="ability-stat-grid">
-                            ${ability.cooldown ? `
-                                <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Cooldown</div>
-                                    <div class="ability-stat-value">${ability.cooldown}s</div>
-                                </div>
-                            ` : ''}
-                            ${ability.range ? `
-                                <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Range</div>
-                                    <div class="ability-stat-value">${ability.range}</div>
-                                </div>
-                            ` : ''}
-                            ${ability.area ? `
-                                <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Area</div>
-                                    <div class="ability-stat-value">${ability.area}</div>
-                                </div>
-                            ` : ''}
-                            ${ability.base_value ? `
-                                <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Base Value</div>
-                                    <div class="ability-stat-value">${ability.base_value}</div>
-                                </div>
-                            ` : ''}
-                            ${ability.scaling ? `
-                                <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Scaling</div>
-                                    <div class="ability-stat-value">${ability.scaling}% ${ability.stat || ''}</div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    ` : ''}
-                    
-                    ${ability.buff_name ? `
-                        <div class="ability-buff-section">
-                            <p><strong>Buff:</strong> ${ability.buff_name}</p>
-                            ${ability.buff_duration ? `<p><strong>Duration:</strong> ${ability.buff_duration}s</p>` : ''}
-                            ${ability.buff_stacks ? `<p><strong>Stacks:</strong> ${ability.buff_stacks}</p>` : ''}
-                            ${ability.buff_effect ? `<p><strong>Effect:</strong> ${JSON.stringify(ability.buff_effect)}</p>` : ''}
-                        </div>
-                    ` : ''}
-                    
-                    ${ability.debuff_name ? `
-                        <div class="ability-debuff-section">
-                            <p><strong>Debuff:</strong> ${ability.debuff_name}</p>
-                            ${ability.debuff_duration ? `<p><strong>Duration:</strong> ${ability.debuff_duration}s</p>` : ''}
-                            ${ability.debuff_stacks ? `<p><strong>Stacks:</strong> ${ability.debuff_stacks}</p>` : ''}
-                            ${ability.debuff_effect ? `<p><strong>Effect:</strong> ${JSON.stringify(ability.debuff_effect)}</p>` : ''}
-                            ${ability.dispellable !== null ? `<p><strong>Dispellable:</strong> ${ability.dispellable ? 'Yes' : 'No'}</p>` : ''}
-                        </div>
-                    ` : ''}
-                    
-                    ${ability.targeting ? `<p><strong>Targeting:</strong> ${ability.targeting}</p>` : ''}
-                    ${ability.target_type ? `<p><strong>Target Type:</strong> ${ability.target_type}</p>` : ''}
-                    ${ability.effects ? `<p><strong>Effects:</strong> ${ability.effects}</p>` : ''}
                 </div>
             </div>
         `;
