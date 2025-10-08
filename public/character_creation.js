@@ -32,7 +32,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile }) {
 }
 
 function addGridSelectionStyles() {
-    // Check if styles are already added
     if (document.getElementById('grid-selection-styles')) {
         return;
     }
@@ -151,6 +150,216 @@ function addGridSelectionStyles() {
         .profession-item .grid-item-description {
             font-size: 10px;
         }
+
+        /* Name input in portrait selection */
+        .name-selection-inline {
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .name-selection-inline label {
+            display: block;
+            color: #c4975a;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .name-selection-inline input {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .name-error-message {
+            color: #ff6b6b;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        /* Improved Summary Layout */
+        .summary-card {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            background: rgba(50, 35, 20, 0.95);
+            border: 2px solid rgba(196, 151, 90, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+        }
+
+        .summary-art-block {
+            flex: 0 0 25%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-art {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 3px solid rgba(196, 151, 90, 0.8);
+        }
+
+        .summary-character-name {
+            color: #c4975a;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .summary-info-block {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .summary-info-block h2 {
+            color: #c4975a;
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+
+        .summary-info-block p {
+            margin: 5px 0;
+            color: #ddd;
+            font-size: 14px;
+        }
+
+        .summary-info-block p strong {
+            color: #c4975a;
+        }
+
+        /* Ability tooltip styles */
+        .ability-item {
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .ability-item:hover {
+            color: #4CAF50;
+            text-decoration: underline;
+        }
+
+        .ability-tooltip-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ability-tooltip-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .ability-tooltip-content {
+            position: relative;
+            background: rgba(50, 35, 20, 0.98);
+            border: 3px solid #c4975a;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(196, 151, 90, 0.5);
+        }
+
+        .ability-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(196, 151, 90, 0.5);
+        }
+
+        .ability-tooltip-header h3 {
+            color: #c4975a;
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .ability-tooltip-close {
+            background: none;
+            border: none;
+            color: #c4975a;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            width: 30px;
+            height: 30px;
+        }
+
+        .ability-tooltip-close:hover {
+            color: #fff;
+        }
+
+        .ability-tooltip-body {
+            color: #ddd;
+        }
+
+        .ability-tooltip-body p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .ability-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .ability-stat-item {
+            background: rgba(85, 54, 27, 0.6);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(196, 151, 90, 0.4);
+        }
+
+        .ability-stat-label {
+            color: #c4975a;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .ability-stat-value {
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .summary-card {
+                flex-direction: column;
+            }
+
+            .summary-art-block {
+                flex: 0 0 auto;
+                width: 100%;
+                max-width: 200px;
+                margin: 0 auto;
+            }
+        }
     `;
     
     document.head.appendChild(style);
@@ -184,41 +393,7 @@ async function startCharacterCreationFlow() {
         window.gameAuth.loadModule('castle');
         return;
     }
-    renderNameSelection();
-}
-
-function renderNameSelection() {
-    const section = _main.querySelector('.character-creation-section');
-    const currentCharacterNumber = _existingCharacterCount + 1;
-    section.innerHTML = `
-        <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name Your Champion</h1>
-        </div>
-        <div class="name-selection-block">
-            <label for="character-name-input">Enter a name for your champion:</label>
-            <input type="text" id="character-name-input" maxlength="24" placeholder="Champion Name" class="fantasy-input" value="${_characterName}">
-            <div class="name-error-message" style="color: red; display: none;"></div>
-            <button class="fantasy-button name-confirm-btn">Confirm Name</button>
-        </div>
-    `;
-    const input = section.querySelector('#character-name-input');
-    const errorMsg = section.querySelector('.name-error-message');
-    section.querySelector('.name-confirm-btn').addEventListener('click', () => {
-        const name = input.value.trim();
-        if (!name) {
-            errorMsg.textContent = 'Please enter a name.';
-            errorMsg.style.display = 'block';
-            return;
-        }
-        if (name.length < 2) {
-            errorMsg.textContent = 'Name must be at least 2 characters.';
-            errorMsg.style.display = 'block';
-            return;
-        }
-        errorMsg.style.display = 'none';
-        _characterName = name;
-        fetchRacesAndRenderSelection();
-    });
+    fetchRacesAndRenderSelection();
 }
 
 async function fetchRacesAndRenderSelection() {
@@ -343,10 +518,8 @@ function loadClassSelectionBackgrounds() {
         const className = selectedClass.name.toLowerCase().replace(/\s+/g, '_');
         const backgroundImagePath = `assets/art/classes/backgrounds/${className}_bg.png`;
         
-        // Create and test the image
         const testImage = new Image();
         testImage.onload = function() {
-            // Image exists, apply it with overlay for readability
             slide.style.backgroundImage = `
                 linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)),
                 url('${backgroundImagePath}')
@@ -355,12 +528,10 @@ function loadClassSelectionBackgrounds() {
             slide.style.backgroundPosition = 'center';
             slide.style.backgroundRepeat = 'no-repeat';
             
-            // Apply class-specific border
             applyClassBorderToSlide(slide, className);
         };
         
         testImage.onerror = function() {
-            // Image doesn't exist, keep default background and apply border
             console.log(`Class background image not found: ${backgroundImagePath}`);
             applyClassBorderToSlide(slide, className);
         };
@@ -404,7 +575,7 @@ function showClassDescription(classInfo) {
                 ${classInfo.starting_abilities && classInfo.starting_abilities.length > 0 ? `
                     <div class="abilities-block">
                         <h4>Starting Abilities:</h4>
-                        <ul>${classInfo.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
+                        <ul>${classInfo.starting_abilities.map(ability => `<li class="ability-item" data-ability="${ability}">${ability}</li>`).join('')}</ul>
                     </div>
                 ` : ''}
             </div>
@@ -419,6 +590,85 @@ function showClassDescription(classInfo) {
     modal.querySelector('.modal-close-btn').addEventListener('click', closeModal);
     modal.querySelector('.modal-ok-btn').addEventListener('click', closeModal);
     modal.querySelector('.modal-overlay').addEventListener('click', closeModal);
+    
+    // Add ability tooltip handlers
+    modal.querySelectorAll('.ability-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showAbilityTooltip(item.dataset.ability);
+        });
+    });
+}
+
+async function showAbilityTooltip(abilityName) {
+    try {
+        const response = await _apiCall(`/api/supabase/rest/v1/abilities?name=eq.${encodeURIComponent(abilityName)}&select=*`);
+        const abilities = await response.json();
+        
+        if (!abilities || abilities.length === 0) {
+            displayMessage('Ability information not available.');
+            return;
+        }
+        
+        const ability = abilities[0];
+        
+        const modal = document.createElement('div');
+        modal.className = 'ability-tooltip-modal';
+        modal.innerHTML = `
+            <div class="ability-tooltip-overlay"></div>
+            <div class="ability-tooltip-content">
+                <div class="ability-tooltip-header">
+                    <h3>${ability.name}</h3>
+                    <button class="ability-tooltip-close">&times;</button>
+                </div>
+                <div class="ability-tooltip-body">
+                    <p><strong>Type:</strong> ${ability.type || 'Active'}</p>
+                    <p>${ability.description}</p>
+                    
+                    ${ability.cooldown || ability.mana_cost || ability.damage || ability.healing ? `
+                        <div class="ability-stat-grid">
+                            ${ability.cooldown ? `
+                                <div class="ability-stat-item">
+                                    <div class="ability-stat-label">Cooldown</div>
+                                    <div class="ability-stat-value">${ability.cooldown}s</div>
+                                </div>
+                            ` : ''}
+                            ${ability.mana_cost ? `
+                                <div class="ability-stat-item">
+                                    <div class="ability-stat-label">Mana Cost</div>
+                                    <div class="ability-stat-value">${ability.mana_cost}</div>
+                                </div>
+                            ` : ''}
+                            ${ability.damage ? `
+                                <div class="ability-stat-item">
+                                    <div class="ability-stat-label">Damage</div>
+                                    <div class="ability-stat-value">${ability.damage}</div>
+                                </div>
+                            ` : ''}
+                            ${ability.healing ? `
+                                <div class="ability-stat-item">
+                                    <div class="ability-stat-label">Healing</div>
+                                    <div class="ability-stat-value">${ability.healing}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    ${ability.effects ? `
+                        <p><strong>Effects:</strong> ${ability.effects}</p>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const closeModal = () => modal.remove();
+        modal.querySelector('.ability-tooltip-close').addEventListener('click', closeModal);
+        modal.querySelector('.ability-tooltip-overlay').addEventListener('click', closeModal);
+    } catch (error) {
+        console.error('Failed to load ability details:', error);
+        displayMessage('Failed to load ability details.');
+    }
 }
 
 function initializeSelectionSlider() {
@@ -601,7 +851,7 @@ function renderClassSelection() {
                                     </div>
                                     <div class="abilities-block">
                                         <h4>Starting Abilities:</h4>
-                                        <ul>${cls.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
+                                        <ul>${cls.starting_abilities.map(ability => `<li class="ability-item" data-ability="${ability}">${ability}</li>`).join('')}</ul>
                                     </div>
                                     <button class="fantasy-button select-btn" data-id="${cls.id}" data-type="class">Select ${cls.name}</button>
                                 </div>
@@ -630,6 +880,14 @@ function renderClassSelection() {
         button.addEventListener('click', (e) => {
             const classId = parseInt(e.target.dataset.id);
             handleClassSelection(classId);
+        });
+    });
+
+    // Add ability tooltip handlers
+    section.querySelectorAll('.ability-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showAbilityTooltip(item.dataset.ability);
         });
     });
 
@@ -662,12 +920,16 @@ async function renderPortraitSelection() {
     
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Portrait</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name & Portrait</h1>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name}</h3>
             <p><strong>Class:</strong> ${_selectedClass.name}</p>
-            <p>${_selectedClass.description}</p>
+        </div>
+        <div class="name-selection-inline">
+            <label for="character-name-input">Champion Name:</label>
+            <input type="text" id="character-name-input" maxlength="24" placeholder="Enter champion name" class="fantasy-input" value="${_characterName}">
+            <div class="name-error-message"></div>
         </div>
         <div class="grid-selection-section">
             <div class="selection-grid">
@@ -688,9 +950,29 @@ async function renderPortraitSelection() {
         </div>
     `;
 
+    const input = section.querySelector('#character-name-input');
+    const errorMsg = section.querySelector('.name-error-message');
+
     // Add click handlers for portrait selection
     section.querySelectorAll('.portrait-item').forEach(item => {
         item.addEventListener('click', (e) => {
+            const name = input.value.trim();
+            if (!name) {
+                errorMsg.textContent = 'Please enter a name first.';
+                errorMsg.style.display = 'block';
+                input.focus();
+                return;
+            }
+            if (name.length < 2) {
+                errorMsg.textContent = 'Name must be at least 2 characters.';
+                errorMsg.style.display = 'block';
+                input.focus();
+                return;
+            }
+            
+            errorMsg.style.display = 'none';
+            _characterName = name;
+            
             // Remove previous selection
             section.querySelectorAll('.portrait-item').forEach(i => i.classList.remove('selected'));
             // Add selection to clicked item
@@ -699,6 +981,11 @@ async function renderPortraitSelection() {
             const portrait = item.dataset.portrait;
             handlePortraitSelection(portrait);
         });
+    });
+
+    // Clear error on input
+    input.addEventListener('input', () => {
+        errorMsg.style.display = 'none';
     });
 
     section.querySelector('.return-btn').addEventListener('click', () => {
@@ -740,9 +1027,8 @@ function renderProfessionSelection() {
                 <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
             </div>
             <div class="selected-race-summary">
-                <h3>Selected Race: ${_selectedRace.name}</h3>
-                <p><strong>Class:</strong> ${_selectedClass.name}</p>
-                <p>${_selectedClass.description}</p>
+                <h3>${_characterName}</h3>
+                <p><strong>Race:</strong> ${_selectedRace.name} | <strong>Class:</strong> ${_selectedClass.name}</p>
             </div>
             <div class="no-professions-message">
                 <h3>No Available Professions</h3>
@@ -770,9 +1056,8 @@ function renderProfessionSelection() {
             ` : ''}
         </div>
         <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name}</h3>
-            <p><strong>Class:</strong> ${_selectedClass.name}</p>
-            <p>${_selectedClass.description}</p>
+            <h3>${_characterName}</h3>
+            <p><strong>Race:</strong> ${_selectedRace.name} | <strong>Class:</strong> ${_selectedClass.name}</p>
         </div>
         <div class="grid-selection-section">
             <div class="selection-grid">
@@ -831,26 +1116,25 @@ function renderCharacterSummary() {
 
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Summary</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Confirm</h1>
         </div>
         <div class="summary-card">
             <div class="summary-art-block">
                 <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${_selectedPortrait}.png" 
                     alt="${_selectedRace.name} ${_selectedClass.name}" 
                     class="summary-art">
+                <div class="summary-character-name">${_characterName}</div>
             </div>
             <div class="summary-info-block">
                 <h2>${_selectedRace.name} ${_selectedClass.name}</h2>
-                <p><strong>Race Description:</strong> ${_selectedRace.description}</p>
-                <p><strong>Class Description:</strong> ${_selectedClass.description}</p>
-                <p><strong>Profession:</strong> ${_selectedProfession.name} - ${_selectedProfession.description}</p>
+                <p><strong>Profession:</strong> ${_selectedProfession.name}</p>
                 <h4>Final Stats:</h4>
                 <div class="stats-block">
                     ${Object.entries(finalStats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
                 </div>
                 <div class="abilities-block">
                     <h4>Starting Abilities:</h4>
-                    <ul>${_selectedClass.starting_abilities.map(ability => `<li>${ability}</li>`).join('')}</ul>
+                    <ul>${_selectedClass.starting_abilities.map(ability => `<li class="ability-item" data-ability="${ability}">${ability}</li>`).join('')}</ul>
                 </div>
             </div>
         </div>
@@ -859,6 +1143,14 @@ function renderCharacterSummary() {
             <button type="button" class="fantasy-button return-btn">Return</button>
         </div>
     `;
+
+    // Add ability tooltip handlers in summary
+    section.querySelectorAll('.ability-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showAbilityTooltip(item.dataset.ability);
+        });
+    });
 
     section.querySelector('.confirm-btn').addEventListener('click', (e) => {
         e.preventDefault();
