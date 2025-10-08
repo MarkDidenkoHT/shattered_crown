@@ -611,6 +611,7 @@ async function showAbilityTooltip(abilityName) {
         }
         
         const ability = abilities[0];
+        const abilityIconPath = `assets/art/abilities/${ability.name.replace(/\s+/g, '')}.png`;
         
         const modal = document.createElement('div');
         modal.className = 'ability-tooltip-modal';
@@ -618,14 +619,18 @@ async function showAbilityTooltip(abilityName) {
             <div class="ability-tooltip-overlay"></div>
             <div class="ability-tooltip-content">
                 <div class="ability-tooltip-header">
-                    <h3>${ability.name}</h3>
+                    <div class="ability-header-left">
+                        <img src="${abilityIconPath}" alt="${ability.name}" class="ability-icon" onerror="this.style.display='none'">
+                        <h3>${ability.name}</h3>
+                    </div>
                     <button class="ability-tooltip-close">&times;</button>
                 </div>
                 <div class="ability-tooltip-body">
-                    <p><strong>Type:</strong> ${ability.type || 'Active'}</p>
-                    <p>${ability.description}</p>
+                    ${ability.type ? `<p><strong>Type:</strong> ${ability.type}</p>` : ''}
+                    ${ability.damage_type ? `<p><strong>Damage Type:</strong> ${ability.damage_type}</p>` : ''}
+                    ${ability.description ? `<p class="ability-description">${ability.description}</p>` : ''}
                     
-                    ${ability.cooldown || ability.mana_cost || ability.damage || ability.healing ? `
+                    ${ability.cooldown || ability.range || ability.area || ability.base_value ? `
                         <div class="ability-stat-grid">
                             ${ability.cooldown ? `
                                 <div class="ability-stat-item">
@@ -633,30 +638,55 @@ async function showAbilityTooltip(abilityName) {
                                     <div class="ability-stat-value">${ability.cooldown}s</div>
                                 </div>
                             ` : ''}
-                            ${ability.mana_cost ? `
+                            ${ability.range ? `
                                 <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Mana Cost</div>
-                                    <div class="ability-stat-value">${ability.mana_cost}</div>
+                                    <div class="ability-stat-label">Range</div>
+                                    <div class="ability-stat-value">${ability.range}</div>
                                 </div>
                             ` : ''}
-                            ${ability.damage ? `
+                            ${ability.area ? `
                                 <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Damage</div>
-                                    <div class="ability-stat-value">${ability.damage}</div>
+                                    <div class="ability-stat-label">Area</div>
+                                    <div class="ability-stat-value">${ability.area}</div>
                                 </div>
                             ` : ''}
-                            ${ability.healing ? `
+                            ${ability.base_value ? `
                                 <div class="ability-stat-item">
-                                    <div class="ability-stat-label">Healing</div>
-                                    <div class="ability-stat-value">${ability.healing}</div>
+                                    <div class="ability-stat-label">Base Value</div>
+                                    <div class="ability-stat-value">${ability.base_value}</div>
+                                </div>
+                            ` : ''}
+                            ${ability.scaling ? `
+                                <div class="ability-stat-item">
+                                    <div class="ability-stat-label">Scaling</div>
+                                    <div class="ability-stat-value">${ability.scaling}% ${ability.stat || ''}</div>
                                 </div>
                             ` : ''}
                         </div>
                     ` : ''}
                     
-                    ${ability.effects ? `
-                        <p><strong>Effects:</strong> ${ability.effects}</p>
+                    ${ability.buff_name ? `
+                        <div class="ability-buff-section">
+                            <p><strong>Buff:</strong> ${ability.buff_name}</p>
+                            ${ability.buff_duration ? `<p><strong>Duration:</strong> ${ability.buff_duration}s</p>` : ''}
+                            ${ability.buff_stacks ? `<p><strong>Stacks:</strong> ${ability.buff_stacks}</p>` : ''}
+                            ${ability.buff_effect ? `<p><strong>Effect:</strong> ${JSON.stringify(ability.buff_effect)}</p>` : ''}
+                        </div>
                     ` : ''}
+                    
+                    ${ability.debuff_name ? `
+                        <div class="ability-debuff-section">
+                            <p><strong>Debuff:</strong> ${ability.debuff_name}</p>
+                            ${ability.debuff_duration ? `<p><strong>Duration:</strong> ${ability.debuff_duration}s</p>` : ''}
+                            ${ability.debuff_stacks ? `<p><strong>Stacks:</strong> ${ability.debuff_stacks}</p>` : ''}
+                            ${ability.debuff_effect ? `<p><strong>Effect:</strong> ${JSON.stringify(ability.debuff_effect)}</p>` : ''}
+                            ${ability.dispellable !== null ? `<p><strong>Dispellable:</strong> ${ability.dispellable ? 'Yes' : 'No'}</p>` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    ${ability.targeting ? `<p><strong>Targeting:</strong> ${ability.targeting}</p>` : ''}
+                    ${ability.target_type ? `<p><strong>Target Type:</strong> ${ability.target_type}</p>` : ''}
+                    ${ability.effects ? `<p><strong>Effects:</strong> ${ability.effects}</p>` : ''}
                 </div>
             </div>
         `;
