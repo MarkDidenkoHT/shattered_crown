@@ -393,10 +393,9 @@
     min-height: 13vh;
 }
 
-/* --- Condensed stats/items/consumables blocks --- */
 .stats-block {
     width: 100%;
-    min-height: 13vh;
+    min-height: 15vh;
 }
 
  .abilities-block {
