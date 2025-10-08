@@ -1107,7 +1107,7 @@ function renderBattleScreen(mode, level, layoutData) {
             filter: brightness(1.2) saturate(1.1);
         }
         .character-token.cannot-act {
-            filter: grayscale(0.3) opacity(0.7);
+            filter: grayscale(0.25) opacity(0.8);
         }
         .character-selected {
             filter: brightness(1.3) drop-shadow(0 0 8px #FFD700) !important;
