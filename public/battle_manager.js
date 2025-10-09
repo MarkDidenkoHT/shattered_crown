@@ -1268,17 +1268,11 @@ function renderEnvironmentItems(layoutEnvItems) {
   const container = BattleState.main.querySelector('.battle-grid-container');
   if (!container) return;
 
-  // if new data missing or empty, do not clear corpses
-  if (!layoutEnvItems || Object.keys(layoutEnvItems).length === 0) {
-    console.debug("Skipping environment re-render (no data).");
-    return;
-  }
+  if (!layoutEnvItems) layoutEnvItems = {};
 
-  // Merge instead of wipe
   const oldItems = BattleState.environmentItems || {};
-  BattleState.environmentItems = { ...oldItems, ...layoutEnvItems };
 
-  // Remove only items that are gone
+  // Remove items that disappeared
   Object.keys(oldItems).forEach(id => {
     if (!layoutEnvItems[id]) {
       const el = container.querySelector(`.environment-item[data-item-id="${id}"]`);
@@ -1286,17 +1280,17 @@ function renderEnvironmentItems(layoutEnvItems) {
     }
   });
 
-  // Add or update items
+  // Add new items
   Object.values(layoutEnvItems).forEach(item => {
     const existing = container.querySelector(`.environment-item[data-item-id="${item.id}"]`);
-    if (existing) return; // already rendered
-    if (!Array.isArray(item.position)) return;
-    const [x, y] = item.position;
-    const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
-    if (!cell) return;
-    const itemEl = createEnvironmentItemElement(item);
-    cell.appendChild(itemEl);
+    if (!existing && Array.isArray(item.position)) {
+      const [x, y] = item.position;
+      const cell = container.querySelector(`td[data-x="${x}"][data-y="${y}"]`);
+      if (cell) cell.appendChild(createEnvironmentItemElement(item));
+    }
   });
+
+  BattleState.environmentItems = { ...layoutEnvItems };
 }
 
 const createCharacterElement = (char) => {
