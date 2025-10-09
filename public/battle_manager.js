@@ -1183,6 +1183,12 @@ function renderBattleGrid(layoutJson) {
         display: 'flex', flexDirection: 'column', margin: '3px', border: '2px solid #c4975a', borderRadius: '4px',
     });
 
+    const bgName = layoutJson.background || BattleState.battleState?.background || 'default';
+    container.style.backgroundImage = `url(assets/art/backgrounds/${bgName}.png)`;
+    container.style.backgroundSize = 'cover';
+    container.style.backgroundPosition = 'center';
+    container.style.backgroundRepeat = 'no-repeat';
+
     const table = document.createElement('table');
     table.className = 'battle-grid-table';
     Object.assign(table.style, {
@@ -1219,9 +1225,6 @@ function renderBattleGrid(layoutJson) {
             td.title = tileName;
 
             Object.assign(td.style, {
-                backgroundImage: `url(assets/art/tiles/${art}.png)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
                 width: `${100 / GRID_SIZE.cols}%`,
                 padding: '0', margin: '0',
                 position: 'relative',
@@ -1368,7 +1371,7 @@ function createEnvironmentItemElement(item) {
     el.style.left = '0';
     el.style.width = '100%';
     el.style.height = '100%';
-    el.style.zIndex = '8'; // under characters (characters are zIndex 5+)
+    el.style.zIndex = '5'; // under characters (characters are zIndex 5+)
     el.title = item.name + (item.character_name ? ` — ${item.character_name}` : '');
 
     // sprite image (fallback to placeholder)
