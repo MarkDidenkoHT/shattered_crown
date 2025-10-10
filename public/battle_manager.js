@@ -1179,8 +1179,18 @@ function renderBattleGrid(layoutJson) {
 
     container.innerHTML = '';
     Object.assign(container.style, {
-        width: '98%', maxWidth: '380px', height: '55%', maxHeight: '380px',
-        display: 'flex', flexDirection: 'column', margin: '3px', border: '2px solid #c4975a', borderRadius: '4px',
+        aspectRatio: '1 / 1',
+        width: 'min(98%, 380px)',
+        height: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        margin: '3px',
+        border: '2px solid #c4975a',
+        borderRadius: '4px',
+        backgroundImage: `url(assets/art/backgrounds/${bgName}.png)`,
+        backgroundSize: 'contain',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
     });
 
     const bgName = layoutJson.background || BattleState.battleState?.background || 'default';
