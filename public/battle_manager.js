@@ -1180,7 +1180,7 @@ function renderBattleGrid(layoutJson) {
     container.innerHTML = '';
     Object.assign(container.style, {
         width: '100%', maxWidth: '380px', maxHeight: '380px',
-        display: 'flex', flexDirection: 'column', margin: '2px', border: '2px solid #c4975a', borderRadius: '4px', aspect-ratio: '1 / 1';
+        display: 'flex', flexDirection: 'column', margin: '2px', border: '2px solid #c4975a', borderRadius: '4px', aspectRatio: '1 / 1';
     });
 
     const bgName = layoutJson.background || BattleState.battleState?.background || 'default';
