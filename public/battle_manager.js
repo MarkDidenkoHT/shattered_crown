@@ -1181,7 +1181,7 @@ function renderBattleGrid(layoutJson) {
     Object.assign(container.style, {
         aspectRatio: '1 / 1',
         width: 'min(98%, 380px)',
-        height: 'auto',
+        height: 50%,
         display: 'flex',
         flexDirection: 'column',
         margin: '3px',
