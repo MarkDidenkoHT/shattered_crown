@@ -508,7 +508,9 @@ async function showTalentModal(character) {
           </div>
           
           <div class="instructions">
-            Hold column for 1.5s to spend talent point<br>
+            Hold ability for 1.5s to learn with talent point<br>
+            Click learned ability to select/deselect for combat<br>
+            (Max: 4 Basic, 2 Passive, 1 Ultimate)
           </div>
           
           <div>
@@ -926,7 +928,59 @@ async function showEquipmentModal(character, slot, type) {
     `;
     
     document.body.appendChild(modal);
-    
+
+    let currentSelections = {
+      basic: [...(character.selected_abilities?.basic || [])],
+      passive: [...(character.selected_abilities?.passive || [])],
+      ultimate: [...(character.selected_abilities?.ultimate || [])]
+    };
+
+    const MAX_SELECTIONS = { basic: 4, passive: 2, ultimate: 1 };
+
+    // Mark initially selected abilities
+    updateSelectionVisuals(modal, currentSelections);
+
+    // Add selection counter display
+    const selectionCounter = document.createElement('div');
+    selectionCounter.className = 'selection-counter';
+    selectionCounter.innerHTML = `
+      <div class="counter-row">
+        <span>Basic: <span id="basicCount">${currentSelections.basic.length}</span>/${MAX_SELECTIONS.basic}</span>
+        <span>Passive: <span id="passiveCount">${currentSelections.passive.length}</span>/${MAX_SELECTIONS.passive}</span>
+        <span>Ultimate: <span id="ultimateCount">${currentSelections.ultimate.length}</span>/${MAX_SELECTIONS.ultimate}</span>
+      </div>
+    `;
+    talentContainer.insertBefore(selectionCounter, talentContainer.querySelector('.instructions'));
+
+    // Add save button before close button
+    const saveButton = document.createElement('button');
+    saveButton.className = 'fantasy-button save-selection-btn';
+    saveButton.textContent = 'Save Selection';
+    saveButton.style.marginBottom = '0.5rem';
+    talentContainer.querySelector('.help-tutorial-close-button').insertAdjacentElement('beforebegin', saveButton);
+
+    // Save button handler
+    saveButton.addEventListener('click', async () => {
+      const originalText = saveButton.textContent;
+      saveButton.disabled = true;
+      saveButton.textContent = 'Saving...';
+      
+      try {
+        await saveSelectedAbilities(character, currentSelections);
+        saveButton.textContent = 'Saved!';
+        setTimeout(() => {
+          saveButton.textContent = originalText;
+          saveButton.disabled = false;
+        }, 1500);
+      } catch (error) {
+        saveButton.textContent = originalText;
+        saveButton.disabled = false;
+      }
+    });
+
+    // Add ability selection click handlers
+    initializeAbilitySelection(character, modal, enrichedTalentAbilities, learnedAbilities, currentSelections, MAX_SELECTIONS);
+
     let selectedItem = null;
     let selectedCraftingSessionId = null;
     let isConsumable = false;
@@ -1122,6 +1176,108 @@ function displayMessage(message) {
   });
 }
 
+function initializeAbilitySelection(character, modal, talentAbilities, learnedAbilities, currentSelections, MAX_SELECTIONS) {
+  modal.querySelectorAll('.talent-slot').forEach(slot => {
+    const column = parseInt(slot.dataset.column);
+    const row = parseInt(slot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+    
+    if (!ability || !isAbilityLearned(ability, learnedAbilities)) return;
+    
+    // Add click handler for selection (not hold for learning)
+    slot.addEventListener('click', (e) => {
+      // Don't trigger if currently holding for learning
+      if (slot.classList.contains('filled')) {
+        toggleAbilitySelection(ability, currentSelections, MAX_SELECTIONS, modal);
+      }
+    });
+  });
+}
+
+function toggleAbilitySelection(ability, currentSelections, MAX_SELECTIONS, modal) {
+  const abilityType = ability.type; // 'basic', 'passive', or 'ultimate'
+  const abilityName = ability.name;
+  
+  const currentTypeSelections = currentSelections[abilityType];
+  const isCurrentlySelected = currentTypeSelections.includes(abilityName);
+  
+  if (isCurrentlySelected) {
+    // Deselect
+    currentSelections[abilityType] = currentTypeSelections.filter(name => name !== abilityName);
+  } else {
+    // Try to select
+    if (currentTypeSelections.length >= MAX_SELECTIONS[abilityType]) {
+      const typeLabel = abilityType.charAt(0).toUpperCase() + abilityType.slice(1);
+      displayMessage(`Cannot select more than ${MAX_SELECTIONS[abilityType]} ${typeLabel} abilities. Please deselect one first.`);
+      return;
+    }
+    currentSelections[abilityType].push(abilityName);
+  }
+  
+  updateSelectionVisuals(modal, currentSelections);
+  updateSelectionCounters(modal, currentSelections);
+}
+
+function updateSelectionVisuals(modal, currentSelections) {
+  modal.querySelectorAll('.talent-slot.filled').forEach(slot => {
+    const img = slot.querySelector('img');
+    if (!img) return;
+    
+    const abilityName = img.alt;
+    
+    // Check if this ability is selected
+    const isSelected = Object.values(currentSelections).flat().includes(abilityName);
+    
+    if (isSelected) {
+      slot.classList.add('ability-selected');
+    } else {
+      slot.classList.remove('ability-selected');
+    }
+  });
+}
+
+function updateSelectionCounters(modal, currentSelections) {
+  const basicCount = modal.querySelector('#basicCount');
+  const passiveCount = modal.querySelector('#passiveCount');
+  const ultimateCount = modal.querySelector('#ultimateCount');
+  
+  if (basicCount) basicCount.textContent = currentSelections.basic.length;
+  if (passiveCount) passiveCount.textContent = currentSelections.passive.length;
+  if (ultimateCount) ultimateCount.textContent = currentSelections.ultimate.length;
+}
+
+async function saveSelectedAbilities(character, selectedAbilities) {
+  try {
+    const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
+      method: 'POST',
+      body: {
+        character_id: character.id,
+        player_id: _profile.id,
+        selected_abilities: selectedAbilities
+      }
+    });
+    
+    if (!response.ok) {
+      const errorResult = await response.json();
+      throw new Error(errorResult.error || 'Failed to save selected abilities');
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to save selected abilities');
+    }
+    
+    displayMessage(result.message);
+    
+  } catch (error) {
+    console.error('Error saving selected abilities:', error);
+    displayMessage(error.message || 'Failed to save selected abilities. Please try again.');
+    throw error;
+  }
+}
+
+
 function loadCharacterManagerStyles() {
     if (document.getElementById('character-manager-styles')) {
         return;
@@ -1130,6 +1286,70 @@ function loadCharacterManagerStyles() {
     const styleEl = document.createElement('style');
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
+.talent-slot.ability-selected {
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.8), 
+                0 0 40px rgba(76, 175, 80, 0.4),
+                inset 0 0 20px rgba(76, 175, 80, 0.2);
+    border-color: #4CAF50 !important;
+}
+
+.talent-slot.ability-selected::after {
+    content: '✓';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #4CAF50;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.selection-counter {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(218, 165, 32, 0.3);
+}
+
+.counter-row {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    color: #FFD700;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.counter-row span {
+    white-space: nowrap;
+}
+
+.save-selection-btn {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border-color: #4CAF50;
+}
+
+.save-selection-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #45a049, #3d8b40);
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+.save-selection-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .equipment-option {
     border: 2px solid #444;
 }
