@@ -39,7 +39,6 @@ function addGridSelectionStyles() {
     const style = document.createElement('style');
     style.id = 'grid-selection-styles';
     style.textContent = `
-        /* Mobile-First Grid Selection Styles */
         .grid-selection-section {
             padding: 15px;
         }
@@ -79,6 +78,7 @@ function addGridSelectionStyles() {
 
         .grid-item-image {
             margin-bottom: 8px;
+            flex-shrink: 0;
         }
 
         .grid-portrait {
@@ -95,6 +95,7 @@ function addGridSelectionStyles() {
             object-fit: cover;
             border-radius: 6px;
             border: 1px solid rgba(196, 151, 90, 0.6);
+            flex-shrink: 0;
         }
 
         .grid-item-label {
@@ -106,6 +107,10 @@ function addGridSelectionStyles() {
 
         .grid-item-info {
             text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .grid-item-description {
@@ -114,7 +119,6 @@ function addGridSelectionStyles() {
             line-height: 1.2;
         }
 
-        /* Portrait specific styles */
         .portrait-item {
             min-height: 120px;
         }
@@ -123,24 +127,24 @@ function addGridSelectionStyles() {
             font-size: 14px;
         }
 
-        /* Profession specific styles - horizontal layout for mobile */
         .profession-item {
-            min-height: 80px;
+            min-height: auto;
+            height: 100%;
             flex-direction: row;
             text-align: left;
             padding: 12px;
             align-items: center;
+            gap: 10px;
         }
 
         .profession-item .grid-item-image {
-            margin-right: 12px;
+            margin-right: 0;
             margin-bottom: 0;
-            flex-shrink: 0;
         }
 
         .profession-item .grid-item-info {
             text-align: left;
-            flex-grow: 1;
+            min-width: 0;
         }
 
         .profession-item .grid-item-label {
@@ -149,37 +153,68 @@ function addGridSelectionStyles() {
 
         .profession-item .grid-item-description {
             font-size: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
 
-        /* Name input in portrait selection */
         .name-selection-inline {
             padding: 15px;
             margin-bottom: 15px;
+            background: rgba(50, 35, 20, 0.6);
+            border: 2px solid rgba(196, 151, 90, 0.5);
+            border-radius: 10px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .name-selection-inline label {
             display: block;
             color: #c4975a;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            letter-spacing: 1px;
         }
 
         .name-selection-inline input {
             width: 100%;
             max-width: 400px;
+            padding: 12px 15px;
+            background: rgba(30, 20, 10, 0.8);
+            border: 2px solid rgba(196, 151, 90, 0.6);
+            border-radius: 6px;
+            color: #c4975a;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .name-selection-inline input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            background: rgba(30, 20, 10, 1);
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .name-selection-inline input::placeholder {
+            color: rgba(196, 151, 90, 0.4);
         }
 
         .name-error-message {
             color: #ff6b6b;
             font-size: 12px;
-            margin-top: 5px;
+            margin-top: 8px;
             display: none;
         }
 
-        /* Improved Summary Layout */
-        .summary-card {
+        .summary-wrapper {
             display: flex;
-            flex-direction: row;
             gap: 20px;
             background: rgba(50, 35, 20, 0.95);
             border: 2px solid rgba(196, 151, 90, 0.8);
@@ -187,18 +222,20 @@ function addGridSelectionStyles() {
             padding: 20px;
             margin: 20px auto;
             max-width: 900px;
+            align-items: flex-start;
         }
 
-        .summary-art-block {
-            flex: 0 0 25%;
+        .summary-portrait-block {
+            flex: 0 0 auto;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
-        .summary-art {
-            width: 100%;
+        .summary-portrait {
+            width: 200px;
+            height: 200px;
             aspect-ratio: 1;
             object-fit: cover;
             border-radius: 8px;
@@ -210,33 +247,31 @@ function addGridSelectionStyles() {
             font-size: 18px;
             font-weight: bold;
             text-align: center;
-            margin-top: 5px;
         }
 
-        .summary-info-block {
+        .summary-details-block {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
 
-        .summary-info-block h2 {
+        .summary-details-block h2 {
             color: #c4975a;
-            margin: 0 0 10px 0;
+            margin: 0;
             font-size: 24px;
         }
 
-        .summary-info-block p {
+        .summary-details-block p {
             margin: 5px 0;
             color: #ddd;
             font-size: 14px;
         }
 
-        .summary-info-block p strong {
+        .summary-details-block p strong {
             color: #c4975a;
         }
 
-        /* Ability tooltip styles */
         .ability-item {
             cursor: pointer;
             transition: color 0.2s ease;
@@ -349,15 +384,13 @@ function addGridSelectionStyles() {
         }
 
         @media (max-width: 768px) {
-            .summary-card {
+            .summary-wrapper {
                 flex-direction: column;
+                align-items: center;
             }
 
-            .summary-art-block {
-                flex: 0 0 auto;
+            .summary-portrait-block {
                 width: 100%;
-                max-width: 200px;
-                margin: 0 auto;
             }
         }
     `;
@@ -486,6 +519,9 @@ function renderRaceSelection() {
                 </div>
             </div>
         </div>
+        <div class="top-right-buttons">
+            <button class="fantasy-button return-btn">Change Deity</button>
+        </div>
     `;
 
     initializeSelectionSlider();
@@ -504,6 +540,10 @@ function renderRaceSelection() {
             
             if (classInfo) showClassDescription(classInfo);
         });
+    });
+
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        window.gameAuth.loadModule('god_selection');
     });
 }
 
@@ -851,7 +891,6 @@ function renderClassSelection() {
         });
     });
 
-    // Add ability tooltip handlers
     section.querySelectorAll('.ability-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -862,369 +901,5 @@ function renderClassSelection() {
     section.querySelector('.return-btn').addEventListener('click', () => {
         _selectedClass = null;
         renderRaceSelection();
-    });
-}
-
-function handleClassSelection(classId) {
-    _selectedClass = _classes.find(c => c.id === classId);
-    if (!_selectedClass) {
-        displayMessage('Selected class not found. Please try again.');
-        return;
-    }
-    renderPortraitSelection();
-}
-
-async function renderPortraitSelection() {
-    const section = _main.querySelector('.character-creation-section');
-    const currentCharacterNumber = _existingCharacterCount + 1;
-    const className = _selectedClass.name.toLowerCase().replace(/\s+/g, '_');
-    
-    const portraits = [
-        `${className}_portrait_1`,
-        `${className}_portrait_2`,
-        `${className}_portrait_3`,
-        `${className}_portrait_4`
-    ];
-    
-    section.innerHTML = `
-        <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name & Portrait</h1>
-        </div>
-        <div class="selected-race-summary">
-            <h3>Selected Race: ${_selectedRace.name}</h3>
-            <p><strong>Class:</strong> ${_selectedClass.name}</p>
-        </div>
-        <div class="name-selection-inline">
-            <label for="character-name-input">Champion Name:</label>
-            <input type="text" id="character-name-input" maxlength="24" placeholder="Enter champion name" class="fantasy-input" value="${_characterName}">
-            <div class="name-error-message"></div>
-        </div>
-        <div class="grid-selection-section">
-            <div class="selection-grid">
-                ${portraits.map((portrait, index) => `
-                    <div class="grid-item portrait-item" data-portrait="${portrait}">
-                        <div class="grid-item-image">
-                            <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${portrait}.png" 
-                                 alt="${portrait}" 
-                                 class="grid-portrait">
-                        </div>
-                        <div class="grid-item-label">Portrait ${index + 1}</div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-        <div class="top-right-buttons">
-            <button class="fantasy-button return-btn">Return</button>
-        </div>
-    `;
-
-    const input = section.querySelector('#character-name-input');
-    const errorMsg = section.querySelector('.name-error-message');
-
-    // Add click handlers for portrait selection
-    section.querySelectorAll('.portrait-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const name = input.value.trim();
-            if (!name) {
-                errorMsg.textContent = 'Please enter a name first.';
-                errorMsg.style.display = 'block';
-                input.focus();
-                return;
-            }
-            if (name.length < 2) {
-                errorMsg.textContent = 'Name must be at least 2 characters.';
-                errorMsg.style.display = 'block';
-                input.focus();
-                return;
-            }
-            
-            errorMsg.style.display = 'none';
-            _characterName = name;
-            
-            // Remove previous selection
-            section.querySelectorAll('.portrait-item').forEach(i => i.classList.remove('selected'));
-            // Add selection to clicked item
-            item.classList.add('selected');
-            
-            const portrait = item.dataset.portrait;
-            handlePortraitSelection(portrait);
-        });
-    });
-
-    // Clear error on input
-    input.addEventListener('input', () => {
-        errorMsg.style.display = 'none';
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', () => {
-        _selectedPortrait = null;
-        renderClassSelection();
-    });
-}
-
-function handlePortraitSelection(portrait) {
-    _selectedPortrait = portrait;
-    fetchProfessionsAndRenderSelection();
-}
-
-async function fetchProfessionsAndRenderSelection() {
-    try {
-        const response = await _apiCall(`/api/supabase/rest/v1/professions?select=id,name,description`);
-        _professions = await response.json();
-
-        if (_professions.length === 0) {
-            displayMessage('No professions available. Please contact support.');
-            renderPortraitSelection();
-            return;
-        }
-        renderProfessionSelection();
-    } catch (error) {
-        displayMessage('Failed to load professions. Please try again.');
-        renderPortraitSelection();
-    }
-}
-
-function renderProfessionSelection() {
-    const section = _main.querySelector('.character-creation-section');
-    const currentCharacterNumber = _existingCharacterCount + 1;
-    const availableProfessions = _professions.filter(profession => !_usedProfessionIds.includes(profession.id));
-    
-    if (availableProfessions.length === 0) {
-        section.innerHTML = `
-            <div class="art-header">
-                <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
-            </div>
-            <div class="selected-race-summary">
-                <h3>${_characterName}</h3>
-                <p><strong>Race:</strong> ${_selectedRace.name} | <strong>Class:</strong> ${_selectedClass.name}</p>
-            </div>
-            <div class="no-professions-message">
-                <h3>No Available Professions</h3>
-                <p>All professions have already been selected by your other characters. Each character must have a unique profession.</p>
-            </div>
-            <div class="top-right-buttons">
-                <button class="fantasy-button return-btn">Return</button>
-            </div>
-        `;
-        
-        section.querySelector('.return-btn').addEventListener('click', () => {
-            _selectedProfession = null;
-            renderPortraitSelection();
-        });
-        return;
-    }
-
-    section.innerHTML = `
-        <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Choose Profession</h1>
-            ${_usedProfessionIds.length > 0 ? `
-                <div class="profession-note">
-                    <p><em>Note: ${_usedProfessionIds.length} profession(s) already selected by other characters</em></p>
-                </div>
-            ` : ''}
-        </div>
-        <div class="selected-race-summary">
-            <h3>${_characterName}</h3>
-            <p><strong>Race:</strong> ${_selectedRace.name} | <strong>Class:</strong> ${_selectedClass.name}</p>
-        </div>
-        <div class="grid-selection-section">
-            <div class="selection-grid">
-                ${availableProfessions.map(profession => `
-                    <div class="grid-item profession-item" data-id="${profession.id}">
-                        <div class="grid-item-image">
-                            <img src="assets/art/professions/${profession.name.toLowerCase().replace(/\s+/g, '_')}.png" 
-                                 alt="${profession.name}" 
-                                 class="grid-profession">
-                        </div>
-                        <div class="grid-item-info">
-                            <div class="grid-item-label">${profession.name}</div>
-                            <div class="grid-item-description">${profession.description}</div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-        <div class="top-right-buttons">
-            <button class="fantasy-button return-btn">Return</button>
-        </div>
-    `;
-
-    // Add click handlers for profession selection
-    section.querySelectorAll('.profession-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            // Remove previous selection
-            section.querySelectorAll('.profession-item').forEach(i => i.classList.remove('selected'));
-            // Add selection to clicked item
-            item.classList.add('selected');
-            
-            const professionId = parseInt(item.dataset.id);
-            handleProfessionSelection(professionId);
-        });
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', () => {
-        _selectedProfession = null;
-        renderPortraitSelection();
-    });
-}
-
-function handleProfessionSelection(professionId) {
-    _selectedProfession = _professions.find(p => p.id === professionId);
-    if (!_selectedProfession) {
-        displayMessage('Selected profession not found. Please try again.');
-        return;
-    }
-    renderCharacterSummary();
-}
-
-function renderCharacterSummary() {
-    const section = _main.querySelector('.character-creation-section');
-    const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
-    const currentCharacterNumber = _existingCharacterCount + 1;
-
-    section.innerHTML = `
-        <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Confirm</h1>
-        </div>
-        <div class="summary-card">
-            <div class="summary-art-block">
-                <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${_selectedPortrait}.png" 
-                    alt="${_selectedRace.name} ${_selectedClass.name}" 
-                    class="summary-art">
-                <div class="summary-character-name">${_characterName}</div>
-            </div>
-            <div class="summary-info-block">
-                <h2>${_selectedRace.name} ${_selectedClass.name}</h2>
-                <p><strong>Profession:</strong> ${_selectedProfession.name}</p>
-                <h4>Final Stats:</h4>
-                <div class="stats-block">
-                    ${Object.entries(finalStats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
-                </div>
-                <div class="abilities-block">
-                    <h4>Starting Abilities:</h4>
-                    <ul>${_selectedClass.starting_abilities.map(ability => `<li class="ability-item" data-ability="${ability}">${ability}</li>`).join('')}</ul>
-                </div>
-            </div>
-        </div>
-        <div class="confirm-return-buttons">
-            <button type="button" class="fantasy-button confirm-btn">Confirm</button>
-            <button type="button" class="fantasy-button return-btn">Return</button>
-        </div>
-    `;
-
-    // Add ability tooltip handlers in summary
-    section.querySelectorAll('.ability-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showAbilityTooltip(item.dataset.ability);
-        });
-    });
-
-    section.querySelector('.confirm-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        confirmCharacter();
-    });
-
-    section.querySelector('.return-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        renderProfessionSelection();
-    });
-}
-
-function calculateFinalStats(baseStats, statBonuses) {
-    const finalStats = { ...baseStats };
-    for (const stat in statBonuses) {
-        if (finalStats.hasOwnProperty(stat)) {
-            finalStats[stat] += statBonuses[stat];
-        } else {
-            finalStats[stat] = statBonuses[stat];
-        }
-    }
-    finalStats.Armor = 0;
-    finalStats.Resistance = 0;
-    return finalStats;
-}
-
-async function confirmCharacter() {
-    try {
-        const characterCreationData = {
-            player_id: _profile.id,
-            race_id: _selectedRace.id,
-            class_id: _selectedClass.id,
-            portrait: _selectedPortrait,
-            profession_id: _selectedProfession.id,
-            name: _characterName
-        };
-
-        const response = await _apiCall(`${window.gameAuth.supabaseConfig?.SUPABASE_URL}/functions/v1/create-character`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${window.gameAuth.supabaseConfig?.SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(characterCreationData)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                throw new Error(errorData.error || `Edge function call failed with status ${response.status}`);
-            } catch {
-                throw new Error(`Edge function call failed with status ${response.status}: ${errorText}`);
-            }
-        }
-
-        const result = await response.json();
-        
-        if (result.success) {
-            _usedProfessionIds.push(_selectedProfession.id);
-            _existingCharacterCount++;
-            displayMessage(`Character ${_existingCharacterCount} (${result.character.race} ${result.character.class}) created! (${_existingCharacterCount}/${_maxCharacters})`);
-            
-            setTimeout(() => {
-                startCharacterCreationFlow();
-            }, 1000);
-        } else {
-            throw new Error(result.error || 'Unknown error occurred during character creation');
-        }
-
-    } catch (error) {
-        displayMessage(`Failed to save character: ${error.message}`);
-    }
-}
-
-function createParticles() {
-    const particlesContainer = _main.querySelector('.particles');
-    if (!particlesContainer) return;
-
-    particlesContainer.innerHTML = '';
-    const particleCount = 20;
-    for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.left = Math.random() * 100 + '%';
-        particle.style.top = Math.random() * 100 + '%';
-        particle.style.animationDelay = Math.random() * 6 + 's';
-        particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
-        particlesContainer.appendChild(particle);
-    }
-}
-
-function displayMessage(message) {
-    const messageBox = document.createElement('div');
-    messageBox.className = 'custom-message-box';
-    messageBox.innerHTML = `
-        <div class="message-content">
-            <p>${message}</p>
-            <button class="fantasy-button message-ok-btn">OK</button>
-        </div>
-    `;
-    document.body.appendChild(messageBox);
-
-    messageBox.querySelector('.message-ok-btn').addEventListener('click', () => {
-        messageBox.remove();
     });
 }
