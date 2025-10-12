@@ -495,15 +495,15 @@ async function showTalentModal(character) {
           
           <div class="talent-grid">
             <div class="talent-column">
-              ${generateTalentColumn(enrichedTalentAbilities['1'] || [], learnedAbilities, 1)}
+              ${generateTalentColumn(enrichedTalentAbilities['1'] || [], learnedAbilities, 1, character.selected_abilities)}
             </div>
             
             <div class="talent-column">
-              ${generateTalentColumn(enrichedTalentAbilities['2'] || [], learnedAbilities, 2)}
+              ${generateTalentColumn(enrichedTalentAbilities['2'] || [], learnedAbilities, 2, character.selected_abilities)}
             </div>
             
             <div class="talent-column">
-              ${generateTalentColumn(enrichedTalentAbilities['3'] || [], learnedAbilities, 3)}
+              ${generateTalentColumn(enrichedTalentAbilities['3'] || [], learnedAbilities, 3, character.selected_abilities)}
             </div>
           </div>
           
@@ -727,27 +727,29 @@ function initializeTalentTree(character, modal) {
 
   // Add handler to toggle selected abilities
   async function updateSelectedAbilities(character, selectedAbilities) {
-      try {
-        const safeAbilities = {
-          basic: Array.isArray(selectedAbilities.basic) ? selectedAbilities.basic : [],
-          passive: Array.isArray(selectedAbilities.passive) ? selectedAbilities.passive : [],
-          ultimate: Array.isArray(selectedAbilities.ultimate) ? selectedAbilities.ultimate : []
-        };
+   try {
+      const safeAbilities = {
+        basic: Array.isArray(selectedAbilities.basic) ? selectedAbilities.basic : [],
+        passive: Array.isArray(selectedAbilities.passive) ? selectedAbilities.passive : [],
+        ultimate: Array.isArray(selectedAbilities.ultimate) ? selectedAbilities.ultimate : []
+      };
 
-        const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
-          method: 'POST',
-          body: {
-            character_id: character.id,
-            player_id: _profile.id,
-            selected_abilities: safeAbilities
-          }
-        });
+      const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
+        method: 'POST',
+        body: {
+          character_id: character.id,
+          player_id: _profile.id,
+          selected_abilities: safeAbilities
+        }
+      });
+
       const result = await response.json();
-      displayMessage(result.message || (result.success ? 'Selected abilities updated.' : 'Update failed.'));
+      if (!result.success) {
+        console.warn('Failed to update selected abilities:', result.error);
+      }
       return result.success;
     } catch (err) {
       console.error('Error updating selected abilities:', err);
-      displayMessage('Failed to update selected abilities.');
       return false;
     }
   }
@@ -802,7 +804,10 @@ function initializeTalentTree(character, modal) {
       }
 
       const success = await updateSelectedAbilities(character, selected);
-      if (success) slot.classList.toggle('selected-ability');
+      if (success) {
+        const isSelected = selected[ability.type].includes(ability.name);
+        slot.classList.toggle('selected-ability', isSelected);
+      }
     });
   });
 
