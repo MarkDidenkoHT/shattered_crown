@@ -589,6 +589,7 @@ function applyClassBorder(container, className) {
 function generateTalentColumn(abilities, learnedAbilities, column, selectedAbilities = { basic: [], passive: [], ultimate: [] }) {
   const maxSlots = 7;
   let html = '';
+  console.log('Selected abilities:', selectedAbilities);
 
   // normalize selected abilities
   selectedAbilities = {
