@@ -508,9 +508,7 @@ async function showTalentModal(character) {
           </div>
           
           <div class="instructions">
-            Hold ability for 1.5s to learn with talent point<br>
-            Click learned ability to select/deselect for combat<br>
-            (Max: 4 Basic, 2 Passive, 1 Ultimate)
+            Hold column for 1.5s to spend talent point<br>
           </div>
           
           <div>
@@ -588,17 +586,18 @@ function applyClassBorder(container, className) {
   container.style.border = `3px solid ${borderColor}`;
 }
 
-function generateTalentColumn(abilities, learnedAbilities, column) {
+function generateTalentColumn(abilities, learnedAbilities, column, selectedAbilities = { basic: [], passive: [], ultimate: [] }) {
   const maxSlots = 7;
   let html = '';
-  
+
   for (let row = maxSlots - 1; row >= 0; row--) {
     const ability = abilities[row];
     const hasAbility = ability !== undefined;
     const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
-    
+    const isSelected = hasAbility && selectedAbilities[ability.type || '']?.includes(ability.name);
+
     html += `
-    <div class="talent-slot ${isLearned ? 'filled' : ''}" 
+    <div class="talent-slot ${isLearned ? 'filled' : ''} ${isSelected ? 'selected-ability' : ''}"
         data-column="${column}" 
         data-row="${row}"
         ${hasAbility ? `title="${ability.name} (${ability.type})"` : ''}>
@@ -609,9 +608,9 @@ function generateTalentColumn(abilities, learnedAbilities, column) {
         <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
       ` : ''}
     </div>
-  `;
+    `;
   }
-  
+
   return html;
 }
 
@@ -628,56 +627,36 @@ function initializeTalentTree(character, modal) {
   let holdProgress = null;
   let currentSlot = null;
   let startTime = 0;
-  
+
   const className = character.classes?.name?.toLowerCase() || 'paladin';
   const talentAbilities = character.classes?.talent_abilities || {};
   const pointsDisplay = modal.querySelector('#talentPointsCount');
-  
+
   function updatePoints() {
     pointsDisplay.textContent = talentPoints;
   }
-  
+
   function startHold(targetSlot) {
-    console.log('startHold called for slot:', targetSlot);
-    
-    if (talentPoints <= 0) {
-      console.log('No talent points');
-      return;
-    }
-    
-    // Check if this slot can be learned
-    if (targetSlot.classList.contains('filled')) {
-      console.log('Slot already filled');
-      return;
-    }
-    
-    // Check if slot has an ability
+    if (talentPoints <= 0) return;
+    if (targetSlot.classList.contains('filled')) return;
+
     const column = parseInt(targetSlot.dataset.column);
     const row = parseInt(targetSlot.dataset.row);
     const ability = talentAbilities[column]?.[row];
-    
-    if (!ability) {
-      console.log('No ability in this slot');
-      return;
-    }
-    
-    console.log('Starting hold animation for ability:', ability.name);
-    
+    if (!ability) return;
+
     currentSlot = targetSlot;
     holdProgress = targetSlot.querySelector('.hold-progress');
     startTime = Date.now();
-    
-    // Add visual feedback to the column
+
     const parentColumn = targetSlot.closest('.talent-column');
-    if (parentColumn) {
-      parentColumn.classList.add('column-active');
-    }
-    
+    if (parentColumn) parentColumn.classList.add('column-active');
+
     holdTimer = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min((elapsed / 1500) * 100, 100);
       holdProgress.style.width = progress + '%';
-      
+
       if (elapsed >= 1500) {
         clearInterval(holdTimer);
         holdTimer = null;
@@ -685,35 +664,29 @@ function initializeTalentTree(character, modal) {
       }
     }, 16);
   }
-  
+
   function cancelHold() {
     if (holdTimer) {
       clearInterval(holdTimer);
       holdTimer = null;
     }
-    
     if (holdProgress) {
       holdProgress.style.width = '0%';
       holdProgress = null;
     }
-    
     if (currentSlot) {
       const activeColumn = modal.querySelector('.talent-column.column-active');
-      if (activeColumn) {
-        activeColumn.classList.remove('column-active');
-      }
-      
+      if (activeColumn) activeColumn.classList.remove('column-active');
       currentSlot = null;
     }
   }
-  
+
   async function completeHold() {
     if (!currentSlot) return;
 
     const column = parseInt(currentSlot.dataset.column);
     const row = parseInt(currentSlot.dataset.row);
     const ability = talentAbilities[column]?.[row];
-
     if (!ability) return;
 
     try {
@@ -733,26 +706,17 @@ function initializeTalentTree(character, modal) {
       }
 
       const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to learn talent');
-      }
+      if (!result.success) throw new Error(result.error || 'Failed to learn talent');
 
       talentPoints = result.remaining_talent_points;
       updatePoints();
 
       currentSlot.classList.add('filled', 'level-up-flash');
       const abilityImage = currentSlot.querySelector('img');
-      if (abilityImage) {
-        abilityImage.style.opacity = '1';
-      }
+      if (abilityImage) abilityImage.style.opacity = '1';
 
-      setTimeout(() => {
-        currentSlot.classList.remove('level-up-flash');
-      }, 1000);
-
+      setTimeout(() => currentSlot.classList.remove('level-up-flash'), 1000);
       displayMessage(result.message);
-
     } catch (error) {
       console.error('Error learning talent:', error);
       displayMessage(error.message || 'Failed to learn talent. Please try again.');
@@ -760,52 +724,83 @@ function initializeTalentTree(character, modal) {
 
     cancelHold();
   }
-  
-  // Attach events to individual talent slots instead of columns
+
+  // Add handler to toggle selected abilities
+  async function updateSelectedAbilities(character, selectedAbilities) {
+    try {
+      const response = await _apiCall('/api/supabase/functions/v1/update_selected_abilities', {
+        method: 'POST',
+        body: {
+          character_id: character.id,
+          player_id: _profile.id,
+          selected_abilities: selectedAbilities
+        }
+      });
+      const result = await response.json();
+      displayMessage(result.message || (result.success ? 'Selected abilities updated.' : 'Update failed.'));
+      return result.success;
+    } catch (err) {
+      console.error('Error updating selected abilities:', err);
+      displayMessage('Failed to update selected abilities.');
+      return false;
+    }
+  }
+
+  // Attach events to slots
   modal.querySelectorAll('.talent-slot').forEach(slot => {
-    // Only add events to slots that have abilities
     const column = parseInt(slot.dataset.column);
     const row = parseInt(slot.dataset.row);
     const ability = talentAbilities[column]?.[row];
-    
-    if (!ability) return; // Skip empty slots
-    
-    slot.addEventListener('mousedown', (e) => {
+    if (!ability) return;
+
+    // --- Learning logic ---
+    slot.addEventListener('mousedown', e => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('mousedown on slot');
       startHold(slot);
     });
-
-    slot.addEventListener('mouseup', (e) => {
+    slot.addEventListener('mouseup', e => {
       e.preventDefault();
       e.stopPropagation();
       cancelHold();
     });
-
-    slot.addEventListener('mouseleave', (e) => {
-      cancelHold();
-    });
-
-    slot.addEventListener('touchstart', (e) => {
+    slot.addEventListener('mouseleave', cancelHold);
+    slot.addEventListener('touchstart', e => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('touchstart on slot');
       startHold(slot);
     }, { passive: false });
-
-    slot.addEventListener('touchend', (e) => {
+    slot.addEventListener('touchend', e => {
       e.preventDefault();
       e.stopPropagation();
       cancelHold();
     }, { passive: false });
+    slot.addEventListener('touchcancel', cancelHold);
 
-    slot.addEventListener('touchcancel', (e) => {
-      cancelHold();
+    // --- Selection toggle logic ---
+    slot.addEventListener('click', async e => {
+      const isLearned = slot.classList.contains('filled');
+      if (!isLearned) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const selected = character.selected_abilities || { basic: [], passive: [], ultimate: [] };
+      const list = selected[ability.type] || [];
+
+      // Toggle selection
+      if (list.includes(ability.name)) {
+        selected[ability.type] = list.filter(a => a !== ability.name);
+      } else {
+        selected[ability.type].push(ability.name);
+      }
+
+      const success = await updateSelectedAbilities(character, selected);
+      if (success) slot.classList.toggle('selected-ability');
     });
   });
-  
-  // Global cleanup events
+
+  // Global cleanup
   document.addEventListener('mouseup', cancelHold);
   document.addEventListener('touchend', cancelHold);
 }
@@ -928,59 +923,7 @@ async function showEquipmentModal(character, slot, type) {
     `;
     
     document.body.appendChild(modal);
-
-    let currentSelections = {
-      basic: [...(character.selected_abilities?.basic || [])],
-      passive: [...(character.selected_abilities?.passive || [])],
-      ultimate: [...(character.selected_abilities?.ultimate || [])]
-    };
-
-    const MAX_SELECTIONS = { basic: 4, passive: 2, ultimate: 1 };
-
-    // Mark initially selected abilities
-    updateSelectionVisuals(modal, currentSelections);
-
-    // Add selection counter display
-    const selectionCounter = document.createElement('div');
-    selectionCounter.className = 'selection-counter';
-    selectionCounter.innerHTML = `
-      <div class="counter-row">
-        <span>Basic: <span id="basicCount">${currentSelections.basic.length}</span>/${MAX_SELECTIONS.basic}</span>
-        <span>Passive: <span id="passiveCount">${currentSelections.passive.length}</span>/${MAX_SELECTIONS.passive}</span>
-        <span>Ultimate: <span id="ultimateCount">${currentSelections.ultimate.length}</span>/${MAX_SELECTIONS.ultimate}</span>
-      </div>
-    `;
-    talentContainer.insertBefore(selectionCounter, talentContainer.querySelector('.instructions'));
-
-    // Add save button before close button
-    const saveButton = document.createElement('button');
-    saveButton.className = 'fantasy-button save-selection-btn';
-    saveButton.textContent = 'Save Selection';
-    saveButton.style.marginBottom = '0.5rem';
-    talentContainer.querySelector('.help-tutorial-close-button').insertAdjacentElement('beforebegin', saveButton);
-
-    // Save button handler
-    saveButton.addEventListener('click', async () => {
-      const originalText = saveButton.textContent;
-      saveButton.disabled = true;
-      saveButton.textContent = 'Saving...';
-      
-      try {
-        await saveSelectedAbilities(character, currentSelections);
-        saveButton.textContent = 'Saved!';
-        setTimeout(() => {
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
-        }, 1500);
-      } catch (error) {
-        saveButton.textContent = originalText;
-        saveButton.disabled = false;
-      }
-    });
-
-    // Add ability selection click handlers
-    initializeAbilitySelection(character, modal, enrichedTalentAbilities, learnedAbilities, currentSelections, MAX_SELECTIONS);
-
+    
     let selectedItem = null;
     let selectedCraftingSessionId = null;
     let isConsumable = false;
@@ -1176,139 +1119,6 @@ function displayMessage(message) {
   });
 }
 
-function initializeAbilitySelection(character, modal, talentAbilities, learnedAbilities, currentSelections, MAX_SELECTIONS) {
-  modal.querySelectorAll('.talent-slot').forEach(slot => {
-    const column = parseInt(slot.dataset.column);
-    const row = parseInt(slot.dataset.row);
-    const ability = talentAbilities[column]?.[row];
-    
-    if (!ability) return;
-    
-    const isLearned = isAbilityLearned(ability, learnedAbilities);
-    
-    if (!isLearned) return; // Only add selection handlers to learned abilities
-    
-    let clickTimeout;
-    let isHolding = false;
-    let clickStartTime = 0;
-    
-    const handleStart = (e) => {
-      clickStartTime = Date.now();
-      isHolding = false;
-      
-      clickTimeout = setTimeout(() => {
-        isHolding = true;
-      }, 200); // If held for more than 200ms, it's considered a hold (for learning)
-    };
-    
-    const handleEnd = (e) => {
-      const clickDuration = Date.now() - clickStartTime;
-      clearTimeout(clickTimeout);
-      
-      // If it was a quick click (less than 200ms) and slot is filled (learned), toggle selection
-      if (clickDuration < 200 && !isHolding && slot.classList.contains('filled')) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleAbilitySelection(ability, currentSelections, MAX_SELECTIONS, modal);
-      }
-      
-      isHolding = false;
-    };
-    
-    // Mouse events
-    slot.addEventListener('mousedown', handleStart);
-    slot.addEventListener('mouseup', handleEnd);
-    
-    // Touch events
-    slot.addEventListener('touchstart', handleStart);
-    slot.addEventListener('touchend', handleEnd);
-  });
-}
-
-function toggleAbilitySelection(ability, currentSelections, MAX_SELECTIONS, modal) {
-  const abilityType = ability.type; // 'basic', 'passive', or 'ultimate'
-  const abilityName = ability.name;
-  
-  const currentTypeSelections = currentSelections[abilityType];
-  const isCurrentlySelected = currentTypeSelections.includes(abilityName);
-  
-  if (isCurrentlySelected) {
-    // Deselect
-    currentSelections[abilityType] = currentTypeSelections.filter(name => name !== abilityName);
-  } else {
-    // Try to select
-    if (currentTypeSelections.length >= MAX_SELECTIONS[abilityType]) {
-      const typeLabel = abilityType.charAt(0).toUpperCase() + abilityType.slice(1);
-      displayMessage(`Cannot select more than ${MAX_SELECTIONS[abilityType]} ${typeLabel} abilities. Please deselect one first.`);
-      return;
-    }
-    currentSelections[abilityType].push(abilityName);
-  }
-  
-  updateSelectionVisuals(modal, currentSelections);
-  updateSelectionCounters(modal, currentSelections);
-}
-
-function updateSelectionVisuals(modal, currentSelections) {
-  modal.querySelectorAll('.talent-slot.filled').forEach(slot => {
-    const img = slot.querySelector('img');
-    if (!img) return;
-    
-    const abilityName = img.alt;
-    
-    // Check if this ability is selected
-    const isSelected = Object.values(currentSelections).flat().includes(abilityName);
-    
-    if (isSelected) {
-      slot.classList.add('ability-selected');
-    } else {
-      slot.classList.remove('ability-selected');
-    }
-  });
-}
-
-function updateSelectionCounters(modal, currentSelections) {
-  const basicCount = modal.querySelector('#basicCount');
-  const passiveCount = modal.querySelector('#passiveCount');
-  const ultimateCount = modal.querySelector('#ultimateCount');
-  
-  if (basicCount) basicCount.textContent = currentSelections.basic.length;
-  if (passiveCount) passiveCount.textContent = currentSelections.passive.length;
-  if (ultimateCount) ultimateCount.textContent = currentSelections.ultimate.length;
-}
-
-async function saveSelectedAbilities(character, selectedAbilities) {
-  try {
-    const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
-      method: 'POST',
-      body: {
-        character_id: character.id,
-        player_id: _profile.id,
-        selected_abilities: selectedAbilities
-      }
-    });
-    
-    if (!response.ok) {
-      const errorResult = await response.json();
-      throw new Error(errorResult.error || 'Failed to save selected abilities');
-    }
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to save selected abilities');
-    }
-    
-    displayMessage(result.message);
-    
-  } catch (error) {
-    console.error('Error saving selected abilities:', error);
-    displayMessage(error.message || 'Failed to save selected abilities. Please try again.');
-    throw error;
-  }
-}
-
-
 function loadCharacterManagerStyles() {
     if (document.getElementById('character-manager-styles')) {
         return;
@@ -1317,68 +1127,9 @@ function loadCharacterManagerStyles() {
     const styleEl = document.createElement('style');
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
-.talent-slot.ability-selected {
-    box-shadow: 0 0 20px rgba(76, 175, 80, 0.8), 
-                0 0 40px rgba(76, 175, 80, 0.4),
-                inset 0 0 20px rgba(76, 175, 80, 0.2);
-    border-color: #4CAF50 !important;
-}
-
-.talent-slot.ability-selected::after {
-    content: '✓';
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: #4CAF50;
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.selection-counter {
-    background: rgba(0, 0, 0, 0.4);
-    padding: 0.8rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    border: 1px solid rgba(218, 165, 32, 0.3);
-}
-
-.counter-row {
-    display: flex;
-    justify-content: space-around;
-    gap: 1rem;
-    color: #FFD700;
-    font-size: 14px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.counter-row span {
-    white-space: nowrap;
-}
-
-.save-selection-btn {
-    width: 100%;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #4CAF50, #45a049);
-    border-color: #4CAF50;
-}
-
-.save-selection-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #45a049, #3d8b40);
-    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
-}
-
-.save-selection-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.talent-slot.selected-ability {
+  outline: 3px solid #4caf50;
+  box-shadow: 0 0 12px rgba(76,175,80,0.7);
 }
 
 .equipment-option {

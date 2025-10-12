@@ -1675,23 +1675,28 @@ async function renderBottomUI() {
 
     BattleState.characterAbilities = BattleState.characterAbilities || {};
     let abilityObjs = {};
+
     if (BattleState.characterAbilities[currentChar.id]) {
         abilityObjs = BattleState.characterAbilities[currentChar.id];
     } else {
-        abilityObjs = { basic: [], passive: null, ultimate: null };
+        abilityObjs = { basic: [], passives: [], ultimate: null };
 
         const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
 
+        // Load basics
         for (const abilityName of Object.keys(charAbilities.basic || {})) {
             const ability = await getAbility(abilityName);
             if (ability) abilityObjs.basic.push(ability);
         }
 
+        // Load passives (can be up to two)
         const passiveNames = Object.keys(charAbilities.passive || {});
-        if (passiveNames[0]) {
-            abilityObjs.passive = await getAbility(passiveNames[0]);
+        for (let i = 0; i < Math.min(passiveNames.length, 2); i++) {
+            const ability = await getAbility(passiveNames[i]);
+            if (ability) abilityObjs.passives.push(ability);
         }
 
+        // Load ultimate
         const ultimateNames = Object.keys(charAbilities.ultimate || {});
         if (ultimateNames[0]) {
             abilityObjs.ultimate = await getAbility(ultimateNames[0]);
@@ -1711,51 +1716,69 @@ async function renderBottomUI() {
 
             let ability = null;
 
-            if (btnIndex < 3) {
+            // Map buttons by index
+            if (btnIndex >= 0 && btnIndex <= 3) {
+                // Basic abilities 0–3
                 ability = abilityObjs.basic[btnIndex] || null;
-            } else if (btnIndex === 3) {
+            } else if (btnIndex === 4) {
+                // Ultimate
                 ability = abilityObjs.ultimate;
-            } else if (btnIndex === 6) {
-                ability = abilityObjs.passive;
             }
 
             if (ability) {
+                // Ability buttons
                 if (ability.sprite) {
-                    btn.innerHTML = `<img src='assets/art/abilities/${ability.sprite}.png' alt='${ability.name}' style='width:100%;height:100%;'>`;
-                    btn.title = ability.name;
+                    btn.innerHTML = `<img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}" style="width:100%;height:100%;">`;
                 } else {
                     btn.textContent = ability.name || 'Unknown';
                 }
-
+                btn.title = ability.name;
                 btn.dataset.abilityName = ability.name;
                 btn.disabled = false;
                 btn.addEventListener('click', debounce(() => {
                     const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
                     if (caster) toggleAbilitySelection(caster, ability);
                 }, 150));
-            } else if (btnIndex === 4) {
-                btn.textContent = 'Refresh';
-                btn.id = 'refreshButtonBottom';
-                btn.disabled = false;
             } else if (btnIndex === 5) {
+                // Consumable
                 const consumable = currentChar?.equipped_items?.equipped_consumable;
                 if (consumable && consumable !== 'none') {
                     const itemSprite = consumable.replace(/\s+/g, '');
-                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
+                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width:36px;height:36px;object-fit:contain;">`;
                     btn.id = 'consumableButton';
-                    btn.disabled = false;
                     btn.title = consumable;
+                    btn.disabled = false;
                     btn.addEventListener('click', debounce(handleUseConsumable, 500));
                 } else {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
                 }
+            } else if (btnIndex === 6 || btnIndex === 7) {
+                // Two passives
+                const passive = abilityObjs.passives[btnIndex - 6] || null;
+                if (passive) {
+                    if (passive.sprite) {
+                        btn.innerHTML = `<img src="assets/art/abilities/${passive.sprite}.png" alt="${passive.name}" style="width:100%;height:100%;">`;
+                    } else {
+                        btn.textContent = passive.name || 'Passive';
+                    }
+                    btn.title = passive.name;
+                } else {
+                    btn.textContent = 'Passive';
+                    btn.disabled = true;
+                }
+            } else if (btnIndex === 8) {
+                // Interact placeholder
+                btn.textContent = 'Interact';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
             } else if (btnIndex === 9) {
+                // End turn
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
             } else {
-                btn.textContent = `Btn ${btnIndex + 1}`;
+                btn.textContent = `Btn ${btnIndex}`;
                 btn.disabled = true;
             }
 
@@ -1766,11 +1789,9 @@ async function renderBottomUI() {
 
     ui.appendChild(fragment);
 
+    // End Turn handler
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
     if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
-
-    const refreshBtnBottom = document.getElementById('refreshButtonBottom');
-    if (refreshBtnBottom) refreshBtnBottom.addEventListener('click', debounce(handleRefresh, 300));
 }
 
 const handleAbilityUse = async (abilityPayload) => {
