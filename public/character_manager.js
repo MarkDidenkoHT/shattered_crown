@@ -590,11 +590,19 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
   const maxSlots = 7;
   let html = '';
 
+  // normalize selected abilities
+  selectedAbilities = {
+    basic: selectedAbilities?.basic || [],
+    passive: selectedAbilities?.passive || [],
+    ultimate: selectedAbilities?.ultimate || []
+  };
+
   for (let row = maxSlots - 1; row >= 0; row--) {
     const ability = abilities[row];
     const hasAbility = ability !== undefined;
     const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
-    const isSelected = hasAbility && selectedAbilities[ability.type || '']?.includes(ability.name);
+    const typeKey = (ability?.type || '').toLowerCase();
+    const isSelected = hasAbility && Array.isArray(selectedAbilities[typeKey]) && selectedAbilities[typeKey].includes(ability.name);
 
     html += `
     <div class="talent-slot ${isLearned ? 'filled' : ''} ${isSelected ? 'selected-ability' : ''}"
