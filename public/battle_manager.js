@@ -155,7 +155,6 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
     hpFill.style.width = `${newPercentage}%`;
     hpFill.style.backgroundColor = newColor;
 
-    // === Floating number effect ===
     const delta = newHP - oldHP;
     if (delta !== 0) {
         const charEl = hpBarEl.closest('.character-token');
@@ -176,7 +175,6 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
             floatText.style.pointerEvents = 'none';
             charEl.appendChild(floatText);
 
-            // Animate upward fade
             floatText.animate([
                 { transform: 'translate(-50%, 0)', opacity: 1 },
                 { transform: 'translate(-50%, -40px)', opacity: 0 }
@@ -186,7 +184,6 @@ const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
                 fill: 'forwards'
             });
 
-            // Cleanup
             setTimeout(() => floatText.remove(), 1000);
         }
     }
@@ -1033,7 +1030,6 @@ const updateCharacterAvailability = () => {
 
     const currentTurn = BattleState.battleState.current_turn;
     
-    // Remove existing classes with smooth transitions
     BattleState.characterElements.forEach((charEl, charId) => {
         charEl.style.transition = 'filter 300ms ease, opacity 200ms ease';
         charEl.classList.remove('current-turn', 'cannot-act');
@@ -1257,12 +1253,10 @@ function renderCharacters() {
     const container = BattleState.main.querySelector('.battle-grid-container');
     if (!container) return;
     
-    // Clear existing character elements map and DOM elements
     BattleState.characterElements.clear();
     container.querySelectorAll('.character-token').forEach(token => token.remove());
 
     BattleState.characters.forEach(char => {
-        // ⬇️ Skip characters without positions OR with 0 HP (dead)
         if (!Array.isArray(char.position) || char.current_hp <= 0) return;
 
         const [x, y] = char.position;
@@ -1272,7 +1266,6 @@ function renderCharacters() {
         const charEl = createCharacterElement(char);
         cell.appendChild(charEl);
         
-        // Store reference for animations
         BattleState.characterElements.set(char.id, charEl);
     });
 }
@@ -2212,7 +2205,6 @@ function capitalizeFirst(str) {
 }
 
 
-
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
     
@@ -2359,7 +2351,7 @@ function navigateToCastle() {
 }
 
 async function assignLoot(battleState) {
-  const battle_id = battleState.id; // Assuming battleState has an id
+  const battle_id = battleState.id;
   
   try {
     const response = await fetch('/api/battle/assign-loot', {
@@ -2374,7 +2366,6 @@ async function assignLoot(battleState) {
     
     if (data.success) {
       console.log('Loot assigned successfully:', data);
-      // Update UI or state as needed
       return data;
     } else {
       console.error('Failed to assign loot:', data.error);

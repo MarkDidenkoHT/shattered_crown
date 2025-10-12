@@ -250,7 +250,7 @@ function showGodReselectConfirmation() {
             </div>
             <div class="god-reselect-buttons">
                 <button class="fantasy-button cancel-god-reselect">Cancel</button>
-                <button class="fantasy-button confirm-god-reselect" style="background: #d32f2f;">Delete Characters & Change Deity</button>
+                <button class="fantasy-button confirm-god-reselect" style="background: #d32f2f;">Continue</button>
             </div>
         </div>
     `;
