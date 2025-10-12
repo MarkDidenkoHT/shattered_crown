@@ -1182,15 +1182,46 @@ function initializeAbilitySelection(character, modal, talentAbilities, learnedAb
     const row = parseInt(slot.dataset.row);
     const ability = talentAbilities[column]?.[row];
     
-    if (!ability || !isAbilityLearned(ability, learnedAbilities)) return;
+    if (!ability) return;
     
-    // Add click handler for selection (not hold for learning)
-    slot.addEventListener('click', (e) => {
-      // Don't trigger if currently holding for learning
-      if (slot.classList.contains('filled')) {
+    const isLearned = isAbilityLearned(ability, learnedAbilities);
+    
+    if (!isLearned) return; // Only add selection handlers to learned abilities
+    
+    let clickTimeout;
+    let isHolding = false;
+    let clickStartTime = 0;
+    
+    const handleStart = (e) => {
+      clickStartTime = Date.now();
+      isHolding = false;
+      
+      clickTimeout = setTimeout(() => {
+        isHolding = true;
+      }, 200); // If held for more than 200ms, it's considered a hold (for learning)
+    };
+    
+    const handleEnd = (e) => {
+      const clickDuration = Date.now() - clickStartTime;
+      clearTimeout(clickTimeout);
+      
+      // If it was a quick click (less than 200ms) and slot is filled (learned), toggle selection
+      if (clickDuration < 200 && !isHolding && slot.classList.contains('filled')) {
+        e.preventDefault();
+        e.stopPropagation();
         toggleAbilitySelection(ability, currentSelections, MAX_SELECTIONS, modal);
       }
-    });
+      
+      isHolding = false;
+    };
+    
+    // Mouse events
+    slot.addEventListener('mousedown', handleStart);
+    slot.addEventListener('mouseup', handleEnd);
+    
+    // Touch events
+    slot.addEventListener('touchstart', handleStart);
+    slot.addEventListener('touchend', handleEnd);
   });
 }
 
