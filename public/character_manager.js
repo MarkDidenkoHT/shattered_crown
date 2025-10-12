@@ -602,7 +602,8 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
     const ability = abilities[row];
     const hasAbility = ability !== undefined;
     const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
-    const typeKey = (ability?.type || '').toLowerCase();
+    let typeKey = (ability?.type || '').toLowerCase();
+    if (typeKey === 'active') typeKey = 'basic';
     // Debug log to check type matching
     if (hasAbility) {
       console.log('[Talent Debug]', {
