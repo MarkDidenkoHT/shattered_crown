@@ -728,7 +728,7 @@ function initializeTalentTree(character, modal) {
   // Add handler to toggle selected abilities
   async function updateSelectedAbilities(character, selectedAbilities) {
     try {
-      const response = await _apiCall('/api/supabase/functions/v1/update_selected_abilities', {
+      const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
         method: 'POST',
         body: {
           character_id: character.id,
