@@ -593,9 +593,9 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
 
   // normalize selected abilities
   selectedAbilities = {
-    basic: selectedAbilities?.basic || [],
-    passive: selectedAbilities?.passive || [],
-    ultimate: selectedAbilities?.ultimate || []
+    basic: Array.isArray(selectedAbilities?.basic) ? selectedAbilities.basic : [],
+    passive: Array.isArray(selectedAbilities?.passive) ? selectedAbilities.passive : [],
+    ultimate: Array.isArray(selectedAbilities?.ultimate) ? selectedAbilities.ultimate : []
   };
 
   for (let row = maxSlots - 1; row >= 0; row--) {
