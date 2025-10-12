@@ -734,7 +734,7 @@ function initializeTalentTree(character, modal) {
           ultimate: Array.isArray(selectedAbilities.ultimate) ? selectedAbilities.ultimate : []
         };
 
-        const response = await _apiCall('/api/supabase/functions/v1/update_selected_abilities', {
+        const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
           method: 'POST',
           body: {
             character_id: character.id,
