@@ -603,6 +603,16 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
     const hasAbility = ability !== undefined;
     const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
     const typeKey = (ability?.type || '').toLowerCase();
+    // Debug log to check type matching
+    if (hasAbility) {
+      console.log('[Talent Debug]', {
+        abilityName: ability.name,
+        abilityType: ability.type,
+        typeKey,
+        selectedAbilitiesKeys: Object.keys(selectedAbilities),
+        selectedList: selectedAbilities[typeKey]
+      });
+    }
     const isSelected = hasAbility && Array.isArray(selectedAbilities[typeKey]) && selectedAbilities[typeKey].includes(ability.name);
 
     html += `
