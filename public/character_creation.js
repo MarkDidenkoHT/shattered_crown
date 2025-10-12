@@ -86,6 +86,16 @@ function addGridSelectionStyles() {
         .top-right-buttons { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
         .god-return-btn { background: rgba(120, 80, 40, 0.9); }
         .god-return-btn:hover { background: rgba(140, 100, 60, 0.9); }
+        .god-reselect-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .god-reselect-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); }
+        .god-reselect-content { position: relative; background: rgba(50, 35, 20, 0.98); border: 3px solid #c4975a; border-radius: 12px; padding: 20px; max-width: 500px; width: 90%; box-shadow: 0 0 30px rgba(196, 151, 90, 0.5); }
+        .god-reselect-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid rgba(196, 151, 90, 0.5); }
+        .god-reselect-header h3 { color: #c4975a; margin: 0; font-size: 20px; }
+        .god-reselect-close { background: none; border: none; color: #c4975a; font-size: 28px; cursor: pointer; padding: 0; line-height: 1; width: 30px; height: 30px; }
+        .god-reselect-close:hover { color: #fff; }
+        .god-reselect-body { color: #ddd; margin-bottom: 20px; }
+        .god-reselect-warning { color: #ff6b6b; font-weight: bold; margin: 10px 0; }
+        .god-reselect-buttons { display: flex; gap: 10px; justify-content: flex-end; }
     `;
     document.head.appendChild(style);
 }
@@ -220,9 +230,67 @@ function renderRaceSelection() {
         });
     });
 
-    section.querySelector('.god-return-btn').addEventListener('click', () => {
-        window.gameAuth.loadModule('god_selection');
+    section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
+}
+
+function showGodReselectConfirmation() {
+    const modal = document.createElement('div');
+    modal.className = 'god-reselect-modal';
+    modal.innerHTML = `
+        <div class="god-reselect-overlay"></div>
+        <div class="god-reselect-content">
+            <div class="god-reselect-header">
+                <h3>Change Deity</h3>
+                <button class="god-reselect-close">&times;</button>
+            </div>
+            <div class="god-reselect-body">
+                <p>You have ${_existingCharacterCount} character(s) created with your current deity.</p>
+                <div class="god-reselect-warning">Changing deity will delete all your existing characters!</div>
+                <p>Are you sure you want to continue?</p>
+            </div>
+            <div class="god-reselect-buttons">
+                <button class="fantasy-button cancel-god-reselect">Cancel</button>
+                <button class="fantasy-button confirm-god-reselect" style="background: #d32f2f;">Delete Characters & Change Deity</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const closeModal = () => modal.remove();
+    
+    modal.querySelector('.god-reselect-close').addEventListener('click', closeModal);
+    modal.querySelector('.god-reselect-overlay').addEventListener('click', closeModal);
+    modal.querySelector('.cancel-god-reselect').addEventListener('click', closeModal);
+    
+    modal.querySelector('.confirm-god-reselect').addEventListener('click', async () => {
+        try {
+            const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                displayMessage('Characters deleted. Redirecting to deity selection...');
+                closeModal();
+                setTimeout(() => {
+                    window.gameAuth.loadModule('god_selection');
+                }, 1500);
+            } else {
+                throw new Error('Failed to delete characters');
+            }
+        } catch (error) {
+            displayMessage('Failed to delete characters. Please try again.');
+            closeModal();
+        }
     });
+}
+
+function handleGodReselection() {
+    if (_existingCharacterCount > 0) {
+        showGodReselectConfirmation();
+    } else {
+        window.gameAuth.loadModule('god_selection');
+    }
 }
 
 function loadClassSelectionBackgrounds() {
@@ -443,7 +511,7 @@ function renderClassSelection() {
         item.addEventListener('click', (e) => { e.stopPropagation(); showAbilityTooltip(item.dataset.ability); });
     });
     section.querySelector('.return-btn').addEventListener('click', () => { _selectedClass = null; renderRaceSelection(); });
-    section.querySelector('.god-return-btn').addEventListener('click', () => { window.gameAuth.loadModule('god_selection'); });
+    section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
 }
 
 function handleClassSelection(classId) {
@@ -502,7 +570,7 @@ async function renderPortraitSelection() {
     });
     input.addEventListener('input', () => errorMsg.style.display = 'none');
     section.querySelector('.return-btn').addEventListener('click', () => { _selectedPortrait = null; renderClassSelection(); });
-    section.querySelector('.god-return-btn').addEventListener('click', () => { window.gameAuth.loadModule('god_selection'); });
+    section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
 }
 
 function handlePortraitSelection(portrait) {
@@ -542,7 +610,7 @@ function renderProfessionSelection() {
             </div>
         `;
         section.querySelector('.return-btn').addEventListener('click', () => { _selectedProfession = null; renderPortraitSelection(); });
-        section.querySelector('.god-return-btn').addEventListener('click', () => { window.gameAuth.loadModule('god_selection'); });
+        section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
         return;
     }
     section.innerHTML = `
@@ -582,7 +650,7 @@ function renderProfessionSelection() {
         });
     });
     section.querySelector('.return-btn').addEventListener('click', () => { _selectedProfession = null; renderPortraitSelection(); });
-    section.querySelector('.god-return-btn').addEventListener('click', () => { window.gameAuth.loadModule('god_selection'); });
+    section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
 }
 
 function handleProfessionSelection(professionId) {
@@ -628,7 +696,7 @@ function renderCharacterSummary() {
     });
     section.querySelector('.confirm-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); confirmCharacter(); });
     section.querySelector('.return-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); renderProfessionSelection(); });
-    section.querySelector('.god-return-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.gameAuth.loadModule('god_selection'); });
+    section.querySelector('.god-return-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); handleGodReselection(); });
 }
 
 function calculateFinalStats(baseStats, statBonuses) {
