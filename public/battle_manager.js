@@ -137,49 +137,59 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
 };
 
 const animateHPChange = (hpBarEl, oldHP, newHP, maxHP) => {
-    console.groupCollapsed(`[HP BAR UPDATE] Character HP Change`);
-    console.log("Old HP:", oldHP, "New HP:", newHP, "Max HP:", maxHP);
-
-    if (!hpBarEl) {
-        console.warn("❌ No hpBarEl found for this character.");
-        console.groupEnd();
-        return;
-    }
-    if (oldHP === newHP) {
-        console.info("ℹ️ HP unchanged, skipping animation.");
-        console.groupEnd();
-        return;
-    }
+    if (!hpBarEl) return;
+    if (oldHP === newHP) return;
 
     const hpFill = hpBarEl.querySelector('div');
-    if (!hpFill) {
-        console.warn("❌ No hpFill element inside hpBarEl.");
-        console.groupEnd();
-        return;
-    }
+    if (!hpFill) return;
 
     const oldPercentage = Math.max(0, Math.min(100, Math.round((oldHP / maxHP) * 100)));
     const newPercentage = Math.max(0, Math.min(100, Math.round((newHP / maxHP) * 100)));
-
-    console.log("Old %:", oldPercentage, "New %:", newPercentage);
 
     let newColor = '#4CAF50';
     if (newPercentage <= 25) newColor = '#F44336';
     else if (newPercentage <= 50) newColor = '#FF9800';
     else if (newPercentage <= 75) newColor = '#FFC107';
 
-    console.log("Applied color:", newColor);
-
     hpFill.style.transition = `width ${ANIMATION_CONFIG.moveDuration * 0.6}ms ease-out, background-color 300ms ease`;
     hpFill.style.width = `${newPercentage}%`;
     hpFill.style.backgroundColor = newColor;
 
+    // === Floating number effect ===
     const delta = newHP - oldHP;
     if (delta !== 0) {
-        console.log("Indicator:", delta > 0 ? `Healing +${delta}` : `Damage ${delta}`);
-    }
+        const charEl = hpBarEl.closest('.character-token');
+        if (charEl) {
+            const floatText = document.createElement('div');
+            floatText.textContent = (delta > 0 ? `+${delta}` : `${delta}`);
+            floatText.style.position = 'absolute';
+            floatText.style.left = '50%';
+            floatText.style.bottom = '110%';
+            floatText.style.transform = 'translateX(-50%)';
+            floatText.style.fontFamily = 'Cinzel, serif';
+            floatText.style.fontSize = '14px';
+            floatText.style.fontWeight = 'bold';
+            floatText.style.color = delta > 0 ? '#66ff66' : '#ff4444';
+            floatText.style.textShadow = '0 0 4px rgba(0,0,0,0.8)';
+            floatText.style.opacity = '1';
+            floatText.style.zIndex = '50';
+            floatText.style.pointerEvents = 'none';
+            charEl.appendChild(floatText);
 
-    console.groupEnd();
+            // Animate upward fade
+            floatText.animate([
+                { transform: 'translate(-50%, 0)', opacity: 1 },
+                { transform: 'translate(-50%, -40px)', opacity: 0 }
+            ], {
+                duration: 1000,
+                easing: 'ease-out',
+                fill: 'forwards'
+            });
+
+            // Cleanup
+            setTimeout(() => floatText.remove(), 1000);
+        }
+    }
 };
 
 function injectBattleLoadingStyles() {
@@ -1179,8 +1189,8 @@ function renderBattleGrid(layoutJson) {
 
     container.innerHTML = '';
     Object.assign(container.style, {
-        width: '98%', maxWidth: '380px', height: '55%', maxHeight: '380px',
-        display: 'flex', flexDirection: 'column', margin: '3px', border: '2px solid #c4975a', borderRadius: '4px',
+        width: '100%', maxWidth: '380px', maxHeight: '380px',
+        display: 'flex', flexDirection: 'column', margin: '2px', border: '2px solid #c4975a', borderRadius: '4px', aspectRatio: '1 / 1'
     });
 
     const bgName = layoutJson.background || BattleState.battleState?.background || 'default';
