@@ -727,15 +727,21 @@ function initializeTalentTree(character, modal) {
 
   // Add handler to toggle selected abilities
   async function updateSelectedAbilities(character, selectedAbilities) {
-    try {
-      const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
-        method: 'POST',
-        body: {
-          character_id: character.id,
-          player_id: _profile.id,
-          selected_abilities: selectedAbilities
-        }
-      });
+      try {
+        const safeAbilities = {
+          basic: Array.isArray(selectedAbilities.basic) ? selectedAbilities.basic : [],
+          passive: Array.isArray(selectedAbilities.passive) ? selectedAbilities.passive : [],
+          ultimate: Array.isArray(selectedAbilities.ultimate) ? selectedAbilities.ultimate : []
+        };
+
+        const response = await _apiCall('/api/supabase/functions/v1/update_selected_abilities', {
+          method: 'POST',
+          body: {
+            character_id: character.id,
+            player_id: _profile.id,
+            selected_abilities: safeAbilities
+          }
+        });
       const result = await response.json();
       displayMessage(result.message || (result.success ? 'Selected abilities updated.' : 'Update failed.'));
       return result.success;
