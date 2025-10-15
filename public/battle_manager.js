@@ -808,22 +808,18 @@ function startAbilitySelection(caster, abilityRaw) {
     
             const targetChar = getCharacterAt(ax, ay);
     
-            // assign visual class re-using existing classes that clearAbilitySelection removes
             if (targetChar) {
               const ally = isAlly(caster, targetChar);
               cell.classList.add(ally ? 'highlight-target-ally' : 'highlight-target-enemy');
             } else {
-              // empty tile — use the area-center class (clearAbilitySelection removes this)
               cell.classList.add('highlight-area-center');
             }
     
-            // compute intended effect if there is a character (null allowed)
             const eff = computeEffect(caster, ability, targetChar);
             if (targetChar && eff) affected.push({ char: targetChar, eff });
           }
         }
     
-        // Register click handler for every affected tile (so player can click any tile in the AoE)
         for (const tile of affectedTiles) {
           registerTile(tile, () => {
             const payload = {
@@ -1375,13 +1371,12 @@ function createEnvironmentItemElement(item) {
     el.style.left = '0';
     el.style.width = '100%';
     el.style.height = '100%';
-    el.style.zIndex = '5'; // under characters (characters are zIndex 5+)
+    el.style.zIndex = '5';
     el.title = item.name + (item.character_name ? ` — ${item.character_name}` : '');
 
-    // sprite image (fallback to placeholder)
     const img = document.createElement('img');
     const sprite = item.sprite ? item.sprite.toLowerCase() : 'placeholder';
-    img.src = `assets/art/environment/${sprite}.png`; // keep consistent asset path
+    img.src = `assets/art/environment/${sprite}.png`;
     img.alt = item.name || 'Item';
     img.style.width = '100%';
     img.style.height = '100%';
