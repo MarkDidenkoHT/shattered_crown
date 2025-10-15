@@ -69,14 +69,12 @@ function addGridSelectionStyles() {
         .summary-info-block p { margin: 5px 0; color: #ddd; font-size: 14px; }
         .summary-info-block p strong { color: #c4975a; }
         .ability-item { cursor: pointer; transition: color 0.2s ease; }
-        .ability-item:hover { color: #4CAF50; text-decoration: underline; }
         .ability-tooltip-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; display: flex; align-items: center; justify-content: center; }
         .ability-tooltip-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); }
         .ability-tooltip-content { position: relative; background: rgba(50, 35, 20, 0.98); border: 3px solid #c4975a; border-radius: 12px; padding: 20px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 30px rgba(196, 151, 90, 0.5); }
         .ability-tooltip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid rgba(196, 151, 90, 0.5); }
         .ability-tooltip-header h3 { color: #c4975a; margin: 0; font-size: 20px; }
         .ability-tooltip-close { background: none; border: none; color: #c4975a; font-size: 28px; cursor: pointer; padding: 0; line-height: 1; width: 30px; height: 30px; }
-        .ability-tooltip-close:hover { color: #fff; }
         .ability-tooltip-body { color: #ddd; }
         .ability-tooltip-body p { margin: 10px 0; line-height: 1.6; }
         .ability-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
@@ -84,15 +82,12 @@ function addGridSelectionStyles() {
         .ability-stat-label { color: #c4975a; font-size: 11px; text-transform: uppercase; font-weight: bold; }
         .ability-stat-value { color: #fff; font-size: 16px; font-weight: bold; }
         .top-right-buttons { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
-        .god-return-btn { background: rgba(120, 80, 40, 0.9); }
-        .god-return-btn:hover { background: rgba(140, 100, 60, 0.9); }
         .god-reselect-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; display: flex; align-items: center; justify-content: center; }
         .god-reselect-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); }
         .god-reselect-content { position: relative; background: rgba(50, 35, 20, 0.98); border: 3px solid #c4975a; border-radius: 12px; padding: 20px; max-width: 500px; width: 90%; box-shadow: 0 0 30px rgba(196, 151, 90, 0.5); }
         .god-reselect-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid rgba(196, 151, 90, 0.5); }
         .god-reselect-header h3 { color: #c4975a; margin: 0; font-size: 20px; }
         .god-reselect-close { background: none; border: none; color: #c4975a; font-size: 28px; cursor: pointer; padding: 0; line-height: 1; width: 30px; height: 30px; }
-        .god-reselect-close:hover { color: #fff; }
         .god-reselect-body { color: #ddd; margin-bottom: 20px; }
         .god-reselect-warning { color: #ff6b6b; font-weight: bold; margin: 10px 0; }
         .god-reselect-buttons { display: flex; gap: 10px; justify-content: flex-end; }
