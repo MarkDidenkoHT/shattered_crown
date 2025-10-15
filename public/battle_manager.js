@@ -776,71 +776,75 @@ function startAbilitySelection(caster, abilityRaw) {
   }
 
   if (ability.targeting === 'area') {
-  const area = ability.area;
-  const range = ability.range;
-
-  let potentialCenters = [];
-
-  if (range === 0) {
-    potentialCenters = [caster.position];
-  } else {
-    const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
-    for (const cell of cells) {
-      const x = +cell.dataset.x, y = +cell.dataset.y;
-      if (chebyshevDistance(caster.position, [x, y]) <= range) {
-        potentialCenters.push([x, y]);
-      }
-    }
-  }
-
-    for (const [cx, cy] of potentialCenters) {
-      const affected = [];
-      const affectedTiles = [];
+      const area = Number(ability.area) || 0;
+      const range = Number(ability.range) || 0;
     
-      for (let ax = cx - area; ax <= cx + area; ax++) {
-        for (let ay = cy - area; ay <= cy + area; ay++) {
-          if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
-          const cell = getCellAt(ax, ay);
-          if (!cell) continue;
+      let potentialCenters = [];
     
-          affectedTiles.push(cell);
-    
-          // ✅ Reuse existing highlight style (same as single-target)
-          const targetChar = getCharacterAt(ax, ay);
-          if (targetChar) {
-            const ally = isAlly(caster, targetChar);
-            cell.classList.add(ally ? 'highlight-target-ally' : 'highlight-target-enemy');
-          } else {
-            // empty tile — neutral highlight
-            cell.classList.add('highlight-area-center');
+      if (range === 0) {
+        potentialCenters = [caster.position.slice()];
+      } else {
+        const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
+        for (const cell of cells) {
+          const x = +cell.dataset.x, y = +cell.dataset.y;
+          if (chebyshevDistance(caster.position, [x, y]) <= range) {
+            potentialCenters.push([x, y]);
           }
-    
-          const eff = computeEffect(caster, ability, targetChar);
-          if (eff) affected.push({ char: targetChar, eff });
         }
       }
     
-      for (const tile of affectedTiles) {
-        registerTile(tile, () => {
-          const payload = {
-            abilityName: ability.name,
-            casterId: caster.id,
-            casterPos: caster.position,
-            targetCenter: [cx, cy],
-            affectedTargets: affected.map(a => ({
-              id: a.char.id,
-              pos: a.char.position,
-              faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-              intendedEffect: a.eff
-            }))
-          };
-          console.log('[ABILITY USED]', payload);
-          handleAbilityUse(payload);
-          clearAbilitySelection();
-        });
+      for (const [cx, cy] of potentialCenters) {
+        const affected = [];
+        const affectedTiles = [];
+    
+        for (let ax = cx - area; ax <= cx + area; ax++) {
+          for (let ay = cy - area; ay <= cy + area; ay++) {
+            if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
+    
+            const cell = getCellAt(ax, ay);
+            if (!cell) continue;
+    
+            affectedTiles.push(cell);
+    
+            const targetChar = getCharacterAt(ax, ay);
+    
+            // assign visual class re-using existing classes that clearAbilitySelection removes
+            if (targetChar) {
+              const ally = isAlly(caster, targetChar);
+              cell.classList.add(ally ? 'highlight-target-ally' : 'highlight-target-enemy');
+            } else {
+              // empty tile — use the area-center class (clearAbilitySelection removes this)
+              cell.classList.add('highlight-area-center');
+            }
+    
+            // compute intended effect if there is a character (null allowed)
+            const eff = computeEffect(caster, ability, targetChar);
+            if (targetChar && eff) affected.push({ char: targetChar, eff });
+          }
+        }
+    
+        // Register click handler for every affected tile (so player can click any tile in the AoE)
+        for (const tile of affectedTiles) {
+          registerTile(tile, () => {
+            const payload = {
+              abilityName: ability.name,
+              casterId: caster.id,
+              casterPos: caster.position,
+              targetCenter: [cx, cy],
+              affectedTargets: affected.map(a => ({
+                id: a.char.id,
+                pos: a.char.position,
+                faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+                intendedEffect: a.eff
+              }))
+            };
+            console.log('[ABILITY USED]', payload);
+            handleAbilityUse(payload);
+            clearAbilitySelection();
+          });
+        }
       }
     }
-   }
 
   if (ability.targeting === 'tile') {
     const range = ability.range || 1;
