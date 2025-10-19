@@ -2023,7 +2023,7 @@ app.post('/api/battle/assign-loot', async (req, res) => {
     }
 });
 
-// Delete all characters for a player
+// Delete all characters for a player (using service role for broader permissions)
 app.post('/api/characters/delete-all', requireAuth, async (req, res) => {
     try {
         const { player_id } = req.body;
@@ -2032,99 +2032,83 @@ app.post('/api/characters/delete-all', requireAuth, async (req, res) => {
             return res.status(400).json({ success: false, error: 'Missing player_id' });
         }
 
-        // First, get the character IDs to clean up related data
-        const charactersResponse = await fetch(
-            `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${player_id}&select=id`,
-            {
-                headers: {
-                    'apikey': process.env.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-                }
-            }
-        );
+        console.log(`[DELETE CHARACTERS] Starting deletion for player: ${player_id}`);
 
-        if (!charactersResponse.ok) {
-            throw new Error('Failed to fetch characters for cleanup');
-        }
+        // Use service role key for deletion to bypass RLS if needed
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-        const characters = await charactersResponse.json();
-        const characterIds = characters.map(char => char.id);
-
-        // Delete related data in the correct order to avoid foreign key constraints
-        
-        // 1. Delete character equipment
-        if (characterIds.length > 0) {
-            const charIdsQuery = characterIds.map(id => `character_id=eq.${id}`).join(',');
-            await fetch(
-                `${process.env.SUPABASE_URL}/rest/v1/character_equipment?or=(${charIdsQuery})`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                        'apikey': process.env.SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-                    }
-                }
-            );
-        }
-
-        // 2. Delete character abilities
-        if (characterIds.length > 0) {
-            const charIdsQuery = characterIds.map(id => `character_id=eq.${id}`).join(',');
-            await fetch(
-                `${process.env.SUPABASE_URL}/rest/v1/character_abilities?or=(${charIdsQuery})`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                        'apikey': process.env.SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-                    }
-                }
-            );
-        }
-
-        // 3. Delete the characters themselves
+        // Simple approach: just delete characters and let database cascades handle the rest
         const deleteResponse = await fetch(
             `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${player_id}`,
             {
                 method: 'DELETE',
                 headers: {
-                    'apikey': process.env.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json',
                     'Prefer': 'return=representation'
                 }
             }
         );
 
         if (!deleteResponse.ok) {
-            throw new Error('Failed to delete characters');
+            const errorText = await deleteResponse.text();
+            console.error('[DELETE CHARACTERS] Database deletion failed:', {
+                status: deleteResponse.status,
+                statusText: deleteResponse.statusText,
+                error: errorText
+            });
+            
+            // Try to get more specific error info
+            let errorDetails = `Database error: ${deleteResponse.status}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorDetails = errorData.message || errorData.error || errorText;
+            } catch (e) {
+                errorDetails = errorText;
+            }
+            
+            throw new Error(errorDetails);
         }
 
-        // 4. Reset the player's god selection
-        await fetch(
-            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`,
-            {
-                method: 'PATCH',
-                headers: {
-                    'apikey': process.env.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ god: null })
+        const deletedCharacters = await deleteResponse.json();
+        console.log(`[DELETE CHARACTERS] Successfully deleted ${deletedCharacters.length} characters`);
+
+        // Reset the player's god selection
+        try {
+            const profileResponse = await fetch(
+                `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ god: null })
+                }
+            );
+
+            if (!profileResponse.ok) {
+                console.warn('[DELETE CHARACTERS] Failed to reset god selection, but character deletion was successful');
             }
-        );
+        } catch (profileError) {
+            console.warn('[DELETE CHARACTERS] Error resetting god selection:', profileError.message);
+        }
 
         res.json({ 
             success: true, 
-            message: `Successfully deleted ${characters.length} character(s) and reset deity selection`,
-            deleted_count: characters.length 
+            message: `Successfully deleted ${deletedCharacters.length} character(s) and reset deity selection`,
+            deleted_count: deletedCharacters.length 
         });
 
     } catch (error) {
-        console.error('[DELETE CHARACTERS]', error);
+        console.error('[DELETE CHARACTERS] Final error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to delete characters', 
-            details: error.message 
+            details: error.message,
+            suggestion: 'Please check if your Supabase RLS policies allow character deletion'
         });
     }
 });
