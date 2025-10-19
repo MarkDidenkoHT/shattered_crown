@@ -528,11 +528,22 @@ function handleClassSelection(classId) {
     renderPortraitSelection();
 }
 
-async function renderPortraitSelection() {
+function renderPortraitSelection() {
     const section = _main.querySelector('.character-creation-section');
     const currentCharacterNumber = _existingCharacterCount + 1;
+    
+    const raceName = _selectedRace.name.toLowerCase().replace(/\s+/g, '_');
     const className = _selectedClass.name.toLowerCase().replace(/\s+/g, '_');
-    const portraits = [`${className}_portrait_1`, `${className}_portrait_2`, `${className}_portrait_3`, `${className}_portrait_4`];
+    const baseName = `${raceName}_${className}`;
+    
+    // Define available portraits for this race/class combination
+    const portraits = [
+        `${baseName}_1`,
+        `${baseName}_2`, 
+        `${baseName}_3`,
+        `${baseName}_4`
+    ];
+
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name & Portrait</h1>
@@ -551,7 +562,8 @@ async function renderPortraitSelection() {
                 ${portraits.map((portrait, index) => `
                     <div class="grid-item portrait-item" data-portrait="${portrait}">
                         <div class="grid-item-image">
-                            <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${portrait}.png" alt="${portrait}" class="grid-portrait">
+                            <img src="assets/art/classes/portraits/${portrait}.png" alt="Portrait ${index + 1}" class="grid-portrait"
+                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color: #8a6d3b; padding: 20px;\\'>No portrait<br>available</div>';">
                         </div>
                         <div class="grid-item-label">Portrait ${index + 1}</div>
                     </div>
@@ -563,22 +575,51 @@ async function renderPortraitSelection() {
             <button class="fantasy-button god-return-btn">Change Deity</button>
         </div>
     `;
+
     const input = section.querySelector('#character-name-input');
     const errorMsg = section.querySelector('.name-error-message');
+    
     section.querySelectorAll('.portrait-item').forEach(item => {
         item.addEventListener('click', (e) => {
             const name = input.value.trim();
-            if (!name) { errorMsg.textContent = 'Please enter a name first.'; errorMsg.style.display = 'block'; input.focus(); return; }
-            if (name.length < 2) { errorMsg.textContent = 'Name must be at least 2 characters.'; errorMsg.style.display = 'block'; input.focus(); return; }
-            errorMsg.style.display = 'none'; _characterName = name;
+            if (!name) {
+                errorMsg.textContent = 'Please enter a name first.';
+                errorMsg.style.display = 'block';
+                input.focus();
+                return;
+            }
+            if (name.length < 2) {
+                errorMsg.textContent = 'Name must be at least 2 characters.';
+                errorMsg.style.display = 'block';
+                input.focus();
+                return;
+            }
+            
+            errorMsg.style.display = 'none';
+            _characterName = name;
+            
+            // Update selection UI
             section.querySelectorAll('.portrait-item').forEach(i => i.classList.remove('selected'));
             item.classList.add('selected');
-            const portrait = item.dataset.portrait; handlePortraitSelection(portrait);
+            
+            const portrait = item.dataset.portrait;
+            handlePortraitSelection(portrait);
         });
     });
-    input.addEventListener('input', () => errorMsg.style.display = 'none');
-    section.querySelector('.return-btn').addEventListener('click', () => { _selectedPortrait = null; renderClassSelection(); });
+
+    input.addEventListener('input', () => {
+        errorMsg.style.display = 'none';
+    });
+
+    section.querySelector('.return-btn').addEventListener('click', () => {
+        _selectedPortrait = null;
+        renderClassSelection();
+    });
+
     section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
+    
+    // Auto-focus the name input
+    input.focus();
 }
 
 function handlePortraitSelection(portrait) {
@@ -671,13 +712,14 @@ function renderCharacterSummary() {
     const section = _main.querySelector('.character-creation-section');
     const finalStats = calculateFinalStats(_selectedRace.base_stats, _selectedClass.stat_bonuses);
     const currentCharacterNumber = _existingCharacterCount + 1;
+    
     section.innerHTML = `
         <div class="art-header">
             <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Confirm</h1>
         </div>
         <div class="summary-card">
             <div class="summary-art-block">
-                <img src="assets/art/classes/portraits/${_selectedClass.name.toLowerCase().replace(/\s+/g, '_')}/${_selectedPortrait}.png" alt="${_selectedRace.name} ${_selectedClass.name}" class="summary-art">
+                <img src="assets/art/classes/portraits/${_selectedPortrait}.png" alt="${_selectedRace.name} ${_selectedClass.name}" class="summary-art">
                 <div class="summary-character-name">${_characterName}</div>
             </div>
             <div class="summary-info-block">
