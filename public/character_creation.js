@@ -42,7 +42,7 @@ function addGridSelectionStyles() {
         .grid-item:active { transform: scale(0.95); }
         .grid-item.selected { border-color: #4CAF50; background: rgba(40, 60, 40, 0.9); box-shadow: 0 0 15px rgba(76, 175, 80, 0.4); }
         .grid-item-image { margin-bottom: 8px; }
-        .grid-portrait { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid rgba(196, 151, 90, 0.8); }
+        .grid-portrait { width: 125px; height: 125px; border-radius: 8px; object-fit: cover; border: 2px solid rgba(196, 151, 90, 0.8); }
         .grid-profession { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(196, 151, 90, 0.6); }
         .grid-item-label { color: #c4975a; font-weight: bold; font-size: 13px; margin-bottom: 4px; }
         .grid-item-info { text-align: center; }
@@ -208,6 +208,14 @@ function renderRaceSelection() {
         </div>
     `;
 
+    // Add error handlers for race images
+    section.querySelectorAll('.card-art').forEach(img => {
+        img.addEventListener('error', function() {
+            this.style.display = 'none';
+            this.parentElement.innerHTML = '<div style="color: #8a6d3b; padding: 20px; text-align: center;">Race Art<br>Not Available</div>';
+        });
+    });
+
     initializeSelectionSlider();
     section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -260,7 +268,6 @@ function showGodReselectConfirmation() {
     
     modal.querySelector('.confirm-god-reselect').addEventListener('click', async () => {
         try {
-            // Use the new server-side endpoint to delete characters
             const response = await _apiCall('/api/characters/delete-all', {
                 method: 'POST',
                 body: { player_id: _profile.id }
@@ -271,7 +278,6 @@ function showGodReselectConfirmation() {
                 if (result.success) {
                     displayMessage('Characters deleted. Redirecting to deity selection...');
                     closeModal();
-                    // Reset character count and used professions
                     _existingCharacterCount = 0;
                     _usedProfessionIds = [];
                     setTimeout(() => {
@@ -395,7 +401,7 @@ async function showAbilityTooltip(abilityName) {
             <div class="ability-tooltip-content">
                 <div class="ability-tooltip-header">
                     <div class="ability-header-content">
-                        <img src="${abilityIconPath}" alt="${ability.name}" class="ability-icon" onerror="this.style.display='none'">
+                        <img src="${abilityIconPath}" alt="${ability.name}" class="ability-icon">
                         <h3>${ability.name}</h3>
                     </div>
                     <button class="ability-tooltip-close">&times;</button>
@@ -406,6 +412,13 @@ async function showAbilityTooltip(abilityName) {
             </div>
         `;
         document.body.appendChild(modal);
+        
+        // Add error handler for ability icon
+        const abilityIcon = modal.querySelector('.ability-icon');
+        abilityIcon.addEventListener('error', function() {
+            this.style.display = 'none';
+        });
+        
         const closeModal = () => modal.remove();
         modal.querySelector('.ability-tooltip-close').addEventListener('click', closeModal);
         modal.querySelector('.ability-tooltip-overlay').addEventListener('click', closeModal);
@@ -536,7 +549,6 @@ function renderPortraitSelection() {
     const className = _selectedClass.name.toLowerCase().replace(/\s+/g, '_');
     const baseName = `${raceName}_${className}`;
     
-    // Define available portraits for this race/class combination
     const portraits = [
         `${baseName}_1`,
         `${baseName}_2`, 
@@ -562,8 +574,7 @@ function renderPortraitSelection() {
                 ${portraits.map((portrait, index) => `
                     <div class="grid-item portrait-item" data-portrait="${portrait}">
                         <div class="grid-item-image">
-                            <img src="assets/art/classes/portraits/${portrait}.png" alt="Portrait ${index + 1}" class="grid-portrait"
-                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color: #8a6d3b; padding: 20px;\\'>No portrait<br>available</div>';">
+                            <img src="assets/art/classes/portraits/${portrait}.png" alt="Portrait ${index + 1}" class="grid-portrait">
                         </div>
                         <div class="grid-item-label">Portrait ${index + 1}</div>
                     </div>
@@ -575,6 +586,14 @@ function renderPortraitSelection() {
             <button class="fantasy-button god-return-btn">Change Deity</button>
         </div>
     `;
+
+    // Add error handlers for portrait images
+    section.querySelectorAll('.grid-portrait').forEach(img => {
+        img.addEventListener('error', function() {
+            this.style.display = 'none';
+            this.parentElement.innerHTML = '<div style="color: #8a6d3b; padding: 20px; text-align: center;">No portrait<br>available</div>';
+        });
+    });
 
     const input = section.querySelector('#character-name-input');
     const errorMsg = section.querySelector('.name-error-message');
@@ -598,7 +617,6 @@ function renderPortraitSelection() {
             errorMsg.style.display = 'none';
             _characterName = name;
             
-            // Update selection UI
             section.querySelectorAll('.portrait-item').forEach(i => i.classList.remove('selected'));
             item.classList.add('selected');
             
@@ -618,7 +636,6 @@ function renderPortraitSelection() {
 
     section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
     
-    // Auto-focus the name input
     input.focus();
 }
 
@@ -691,6 +708,15 @@ function renderProfessionSelection() {
             <button class="fantasy-button god-return-btn">Change Deity</button>
         </div>
     `;
+    
+    // Add error handlers for profession images
+    section.querySelectorAll('.grid-profession').forEach(img => {
+        img.addEventListener('error', function() {
+            this.style.display = 'none';
+            this.parentElement.innerHTML = '<div style="color: #8a6d3b; padding: 10px; text-align: center;">No image</div>';
+        });
+    });
+    
     section.querySelectorAll('.profession-item').forEach(item => {
         item.addEventListener('click', (e) => {
             section.querySelectorAll('.profession-item').forEach(i => i.classList.remove('selected'));
@@ -741,6 +767,14 @@ function renderCharacterSummary() {
             <button type="button" class="fantasy-button god-return-btn">Change Deity</button>
         </div>
     `;
+    
+    // Add error handler for summary art
+    const summaryArt = section.querySelector('.summary-art');
+    summaryArt.addEventListener('error', function() {
+        this.style.display = 'none';
+        this.parentElement.innerHTML = '<div style="color: #8a6d3b; padding: 40px; text-align: center; font-size: 14px;">Portrait<br>Not Available</div>';
+    });
+    
     section.querySelectorAll('.ability-item').forEach(item => {
         item.addEventListener('click', (e) => { e.stopPropagation(); showAbilityTooltip(item.dataset.ability); });
     });
