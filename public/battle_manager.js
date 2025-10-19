@@ -86,10 +86,8 @@ const processCharacterState = (charState) => {
         portrait: charState.portrait,
         has_moved: charState.has_moved,
         has_acted: charState.has_acted,
-
         current_hp: charState.current_hp,
         max_hp: charState.max_hp,
-
         priority: charState.priority || 999,
         buffs: charState.buffs || [],
         debuffs: charState.debuffs || [],
@@ -708,7 +706,7 @@ function startAbilitySelection(caster, abilityRaw) {
         try {
           handler(ev);
         } catch (err) {
-          console.error('ability handler error', err);
+          console.error('Ability handler error', err);
         }
         return;
       }
@@ -721,7 +719,7 @@ function startAbilitySelection(caster, abilityRaw) {
           try {
             handleCharacterSelection(char, tile);
           } catch (err) {
-            console.warn('handleCharacterSelection error', err);
+            console.warn('Character selection error', err);
           }
         }
       }
@@ -768,7 +766,6 @@ function startAbilitySelection(caster, abilityRaw) {
             }
           ]
         };
-        console.log('[ABILITY USED]', payload);
         handleAbilityUse(payload);
         clearAbilitySelection();
       });
@@ -834,7 +831,6 @@ function startAbilitySelection(caster, abilityRaw) {
                 intendedEffect: a.eff
               }))
             };
-            console.log('[ABILITY USED]', payload);
             handleAbilityUse(payload);
             clearAbilitySelection();
           });
@@ -869,7 +865,6 @@ function startAbilitySelection(caster, abilityRaw) {
               affectedTargets: [],
               environmentTarget: envItem.id
             };
-            console.log('[ENVIRONMENT ABILITY USED]', payload);
             handleAbilityUse(payload);
             clearAbilitySelection();
           });
@@ -1062,7 +1057,9 @@ const handleTurnLogic = () => {
         }
     }
 
-    renderBottomUI();
+    if (BattleState.currentTurnCharacter && BattleState.selectedPlayerCharacter?.id === BattleState.currentTurnCharacter.id) {
+        renderBottomUI();
+    }
 };
 
 const handleAITurn = async () => {
@@ -1275,7 +1272,6 @@ function renderEnvironmentItems(layoutEnvItems) {
 
   const oldItems = BattleState.environmentItems || {};
 
-  // Remove items that disappeared
   Object.keys(oldItems).forEach(id => {
     if (!layoutEnvItems[id]) {
       const el = container.querySelector(`.environment-item[data-item-id="${id}"]`);
@@ -1283,7 +1279,6 @@ function renderEnvironmentItems(layoutEnvItems) {
     }
   });
 
-  // Add new items
   Object.values(layoutEnvItems).forEach(item => {
     const existing = container.querySelector(`.environment-item[data-item-id="${item.id}"]`);
     if (!existing && Array.isArray(item.position)) {
@@ -1427,15 +1422,11 @@ const handleTileClick = throttle((event) => {
     }
 
     if (charInCell) {
-        // Character found - show character info first
         handleCharacterSelection(charInCell, clickedTileEl);
     } else {
-        // No character - handle movement/deselection
         if (BattleState.selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
-            // Moving to a highlighted tile - keep character selected and info displayed
             attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
         } else {
-            // Clicking empty tile when no character selected or not a valid move - show tile info
             unhighlightAllTiles();
             
             if (BattleState.selectedCharacterEl) {
@@ -1445,7 +1436,6 @@ const handleTileClick = throttle((event) => {
             
             BattleState.selectedPlayerCharacter = null;
             
-            // Show tile info only when deselecting
             const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
             const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
             const tileData = BattleState.tileMap.get(tileKey);
@@ -1458,17 +1448,15 @@ const handleTileClick = throttle((event) => {
         }
     }
 
-    // Always append environment items after the main info is set
     const envList = document.getElementById('envList');
-    if (envList) envList.innerHTML = ''; // clear old environment items
+    if (envList) envList.innerHTML = '';
     
     itemsInCell.forEach(item => {
-        showEntityInfo({ item }); // This appends to environment section only
+        showEntityInfo({ item });
     });
 }, 150);
 
 const handleCharacterSelection = (character, tileEl) => {
-    // Prevent selecting another character if a move is queued
     if (BattleState.isMoveQueued) {
         displayMessage('Finish your move by pressing "End Turn" before selecting another character.', 'warning');
         return;
@@ -1489,48 +1477,16 @@ const handleCharacterSelection = (character, tileEl) => {
             BattleState.currentTurnCharacter = character;
             highlightWalkableTiles(character);
         }
-        // ✅ show bottom UI only for player characters
         renderBottomUI();
     } else {
         BattleState.selectedPlayerCharacter = null;
         BattleState.selectedCharacterEl = null;
         unhighlightAllTiles();
-        // ✅ clear bottom UI if AI character is clicked
         const ui = BattleState.main.querySelector('.battle-bottom-ui');
         if (ui) ui.innerHTML = '';
     }
     
     showEntityInfo(character);
-};
-
-const handleMovementOrDeselect = async (tileEl, targetX, targetY) => {
-    // Prevent moving another character if a move is queued
-    if (BattleState.isMoveQueued) {
-        displayMessage('Finish your move by pressing "End Turn" before moving another character.', 'warning');
-        return;
-    }
-
-    if (BattleState.selectedPlayerCharacter && tileEl.classList.contains('highlight-walkable')) {
-        await attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
-    } else {
-        unhighlightAllTiles();
-        
-        if (BattleState.selectedCharacterEl) {
-            BattleState.selectedCharacterEl.classList.remove('character-selected');
-            BattleState.selectedCharacterEl = null;
-        }
-        
-        BattleState.selectedPlayerCharacter = null;
-        
-        const tileName = tileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
-        const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
-        const tileData = BattleState.tileMap.get(tileKey);
-        showEntityInfo({ 
-            tile: tileData || { 
-                name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' 
-            } 
-        });
-    }
 };
 
 function highlightWalkableTiles(character) {
@@ -1547,15 +1503,11 @@ function highlightWalkableTiles(character) {
         if (newX >= 0 && newX < GRID_SIZE.cols && newY >= 0 && newY < GRID_SIZE.rows) {
             const tileEl = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
             if (tileEl && tileEl.dataset.walkable === 'true') {
-                
-                // 🔥 check environment items at this tile
                 const envItemEl = tileEl.querySelector('.environment-item');
                 if (envItemEl && envItemEl.dataset.walkable !== 'true') {
-                    // blocked by obstacle (e.g. rock, chest) - but corpses should be walkable
                     return;
                 }
                 
-                // check if another LIVING character is standing here
                 const isOccupied = BattleState.characters.some(c => 
                     Array.isArray(c.position) && 
                     c.position[0] === newX && 
@@ -1573,13 +1525,11 @@ function highlightWalkableTiles(character) {
 }
 
 function unhighlightAllTiles() {
-    // Remove walkable highlights
     BattleState.highlightedTiles.forEach(tileEl => {
         tileEl.classList.remove('highlight-walkable');
     });
     BattleState.highlightedTiles = [];
 
-    // Remove any selected character border
     document.querySelectorAll('.character-selected').forEach(el => {
         el.classList.remove('character-selected');
     });
@@ -1605,7 +1555,6 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
-    // Only check for LIVING characters occupying the tile
     const isOccupied = BattleState.characters.some(c => 
         Array.isArray(c.position) && 
         c.position[0] === targetX && 
@@ -1661,13 +1610,11 @@ async function getAbility(abilityName) {
 async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
     ui.innerHTML = '';
+    
+    if (!BattleState.selectedPlayerCharacter) return;
+    
+    const currentChar = BattleState.selectedPlayerCharacter;
     const fragment = document.createDocumentFragment();
-    const currentChar = BattleState.currentTurnCharacter;
-
-    if (!currentChar) {
-        ui.appendChild(fragment);
-        return;
-    }
 
     BattleState.characterAbilities = BattleState.characterAbilities || {};
     let abilityObjs = {};
@@ -1679,20 +1626,17 @@ async function renderBottomUI() {
 
         const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
 
-        // Load basics
         for (const abilityName of Object.keys(charAbilities.basic || {})) {
             const ability = await getAbility(abilityName);
             if (ability) abilityObjs.basic.push(ability);
         }
 
-        // Load passives (can be up to two)
         const passiveNames = Object.keys(charAbilities.passive || {});
         for (let i = 0; i < Math.min(passiveNames.length, 2); i++) {
             const ability = await getAbility(passiveNames[i]);
             if (ability) abilityObjs.passives.push(ability);
         }
 
-        // Load ultimate
         const ultimateNames = Object.keys(charAbilities.ultimate || {});
         if (ultimateNames[0]) {
             abilityObjs.ultimate = await getAbility(ultimateNames[0]);
@@ -1712,17 +1656,13 @@ async function renderBottomUI() {
 
             let ability = null;
 
-            // Map buttons by index
             if (btnIndex >= 0 && btnIndex <= 3) {
-                // Basic abilities 0–3
                 ability = abilityObjs.basic[btnIndex] || null;
             } else if (btnIndex === 4) {
-                // Ultimate
                 ability = abilityObjs.ultimate;
             }
 
             if (ability) {
-                // Ability buttons
                 if (ability.sprite) {
                     btn.innerHTML = `<img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}" style="width:100%;height:100%;">`;
                 } else {
@@ -1732,11 +1672,10 @@ async function renderBottomUI() {
                 btn.dataset.abilityName = ability.name;
                 btn.disabled = false;
                 btn.addEventListener('click', debounce(() => {
-                    const caster = BattleState.selectedPlayerCharacter || BattleState.currentTurnCharacter;
+                    const caster = BattleState.selectedPlayerCharacter;
                     if (caster) toggleAbilitySelection(caster, ability);
                 }, 150));
             } else if (btnIndex === 5) {
-                // Consumable
                 const consumable = currentChar?.equipped_items?.equipped_consumable;
                 if (consumable && consumable !== 'none') {
                     const itemSprite = consumable.replace(/\s+/g, '');
@@ -1750,7 +1689,6 @@ async function renderBottomUI() {
                     btn.disabled = true;
                 }
             } else if (btnIndex === 6 || btnIndex === 7) {
-                // Two passives
                 const passive = abilityObjs.passives[btnIndex - 6] || null;
                 if (passive) {
                     if (passive.sprite) {
@@ -1764,12 +1702,10 @@ async function renderBottomUI() {
                     btn.disabled = true;
                 }
             } else if (btnIndex === 8) {
-                // Interact placeholder
                 btn.textContent = 'Interact';
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
             } else if (btnIndex === 9) {
-                // End turn
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
@@ -1785,7 +1721,6 @@ async function renderBottomUI() {
 
     ui.appendChild(fragment);
 
-    // End Turn handler
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
     if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
 }
@@ -1870,9 +1805,7 @@ const handleEndTurn = async () => {
         }
 
         BattleState.currentTurnCharacter = null;
-        // Reset move queued flag after turn ends
         BattleState.isMoveQueued = false;
-        // Clear highlighted tiles after ending turn
         unhighlightAllTiles();
 
     } catch (err) {
@@ -1906,17 +1839,10 @@ const handleUseConsumable = async () => {
         consumableItem: consumable
     };
 
-    console.log('=== USE CONSUMABLE DEBUG ===');
-    console.log('Request data:', requestData);
-    console.log('Active character:', activeCharacter);
-    console.log('Profile:', BattleState.profile);
-    console.log('============================');
-
     try {
         const res = await BattleState.apiCall('/functions/v1/use-consumable', 'POST', requestData);
 
         const result = await res.json();
-        console.log('Server response:', result);
 
         if (!result.success) {
             displayMessage(`Error using ${consumable}: ${result.message}`, 'error');
@@ -1925,7 +1851,6 @@ const handleUseConsumable = async () => {
 
         displayMessage(`Used ${consumable}!`, 'success');
         
-        // Using a consumable always ends the turn
         setTimeout(() => {
             handleEndTurn();
         }, 1000);
@@ -1955,7 +1880,6 @@ const handleRefresh = async () => {
         await updateGameStateFromRealtime();
         
         displayMessage('Battle state refreshed successfully.', 'success');
-        // Reset move queued flag on refresh
         BattleState.isMoveQueued = false;
     } catch (error) {
         displayMessage('Failed to refresh battle state.', 'error');
@@ -1976,7 +1900,6 @@ function showEntityInfo(entity) {
         return;
     }
 
-    // === TILE / CHARACTER (reset panel) ===
     if (entity.type === 'player' || entity.type === 'enemy') {
         nameEl.textContent = entity.name || 'Unnamed';
         displayCharacterInfo(entity, portrait, hpEl, statsEl, buffsList, debuffsList);
@@ -1991,7 +1914,6 @@ function showEntityInfo(entity) {
         return;
     }
 
-    // === ENVIRONMENT ITEMS (append only) ===
     if (entity.item && envList) {
         const wrapper = document.createElement('div');
         wrapper.style.display = 'flex';
@@ -2039,10 +1961,8 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
     
     const stats = entity.stats || {};
     
-    // === HP + Stats ===
     hpEl.innerHTML = `
         <div style="font-size: 12px; line-height: 1.2;">
-            <!-- Row 1: HP - VIT -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                 <div style="display: flex; flex: 1;">
                     <span style="font-weight: bold;">HP:</span>
@@ -2058,7 +1978,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
 
     statsEl.innerHTML = `
         <div style="font-size: 12px; line-height: 1.2;">
-            <!-- Row 2: STR - DEX -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                 <div style="display: flex; flex: 1;">
                     <span style="color: #D4AF37; font-weight: bold;">STR:</span>
@@ -2070,7 +1989,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
                 </div>
             </div>
             
-            <!-- Row 3: INT - SPR -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                 <div style="display: flex; flex: 1;">
                     <span style="color: #F4A460; font-weight: bold;">INT:</span>
@@ -2082,7 +2000,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
                 </div>
             </div>
             
-            <!-- Row 4: ARM - RES -->
             <div style="display: flex; justify-content: space-between;">
                 <div style="display: flex; flex: 1;">
                     <span style="color: #8B7355; font-weight: bold;">ARM:</span>
@@ -2096,7 +2013,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         </div>
     `;
 
-    // === Buffs ===
     buffsList.innerHTML = "";
     if (entity.buffs && Object.keys(entity.buffs).length > 0) {
         for (const [buffName, buffData] of Object.entries(entity.buffs)) {
@@ -2114,7 +2030,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         buffsList.innerHTML = '<div style="color:#666;font-style:italic;">None</div>';
     }
 
-    // === Debuffs ===
     debuffsList.innerHTML = "";
     if (entity.debuffs && Object.keys(entity.debuffs).length > 0) {
         for (const [debuffName, debuffData] of Object.entries(entity.debuffs)) {
@@ -2132,7 +2047,6 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
         debuffsList.innerHTML = '<div style="color:#666;font-style:italic;">None</div>';
     }
 
-    // === Portrait ===
     if (entity.portrait && entity.portrait !== 'none') {
         portrait.src = `assets/art/portraits/${entity.portrait}.png`;
         portrait.onerror = () => {
@@ -2144,24 +2058,17 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
 };
 
 function showAbilityTooltip(ability) {
-    // Remove existing tooltip
     hideAbilityTooltip();
     
-    // Find the tooltip container
     const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
-    if (!tooltipContainer) {
-        console.warn('Tooltip container not found');
-        return;
-    }
+    if (!tooltipContainer) return;
     
     const tooltip = document.createElement('div');
     tooltip.className = 'ability-tooltip';
     tooltip.id = 'abilityTooltip';
     
-    // Normalize ability data
     const normalizedAbility = normalizeAbility(ability);
     
-    // Create tooltip content
     tooltip.innerHTML = `
         <div class="ability-tooltip-header">
             <div class="ability-tooltip-name">${normalizedAbility.name}</div>
@@ -2196,13 +2103,11 @@ function showAbilityTooltip(ability) {
     
     tooltipContainer.appendChild(tooltip);
     
-    // Show with animation
     requestAnimationFrame(() => {
         tooltip.classList.add('visible');
     });
 }
 
-// Function to hide tooltip
 function hideAbilityTooltip() {
     const existingTooltip = document.getElementById('abilityTooltip');
     if (existingTooltip) {
@@ -2215,12 +2120,10 @@ function hideAbilityTooltip() {
     }
 }
 
-// Helper function to capitalize first letter
 function capitalizeFirst(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
-
 
 const displayTileInfo = (tile, portrait, hpEl, statsEl, buffsList, debuffsList) => {
     hpEl.textContent = '';
@@ -2382,7 +2285,6 @@ async function assignLoot(battleState) {
     const data = await response.json();
     
     if (data.success) {
-      console.log('Loot assigned successfully:', data);
       return data;
     } else {
       console.error('Failed to assign loot:', data.error);
