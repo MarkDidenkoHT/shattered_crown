@@ -260,20 +260,31 @@ function showGodReselectConfirmation() {
     
     modal.querySelector('.confirm-god-reselect').addEventListener('click', async () => {
         try {
-            const response = await _apiCall(`/api/supabase/rest/v1/characters?player_id=eq.${_profile.id}`, {
-                method: 'DELETE'
+            // Use the new server-side endpoint to delete characters
+            const response = await _apiCall('/api/characters/delete-all', {
+                method: 'POST',
+                body: { player_id: _profile.id }
             });
             
             if (response.ok) {
-                displayMessage('Characters deleted. Redirecting to deity selection...');
-                closeModal();
-                setTimeout(() => {
-                    window.gameAuth.loadModule('god_selection');
-                }, 1500);
+                const result = await response.json();
+                if (result.success) {
+                    displayMessage('Characters deleted. Redirecting to deity selection...');
+                    closeModal();
+                    // Reset character count and used professions
+                    _existingCharacterCount = 0;
+                    _usedProfessionIds = [];
+                    setTimeout(() => {
+                        window.gameAuth.loadModule('god_selection');
+                    }, 1500);
+                } else {
+                    throw new Error(result.error || 'Failed to delete characters');
+                }
             } else {
                 throw new Error('Failed to delete characters');
             }
         } catch (error) {
+            console.error('Delete characters error:', error);
             displayMessage('Failed to delete characters. Please try again.');
             closeModal();
         }
@@ -315,7 +326,9 @@ function applyClassBorderToSlide(slide, className) {
     const borderColors = {
         'paladin': 'rgba(255, 255, 200, 0.8)',
         'warrior': 'rgba(200, 0, 0, 0.8)',
-        'priest': 'rgba(255, 255, 255, 0.8)'
+        'priest': 'rgba(255, 255, 255, 0.8)',
+        'defiler': 'rgba(68, 1, 57, 0.8)',
+        'grave warden': 'rgba(1, 53, 17, 0.8)'
     };
     const borderColor = borderColors[className] || 'rgba(196, 151, 90, 0.8)';
     slide.style.border = `3px solid ${borderColor}`;

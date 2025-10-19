@@ -2022,3 +2022,109 @@ app.post('/api/battle/assign-loot', async (req, res) => {
         return res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
+
+// Delete all characters for a player
+app.post('/api/characters/delete-all', requireAuth, async (req, res) => {
+    try {
+        const { player_id } = req.body;
+
+        if (!player_id) {
+            return res.status(400).json({ success: false, error: 'Missing player_id' });
+        }
+
+        // First, get the character IDs to clean up related data
+        const charactersResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${player_id}&select=id`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
+            }
+        );
+
+        if (!charactersResponse.ok) {
+            throw new Error('Failed to fetch characters for cleanup');
+        }
+
+        const characters = await charactersResponse.json();
+        const characterIds = characters.map(char => char.id);
+
+        // Delete related data in the correct order to avoid foreign key constraints
+        
+        // 1. Delete character equipment
+        if (characterIds.length > 0) {
+            const charIdsQuery = characterIds.map(id => `character_id=eq.${id}`).join(',');
+            await fetch(
+                `${process.env.SUPABASE_URL}/rest/v1/character_equipment?or=(${charIdsQuery})`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                    }
+                }
+            );
+        }
+
+        // 2. Delete character abilities
+        if (characterIds.length > 0) {
+            const charIdsQuery = characterIds.map(id => `character_id=eq.${id}`).join(',');
+            await fetch(
+                `${process.env.SUPABASE_URL}/rest/v1/character_abilities?or=(${charIdsQuery})`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': process.env.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                    }
+                }
+            );
+        }
+
+        // 3. Delete the characters themselves
+        const deleteResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/characters?player_id=eq.${player_id}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                    'Prefer': 'return=representation'
+                }
+            }
+        );
+
+        if (!deleteResponse.ok) {
+            throw new Error('Failed to delete characters');
+        }
+
+        // 4. Reset the player's god selection
+        await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${player_id}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ god: null })
+            }
+        );
+
+        res.json({ 
+            success: true, 
+            message: `Successfully deleted ${characters.length} character(s) and reset deity selection`,
+            deleted_count: characters.length 
+        });
+
+    } catch (error) {
+        console.error('[DELETE CHARACTERS]', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to delete characters', 
+            details: error.message 
+        });
+    }
+});

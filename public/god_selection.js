@@ -16,8 +16,8 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
     }
   } catch (error) {
     console.error('Error loading gods:', error);
-    alert('Failed to load gods. Please try again.');
-    return;
+    // Silently fail and proceed with empty gods array
+    gods = [];
   }
 
   main.innerHTML = `
@@ -26,6 +26,7 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
       
       <div class="art-header">
         <h1>Choose Your Deity</h1>
+        <p class="selection-subtitle">Select a god to continue</p>
       </div>
       
       <div class="god-selection-section">
@@ -44,7 +45,7 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
                     <h3 class="god-name">${god.name}</h3>
                     <p class="god-description">${god.description}</p>
                     <button class="fantasy-button select-god-btn" data-god-id="${god.id}">
-                      Choose
+                      Choose ${god.name}
                     </button>
                   </div>
                 </div>
@@ -171,6 +172,11 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
         0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
+    .select-god-btn.loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
     .art-header {
       background-image: unset;
       padding: 0.5rem 0;
@@ -183,6 +189,14 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
       color: #c4975a;
       font-family: 'Cinzel', serif;
       text-shadow: 2px 2px 0px #3d2914;
+    }
+
+    .selection-subtitle {
+      text-align: center;
+      color: #b8b3a8;
+      font-size: 0.9rem;
+      margin: 0.25rem 0 0 0;
+      font-style: italic;
     }
 
     /* Particle styles */
@@ -229,16 +243,7 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
   selectButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       const godId = e.target.dataset.godId;
-      const godName = gods.find(g => g.id == godId)?.name;
-
-      if (confirm(`Are you sure you want to choose ${godName} as your deity? This choice cannot be changed later.`)) {
-        try {
-          await selectGod(godId, godName, getCurrentProfile);
-        } catch (err) {
-          console.error('Error in god selection:', err);
-          alert('Something went wrong while selecting your deity. Please try again.');
-        }
-      }
+      await selectGod(godId, getCurrentProfile);
     });
   });
 }
@@ -340,8 +345,15 @@ function initializeSlider() {
   });
 }
 
-async function selectGod(godId, godName, getCurrentProfile) {
+async function selectGod(godId, getCurrentProfile) {
+  const button = document.querySelector(`[data-god-id="${godId}"]`);
+  const originalText = button.textContent;
+  
   try {
+    // Show loading state
+    button.classList.add('loading');
+    button.textContent = 'Choosing...';
+
     const profile = getCurrentProfile();
     if (!profile) {
       throw new Error('No profile found');
@@ -373,16 +385,14 @@ async function selectGod(godId, godName, getCurrentProfile) {
       window.gameAuth.updateCurrentProfile(updatedProfile);
     }
 
-    alert(`${godName} has chosen you as their champion! Proceeding to character creation...`);
-    
-    // Small delay for user experience
-    setTimeout(() => {
-      window.gameAuth.loadModule('character_creation');
-    }, 500);
+    // Immediately proceed to character creation without confirmation
+    window.gameAuth.loadModule('character_creation');
 
   } catch (error) {
     console.error('Error selecting god:', error);
-    alert(`Failed to select god: ${error.message}. Please try again.`);
+    // Reset button state on error
+    button.classList.remove('loading');
+    button.textContent = originalText;
   }
 }
 
