@@ -29,6 +29,14 @@ export async function loadModule(main, { getCurrentProfile }) {
             </div>
 
             <div class="bank-content">
+                <!-- Buy View Filters Toggle -->
+                <div class="filters-toggle-container">
+                    <button class="fantasy-button filters-toggle-btn" id="filtersToggle">
+                        <span class="btn-icon">🔍</span>
+                        Show Filters
+                    </button>
+                </div>
+
                 <!-- Buy View Filters -->
                 <div class="buy-filters" id="buyFilters" style="display: none;">
                     <div class="filter-controls">
@@ -154,9 +162,16 @@ export async function loadModule(main, { getCurrentProfile }) {
 async function loadCurrentView() {
     const container = document.getElementById('auctionItemsList');
     const buyFilters = document.getElementById('buyFilters');
+    const filtersToggle = document.getElementById('filtersToggle');
     
     // Show/hide filters based on current view
-    buyFilters.style.display = _currentView === 'buy' ? 'block' : 'none';
+    if (_currentView === 'buy') {
+        filtersToggle.style.display = 'block';
+        // Keep filters in their current state (shown/hidden based on toggle)
+    } else {
+        filtersToggle.style.display = 'none';
+        buyFilters.style.display = 'none';
+    }
     
     try {
         switch (_currentView) {
@@ -233,10 +248,14 @@ function renderFilteredAuctions(auctions) {
             </div>
         `;
     } else {
-        container.innerHTML = filteredAuctions.map(auction => `
+        container.innerHTML = filteredAuctions.map(auction => {
+            const itemIcon = getItemIcon(auction.item_selling, auction.type);
+            const rarityClass = getGearRarity(auction.item_selling);
+            
+            return `
             <div class="bank-item auction-item" data-auction-id="${auction.id}">
-                <div class="item-icon">
-                    <img src="${getItemIcon(auction.item_selling)}" 
+                <div class="item-icon ${rarityClass}">
+                    <img src="${itemIcon}" 
                          alt="${auction.item_selling}">
                     ${auction.amount_selling > 1 ? `<span class="item-quantity">${auction.amount_selling}</span>` : ''}
                 </div>
@@ -259,7 +278,7 @@ function renderFilteredAuctions(auctions) {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
 }
 
@@ -299,7 +318,7 @@ async function loadSellView(container) {
         console.log('[Auction] Sprite map:', spriteMap);
 
         _bankItems = _bankItems.map(item => {
-            const spritePath = item.isGear ? getItemIcon(item.item, true) : (item.spritePath || getItemIcon(item.item));
+            const spritePath = item.isGear ? getItemIcon(item.item, 'gear') : (item.spritePath || getItemIcon(item.item, item.type));
             const rarityClass = item.isGear ? getGearRarity(item.item) : '';
             console.log(`[Auction] Item "${item.item}" (isGear: ${item.isGear}) assigned spritePath:`, spritePath, 'type:', item.type, 'rarityClass:', rarityClass);
             return {
@@ -389,12 +408,16 @@ async function loadMyListingsView(container) {
                 </div>
             `;
         } else {
-            container.innerHTML = _myListings.map(listing => `
+            container.innerHTML = _myListings.map(listing => {
+                const itemIcon = getItemIcon(listing.item_selling, listing.type);
+                const rarityClass = getGearRarity(listing.item_selling);
+                
+                return `
                 <div class="bank-item listing-item ${listing.status ? 'sold' : 'active'}" 
                      data-listing-id="${listing.id}">
                      
-                    <div class="item-icon">
-                        <img src="${getItemIcon(listing.item_selling)}">
+                    <div class="item-icon ${rarityClass}">
+                        <img src="${itemIcon}">
                         ${listing.amount_selling > 1 
                             ? `<span class="item-quantity">${listing.amount_selling}</span>` 
                             : ''}
@@ -429,7 +452,7 @@ async function loadMyListingsView(container) {
                         `}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
         
         closeMessageBox();
@@ -442,6 +465,20 @@ async function loadMyListingsView(container) {
 function setupAuctionInteractions() {
     _main.querySelector('.back-btn').addEventListener('click', () => {
         window.gameAuth.loadModule('castle');
+    });
+
+    // Setup filters toggle button
+    const filtersToggle = document.getElementById('filtersToggle');
+    const buyFilters = document.getElementById('buyFilters');
+    
+    filtersToggle.addEventListener('click', () => {
+        if (buyFilters.style.display === 'none') {
+            buyFilters.style.display = 'block';
+            filtersToggle.innerHTML = '<span class="btn-icon">🔍</span> Hide Filters';
+        } else {
+            buyFilters.style.display = 'none';
+            filtersToggle.innerHTML = '<span class="btn-icon">🔍</span> Show Filters';
+        }
     });
 
     _main.querySelector('#filterTabs').addEventListener('click', async (e) => {
@@ -546,7 +583,7 @@ async function handleBuyClick(auctionId) {
             .filter(item => !item.isGear && item.item === auction.item_wanted)
             .reduce((sum, item) => sum + item.amount, 0);
 
-        document.getElementById('buy-receive-icon').src = getItemIcon(auction.item_selling);
+        document.getElementById('buy-receive-icon').src = getItemIcon(auction.item_selling, auction.type);
         document.getElementById('buy-receive-name').textContent = auction.item_selling;
         document.getElementById('buy-receive-amount').textContent = auction.amount_selling;
 
@@ -854,13 +891,15 @@ function getGearIconPath(itemName) {
     return finalPath;
 }
 
-function getItemIcon(itemName, isGear = false) {
-    console.log(`[Auction] getItemIcon called for "${itemName}" (isGear: ${isGear})`);
-    const availableItem = _availableItems.find(item => item.name === itemName);
-    if (availableItem && availableItem.spritePath) {
-        console.log(`[Auction] getItemIcon - Found spritePath in _availableItems for "${itemName}":`, availableItem.spritePath);
-        return availableItem.spritePath;
-    }
+function getItemIcon(itemName, itemType = '') {
+    console.log(`[Auction] getItemIcon called for "${itemName}" (itemType: ${itemType})`);
+    
+    const gearTypes = ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand', 'gear'];
+    
+    // Check if it's a gear item based on type or name pattern
+    const isGear = gearTypes.includes(itemType) || 
+                   itemType === 'gear' || 
+                   /^(Basic|Uncommon|Rare|Epic|Legendary)\s+/i.test(itemName);
     
     if (isGear) {
         const gearPath = getGearIconPath(itemName);
@@ -868,6 +907,14 @@ function getItemIcon(itemName, isGear = false) {
         return gearPath;
     }
     
+    // Check available items first
+    const availableItem = _availableItems.find(item => item.name === itemName);
+    if (availableItem && availableItem.spritePath) {
+        console.log(`[Auction] getItemIcon - Found spritePath in _availableItems for "${itemName}":`, availableItem.spritePath);
+        return availableItem.spritePath;
+    }
+    
+    // Fallback to recipe path
     const spriteName = itemNameToSpriteFormat(itemName);
     const recipePath = `assets/art/recipes/${spriteName}.png`;
     console.log(`[Auction] getItemIcon - Default recipe path for "${itemName}":`, recipePath);
@@ -943,6 +990,31 @@ function addAuctionStyles() {
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
+        .filters-toggle-container {
+            padding: 0.5rem 1rem;
+            background: rgba(42, 31, 22, 0.3);
+            border-bottom: 1px solid #3d2914;
+        }
+
+        .filters-toggle-btn {
+            background: linear-gradient(145deg, #2a1f16, #63360f);
+            border: 2px solid #996228;
+            color: #b8b3a8;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filters-toggle-btn:hover {
+            border-color: #c4975a;
+            background: linear-gradient(145deg, #3a2f26, #73461f);
+        }
+
         .buy-filters {
             padding: 1rem;
             background: rgba(42, 31, 22, 0.3);
@@ -1398,6 +1470,27 @@ function addAuctionStyles() {
         .wanted-type {
             font-size: 10px;
             color: #666;
+        }
+
+        /* Rarity border colors for gear items */
+        .rarity-basic {
+            border: 2px solid #969696;
+        }
+
+        .rarity-uncommon {
+            border: 2px solid #2dc50e;
+        }
+
+        .rarity-rare {
+            border: 2px solid #0070dd;
+        }
+
+        .rarity-epic {
+            border: 2px solid #a335ee;
+        }
+
+        .rarity-legendary {
+            border: 2px solid #ff8000;
         }
     `;
     document.head.appendChild(style);
