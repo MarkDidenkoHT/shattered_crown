@@ -1676,14 +1676,24 @@ async function renderBottomUI() {
                     if (caster) toggleAbilitySelection(caster, ability);
                 }, 150));
             } else if (btnIndex === 5) {
-                const consumable = currentChar?.equipped_items?.equipped_consumable;
-                if (consumable && consumable !== 'none') {
-                    const itemSprite = consumable.replace(/\s+/g, '');
-                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width:36px;height:36px;object-fit:contain;">`;
-                    btn.id = 'consumableButton';
-                    btn.title = consumable;
-                    btn.disabled = false;
-                    btn.addEventListener('click', debounce(handleUseConsumable, 500));
+                const consumableName = currentChar?.equipped_items?.equipped_consumable;
+                if (consumableName && consumableName !== 'none') {
+                    const consumableAbility = await getAbility(consumableName);
+                    if (consumableAbility) {
+                        const itemSprite = consumableName.replace(/\s+/g, '');
+                        btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumableName}" style="width:36px;height:36px;object-fit:contain;">`;
+                        btn.id = 'consumableButton';
+                        btn.title = consumableName;
+                        btn.dataset.abilityName = consumableAbility.name;
+                        btn.disabled = false;
+                        btn.addEventListener('click', debounce(() => {
+                            const caster = BattleState.selectedPlayerCharacter;
+                            if (caster) toggleAbilitySelection(caster, consumableAbility);
+                        }, 150));
+                    } else {
+                        btn.textContent = 'No Item';
+                        btn.disabled = true;
+                    }
                 } else {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
