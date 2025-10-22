@@ -709,103 +709,86 @@ function logout() {
 }
 
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
-    console.group(`🔵 API CALL: ${methodOrOptions?.method || methodOrOptions} ${url}`);
-    console.log('📤 Request Details:', {
-        url,
-        method: typeof methodOrOptions === 'string' ? methodOrOptions : (methodOrOptions?.method || 'GET'),
-        body: bodyData,
-        timestamp: new Date().toISOString()
-    });
+  console.group(`🚀 API CALL: ${methodOrOptions?.method || methodOrOptions} ${url}`);
+  
+  if (!supabaseConfig?.SUPABASE_ANON_KEY) {
+    console.error('❌ No Supabase configuration available');
+    console.groupEnd();
+    throw new Error('No Supabase configuration available');
+  }
 
-    try {
-        let options = {
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        };
+  const headers = {
+    'Authorization': `Bearer ${supabaseConfig.SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json',
+  };
 
-        if (typeof methodOrOptions === 'string') {
-            options.method = methodOrOptions;
-        } else if (methodOrOptions && typeof methodOrOptions === 'object') {
-            options = { ...options, ...methodOrOptions };
-        }
+  let options = { headers };
 
-        if (bodyData && options.method !== 'GET' && options.method !== 'HEAD') {
-            options.body = JSON.stringify(bodyData);
-            console.log('📦 Request Body:', bodyData);
-        }
-
-        const safeOptions = { ...options };
-        if (safeOptions.headers?.Authorization) {
-            safeOptions.headers.Authorization = 'Bearer ***';
-        }
-        console.log('⚙️ Request Options:', safeOptions);
-
-        const startTime = Date.now();
-        const response = await fetch(url, options);
-        const endTime = Date.now();
-        const duration = endTime - startTime;
-
-        console.log(`📥 Response Received:`, {
-            status: response.status,
-            statusText: response.statusText,
-            duration: `${duration}ms`,
-            url: response.url,
-            ok: response.ok,
-            headers: Object.fromEntries(response.headers.entries())
-        });
-
-        const responseClone = response.clone();
-        
-        try {
-            const responseData = await responseClone.json();
-            console.log('📄 Response Body:', responseData);
-            
-            if (!response.ok) {
-                console.error(`❌ API Error ${response.status}:`, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: responseData,
-                    url: url
-                });
-            } else {
-                console.log('✅ API Call Successful');
-            }
-            
-            console.groupEnd();
-            return response;
-            
-        } catch (jsonError) {
-            const textResponse = response.clone();
-            const textData = await textResponse.text();
-            
-            console.log('📄 Response Body (text):', textData);
-            
-            if (!response.ok) {
-                console.error(`❌ API Error ${response.status} (non-JSON):`, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    rawText: textData,
-                    url: url
-                });
-            }
-            
-            console.groupEnd();
-            return response;
-        }
-
-    } catch (error) {
-        console.error('💥 API Call Failed:', {
-            error: error.message,
-            stack: error.stack,
-            url: url,
-            method: typeof methodOrOptions === 'string' ? methodOrOptions : (methodOrOptions?.method || 'GET'),
-            timestamp: new Date().toISOString()
-        });
-        
-        console.groupEnd();
-        throw error;
+  if (typeof methodOrOptions === 'string') {
+    options.method = methodOrOptions;
+    if (bodyData) {
+      options.body = JSON.stringify(bodyData);
+      console.log('📦 Request Body:', bodyData);
     }
+  } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
+    options = {
+      ...options,
+      ...methodOrOptions
+    };
+    if (options.body && typeof options.body !== 'string') {
+      options.body = JSON.stringify(options.body);
+      console.log('📦 Request Body:', options.body);
+    }
+  } else {
+    options.method = 'GET';
+  }
+
+  console.log('⚙️ Request Options:', {
+    method: options.method,
+    headers: { ...headers, Authorization: 'Bearer ***' },
+    hasBody: !!options.body
+  });
+
+  try {
+    const startTime = Date.now();
+    const response = await fetch(url, options);
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+
+    console.log(`📥 Response: ${response.status} ${response.statusText} (${duration}ms)`);
+
+    if (response.status === 401) {
+      console.error('🔐 Unauthorized - clearing session');
+      clearSession();
+      window.location.href = "/";
+      console.groupEnd();
+      throw new Error(`Unauthorized access to ${url}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ HTTP Error ${response.status}:`, errorText);
+      console.groupEnd();
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const responseClone = response.clone();
+    try {
+      const responseData = await responseClone.json();
+      console.log('✅ Response Data:', responseData);
+    } catch (jsonError) {
+      const textData = await response.text();
+      console.log('📄 Response Text:', textData);
+    }
+
+    console.groupEnd();
+    return response;
+
+  } catch (error) {
+    console.error('💥 Fetch Error:', error);
+    console.groupEnd();
+    throw error;
+  }
 }
 
 function updateCurrentProfile(newProfile) {
