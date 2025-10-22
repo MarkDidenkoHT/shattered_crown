@@ -2295,8 +2295,13 @@ async function assignLoot(battleState) {
     const data = await response.json();
     
     if (data.success) {
+      console.log('✅ Loot assigned successfully');
       return data;
     } else {
+      if (data.error === 'Loot already assigned for this battle') {
+        console.log('ℹ️ Loot was already assigned previously');
+        return { success: true, alreadyAssigned: true };
+      }
       console.error('Failed to assign loot:', data.error);
       return null;
     }
