@@ -709,48 +709,103 @@ function logout() {
 }
 
 async function apiCall(url, methodOrOptions = 'GET', bodyData = null) {
-  if (!supabaseConfig?.SUPABASE_ANON_KEY) {
-    throw new Error('No Supabase configuration available');
-  }
+    console.group(`🔵 API CALL: ${methodOrOptions?.method || methodOrOptions} ${url}`);
+    console.log('📤 Request Details:', {
+        url,
+        method: typeof methodOrOptions === 'string' ? methodOrOptions : (methodOrOptions?.method || 'GET'),
+        body: bodyData,
+        timestamp: new Date().toISOString()
+    });
 
-  const headers = {
-    'Authorization': `Bearer ${supabaseConfig.SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json',
-  };
+    try {
+        let options = {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
 
-  let options = { headers };
+        if (typeof methodOrOptions === 'string') {
+            options.method = methodOrOptions;
+        } else if (methodOrOptions && typeof methodOrOptions === 'object') {
+            options = { ...options, ...methodOrOptions };
+        }
 
-  if (typeof methodOrOptions === 'string') {
-    options.method = methodOrOptions;
-    if (bodyData) {
-      options.body = JSON.stringify(bodyData);
+        if (bodyData && options.method !== 'GET' && options.method !== 'HEAD') {
+            options.body = JSON.stringify(bodyData);
+            console.log('📦 Request Body:', bodyData);
+        }
+
+        const safeOptions = { ...options };
+        if (safeOptions.headers?.Authorization) {
+            safeOptions.headers.Authorization = 'Bearer ***';
+        }
+        console.log('⚙️ Request Options:', safeOptions);
+
+        const startTime = Date.now();
+        const response = await fetch(url, options);
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+
+        console.log(`📥 Response Received:`, {
+            status: response.status,
+            statusText: response.statusText,
+            duration: `${duration}ms`,
+            url: response.url,
+            ok: response.ok,
+            headers: Object.fromEntries(response.headers.entries())
+        });
+
+        const responseClone = response.clone();
+        
+        try {
+            const responseData = await responseClone.json();
+            console.log('📄 Response Body:', responseData);
+            
+            if (!response.ok) {
+                console.error(`❌ API Error ${response.status}:`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: responseData,
+                    url: url
+                });
+            } else {
+                console.log('✅ API Call Successful');
+            }
+            
+            console.groupEnd();
+            return response;
+            
+        } catch (jsonError) {
+            const textResponse = response.clone();
+            const textData = await textResponse.text();
+            
+            console.log('📄 Response Body (text):', textData);
+            
+            if (!response.ok) {
+                console.error(`❌ API Error ${response.status} (non-JSON):`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    rawText: textData,
+                    url: url
+                });
+            }
+            
+            console.groupEnd();
+            return response;
+        }
+
+    } catch (error) {
+        console.error('💥 API Call Failed:', {
+            error: error.message,
+            stack: error.stack,
+            url: url,
+            method: typeof methodOrOptions === 'string' ? methodOrOptions : (methodOrOptions?.method || 'GET'),
+            timestamp: new Date().toISOString()
+        });
+        
+        console.groupEnd();
+        throw error;
     }
-  } else if (typeof methodOrOptions === 'object' && methodOrOptions !== null) {
-    options = {
-      ...options,
-      ...methodOrOptions
-    };
-    if (options.body && typeof options.body !== 'string') {
-      options.body = JSON.stringify(options.body);
-    }
-  } else {
-    options.method = 'GET';
-  }
-
-  const response = await fetch(url, options);
-
-  if (response.status === 401) {
-    clearSession();
-    window.location.href = "/";
-    throw new Error(`Unauthorized access to ${url}`);
-  }
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-  }
-
-  return response;
 }
 
 function updateCurrentProfile(newProfile) {
