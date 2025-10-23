@@ -9,13 +9,7 @@ const BattleState = {
     characterElements: new Map(),
     isMoveQueued: false,
     characterAbilities: {},
-    environmentItems: {},
-    uiElements: {
-        bottomUI: null,
-        tooltip: null,
-        characterContainer: null,
-        infoPanel: null
-    }
+    environmentItems: {}
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -598,7 +592,6 @@ async function updateGameStateFromRealtime() {
     requestAnimationFrame(() => {
         updateTurnDisplay();
         updateCharacterAvailability();
-        updateBottomUI();
     });
     
     handleTurnLogic();
@@ -1065,7 +1058,7 @@ const handleTurnLogic = () => {
     }
 
     if (BattleState.currentTurnCharacter && BattleState.selectedPlayerCharacter?.id === BattleState.currentTurnCharacter.id) {
-        updateBottomUI();
+        renderBottomUI();
     }
 };
 
@@ -1161,12 +1154,6 @@ function renderBattleScreen(mode, level, layoutData) {
         </div>
     `;
 
-    // Store UI element references
-    BattleState.uiElements.bottomUI = BattleState.main.querySelector('.battle-bottom-ui');
-    BattleState.uiElements.tooltip = BattleState.main.querySelector('.tooltip-container');
-    BattleState.uiElements.characterContainer = BattleState.main.querySelector('.battle-grid-container');
-    BattleState.uiElements.infoPanel = BattleState.main.querySelector('.battle-info-panel');
-
     renderBattleGrid(layoutData.layout);
     renderCharacters();
     createParticles();
@@ -1181,7 +1168,7 @@ function renderBattleScreen(mode, level, layoutData) {
 }
 
 function renderBattleGrid(layoutJson) {
-    const container = BattleState.uiElements.characterContainer;
+    const container = BattleState.main.querySelector('.battle-grid-container');
     if (!layoutJson?.tiles) {
         container.innerHTML = '<p>Invalid battlefield layout.</p>';
         return;
@@ -1257,7 +1244,7 @@ function renderBattleGrid(layoutJson) {
 }
 
 function renderCharacters() {
-    const container = BattleState.uiElements.characterContainer;
+    const container = BattleState.main.querySelector('.battle-grid-container');
     if (!container) return;
     
     BattleState.characterElements.clear();
@@ -1278,7 +1265,7 @@ function renderCharacters() {
 }
 
 function renderEnvironmentItems(layoutEnvItems) {
-  const container = BattleState.uiElements.characterContainer;
+  const container = BattleState.main.querySelector('.battle-grid-container');
   if (!container) return;
 
   if (!layoutEnvItems) layoutEnvItems = {};
@@ -1490,12 +1477,13 @@ const handleCharacterSelection = (character, tileEl) => {
             BattleState.currentTurnCharacter = character;
             highlightWalkableTiles(character);
         }
-        updateBottomUI();
+        renderBottomUI();
     } else {
         BattleState.selectedPlayerCharacter = null;
         BattleState.selectedCharacterEl = null;
         unhighlightAllTiles();
-        updateBottomUI();
+        const ui = BattleState.main.querySelector('.battle-bottom-ui');
+        if (ui) ui.innerHTML = '';
     }
     
     showEntityInfo(character);
@@ -1506,7 +1494,7 @@ function highlightWalkableTiles(character) {
     if (!character || !Array.isArray(character.position) || character.has_moved) return;
 
     const [charX, charY] = character.position;
-    const container = BattleState.uiElements.characterContainer;
+    const container = BattleState.main.querySelector('.battle-grid-container');
     
     MOVEMENT_OFFSETS.forEach(offset => {
         const newX = charX + offset.dx;
@@ -1559,7 +1547,7 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
         return;
     }
 
-    const container = BattleState.uiElements.characterContainer;
+    const container = BattleState.main.querySelector('.battle-grid-container');
     const targetTileEl = container.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
     if (!targetTileEl || targetTileEl.dataset.walkable !== 'true') {
         displayMessage('Cannot move to an unwalkable tile.');
@@ -1619,149 +1607,132 @@ async function getAbility(abilityName) {
     return null;
 }
 
-function updateBottomUI() {
-    const ui = BattleState.uiElements.bottomUI;
-    if (!ui) return;
-    
-    // If no selected character, clear UI but keep container
-    if (!BattleState.selectedPlayerCharacter) {
-        ui.innerHTML = '';
-        return;
-    }
-    
-    const currentChar = BattleState.selectedPlayerCharacter;
-    
-    // Create UI structure if it doesn't exist
-    if (!ui.hasChildNodes()) {
-        for (let row = 0; row < 2; row++) {
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'battle-ui-row';
-            
-            for (let i = 0; i < 5; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'fantasy-button ui-btn';
-                btn.dataset.index = row * 5 + i;
-                rowDiv.appendChild(btn);
-            }
-            ui.appendChild(rowDiv);
-        }
-    }
-    
-    // Update button states and content
-    const buttons = ui.querySelectorAll('.fantasy-button.ui-btn');
-    buttons.forEach(btn => {
-        const index = parseInt(btn.dataset.index);
-        let ability = null;
-        
-        if (index >= 0 && index <= 3) {
-            ability = BattleState.characterAbilities[currentChar.id]?.basic?.[index] || null;
-        } else if (index === 4) {
-            ability = BattleState.characterAbilities[currentChar.id]?.ultimate || null;
-        }
-        
-        if (ability) {
-            if (ability.sprite) {
-                btn.innerHTML = `<img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}" style="width:100%;height:100%;">`;
-            } else {
-                btn.textContent = ability.name || 'Unknown';
-            }
-            btn.title = ability.name;
-            btn.dataset.abilityName = ability.name;
-            btn.disabled = false;
-            
-            // Update event listener
-            btn.onclick = debounce(() => {
-                const caster = BattleState.selectedPlayerCharacter;
-                if (caster) toggleAbilitySelection(caster, ability);
-            }, 150);
-        } else if (index === 5) {
-            const consumableName = currentChar?.equipped_items?.equipped_consumable;
-            if (consumableName && consumableName !== 'none') {
-                btn.innerHTML = `<img src="assets/art/recipes/${consumableName.replace(/\s+/g, '')}.png" alt="${consumableName}" style="width:36px;height:36px;object-fit:contain;">`;
-                btn.id = 'consumableButton';
-                btn.title = consumableName;
-                btn.disabled = false;
-                btn.onclick = debounce(handleUseConsumable, 150);
-            } else {
-                btn.textContent = 'No Item';
-                btn.disabled = true;
-                btn.onclick = null;
-            }
-        } else if (index === 6 || index === 7) {
-            const passive = BattleState.characterAbilities[currentChar.id]?.passives?.[index - 6] || null;
-            if (passive) {
-                if (passive.sprite) {
-                    btn.innerHTML = `<img src="assets/art/abilities/${passive.sprite}.png" alt="${passive.name}" style="width:100%;height:100%;">`;
-                } else {
-                    btn.textContent = passive.name || 'Passive';
-                }
-                btn.title = passive.name;
-                btn.disabled = true;
-            } else {
-                btn.textContent = 'Passive';
-                btn.disabled = true;
-            }
-            btn.onclick = null;
-        } else if (index === 8) {
-            btn.textContent = 'Interact';
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.onclick = null;
-        } else if (index === 9) {
-            btn.textContent = 'End Turn';
-            btn.id = 'endTurnButtonBottom';
-            btn.disabled = false;
-            btn.onclick = debounce(handleEndTurn, 500);
-        } else {
-            btn.textContent = `Btn ${index}`;
-            btn.disabled = true;
-            btn.onclick = null;
-        }
-        
-        // Update selection state
-        if (btn.dataset.abilityName && BattleState.selectingAbility?.ability?.name === btn.dataset.abilityName) {
-            btn.classList.add('ability-selected');
-        } else {
-            btn.classList.remove('ability-selected');
-        }
-    });
-}
-
 async function renderBottomUI() {
-    const ui = BattleState.uiElements.bottomUI;
-    if (!ui) return;
+    const ui = BattleState.main.querySelector('.battle-bottom-ui');
+    ui.innerHTML = '';
     
-    if (!BattleState.selectedPlayerCharacter) {
-        ui.innerHTML = '';
-        return;
-    }
+    if (!BattleState.selectedPlayerCharacter) return;
     
     const currentChar = BattleState.selectedPlayerCharacter;
-    
-    // Load abilities if not already loaded
-    if (!BattleState.characterAbilities[currentChar.id]) {
-        BattleState.characterAbilities[currentChar.id] = { basic: [], passives: [], ultimate: null };
-        
+    const fragment = document.createDocumentFragment();
+
+    BattleState.characterAbilities = BattleState.characterAbilities || {};
+    let abilityObjs = {};
+
+    if (BattleState.characterAbilities[currentChar.id]) {
+        abilityObjs = BattleState.characterAbilities[currentChar.id];
+    } else {
+        abilityObjs = { basic: [], passives: [], ultimate: null };
+
         const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
 
         for (const abilityName of Object.keys(charAbilities.basic || {})) {
             const ability = await getAbility(abilityName);
-            if (ability) BattleState.characterAbilities[currentChar.id].basic.push(ability);
+            if (ability) abilityObjs.basic.push(ability);
         }
 
         const passiveNames = Object.keys(charAbilities.passive || {});
         for (let i = 0; i < Math.min(passiveNames.length, 2); i++) {
             const ability = await getAbility(passiveNames[i]);
-            if (ability) BattleState.characterAbilities[currentChar.id].passives.push(ability);
+            if (ability) abilityObjs.passives.push(ability);
         }
 
         const ultimateNames = Object.keys(charAbilities.ultimate || {});
         if (ultimateNames[0]) {
-            BattleState.characterAbilities[currentChar.id].ultimate = await getAbility(ultimateNames[0]);
+            abilityObjs.ultimate = await getAbility(ultimateNames[0]);
         }
+
+        BattleState.characterAbilities[currentChar.id] = abilityObjs;
     }
-    
-    updateBottomUI();
+
+    for (let row = 0; row < 2; row++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'battle-ui-row';
+
+        for (let i = 0; i < 5; i++) {
+            const btnIndex = row * 5 + i;
+            const btn = document.createElement('button');
+            btn.className = 'fantasy-button ui-btn';
+
+            let ability = null;
+
+            if (btnIndex >= 0 && btnIndex <= 3) {
+                ability = abilityObjs.basic[btnIndex] || null;
+            } else if (btnIndex === 4) {
+                ability = abilityObjs.ultimate;
+            }
+
+            if (ability) {
+                if (ability.sprite) {
+                    btn.innerHTML = `<img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}" style="width:100%;height:100%;">`;
+                } else {
+                    btn.textContent = ability.name || 'Unknown';
+                }
+                btn.title = ability.name;
+                btn.dataset.abilityName = ability.name;
+                btn.disabled = false;
+                btn.addEventListener('click', debounce(() => {
+                    const caster = BattleState.selectedPlayerCharacter;
+                    if (caster) toggleAbilitySelection(caster, ability);
+                }, 150));
+            } else if (btnIndex === 5) {
+                const consumableName = currentChar?.equipped_items?.equipped_consumable;
+                if (consumableName && consumableName !== 'none') {
+                    const consumableAbility = await getAbility(consumableName);
+                    if (consumableAbility) {
+                        const itemSprite = consumableName.replace(/\s+/g, '');
+                        btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumableName}" style="width:36px;height:36px;object-fit:contain;">`;
+                        btn.id = 'consumableButton';
+                        btn.title = consumableName;
+                        btn.dataset.abilityName = consumableAbility.name;
+                        btn.disabled = false;
+                        btn.addEventListener('click', debounce(() => {
+                            const caster = BattleState.selectedPlayerCharacter;
+                            if (caster) toggleAbilitySelection(caster, consumableAbility);
+                        }, 150));
+                    } else {
+                        btn.textContent = 'No Item';
+                        btn.disabled = true;
+                    }
+                } else {
+                    btn.textContent = 'No Item';
+                    btn.disabled = true;
+                }
+            } else if (btnIndex === 6 || btnIndex === 7) {
+                const passive = abilityObjs.passives[btnIndex - 6] || null;
+                if (passive) {
+                    if (passive.sprite) {
+                        btn.innerHTML = `<img src="assets/art/abilities/${passive.sprite}.png" alt="${passive.name}" style="width:100%;height:100%;">`;
+                    } else {
+                        btn.textContent = passive.name || 'Passive';
+                    }
+                    btn.title = passive.name;
+                } else {
+                    btn.textContent = 'Passive';
+                    btn.disabled = true;
+                }
+            } else if (btnIndex === 8) {
+                btn.textContent = 'Interact';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            } else if (btnIndex === 9) {
+                btn.textContent = 'End Turn';
+                btn.id = 'endTurnButtonBottom';
+                btn.disabled = false;
+            } else {
+                btn.textContent = `Btn ${btnIndex}`;
+                btn.disabled = true;
+            }
+
+            rowDiv.appendChild(btn);
+        }
+        fragment.appendChild(rowDiv);
+    }
+
+    ui.appendChild(fragment);
+
+    const endTurnBtn = document.getElementById('endTurnButtonBottom');
+    if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
 }
 
 const handleAbilityUse = async (abilityPayload) => {
@@ -2099,7 +2070,7 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
 function showAbilityTooltip(ability) {
     hideAbilityTooltip();
     
-    const tooltipContainer = BattleState.uiElements.tooltip;
+    const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
     if (!tooltipContainer) return;
     
     const tooltip = document.createElement('div');
@@ -2298,12 +2269,6 @@ export function cleanup() {
     
     BattleState.tileMap.clear();
     BattleState.characterElements.clear();
-    BattleState.uiElements = {
-        bottomUI: null,
-        tooltip: null,
-        characterContainer: null,
-        infoPanel: null
-    };
     
     const existingMessage = document.querySelector('.custom-message-box');
     if (existingMessage) existingMessage.remove();
