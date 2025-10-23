@@ -551,9 +551,7 @@ function renderPortraitSelection() {
     
     const portraits = [
         `${baseName}_1`,
-        `${baseName}_2`, 
-        `${baseName}_3`,
-        `${baseName}_4`
+        `${baseName}_2`
     ];
 
     section.innerHTML = `
