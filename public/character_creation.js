@@ -49,6 +49,8 @@ function addGridSelectionStyles() {
         .grid-item-description { color: #ddd; font-size: 11px; line-height: 1.2; }
         .portrait-item { min-height: 120px; }
         .portrait-item .grid-item-label { font-size: 14px; }
+        .portrait-display { display: flex; justify-content: center; align-items: center; padding: 30px; }
+        .portrait-large { width: 300px; height: 300px; border-radius: 12px; object-fit: cover; border: 4px solid rgba(196, 151, 90, 0.8); box-shadow: 0 0 20px rgba(196, 151, 90, 0.4); }
         .profession-item { min-height: 80px; flex-direction: row; text-align: left; padding: 12px; align-items: center; }
         .profession-item .grid-item-image { margin-right: 12px; margin-bottom: 0; flex-shrink: 0; }
         .profession-item .grid-item-info { text-align: left; flex-grow: 1; }
@@ -208,7 +210,6 @@ function renderRaceSelection() {
         </div>
     `;
 
-    // Add error handlers for race images
     section.querySelectorAll('.card-art').forEach(img => {
         img.addEventListener('error', function() {
             this.style.display = 'none';
@@ -413,7 +414,6 @@ async function showAbilityTooltip(abilityName) {
         `;
         document.body.appendChild(modal);
         
-        // Add error handler for ability icon
         const abilityIcon = modal.querySelector('.ability-icon');
         abilityIcon.addEventListener('error', function() {
             this.style.display = 'none';
@@ -547,80 +547,60 @@ function renderPortraitSelection() {
     
     const raceName = _selectedRace.name.toLowerCase().replace(/\s+/g, '_');
     const className = _selectedClass.name.toLowerCase().replace(/\s+/g, '_');
-    const baseName = `${raceName}_${className}`;
-    
-    const portraits = [
-        `${baseName}_1`,
-        `${baseName}_2`
-    ];
+    const portraitName = `${raceName}_${className}_1`;
 
     section.innerHTML = `
         <div class="art-header">
-            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name & Portrait</h1>
+            <h1>Character ${currentCharacterNumber} of ${_maxCharacters}: Name Your Champion</h1>
         </div>
         <div class="selected-race-summary">
             <h3>Selected Race: ${_selectedRace.name}</h3>
             <p><strong>Class:</strong> ${_selectedClass.name}</p>
+        </div>
+        <div class="portrait-display">
+            <img src="assets/art/classes/portraits/${portraitName}.png" alt="Champion Portrait" class="portrait-large">
         </div>
         <div class="name-selection-inline">
             <label for="character-name-input">Champion Name:</label>
             <input type="text" id="character-name-input" maxlength="24" placeholder="Enter champion name" class="fantasy-input" value="${_characterName}">
             <div class="name-error-message"></div>
         </div>
-        <div class="grid-selection-section">
-            <div class="selection-grid">
-                ${portraits.map((portrait, index) => `
-                    <div class="grid-item portrait-item" data-portrait="${portrait}">
-                        <div class="grid-item-image">
-                            <img src="assets/art/classes/portraits/${portrait}.png" alt="Portrait ${index + 1}" class="grid-portrait">
-                        </div>
-                        <div class="grid-item-label">Portrait ${index + 1}</div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-        <div class="top-right-buttons">
-            <button class="fantasy-button return-btn">Return</button>
-            <button class="fantasy-button god-return-btn">Change Deity</button>
+        <div class="confirm-return-buttons">
+            <button type="button" class="fantasy-button confirm-portrait-btn">Continue</button>
+            <button type="button" class="fantasy-button return-btn">Return</button>
+            <button type="button" class="fantasy-button god-return-btn">Change Deity</button>
         </div>
     `;
 
-    // Add error handlers for portrait images
-    section.querySelectorAll('.grid-portrait').forEach(img => {
-        img.addEventListener('error', function() {
-            this.style.display = 'none';
-            this.parentElement.innerHTML = '<div style="color: #8a6d3b; padding: 20px; text-align: center;">No portrait<br>available</div>';
-        });
+    const portraitImg = section.querySelector('.portrait-large');
+    portraitImg.addEventListener('error', function() {
+        this.style.display = 'none';
+        this.parentElement.innerHTML = '<div style="color: #8a6d3b; padding: 40px; text-align: center; font-size: 18px;">Portrait<br>Not Available</div>';
     });
 
     const input = section.querySelector('#character-name-input');
     const errorMsg = section.querySelector('.name-error-message');
     
-    section.querySelectorAll('.portrait-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const name = input.value.trim();
-            if (!name) {
-                errorMsg.textContent = 'Please enter a name first.';
-                errorMsg.style.display = 'block';
-                input.focus();
-                return;
-            }
-            if (name.length < 2) {
-                errorMsg.textContent = 'Name must be at least 2 characters.';
-                errorMsg.style.display = 'block';
-                input.focus();
-                return;
-            }
-            
-            errorMsg.style.display = 'none';
-            _characterName = name;
-            
-            section.querySelectorAll('.portrait-item').forEach(i => i.classList.remove('selected'));
-            item.classList.add('selected');
-            
-            const portrait = item.dataset.portrait;
-            handlePortraitSelection(portrait);
-        });
+    section.querySelector('.confirm-portrait-btn').addEventListener('click', () => {
+        const name = input.value.trim();
+        if (!name) {
+            errorMsg.textContent = 'Please enter a name first.';
+            errorMsg.style.display = 'block';
+            input.focus();
+            return;
+        }
+        if (name.length < 2) {
+            errorMsg.textContent = 'Name must be at least 2 characters.';
+            errorMsg.style.display = 'block';
+            input.focus();
+            return;
+        }
+        
+        errorMsg.style.display = 'none';
+        _characterName = name;
+        _selectedPortrait = portraitName;
+        
+        fetchProfessionsAndRenderSelection();
     });
 
     input.addEventListener('input', () => {
@@ -635,11 +615,6 @@ function renderPortraitSelection() {
     section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
     
     input.focus();
-}
-
-function handlePortraitSelection(portrait) {
-    _selectedPortrait = portrait;
-    fetchProfessionsAndRenderSelection();
 }
 
 async function fetchProfessionsAndRenderSelection() {
@@ -707,7 +682,6 @@ function renderProfessionSelection() {
         </div>
     `;
     
-    // Add error handlers for profession images
     section.querySelectorAll('.grid-profession').forEach(img => {
         img.addEventListener('error', function() {
             this.style.display = 'none';
@@ -766,7 +740,6 @@ function renderCharacterSummary() {
         </div>
     `;
     
-    // Add error handler for summary art
     const summaryArt = section.querySelector('.summary-art');
     summaryArt.addEventListener('error', function() {
         this.style.display = 'none';
