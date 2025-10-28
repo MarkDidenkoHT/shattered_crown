@@ -37,15 +37,12 @@ export async function loadModule(main, { getCurrentProfile }) {
                     </button>
                 </div>
 
-                <!-- Buy View Filters -->
                 <div class="buy-filters" id="buyFilters" style="display: none;">
                     <div class="filter-controls">
                         <input type="text" id="buy-search" placeholder="Search items..." class="search-input">
                         <select id="buy-filter" class="filter-select">
                             <option value="all">All Items</option>
-                            <option value="ingredient">Ingredients</option>
-                            <option value="consumable">Consumables</option>
-                            <option value="gear">Crafted Gear</option>
+                            <!-- Options will be populated dynamically -->
                         </select>
                         <select id="buy-sort" class="filter-select">
                             <option value="newest">Newest First</option>
@@ -200,6 +197,8 @@ async function loadBuyView(container) {
         }
 
         _activeAuctions = await response.json();
+        
+        populateFilterOptions(_activeAuctions);
         renderFilteredAuctions(_activeAuctions);
         closeMessageBox();
     } catch (error) {
@@ -207,7 +206,6 @@ async function loadBuyView(container) {
         displayMessage('Failed to load auctions. Please try again.');
     }
 }
-
 function renderFilteredAuctions(auctions) {
     const container = document.getElementById('auctionItemsList');
     const searchQuery = document.getElementById('buy-search')?.value.toLowerCase() || '';
@@ -219,13 +217,14 @@ function renderFilteredAuctions(auctions) {
             auction.item_selling.toLowerCase().includes(searchQuery) ||
             auction.item_wanted.toLowerCase().includes(searchQuery);
         
-        // Use the type from auction table instead of calculating it
-        const matchesFilter = filterType === 'all' || auction.type === filterType;
+        const matchesFilter = filterType === 'all' || 
+                            auction.type === filterType ||
+                            (filterType === 'gear' && 
+                             ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand'].includes(auction.type));
         
         return matchesSearch && matchesFilter;
     });
 
-    // Sort auctions
     filteredAuctions.sort((a, b) => {
         switch (sortBy) {
             case 'oldest':
@@ -263,8 +262,9 @@ function renderFilteredAuctions(auctions) {
                 <div class="item-info">
                     <div class="item-name">${auction.item_selling}</div>
                     <div class="item-details">
-                        <span class="item-type">Seller: ${auction.seller?.chat_id || 'Anonymous'}</span>
-                        <span class="item-profession">• ${formatTime(auction.created_at)}</span>
+                        <span class="item-type">${auction.type || 'Unknown Type'}</span>
+                        <span class="item-profession">• Seller: ${auction.seller?.chat_id || 'Anonymous'}</span>
+                        <span class="item-time">• ${formatTime(auction.created_at)}</span>
                     </div>
                     <div class="auction-trade-info">
                         <span class="trade-want">Wants: ${auction.amount_wanted}× ${auction.item_wanted}</span>
@@ -560,6 +560,29 @@ function setupModalInteractions() {
 
     document.querySelector('.confirm-sell').addEventListener('click', handleConfirmSell);
     document.querySelector('.confirm-buy').addEventListener('click', handleConfirmBuy);
+}
+
+function populateFilterOptions(auctions) {
+    const filterSelect = document.getElementById('buy-filter');
+    if (!filterSelect) return;
+
+    const uniqueTypes = [...new Set(auctions
+        .map(auction => auction.type)
+        .filter(type => type && type.trim() !== '')
+    )].sort();
+
+    const allItemsOption = filterSelect.querySelector('option[value="all"]');
+    filterSelect.innerHTML = '';
+    filterSelect.appendChild(allItemsOption);
+
+    uniqueTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        filterSelect.appendChild(option);
+    });
+
+    console.log('[Auction] Populated filter options:', uniqueTypes);
 }
 
 async function handleBuyClick(auctionId) {
@@ -1132,6 +1155,22 @@ function addAuctionStyles() {
         .item-actions {
             display: flex;
             align-items: center;
+        }
+
+        .item-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        .item-type {
+            color: #c4975a;
+            font-weight: 600;
+        }
+        
+        .item-profession, .item-time {
+            color: #8b7355;
         }
 
         .action-btn {
