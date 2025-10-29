@@ -742,190 +742,195 @@ function resetAbilityButtonsUI() {
 }
 
 function startAbilitySelection(caster, abilityRaw) {
-  unhighlightAllTiles();
-  clearAbilitySelection();
-  const ability = normalizeAbility(abilityRaw);
-  BattleState.selectingAbility = {
-    casterId: caster.id,
-    casterPos: caster.position.slice(),
-    ability
-  };
-  BattleState.highlightedTiles = [];
-
-  function registerTile(tile, handler) {
-    const wrapped = function (ev) {
-      ev.stopPropagation();
-
-      if (BattleState.selectingAbility) {
-        try {
-          handler(ev);
-        } catch (err) {
-          console.error('Ability handler error', err);
-        }
-        return;
-      }
-
-      const charEl = tile.querySelector('.character-token');
-      if (charEl && charEl.dataset?.id) {
-        const charId = charEl.dataset.id;
-        const char = BattleState.characters.find(c => c.id === charId);
-        if (char) {
-          try {
-            handleCharacterSelection(char, tile);
-          } catch (err) {
-            console.warn('Character selection error', err);
-          }
-        }
-      }
+    unhighlightAllTiles();
+    clearAbilitySelection();
+    const ability = normalizeAbility(abilityRaw);
+    BattleState.selectingAbility = {
+        casterId: caster.id,
+        casterPos: caster.position.slice(),
+        ability
     };
+    BattleState.highlightedTiles = [];
 
-    tile._abilityTargetHandler = wrapped;
-    tile.addEventListener('click', wrapped);
-    BattleState.highlightedTiles.push(tile);
-  }
+    function registerTile(tile, handler) {
+        const wrapped = function (ev) {
+            ev.stopPropagation();
 
-  if (ability.targeting === 'single') {
-    for (const ch of BattleState.characters) {
-      const dist = chebyshevDistance(caster.position, ch.position);
-      if (dist > ability.range) continue;
-
-      if (ch.current_hp <= 0 || ch.status === 'dead') continue;
-
-      let allowed = false;
-      if (ability.target_type === 'any') allowed = true;
-      else if (ability.target_type === 'ally') allowed = isAlly(caster, ch);
-      else if (ability.target_type === 'enemy') allowed = !isAlly(caster, ch);
-
-      if (ch.id === caster.id && ability.effects === 'damage') allowed = false;
-      if (!allowed) continue;
-
-      const cell = getCellAt(ch.position[0], ch.position[1]);
-      if (!cell) continue;
-
-      cell.classList.add(isAlly(caster, ch) ? 'highlight-target-ally' : 'highlight-target-enemy');
-
-      registerTile(cell, () => {
-        const eff = computeEffect(caster, ability, ch);
-        const payload = {
-          abilityName: ability.name,
-          casterId: caster.id,
-          casterPos: caster.position,
-          targetCenter: ch.position,
-          affectedTargets: [
-            {
-              id: ch.id,
-              pos: ch.position,
-              faction: isAlly(caster, ch) ? 'ally' : 'enemy',
-              intendedEffect: eff
+            if (BattleState.selectingAbility) {
+                try {
+                    handler(ev);
+                } catch (err) {
+                    console.error('Ability handler error', err);
+                }
+                return;
             }
-          ]
+
+            const charEl = tile.querySelector('.character-token');
+            if (charEl && charEl.dataset?.id) {
+                const charId = charEl.dataset.id;
+                const char = BattleState.characters.find(c => c.id === charId);
+                if (char) {
+                    try {
+                        handleCharacterSelection(char, tile);
+                    } catch (err) {
+                        console.warn('Character selection error', err);
+                    }
+                }
+            }
         };
-        handleAbilityUse(payload);
-        clearAbilitySelection();
-      });
-    }
-  }
 
-  if (ability.targeting === 'area') {
-      const area = Number(ability.area) || 0;
-      const range = Number(ability.range) || 0;
-    
-      let potentialCenters = [];
-    
-      if (range === 0) {
-        potentialCenters = [caster.position.slice()];
-      } else {
-        const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
-        for (const cell of cells) {
-          const x = +cell.dataset.x, y = +cell.dataset.y;
-          if (chebyshevDistance(caster.position, [x, y]) <= range) {
-            potentialCenters.push([x, y]);
-          }
-        }
-      }
-    
-      for (const [cx, cy] of potentialCenters) {
-        const affected = [];
-        const affectedTiles = [];
-    
-        for (let ax = cx - area; ax <= cx + area; ax++) {
-          for (let ay = cy - area; ay <= cy + area; ay++) {
-            if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
-    
-            const cell = getCellAt(ax, ay);
-            if (!cell) continue;
-    
-            affectedTiles.push(cell);
-    
-            const targetChar = getCharacterAt(ax, ay);
-    
-            if (targetChar) {
-              const ally = isAlly(caster, targetChar);
-              cell.classList.add(ally ? 'highlight-target-ally' : 'highlight-target-enemy');
-            } else {
-              cell.classList.add('highlight-area-center');
+        tile._abilityTargetHandler = wrapped;
+        tile.addEventListener('click', wrapped);
+        BattleState.highlightedTiles.push(tile);
+    }
+
+    // FIXED: Proper targeting logic
+    if (ability.targeting === 'single') {
+        console.log('Single target ability:', ability.name, 'Range:', ability.range);
+        
+        for (const ch of BattleState.characters) {
+            // Skip dead characters
+            if (ch.current_hp <= 0 || ch.status === 'dead') {
+                console.log('Skipping dead character:', ch.name);
+                continue;
             }
-    
-            const eff = computeEffect(caster, ability, targetChar);
-            if (targetChar && eff) affected.push({ char: targetChar, eff });
-          }
+
+            const dist = chebyshevDistance(caster.position, ch.position);
+            console.log(`Distance to ${ch.name}:`, dist);
+            
+            if (dist > ability.range) {
+                console.log(`Out of range: ${ch.name} (${dist} > ${ability.range})`);
+                continue;
+            }
+
+            // Determine if target is allowed
+            let allowed = false;
+            const isAllyChar = isAlly(caster, ch);
+            
+            if (ability.target_type === 'any') {
+                allowed = true;
+                console.log(`${ch.name}: any target - ALLOWED`);
+            } else if (ability.target_type === 'ally') {
+                allowed = isAllyChar;
+                console.log(`${ch.name}: ally target - ${allowed ? 'ALLOWED' : 'DENIED'}`);
+            } else if (ability.target_type === 'enemy') {
+                allowed = !isAllyChar;
+                console.log(`${ch.name}: enemy target - ${allowed ? 'ALLOWED' : 'DENIED'}`);
+            }
+
+            // Prevent self-damage
+            if (ch.id === caster.id && ability.effects === 'damage') {
+                allowed = false;
+                console.log(`${ch.name}: self damage - DENIED`);
+            }
+
+            if (!allowed) continue;
+
+            const cell = getCellAt(ch.position[0], ch.position[1]);
+            if (!cell) {
+                console.log('No cell found for character:', ch.name, ch.position);
+                continue;
+            }
+
+            console.log(`Highlighting ${ch.name} as ${isAllyChar ? 'ally' : 'enemy'}`);
+            
+            // Add the appropriate highlight class
+            cell.classList.add(isAllyChar ? 'highlight-target-ally' : 'highlight-target-enemy');
+
+            registerTile(cell, () => {
+                console.log(`Ability ${ability.name} targeting ${ch.name}`);
+                const eff = computeEffect(caster, ability, ch);
+                const payload = {
+                    abilityName: ability.name,
+                    casterId: caster.id,
+                    casterPos: caster.position,
+                    targetCenter: ch.position,
+                    affectedTargets: [
+                        {
+                            id: ch.id,
+                            pos: ch.position,
+                            faction: isAllyChar ? 'ally' : 'enemy',
+                            intendedEffect: eff
+                        }
+                    ]
+                };
+                handleAbilityUse(payload);
+                clearAbilitySelection();
+            });
         }
-    
-        for (const tile of affectedTiles) {
-          registerTile(tile, () => {
-            const payload = {
-              abilityName: ability.name,
-              casterId: caster.id,
-              casterPos: caster.position,
-              targetCenter: [cx, cy],
-              affectedTargets: affected.map(a => ({
-                id: a.char.id,
-                pos: a.char.position,
-                faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
-                intendedEffect: a.eff
-              }))
-            };
-            handleAbilityUse(payload);
-            clearAbilitySelection();
-          });
+    } else if (ability.targeting === 'area') {
+        console.log('Area target ability:', ability.name);
+        const area = Number(ability.area) || 0;
+        const range = Number(ability.range) || 0;
+
+        let potentialCenters = [];
+
+        if (range === 0) {
+            potentialCenters = [caster.position.slice()];
+        } else {
+            const cells = Array.from(BattleState.main.querySelectorAll('td.battle-tile'));
+            for (const cell of cells) {
+                const x = +cell.dataset.x, y = +cell.dataset.y;
+                if (chebyshevDistance(caster.position, [x, y]) <= range) {
+                    potentialCenters.push([x, y]);
+                }
+            }
         }
-      }
+
+        console.log('Potential area centers:', potentialCenters);
+
+        for (const [cx, cy] of potentialCenters) {
+            const affected = [];
+            const affectedTiles = [];
+
+            for (let ax = cx - area; ax <= cx + area; ax++) {
+                for (let ay = cy - area; ay <= cy + area; ay++) {
+                    if (chebyshevDistance([cx, cy], [ax, ay]) > area) continue;
+
+                    const cell = getCellAt(ax, ay);
+                    if (!cell) continue;
+
+                    affectedTiles.push(cell);
+
+                    const targetChar = getCharacterAt(ax, ay);
+                    
+                    if (targetChar) {
+                        const ally = isAlly(caster, targetChar);
+                        cell.classList.add(ally ? 'highlight-target-ally' : 'highlight-target-enemy');
+                        console.log(`Area highlight: ${targetChar.name} as ${ally ? 'ally' : 'enemy'}`);
+                    } else {
+                        cell.classList.add('highlight-area-center');
+                        console.log(`Area highlight: empty tile at [${ax}, ${ay}]`);
+                    }
+
+                    const eff = computeEffect(caster, ability, targetChar);
+                    if (targetChar && eff) affected.push({ char: targetChar, eff });
+                }
+            }
+
+            for (const tile of affectedTiles) {
+                registerTile(tile, () => {
+                    console.log(`Area ability ${ability.name} targeting center [${cx}, ${cy}]`);
+                    const payload = {
+                        abilityName: ability.name,
+                        casterId: caster.id,
+                        casterPos: caster.position,
+                        targetCenter: [cx, cy],
+                        affectedTargets: affected.map(a => ({
+                            id: a.char.id,
+                            pos: a.char.position,
+                            faction: isAlly(caster, a.char) ? 'ally' : 'enemy',
+                            intendedEffect: a.eff
+                        }))
+                    };
+                    handleAbilityUse(payload);
+                    clearAbilitySelection();
+                });
+            }
+        }
     }
 
-  if (ability.targeting === 'tile') {
-    const range = ability.range || 1;
-
-    for (let x = 0; x < GRID_SIZE.cols; x++) {
-      for (let y = 0; y < GRID_SIZE.rows; y++) {
-        const dist = chebyshevDistance(caster.position, [x, y]);
-        if (dist > range) continue;
-
-        const cell = getCellAt(x, y);
-        if (!cell) continue;
-
-        const envItem = Object.values(BattleState.environmentItems || {}).find(item =>
-          item.position?.[0] === x && item.position?.[1] === y
-        );
-
-        if (envItem) {
-          cell.classList.add('highlight-target-enemy');
-
-          registerTile(cell, () => {
-            const payload = {
-              abilityName: ability.name,
-              casterId: caster.id,
-              casterPos: caster.position,
-              targetCenter: [x, y],
-              affectedTargets: [],
-              environmentTarget: envItem.id
-            };
-            handleAbilityUse(payload);
-            clearAbilitySelection();
-          });
-        }
-      }
-    }
-  }
+    console.log('Ability selection started. Highlighted tiles:', BattleState.highlightedTiles.length);
 }
 
 function computeEffect(caster, ability, target) {
