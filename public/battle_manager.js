@@ -552,29 +552,28 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
             await supabase.removeChannel(BattleState.unsubscribeFromBattle);
         }
 
-        let battleState;
         if (reconnecting && existingBattleId) {
             updateBattleLoadingProgress(loadingModal, "Reconnecting...", "Restoring previous battle...", 70);
-            battleState = await reconnectToBattle(existingBattleId);
+            await reconnectToBattle(existingBattleId);
         } else {
             const areaLevel = selectedMode !== 'pvp'
                 ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
                 : Math.floor(Math.random() * 10) + 1;
             updateBattleLoadingProgress(loadingModal, "Initializing battle...", "Generating battlefield...", 80);
-            battleState = await initializeBattle(selectedMode, areaLevel);
+            await initializeBattle(selectedMode, areaLevel);
         }
 
         updateBattleLoadingProgress(loadingModal, "Loading assets...", "Preloading images and abilities...", 85);
-        await preloadAssets(battleState, selectedMode);
+        await preloadAssets(BattleState.battleState, selectedMode);
 
         setupRealtimeSubscription();
         updateBattleLoadingProgress(loadingModal, "Finalizing...", "Rendering battlefield...", 95);
 
         const areaLevel = selectedMode !== 'pvp' 
             ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
-            : battleState?.round_number || 1;
+            : BattleState.battleState?.round_number || 1;
 
-        renderBattleScreen(selectedMode || battleState?.mode || 'unknown', areaLevel, battleState?.layout_data);
+        renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState?.layout_data);
         await updateGameStateFromRealtime();
 
     } catch (err) {
