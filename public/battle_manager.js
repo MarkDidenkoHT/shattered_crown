@@ -25,6 +25,14 @@ const ANIMATION_CONFIG = {
     easingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
 };
 
+const PRELOAD_CONFIG = {
+    abilities: true,
+    backgrounds: true,
+    portraits: true,
+    environment: true,
+    tiles: true
+};
+
 const debounce = (func, wait) => {
     let timeout;
     return function executedFunction(...args) {
@@ -398,6 +406,95 @@ function createBattleLoadingModal(title = "Loading Battle", message = "Preparing
     return modal;
 }
 
+const preloadAssets = async (battleState, selectedMode) => {
+    const loadingPromises = [];
+    
+    if (PRELOAD_CONFIG.backgrounds) {
+        const bgName = battleState?.layout_data?.background || battleState?.background || 'default';
+        const bgUrl = `assets/art/backgrounds/${bgName}.png`;
+        loadingPromises.push(preloadImage(bgUrl));
+    }
+    
+    if (PRELOAD_CONFIG.portraits && battleState?.characters_state) {
+        Object.values(battleState.characters_state).forEach(char => {
+            if (char.portrait && char.portrait !== 'none') {
+                const portraitUrl = `assets/art/portraits/${char.portrait}.png`;
+                loadingPromises.push(preloadImage(portraitUrl));
+            }
+        });
+    }
+    
+    if (PRELOAD_CONFIG.abilities && battleState?.player_abilities) {
+        Object.values(battleState.player_abilities).forEach(charAbilities => {
+            Object.keys(charAbilities.basic || {}).forEach(abilityName => {
+                loadingPromises.push(preloadAbility(abilityName));
+            });
+            
+            Object.keys(charAbilities.ultimate || {}).forEach(abilityName => {
+                loadingPromises.push(preloadAbility(abilityName));
+            });
+            
+            Object.keys(charAbilities.passive || {}).slice(0, 2).forEach(abilityName => {
+                loadingPromises.push(preloadAbility(abilityName));
+            });
+        });
+    }
+    
+    if (PRELOAD_CONFIG.environment && battleState?.layout_data?.environment_items_pos) {
+        Object.values(battleState.layout_data.environment_items_pos).forEach(item => {
+            if (item.sprite) {
+                const envUrl = `assets/art/environment/${item.sprite.toLowerCase()}.png`;
+                loadingPromises.push(preloadImage(envUrl));
+            }
+        });
+    }
+    
+    if (PRELOAD_CONFIG.tiles && battleState?.layout_data?.layout?.tiles) {
+        const uniqueTiles = new Set();
+        battleState.layout_data.layout.tiles.forEach(row => {
+            row.forEach(tile => {
+                const tileName = typeof tile === 'object' ? tile.name : tile;
+                const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
+                uniqueTiles.add(normalized);
+            });
+        });
+        
+        uniqueTiles.forEach(tileName => {
+            const tileData = BattleState.tileMap.get(tileName);
+            if (tileData?.art) {
+                const tileUrl = `assets/art/tiles/${tileData.art}.png`;
+                loadingPromises.push(preloadImage(tileUrl));
+            }
+        });
+    }
+    
+    return Promise.allSettled(loadingPromises);
+};
+
+const preloadImage = (url) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = resolve;
+        img.onerror = () => {
+            console.warn(`Failed to preload image: ${url}`);
+            resolve(); // Don't reject, just continue
+        };
+        img.src = url;
+    });
+};
+
+const preloadAbility = async (abilityName) => {
+    try {
+        const ability = await getAbility(abilityName);
+        if (ability?.sprite) {
+            const abilityUrl = `assets/art/abilities/${ability.sprite}.png`;
+            await preloadImage(abilityUrl);
+        }
+    } catch (error) {
+        console.warn(`Failed to preload ability: ${abilityName}`, error);
+    }
+};
+
 function updateBattleLoadingProgress(modal, step, message, percent) {
     if (!modal?.parentNode) return;
     const progressStep = modal.querySelector('.progress-step');
@@ -423,30 +520,30 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     const loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
     const loadingStartTime = Date.now();
 
-    updateBattleLoadingProgress(loadingModal, "Connecting to server...", "Authenticating player...", 10);
-
-    BattleState.profile = BattleState.getCurrentProfile();
-    if (!BattleState.profile) {
-        removeBattleLoadingModal(loadingModal);
-        displayMessage('User profile not found. Please log in again.');
-        window.gameAuth.loadModule('login');
-        return;
-    }
-
-    if (BattleState.profile.battle_tutorial === false) {
-        await showTutorialModal(BattleState.profile.chat_id);
-    }
-
-    updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
-
-    if (!selectedMode && !reconnecting) {
-        removeBattleLoadingModal(loadingModal);
-        displayMessage('No mode selected. Returning to embark.');
-        window.gameAuth.loadModule('embark');
-        return;
-    }
-
     try {
+        updateBattleLoadingProgress(loadingModal, "Connecting to server...", "Authenticating player...", 10);
+
+        BattleState.profile = BattleState.getCurrentProfile();
+        if (!BattleState.profile) {
+            removeBattleLoadingModal(loadingModal);
+            displayMessage('User profile not found. Please log in again.');
+            window.gameAuth.loadModule('login');
+            return;
+        }
+
+        if (BattleState.profile.battle_tutorial === false) {
+            await showTutorialModal(BattleState.profile.chat_id);
+        }
+
+        updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
+
+        if (!selectedMode && !reconnecting) {
+            removeBattleLoadingModal(loadingModal);
+            displayMessage('No mode selected. Returning to embark.');
+            window.gameAuth.loadModule('embark');
+            return;
+        }
+
         await loadTileData();
         updateBattleLoadingProgress(loadingModal, "Connecting to battle...", "Setting up battle state...", 50);
 
@@ -455,21 +552,33 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
             await supabase.removeChannel(BattleState.unsubscribeFromBattle);
         }
 
+        let battleState;
         if (reconnecting && existingBattleId) {
             updateBattleLoadingProgress(loadingModal, "Reconnecting...", "Restoring previous battle...", 70);
-            await reconnectToBattle(existingBattleId);
+            battleState = await reconnectToBattle(existingBattleId);
         } else {
             const areaLevel = selectedMode !== 'pvp'
                 ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
                 : Math.floor(Math.random() * 10) + 1;
             updateBattleLoadingProgress(loadingModal, "Initializing battle...", "Generating battlefield...", 80);
-            await initializeBattle(selectedMode, areaLevel);
+            battleState = await initializeBattle(selectedMode, areaLevel);
         }
+
+        updateBattleLoadingProgress(loadingModal, "Loading assets...", "Preloading images and abilities...", 85);
+        await preloadAssets(battleState, selectedMode);
 
         setupRealtimeSubscription();
         updateBattleLoadingProgress(loadingModal, "Finalizing...", "Rendering battlefield...", 95);
 
+        const areaLevel = selectedMode !== 'pvp' 
+            ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
+            : battleState?.round_number || 1;
+
+        renderBattleScreen(selectedMode || battleState?.mode || 'unknown', areaLevel, battleState?.layout_data);
+        await updateGameStateFromRealtime();
+
     } catch (err) {
+        console.error('Battle loading error:', err);
         removeBattleLoadingModal(loadingModal);
         displayMessage('Failed to start battle. Returning to embark.');
         window.gameAuth.loadModule('embark');
@@ -481,13 +590,6 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
     await new Promise(resolve => setTimeout(resolve, Math.max(0, minTime - elapsed)));
 
     removeBattleLoadingModal(loadingModal);
-
-    const areaLevel = selectedMode !== 'pvp' 
-        ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
-        : BattleState.battleState?.round_number || 1;
-
-    renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState.layout_data);
-    await updateGameStateFromRealtime();
 }
 
 const loadTileData = async () => {
@@ -1642,21 +1744,36 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
 };
 
 async function getAbility(abilityName) {
-    BattleState.abilityCache = BattleState.abilityCache || {};
     if (BattleState.abilityCache[abilityName]) {
         return BattleState.abilityCache[abilityName];
     }
+    
     try {
         const res = await fetch(`/api/abilities/${encodeURIComponent(abilityName)}`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        
         const abilityData = await res.json();
         const ability = Array.isArray(abilityData) ? abilityData[0] : abilityData;
+        
         if (ability) {
             BattleState.abilityCache[abilityName] = ability;
             return ability;
         }
     } catch (err) {
         console.error('Failed fetching ability', abilityName, err);
+        return {
+            name: abilityName,
+            range: 1,
+            area: 0,
+            targeting: 'single',
+            target_type: 'enemy',
+            effects: 'damage',
+            description: 'Ability data not available'
+        };
     }
+    
     return null;
 }
 
