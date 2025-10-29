@@ -617,10 +617,7 @@ async function showTutorialModal(chatId) {
 
         await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, {
             method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${BattleState.main.supabaseConfig.SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
     });
 }
