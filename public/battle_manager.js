@@ -1211,6 +1211,7 @@ function renderBattleScreen(mode, level, layoutData) {
     renderCharacters();
     createParticles();
     renderEnvironmentItems(BattleState.battleState?.layout_data?.environment_items_pos);
+    renderBottomUI();
 
     const turnStatusEl = document.getElementById('turnStatus');
     if (turnStatusEl) {
@@ -1664,39 +1665,8 @@ async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
     ui.innerHTML = '';
     
-    if (!BattleState.selectedPlayerCharacter) return;
-    
-    const currentChar = BattleState.selectedPlayerCharacter;
+    // Always render the UI structure, even if no character is selected
     const fragment = document.createDocumentFragment();
-
-    BattleState.characterAbilities = BattleState.characterAbilities || {};
-    let abilityObjs = {};
-
-    if (BattleState.characterAbilities[currentChar.id]) {
-        abilityObjs = BattleState.characterAbilities[currentChar.id];
-    } else {
-        abilityObjs = { basic: [], passives: [], ultimate: null };
-
-        const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
-
-        for (const abilityName of Object.keys(charAbilities.basic || {})) {
-            const ability = await getAbility(abilityName);
-            if (ability) abilityObjs.basic.push(ability);
-        }
-
-        const passiveNames = Object.keys(charAbilities.passive || {});
-        for (let i = 0; i < Math.min(passiveNames.length, 2); i++) {
-            const ability = await getAbility(passiveNames[i]);
-            if (ability) abilityObjs.passives.push(ability);
-        }
-
-        const ultimateNames = Object.keys(charAbilities.ultimate || {});
-        if (ultimateNames[0]) {
-            abilityObjs.ultimate = await getAbility(ultimateNames[0]);
-        }
-
-        BattleState.characterAbilities[currentChar.id] = abilityObjs;
-    }
 
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
@@ -1706,6 +1676,51 @@ async function renderBottomUI() {
             const btnIndex = row * 5 + i;
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
+
+            if (!BattleState.selectedPlayerCharacter) {
+                if (btnIndex === 9) {
+                    btn.textContent = 'End Turn';
+                    btn.id = 'endTurnButtonBottom';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                } else {
+                    btn.textContent = '—';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.3';
+                }
+                rowDiv.appendChild(btn);
+                continue;
+            }
+
+            const currentChar = BattleState.selectedPlayerCharacter;
+            BattleState.characterAbilities = BattleState.characterAbilities || {};
+            let abilityObjs = {};
+
+            if (BattleState.characterAbilities[currentChar.id]) {
+                abilityObjs = BattleState.characterAbilities[currentChar.id];
+            } else {
+                abilityObjs = { basic: [], passives: [], ultimate: null };
+
+                const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
+
+                for (const abilityName of Object.keys(charAbilities.basic || {})) {
+                    const ability = await getAbility(abilityName);
+                    if (ability) abilityObjs.basic.push(ability);
+                }
+
+                const passiveNames = Object.keys(charAbilities.passive || {});
+                for (let i = 0; i < Math.min(passiveNames.length, 2); i++) {
+                    const ability = await getAbility(passiveNames[i]);
+                    if (ability) abilityObjs.passives.push(ability);
+                }
+
+                const ultimateNames = Object.keys(charAbilities.ultimate || {});
+                if (ultimateNames[0]) {
+                    abilityObjs.ultimate = await getAbility(ultimateNames[0]);
+                }
+
+                BattleState.characterAbilities[currentChar.id] = abilityObjs;
+            }
 
             let ability = null;
 
