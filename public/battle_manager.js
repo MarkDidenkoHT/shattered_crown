@@ -1203,7 +1203,10 @@ function renderBattleScreen(mode, level, layoutData) {
                         </div>
                 </div>
             </div>
-            <div class="tooltip-container"></div>
+            <!-- Persistent tooltip container -->
+            <div class="tooltip-container">
+                <div id="abilityTooltip" class="ability-tooltip" style="display: none;"></div>
+            </div>
             <div class="battle-bottom-ui" style="display: block; width: 100%; margin: auto; position: fixed; bottom: 4px;"></div>
         </div>
     `;
@@ -2215,14 +2218,8 @@ const displayCharacterInfo = (entity, portrait, hpEl, statsEl, buffsList, debuff
 };
 
 function showAbilityTooltip(ability) {
-    hideAbilityTooltip();
-    
-    const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
-    if (!tooltipContainer) return;
-    
-    const tooltip = document.createElement('div');
-    tooltip.className = 'ability-tooltip';
-    tooltip.id = 'abilityTooltip';
+    const tooltip = document.getElementById('abilityTooltip');
+    if (!tooltip) return;
     
     const normalizedAbility = normalizeAbility(ability);
     
@@ -2252,17 +2249,23 @@ function showAbilityTooltip(ability) {
                 <span class="ability-tooltip-stat-value ability-tooltip-effects">${capitalizeFirst(normalizedAbility.effects)}</span>
             </div>
         </div>
-          ${normalizedAbility.description ? 
-                `<div class="ability-tooltip-description">${normalizedAbility.description}</div>` : 
-                ''
-            }
+        ${normalizedAbility.description ? 
+            `<div class="ability-tooltip-description">${normalizedAbility.description}</div>` : 
+            ''
+        }
     `;
     
-    tooltipContainer.appendChild(tooltip);
+    tooltip.style.display = 'block';
+    tooltip.classList.add('visible');
+}
+
+function hideAbilityTooltip() {
+    const tooltip = document.getElementById('abilityTooltip');
+    if (!tooltip) return;
     
-    requestAnimationFrame(() => {
-        tooltip.classList.add('visible');
-    });
+    tooltip.classList.remove('visible');
+    tooltip.style.display = 'none';
+    tooltip.innerHTML = '';
 }
 
 function hideAbilityTooltip() {
