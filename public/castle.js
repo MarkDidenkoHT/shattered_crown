@@ -2,6 +2,8 @@ let _main;
 let _getCurrentProfile;
 let _profile;
 let _playerCharacters = [];
+let _currentErrand = null;
+let _bankItems = [];
 
 export async function loadModule(main, {refreshTranslations, getCurrentProfile }) {
     _main = main;
@@ -23,6 +25,8 @@ export async function loadModule(main, {refreshTranslations, getCurrentProfile }
                 <button class="fantasy-button settings-btn" data-action="support">Support</button>
                 <button class="fantasy-button settings-btn" data-action="settings">Settings</button>
             </div>
+
+            <div id="errand-display"></div>
 
             <div class="castle-scene">
                 <img src="assets/art/castle/main_castle.png" alt="Main Castle" class="castle-image">
@@ -47,11 +51,132 @@ export async function loadModule(main, {refreshTranslations, getCurrentProfile }
     createParticles();
 
     await fetchPlayerCharacters();
+    await fetchErrand();
     renderCastleScene();
+    renderErrand();
     setupInteractions();
 
     if (typeof refreshTranslations === 'function') {
         refreshTranslations();
+    }
+}
+
+async function fetchErrand() {
+    try {
+        const response = await fetch(`/api/errand/${_profile.id}`);
+        if (!response.ok) throw new Error("Failed to fetch errand");
+
+        const data = await response.json();
+        _currentErrand = data.hasErrand ? data.errand : null;
+
+        if (_currentErrand) {
+            const bankResponse = await fetch(`/api/bank/${_profile.id}`);
+            if (!bankResponse.ok) throw new Error("Failed to fetch bank items");
+            _bankItems = await bankResponse.json();
+        }
+    } catch (error) {
+        console.error("fetchErrand error:", error);
+    }
+}
+
+function renderErrand() {
+    const errandDisplay = _main.querySelector('#errand-display');
+    if (!errandDisplay) return;
+
+    if (!_currentErrand) {
+        errandDisplay.innerHTML = '';
+        return;
+    }
+
+    const itemRequirement = _currentErrand.item_requirement || {};
+    const itemProvided = _currentErrand.item_provided || {};
+
+    const bankMap = {};
+    _bankItems.forEach(item => {
+        bankMap[item.item] = item.amount || 0;
+    });
+
+    const requiredItems = Object.entries(itemRequirement).map(([itemName, requiredAmount]) => {
+        const playerAmount = bankMap[itemName] || 0;
+        const hasEnough = playerAmount >= requiredAmount;
+        return { itemName, requiredAmount, playerAmount, hasEnough };
+    });
+
+    const providedItems = Object.entries(itemProvided).map(([itemName, amount]) => {
+        return { itemName, amount };
+    });
+
+    const canComplete = requiredItems.every(item => item.hasEnough);
+
+    errandDisplay.innerHTML = `
+        <div class="errand-container">
+            <div class="errand-required">
+                ${requiredItems.map(item => `
+                    <div class="errand-item ${item.hasEnough ? '' : 'insufficient'}">
+                        <img src="assets/art/items/${item.itemName}.png" alt="${item.itemName}" class="errand-item-sprite">
+                        <div class="errand-item-amount ${item.hasEnough ? 'enough' : 'not-enough'}">${item.playerAmount}/${item.requiredAmount}</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="errand-arrow">→</div>
+            <div class="errand-provided">
+                ${providedItems.map(item => `
+                    <div class="errand-item reward">
+                        <img src="assets/art/items/${item.itemName}.png" alt="${item.itemName}" class="errand-item-sprite">
+                        <div class="errand-item-amount reward-amount">+${item.amount}</div>
+                    </div>
+                `).join('')}
+            </div>
+            <button class="fantasy-button errand-complete-btn" ${canComplete ? '' : 'disabled'} data-action="complete-errand">
+                ${canComplete ? 'Complete' : 'Insufficient Items'}
+            </button>
+        </div>
+    `;
+
+    setTimeout(() => {
+        const container = errandDisplay.querySelector('.errand-container');
+        if (container) {
+            container.classList.add('errand-visible');
+        }
+    }, 50);
+
+    const completeBtn = errandDisplay.querySelector('.errand-complete-btn');
+    if (completeBtn && canComplete) {
+        completeBtn.addEventListener('click', handleCompleteErrand);
+    }
+}
+
+async function handleCompleteErrand() {
+    const completeBtn = _main.querySelector('.errand-complete-btn');
+    if (completeBtn) {
+        completeBtn.disabled = true;
+        completeBtn.textContent = 'Completing...';
+    }
+
+    try {
+        const response = await fetch(`/api/errand/complete/${_profile.id}`, {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to complete errand');
+        }
+
+        const result = await response.json();
+        displayMessage(`Errand completed! You received: ${Object.entries(result.itemsReceived).map(([item, amount]) => `${amount}x ${item}`).join(', ')}`);
+
+        await fetchErrand();
+        renderErrand();
+
+    } catch (error) {
+        console.error("handleCompleteErrand error:", error);
+        displayMessage(`Failed to complete errand: ${error.message}`);
+        
+        if (completeBtn) {
+            completeBtn.disabled = false;
+            completeBtn.textContent = 'Complete';
+        }
     }
 }
 
@@ -346,6 +471,112 @@ function addCastleStyles() {
             height: 13%;
         }
 
+        #errand-display {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .errand-container {
+            background: rgba(29, 20, 12, 0.85);
+            border: 2px solid #c4975a;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+
+        .errand-container.errand-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .errand-required, .errand-provided {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+        }
+
+        .errand-item {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            background: rgba(42, 31, 22, 0.7);
+            border: 2px solid #c4975a;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .errand-item.insufficient {
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+            border-color: #8b4513;
+        }
+
+        .errand-item.reward {
+            border-color: #ffd700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .errand-item-sprite {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
+
+        .errand-item-amount {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background: rgba(0, 150, 0, 0.9);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .errand-item-amount.not-enough {
+            background: rgba(150, 0, 0, 0.9);
+        }
+
+        .errand-item-amount.reward-amount {
+            background: rgba(255, 215, 0, 0.9);
+            color: #1d140c;
+        }
+
+        .errand-arrow {
+            font-size: 2rem;
+            color: #c4975a;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .errand-complete-btn {
+            padding: 0.8rem 1.5rem;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            margin-left: 0.5rem;
+        }
+
+        .errand-complete-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         @keyframes floatAndFade {
             0% {
                 transform: translateY(0) translateX(0);
@@ -522,6 +753,39 @@ function addCastleStyles() {
         }
 
         @media (max-width: 768px) {
+            #errand-display {
+                top: 60px;
+                left: 1rem;
+                right: 1rem;
+                transform: none;
+            }
+
+            .errand-container {
+                flex-wrap: wrap;
+                justify-content: center;
+                padding: 0.8rem;
+                gap: 0.8rem;
+            }
+
+            .errand-item {
+                width: 50px;
+                height: 50px;
+            }
+
+            .errand-item-sprite {
+                width: 40px;
+                height: 40px;
+            }
+
+            .errand-arrow {
+                font-size: 1.5rem;
+            }
+
+            .errand-complete-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.8rem;
+            }
+
             .roadmap-modal-content {
                 padding: 1.5rem;
                 margin: 1rem;
