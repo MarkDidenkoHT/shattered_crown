@@ -654,7 +654,6 @@ async function updateGameStateFromRealtime() {
 }
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
-BattleState._abilityEscHandler = null;
 
 function chebyshevDistance(a, b) {
   return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
@@ -692,7 +691,6 @@ function clearAbilitySelection() {
     }
   });
   BattleState.highlightedTiles = [];
-  BattleState._abilityEscHandler = null;
   BattleState.selectingAbility = null;
 
   resetAbilityButtonsUI();
@@ -2269,17 +2267,17 @@ function hideAbilityTooltip() {
     tooltip.innerHTML = '';
 }
 
-function hideAbilityTooltip() {
-    const existingTooltip = document.getElementById('abilityTooltip');
-    if (existingTooltip) {
-        existingTooltip.classList.remove('visible');
-        setTimeout(() => {
-            if (existingTooltip.parentNode) {
-                existingTooltip.remove();
-            }
-        }, 300);
-    }
-}
+// function hideAbilityTooltip() {
+//     const existingTooltip = document.getElementById('abilityTooltip');
+//     if (existingTooltip) {
+//         existingTooltip.classList.remove('visible');
+//         setTimeout(() => {
+//             if (existingTooltip.parentNode) {
+//                 existingTooltip.remove();
+//             }
+//         }, 300);
+//     }
+// }
 
 function capitalizeFirst(str) {
     if (!str) return '';
