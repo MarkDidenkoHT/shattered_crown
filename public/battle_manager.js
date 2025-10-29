@@ -1634,11 +1634,11 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
     BattleState.isMoveQueued = true;
     unhighlightAllTiles();
 
-    if (BattleState.selectedCharacterEl) {
-        BattleState.selectedCharacterEl.classList.remove('character-selected');
-        BattleState.selectedCharacterEl = null;
-    }
-    BattleState.selectedPlayerCharacter = null;
+    // if (BattleState.selectedCharacterEl) {
+    //     BattleState.selectedCharacterEl.classList.remove('character-selected');
+    //     BattleState.selectedCharacterEl = null;
+    // }
+    // BattleState.selectedPlayerCharacter = null;
 };
 
 async function getAbility(abilityName) {
@@ -1789,9 +1789,9 @@ async function renderBottomUI() {
 }
 
 const handleAbilityUse = async (abilityPayload) => {
-    const activeCharacter = BattleState.currentTurnCharacter;
+    const activeCharacter = BattleState.selectedPlayerCharacter;
     if (!activeCharacter) {
-        displayMessage('No active character to cast ability.');
+        displayMessage('No character selected to cast ability.');
         return;
     }
 
@@ -1823,6 +1823,8 @@ const handleAbilityUse = async (abilityPayload) => {
         }
 
         BattleState.currentTurnCharacter = null;
+        BattleState.selectedPlayerCharacter = null;
+        BattleState.selectedCharacterEl = null;
         BattleState.isMoveQueued = false;
         unhighlightAllTiles();
 
@@ -1833,9 +1835,9 @@ const handleAbilityUse = async (abilityPayload) => {
 };
 
 const handleEndTurn = async () => {
-    const activeCharacter = BattleState.currentTurnCharacter;
+    const activeCharacter = BattleState.selectedPlayerCharacter;
     if (!activeCharacter) {
-        displayMessage('No character is currently active for this turn.');
+        displayMessage('No character selected to end turn.');
         return;
     }
 
@@ -1868,10 +1870,13 @@ const handleEndTurn = async () => {
         }
 
         BattleState.currentTurnCharacter = null;
+        BattleState.selectedPlayerCharacter = null;
+        BattleState.selectedCharacterEl = null;
         BattleState.isMoveQueued = false;
         unhighlightAllTiles();
 
     } catch (err) {
+        console.error('End turn error:', err);
         displayMessage('Error completing turn. Please try again.', 'error');
     }
 };
