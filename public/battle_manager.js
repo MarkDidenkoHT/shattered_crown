@@ -701,6 +701,7 @@ function clearAbilitySelection() {
 
   resetAbilityButtonsUI();
   hideAbilityTooltip();
+  updateExistingBottomUI();
 }
 
 function toggleAbilitySelection(caster, ability) {
@@ -1531,13 +1532,18 @@ const handleCharacterSelection = (character, tileEl) => {
             BattleState.currentTurnCharacter = character;
             highlightWalkableTiles(character);
         }
-        renderBottomUI();
+        renderBottomUI(); // This will now be efficient
     } else {
         BattleState.selectedPlayerCharacter = null;
         BattleState.selectedCharacterEl = null;
         unhighlightAllTiles();
+        
+        // Instead of clearing UI, just update it to show disabled state
         const ui = BattleState.main.querySelector('.battle-bottom-ui');
-        if (ui) ui.innerHTML = '';
+        if (ui) {
+            ui._lastCharacterId = null; // Force refresh on next valid selection
+            updateExistingBottomUI();
+        }
     }
     
     showEntityInfo(character);
@@ -1663,9 +1669,21 @@ async function getAbility(abilityName) {
 
 async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
+    const currentChar = BattleState.selectedPlayerCharacter;
+    
+    // Only rebuild if character changed or UI doesn't exist
+    if (ui._lastCharacterId === currentChar?.id && ui.children.length > 0) {
+        // Just update existing UI state
+        updateExistingBottomUI();
+        return;
+    }
+    
+    // Store current character ID to detect changes
+    ui._lastCharacterId = currentChar?.id;
+    
+    // Clear UI for rebuild
     ui.innerHTML = '';
     
-    // Always render the UI structure, even if no character is selected
     const fragment = document.createDocumentFragment();
 
     for (let row = 0; row < 2; row++) {
@@ -1677,7 +1695,7 @@ async function renderBottomUI() {
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
 
-            if (!BattleState.selectedPlayerCharacter) {
+            if (!currentChar) {
                 if (btnIndex === 9) {
                     btn.textContent = 'End Turn';
                     btn.id = 'endTurnButtonBottom';
@@ -1692,7 +1710,7 @@ async function renderBottomUI() {
                 continue;
             }
 
-            const currentChar = BattleState.selectedPlayerCharacter;
+            // Cache abilities for this character
             BattleState.characterAbilities = BattleState.characterAbilities || {};
             let abilityObjs = {};
 
@@ -1803,6 +1821,44 @@ async function renderBottomUI() {
     if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
 }
 
+function updateExistingBottomUI() {
+    const ui = BattleState.main.querySelector('.battle-bottom-ui');
+    if (!ui) return;
+    
+    const currentChar = BattleState.selectedPlayerCharacter;
+    const canAct = currentChar && (!currentChar.has_moved || !currentChar.has_acted);
+    
+    // Update end turn button
+    const endTurnBtn = document.getElementById('endTurnButtonBottom');
+    if (endTurnBtn) {
+        endTurnBtn.disabled = !canAct;
+        endTurnBtn.style.opacity = canAct ? '1' : '0.5';
+    }
+    
+    // Update ability buttons
+    const abilityBtns = ui.querySelectorAll('[data-ability-name]');
+    abilityBtns.forEach(btn => {
+        btn.disabled = !canAct;
+        btn.style.opacity = canAct ? '1' : '0.5';
+        
+        // Remove any active selection state
+        btn.classList.remove('ability-selected');
+    });
+    
+    // Update consumable button
+    const consumableBtn = document.getElementById('consumableButton');
+    if (consumableBtn) {
+        const hasConsumable = currentChar?.equipped_items?.equipped_consumable && 
+                             currentChar.equipped_items.equipped_consumable !== 'none';
+        consumableBtn.disabled = !canAct || !hasConsumable;
+        consumableBtn.style.opacity = (canAct && hasConsumable) ? '1' : '0.5';
+    }
+    
+    // Clear any active ability selection visuals
+    clearAbilitySelection();
+    hideAbilityTooltip();
+}
+
 const handleAbilityUse = async (abilityPayload) => {
     const activeCharacter = BattleState.currentTurnCharacter;
     if (!activeCharacter) {
@@ -1885,6 +1941,7 @@ const handleEndTurn = async () => {
         BattleState.currentTurnCharacter = null;
         BattleState.isMoveQueued = false;
         unhighlightAllTiles();
+        updateExistingBottomUI();
 
     } catch (err) {
         displayMessage('Error completing turn. Please try again.', 'error');
