@@ -433,6 +433,10 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         return;
     }
 
+    if (BattleState.profile.battle_tutorial === false) {
+        await showTutorialModal(BattleState.profile.chat_id);
+    }
+
     updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
 
     if (!selectedMode && !reconnecting) {
@@ -568,6 +572,58 @@ const setupRealtimeSubscription = () => {
         )
         .subscribe();
 };
+
+async function showTutorialModal(chatId) {
+    const modal = document.createElement('div');
+    modal.className = 'tutorial-modal';
+    Object.assign(modal.style, {
+        position: 'fixed',
+        top: '0', left: '0',
+        width: '100%', height: '100%',
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: '99999',
+        color: '#fff',
+        flexDirection: 'column',
+        textAlign: 'center',
+        fontFamily: 'Cinzel, serif'
+    });
+
+    modal.innerHTML = `
+        <h2 style="margin-bottom:1rem;">Battle Tutorial</h2>
+        <p style="max-width:480px;margin-bottom:2rem;opacity:0.9;">
+            Welcome to the battle module! Here you'll learn basic controls.
+            <br><br>
+            (Later this will be replaced by a short video.)
+        </p>
+        <button id="closeTutorialBtn" 
+            style="padding:0.75rem 1.5rem;
+                   background:#c4975a;
+                   border:none;
+                   border-radius:8px;
+                   color:#222;
+                   font-weight:bold;
+                   cursor:pointer;">
+            Got it, let's play!
+        </button>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('closeTutorialBtn').addEventListener('click', async () => {
+        modal.remove();
+
+        await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${BattleState.main.supabaseConfig.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+    });
+}
 
 async function updateGameStateFromRealtime() {
     if (!BattleState.battleState) return;
