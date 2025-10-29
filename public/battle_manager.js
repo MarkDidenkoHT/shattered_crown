@@ -692,11 +692,7 @@ function clearAbilitySelection() {
     }
   });
   BattleState.highlightedTiles = [];
-
-  if (BattleState._abilityEscHandler) {
-    document.removeEventListener('keydown', BattleState._abilityEscHandler);
-    BattleState._abilityEscHandler = null;
-  }
+  BattleState._abilityEscHandler = null;
   BattleState.selectingAbility = null;
 
   resetAbilityButtonsUI();
@@ -784,7 +780,7 @@ function startAbilitySelection(caster, abilityRaw) {
         BattleState.highlightedTiles.push(tile);
     }
 
-    // FIXED: Proper targeting logic
+    // Single target ability logic
     if (ability.targeting === 'single') {
         console.log('Single target ability:', ability.name, 'Range:', ability.range);
         
