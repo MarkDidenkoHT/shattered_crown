@@ -70,9 +70,10 @@ async function fetchErrand() {
         _currentErrand = data.hasErrand ? data.errand : null;
 
         if (_currentErrand) {
-            const bankResponse = await fetch(`/api/bank/${_profile.id}`);
+            const bankResponse = await fetch(`/api/bank/items/${_profile.id}`);
             if (!bankResponse.ok) throw new Error("Failed to fetch bank items");
-            _bankItems = await bankResponse.json();
+            const allBankItems = await bankResponse.json();
+            _bankItems = allBankItems.filter(item => item.source === 'bank');
         }
     } catch (error) {
         console.error("fetchErrand error:", error);
@@ -113,7 +114,7 @@ function renderErrand() {
             <div class="errand-required">
                 ${requiredItems.map(item => `
                     <div class="errand-item ${item.hasEnough ? '' : 'insufficient'}">
-                        <img src="assets/art/items/${item.itemName}.png" alt="${item.itemName}" class="errand-item-sprite">
+                        <img src="assets/art/recipes/${item.itemName}.png" alt="${item.itemName}" class="errand-item-sprite">
                         <div class="errand-item-amount ${item.hasEnough ? 'enough' : 'not-enough'}">${item.playerAmount}/${item.requiredAmount}</div>
                     </div>
                 `).join('')}
