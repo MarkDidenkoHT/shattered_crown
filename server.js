@@ -304,6 +304,237 @@ app.get('/api/auction/active', async (req, res) => {
     }
 });
 
+//errand functions
+
+app.get('/api/errand/:playerId', async (req, res) => {
+  const { playerId } = req.params;
+  
+  try {
+    const profileResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}&select=errand`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+    const profiles = await profileResponse.json();
+    
+    if (!profiles || profiles.length === 0) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+    
+    const errandId = profiles[0].errand;
+    
+    if (!errandId) {
+      return res.json({ hasErrand: false });
+    }
+    
+    const errandResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/errands?id=eq.${errandId}&select=*`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+    const errands = await errandResponse.json();
+    
+    if (!errands || errands.length === 0) {
+      return res.status(404).json({ error: 'Errand not found' });
+    }
+    
+    res.json({
+      hasErrand: true,
+      errand: errands[0]
+    });
+    
+  } catch (error) {
+    console.error('[GET ERRAND]', error);
+    res.status(500).json({ error: 'Failed to fetch errand' });
+  }
+});
+
+app.post('/api/errand/complete/:playerId', async (req, res) => {
+  const { playerId } = req.params;
+  
+  try {
+    const profileResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}&select=errand`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+    const profiles = await profileResponse.json();
+    
+    if (!profiles || profiles.length === 0) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+    
+    const errandId = profiles[0].errand;
+    
+    if (!errandId) {
+      return res.status(400).json({ error: 'No active errand' });
+    }
+    
+    const errandResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/errands?id=eq.${errandId}&select=*`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+    const errands = await errandResponse.json();
+    
+    if (!errands || errands.length === 0) {
+      return res.status(404).json({ error: 'Errand not found' });
+    }
+    
+    const errand = errands[0];
+    const itemRequirement = errand.item_requirement || {};
+    
+    const bankResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${playerId}&select=*`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+    const bankItems = await bankResponse.json();
+    
+    const bankMap = {};
+    bankItems.forEach(item => {
+      bankMap[item.item] = item;
+    });
+    
+    for (const [itemName, requiredAmount] of Object.entries(itemRequirement)) {
+      const bankItem = bankMap[itemName];
+      if (!bankItem || bankItem.amount < requiredAmount) {
+        return res.status(400).json({ 
+          error: 'Insufficient items',
+          missing: itemName,
+          required: requiredAmount,
+          have: bankItem ? bankItem.amount : 0
+        });
+      }
+    }
+    
+    for (const [itemName, requiredAmount] of Object.entries(itemRequirement)) {
+      const bankItem = bankMap[itemName];
+      const newAmount = bankItem.amount - requiredAmount;
+      
+      await fetch(
+        `${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ amount: newAmount })
+        }
+      );
+    }
+    
+    const itemProvided = errand.item_provided || {};
+    
+    for (const [itemName, amount] of Object.entries(itemProvided)) {
+      const recipeResponse = await fetch(
+        `${process.env.SUPABASE_URL}/rest/v1/recipes?name=eq.${itemName}&select=*`,
+        {
+          headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+          }
+        }
+      );
+      const recipes = await recipeResponse.json();
+      
+      if (!recipes || recipes.length === 0) {
+        console.warn(`Recipe not found for item: ${itemName}`);
+        continue;
+      }
+      
+      const recipe = recipes[0];
+      
+      const existingBankItem = bankItems.find(b => b.item === itemName);
+      
+      if (existingBankItem) {
+        await fetch(
+          `${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${existingBankItem.id}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': process.env.SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ amount: existingBankItem.amount + amount })
+          }
+        );
+      } else {
+        await fetch(
+          `${process.env.SUPABASE_URL}/rest/v1/bank`,
+          {
+            method: 'POST',
+            headers: {
+              'apikey': process.env.SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              player_id: playerId,
+              item: itemName,
+              amount: amount,
+              profession_id: recipe.profession_id,
+              type: recipe.type
+            })
+          }
+        );
+      }
+    }
+    
+    await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ errand: null })
+      }
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Errand completed',
+      itemsReceived: itemProvided
+    });
+    
+  } catch (error) {
+    console.error('[COMPLETE ERRAND]', error);
+    res.status(500).json({ error: 'Failed to complete errand' });
+  }
+});
+
+//bank functions
+
 app.get('/api/auction/bank/:playerId', async (req, res) => {
   const { playerId } = req.params;
 
