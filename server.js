@@ -693,6 +693,49 @@ app.get('/api/auction/active', async (req, res) => {
   }
 });
 
+// --- Tutorial state endpoints --- //
+
+// Get tutorial status for player
+app.get('/api/profile/tutorial-status/:chatId', async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}&select=battle_tutorial`, {
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            }
+        });
+        const data = await response.json();
+        if (!data.length) return res.status(404).json({ error: 'Profile not found' });
+        res.json({ battle_tutorial: data[0].battle_tutorial });
+    } catch (err) {
+        console.error('[TUTORIAL STATUS]', err);
+        res.status(500).json({ error: 'Failed to get tutorial status' });
+    }
+});
+
+// Mark tutorial as seen
+app.patch('/api/profile/mark-tutorial-seen/:chatId', async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ battle_tutorial: true })
+        });
+        const result = await response.json();
+        res.json(result[0] || { success: true });
+    } catch (err) {
+        console.error('[TUTORIAL UPDATE]', err);
+        res.status(500).json({ error: 'Failed to update tutorial state' });
+    }
+});
+
 async function sendTelegramNotification(chatId, message) {
     if (!process.env.TELEGRAM_BOT_TOKEN) {
         console.warn('TELEGRAM_BOT_TOKEN not set - skipping notification');
