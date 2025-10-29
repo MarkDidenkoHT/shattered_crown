@@ -9,7 +9,8 @@ const BattleState = {
     characterElements: new Map(),
     isMoveQueued: false,
     characterAbilities: {},
-    environmentItems: {}
+    environmentItems: {},
+    abilityCache: new Map()
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -477,7 +478,7 @@ const preloadImage = (url) => {
         img.onload = resolve;
         img.onerror = () => {
             console.warn(`Failed to preload image: ${url}`);
-            resolve(); // Don't reject, just continue
+            resolve();
         };
         img.src = url;
     });
@@ -1743,8 +1744,8 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
 };
 
 async function getAbility(abilityName) {
-    if (BattleState.abilityCache[abilityName]) {
-        return BattleState.abilityCache[abilityName];
+    if (BattleState.abilityCache.has(abilityName)) {
+        return BattleState.abilityCache.get(abilityName);
     }
     
     try {
@@ -1757,7 +1758,7 @@ async function getAbility(abilityName) {
         const ability = Array.isArray(abilityData) ? abilityData[0] : abilityData;
         
         if (ability) {
-            BattleState.abilityCache[abilityName] = ability;
+            BattleState.abilityCache.set(abilityName, ability);
             return ability;
         }
     } catch (err) {
