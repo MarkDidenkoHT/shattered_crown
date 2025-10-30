@@ -111,29 +111,35 @@ function renderErrand() {
 
     errandDisplay.innerHTML = `
     <div class="errand-container">
-        <div class="errand-section">
-            <div class="errand-label">Items Available for Exchange</div>
-            <div class="errand-required">
-                ${requiredItems.map(item => `
-                    <div class="errand-item ${item.hasEnough ? '' : 'insufficient'}">
-                        <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
-                        <div class="errand-item-amount ${item.hasEnough ? 'enough' : 'not-enough'}">${item.playerAmount}/${item.requiredAmount}</div>
-                    </div>
-                `).join('')}
+        <div class="errand-title">Exchange Available</div>
+        <div class="errand-content">
+            <div class="errand-column">
+                <div class="errand-subtitle">Give</div>
+                <div class="errand-items">
+                    ${requiredItems.map(item => `
+                        <div class="errand-item ${item.hasEnough ? '' : 'insufficient'}">
+                            <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
+                            <div class="errand-item-amount ${item.hasEnough ? 'enough' : 'not-enough'}">${item.playerAmount}/${item.requiredAmount}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="errand-arrow">→</div>
+            
+            <div class="errand-column">
+                <div class="errand-subtitle">Receive</div>
+                <div class="errand-items">
+                    ${providedItems.map(item => `
+                        <div class="errand-item reward">
+                            <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
+                            <div class="errand-item-amount reward-amount">+${item.amount}</div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         </div>
-        <div class="errand-arrow">→</div>
-        <div class="errand-section">
-            <div class="errand-label">Rewards</div>
-            <div class="errand-provided">
-                ${providedItems.map(item => `
-                    <div class="errand-item reward">
-                        <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
-                        <div class="errand-item-amount reward-amount">+${item.amount}</div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
+        
         <button class="fantasy-button errand-complete-btn" ${canComplete ? '' : 'disabled'} data-action="complete-errand">
             ${canComplete ? 'Complete Exchange' : 'Insufficient Items'}
         </button>
@@ -478,44 +484,24 @@ function addCastleStyles() {
             height: 13%;
         }
 
-        .errand-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .errand-label {
-            color: #e0d8c9;
-            font-size: 0.9rem;
-            font-weight: bold;
-            text-align: center;
-            font-family: 'Cinzel', serif;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-            background: rgba(196, 151, 90, 0.2);
-            padding: 0.3rem 0.8rem;
-            border-radius: 15px;
-            border: 1px solid rgba(196, 151, 90, 0.3);
-        }
-
         #errand-display {
             position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 60px;
+            left: 1rem;
+            right: 1rem;
             z-index: 100;
             pointer-events: none;
         }
 
         .errand-container {
-            background: rgba(29, 20, 12, 0.85);
+            background: rgba(29, 20, 12, 0.95);
             border: 2px solid #c4975a;
             border-radius: 12px;
-            padding: 1rem 1.5rem;
+            padding: 1rem;
             display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
             pointer-events: auto;
             opacity: 0;
             transform: translateY(-20px);
@@ -527,17 +513,56 @@ function addCastleStyles() {
             transform: translateY(0);
         }
 
-        .errand-required, .errand-provided {
+        .errand-title {
+            color: #ffd700;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            margin-bottom: 0.5rem;
+        }
+
+        .errand-content {
             display: flex;
-            gap: 0.8rem;
             align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .errand-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .errand-subtitle {
+            color: #e0d8c9;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            background: rgba(196, 151, 90, 0.3);
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            border: 1px solid rgba(196, 151, 90, 0.5);
+            width: 100%;
+        }
+
+        .errand-items {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .errand-item {
             position: relative;
-            width: 60px;
-            height: 60px;
-            background: rgba(42, 31, 22, 0.7);
+            width: 50px;
+            height: 50px;
+            background: rgba(42, 31, 22, 0.8);
             border: 2px solid #c4975a;
             border-radius: 8px;
             display: flex;
@@ -547,56 +572,60 @@ function addCastleStyles() {
         }
 
         .errand-item.insufficient {
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 12px rgba(255, 0, 0, 0.6);
             border-color: #8b4513;
         }
 
         .errand-item.reward {
             border-color: #ffd700;
-            background: rgba(255, 215, 0, 0.1);
+            background: rgba(255, 215, 0, 0.15);
         }
 
         .errand-item-sprite {
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
             object-fit: contain;
         }
 
         .errand-item-amount {
             position: absolute;
-            bottom: 2px;
-            right: 2px;
-            background: rgba(0, 150, 0, 0.9);
+            bottom: 1px;
+            right: 1px;
+            background: rgba(0, 150, 0, 0.95);
             color: white;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: bold;
-            padding: 2px 6px;
+            padding: 1px 4px;
             border-radius: 4px;
             font-family: 'Cinzel', serif;
             border: 1px solid rgba(255, 255, 255, 0.3);
+            min-width: 20px;
+            text-align: center;
         }
 
         .errand-item-amount.not-enough {
-            background: rgba(150, 0, 0, 0.9);
+            background: rgba(150, 0, 0, 0.95);
         }
 
         .errand-item-amount.reward-amount {
-            background: rgba(255, 215, 0, 0.9);
+            background: rgba(255, 215, 0, 0.95);
             color: #1d140c;
         }
 
         .errand-arrow {
-            font-size: 2rem;
+            font-size: 1.8rem;
             color: #c4975a;
             font-weight: bold;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 0 0.5rem;
         }
 
         .errand-complete-btn {
-            padding: 0.8rem 1.5rem;
+            padding: 0.8rem 1rem;
             font-size: 0.9rem;
             white-space: nowrap;
-            margin-left: 0.5rem;
+            margin-top: 0.5rem;
+            width: 100%;
         }
 
         .errand-complete-btn:disabled {
@@ -776,60 +805,6 @@ function addCastleStyles() {
             to {
                 opacity: 1;
                 transform: scale(1);
-            }
-        }
-
-        @media (max-width: 768px) {
-            #errand-display {
-                top: 60px;
-                left: 1rem;
-                right: 1rem;
-                transform: none;
-            }
-
-            .errand-container {
-                flex-wrap: wrap;
-                justify-content: center;
-                padding: 0.8rem;
-                gap: 0.8rem;
-            }
-
-            .errand-item {
-                width: 50px;
-                height: 50px;
-            }
-
-            .errand-item-sprite {
-                width: 40px;
-                height: 40px;
-            }
-
-            .errand-arrow {
-                font-size: 1.5rem;
-            }
-
-            .errand-complete-btn {
-                padding: 0.6rem 1rem;
-                font-size: 0.8rem;
-            }
-
-            .roadmap-modal-content {
-                padding: 1.5rem;
-                margin: 1rem;
-            }
-
-            .roadmap-header h2 {
-                font-size: 1.5rem;
-            }
-
-            .roadmap-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .roadmap-date {
-                margin-bottom: 0.5rem;
-                margin-right: 0;
             }
         }
     `;
