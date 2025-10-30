@@ -111,25 +111,31 @@ function renderErrand() {
 
     errandDisplay.innerHTML = `
     <div class="errand-container">
-        <div class="errand-required">
-            ${requiredItems.map(item => `
-                <div class="errand-item ${item.hasEnough ? '' : 'insufficient'}">
-                    <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
-                    <div class="errand-item-amount ${item.hasEnough ? 'enough' : 'not-enough'}">${item.playerAmount}/${item.requiredAmount}</div>
-                </div>
-            `).join('')}
+        <div class="errand-section">
+            <div class="errand-label">Items Available for Exchange</div>
+            <div class="errand-required">
+                ${requiredItems.map(item => `
+                    <div class="errand-item ${item.hasEnough ? '' : 'insufficient'}">
+                        <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
+                        <div class="errand-item-amount ${item.hasEnough ? 'enough' : 'not-enough'}">${item.playerAmount}/${item.requiredAmount}</div>
+                    </div>
+                `).join('')}
+            </div>
         </div>
         <div class="errand-arrow">→</div>
-        <div class="errand-provided">
-            ${providedItems.map(item => `
-                <div class="errand-item reward">
-                    <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
-                    <div class="errand-item-amount reward-amount">+${item.amount}</div>
-                </div>
-            `).join('')}
+        <div class="errand-section">
+            <div class="errand-label">Rewards</div>
+            <div class="errand-provided">
+                ${providedItems.map(item => `
+                    <div class="errand-item reward">
+                        <img src="assets/art/recipes/${item.itemName.replace(/\s+/g, '')}.png" alt="${item.itemName}" class="errand-item-sprite">
+                        <div class="errand-item-amount reward-amount">+${item.amount}</div>
+                    </div>
+                `).join('')}
+            </div>
         </div>
         <button class="fantasy-button errand-complete-btn" ${canComplete ? '' : 'disabled'} data-action="complete-errand">
-            ${canComplete ? 'Complete' : 'Insufficient Items'}
+            ${canComplete ? 'Complete Exchange' : 'Insufficient Items'}
         </button>
     </div>
 `;
@@ -470,6 +476,26 @@ function addCastleStyles() {
             bottom: 20%;
             width: 10%;
             height: 13%;
+        }
+
+        .errand-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .errand-label {
+            color: #e0d8c9;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            background: rgba(196, 151, 90, 0.2);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            border: 1px solid rgba(196, 151, 90, 0.3);
         }
 
         #errand-display {
