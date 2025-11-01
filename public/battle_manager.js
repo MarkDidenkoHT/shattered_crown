@@ -10,7 +10,9 @@ const BattleState = {
     isMoveQueued: false,
     characterAbilities: {},
     environmentItems: {},
-    abilityCache: new Map()
+    abilityCache: new Map(),
+    lastCharacterStates: new Map(), // Track previous states for diffing
+    updateDebounceTimer: null
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -32,6 +34,13 @@ const PRELOAD_CONFIG = {
     portraits: true,
     environment: true,
     tiles: true
+};
+
+// Add optimized real-time config
+const REALTIME_CONFIG = {
+    debounceMs: 100,
+    batchUpdates: true,
+    selectiveFields: ['characters_state', 'current_turn', 'status', 'layout_data.environment_items_pos']
 };
 
 const debounce = (func, wait) => {
@@ -61,7 +70,12 @@ const getSupabaseClient = (config) => {
     }
 
     BattleState.supabaseClient = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
-        auth: { flowType: 'pkce' }
+        auth: { flowType: 'pkce' },
+        realtime: {
+            params: {
+                eventsPerSecond: 10 // Limit real-time events
+            }
+        }
     });
 
     return BattleState.supabaseClient;
@@ -102,6 +116,156 @@ const processCharacterState = (charState) => {
         debuffs: charState.debuffs || [],
         pendingAction: null
     };
+};
+
+// Optimized character diffing function
+const findCharacterChanges = (oldCharacters, newCharacters) => {
+    const changes = {
+        moved: [],
+        hpChanged: [],
+        statusChanged: [],
+        added: [],
+        removed: [],
+        turnStateChanged: []
+    };
+
+    const oldCharMap = new Map(oldCharacters.map(c => [c.id, c]));
+    const newCharMap = new Map(newCharacters.map(c => [c.id, c]));
+
+    // Find added characters
+    for (const newChar of newCharacters) {
+        if (!oldCharMap.has(newChar.id)) {
+            changes.added.push(newChar);
+        }
+    }
+
+    // Find removed characters and changes
+    for (const oldChar of oldCharacters) {
+        const newChar = newCharMap.get(oldChar.id);
+        
+        if (!newChar) {
+            changes.removed.push(oldChar);
+            continue;
+        }
+
+        // Check position changes
+        if (oldChar.position[0] !== newChar.position[0] || oldChar.position[1] !== newChar.position[1]) {
+            changes.moved.push({ oldChar, newChar });
+        }
+
+        // Check HP changes
+        if (oldChar.current_hp !== newChar.current_hp) {
+            changes.hpChanged.push({ oldChar, newChar });
+        }
+
+        // Check status changes (dead/alive)
+        const oldDead = oldChar.current_hp <= 0;
+        const newDead = newChar.current_hp <= 0;
+        if (oldDead !== newDead) {
+            changes.statusChanged.push({ oldChar, newChar });
+        }
+
+        // Check turn state changes
+        if (oldChar.has_moved !== newChar.has_moved || oldChar.has_acted !== newChar.has_acted) {
+            changes.turnStateChanged.push({ oldChar, newChar });
+        }
+    }
+
+    return changes;
+};
+
+// Optimized update function that only processes changes
+const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    if (!container) return;
+
+    const oldCharacters = BattleState.characters;
+    const changes = findCharacterChanges(oldCharacters, newCharacters);
+    const animations = [];
+
+    // Handle removed characters (deaths)
+    for (const oldChar of changes.removed) {
+        const charEl = BattleState.characterElements.get(oldChar.id);
+        if (charEl) {
+            animations.push(new Promise(resolve => {
+                charEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeOutDuration}ms ease-out`;
+                charEl.style.opacity = '0';
+                setTimeout(() => {
+                    if (charEl.parentNode) {
+                        charEl.parentNode.removeChild(charEl);
+                    }
+                    BattleState.characterElements.delete(oldChar.id);
+                    resolve();
+                }, ANIMATION_CONFIG.fadeOutDuration);
+            }));
+        }
+    }
+
+    // Handle added characters (spawns)
+    for (const newChar of changes.added) {
+        const newCharEl = createCharacterElement(newChar);
+        const targetCell = container.querySelector(
+            `td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`
+        );
+
+        if (targetCell) {
+            newCharEl.style.opacity = '0';
+            targetCell.appendChild(newCharEl);
+            BattleState.characterElements.set(newChar.id, newCharEl);
+
+            animations.push(new Promise(resolve => {
+                newCharEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeInDuration}ms ease-in`;
+                newCharEl.style.opacity = '1';
+                setTimeout(resolve, ANIMATION_CONFIG.fadeInDuration);
+            }));
+        }
+    }
+
+    // Handle moved characters
+    for (const { oldChar, newChar } of changes.moved) {
+        const charEl = BattleState.characterElements.get(newChar.id);
+        if (charEl) {
+            const [oldX, oldY] = oldChar.position;
+            const [newX, newY] = newChar.position;
+
+            const fromCell = container.querySelector(`td[data-x="${oldX}"][data-y="${oldY}"]`);
+            const toCell = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
+
+            if (fromCell && toCell) {
+                animations.push(animateCharacterMovement(charEl, fromCell, toCell));
+            }
+        }
+    }
+
+    // Handle HP changes
+    for (const { oldChar, newChar } of changes.hpChanged) {
+        const charEl = BattleState.characterElements.get(newChar.id);
+        if (charEl) {
+            const hpBar = charEl.querySelector('.character-hp-bar');
+            if (hpBar) {
+                animateHPChange(hpBar, oldChar.current_hp, newChar.current_hp, newChar.max_hp);
+            }
+        }
+    }
+
+    // Handle visual state updates
+    for (const newChar of newCharacters) {
+        const charEl = BattleState.characterElements.get(newChar.id);
+        if (charEl) {
+            updateCharacterVisualState(charEl, newChar);
+        }
+    }
+
+    await Promise.all(animations);
+    BattleState.characters = newCharacters;
+    
+    // Store for next diff
+    BattleState.lastCharacterStates = new Map(newCharacters.map(c => [c.id, {
+        position: [...c.position],
+        current_hp: c.current_hp,
+        has_moved: c.has_moved,
+        has_acted: c.has_acted
+    }]));
 };
 
 const animateCharacterMovement = (characterEl, fromCell, toCell) => {
@@ -567,7 +731,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         updateBattleLoadingProgress(loadingModal, "Loading assets...", "Preloading images and abilities...", 85);
         await preloadAssets(BattleState.battleState, selectedMode);
 
-        setupRealtimeSubscription();
+        setupOptimizedRealtimeSubscription();
         updateBattleLoadingProgress(loadingModal, "Finalizing...", "Rendering battlefield...", 95);
 
         const areaLevel = selectedMode !== 'pvp' 
@@ -575,7 +739,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
             : BattleState.battleState?.round_number || 1;
 
         renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState?.layout_data);
-        await updateGameStateFromRealtime();
+        await updateGameStateFromRealtimeOptimized();
 
     } catch (err) {
         console.error('Battle loading error:', err);
@@ -647,7 +811,8 @@ const initializeBattle = async (selectedMode, areaLevel) => {
     BattleState.battleState = initialState;
 };
 
-const setupRealtimeSubscription = () => {
+// OPTIMIZED: Selective real-time subscription
+const setupOptimizedRealtimeSubscription = () => {
     const supabase = getSupabaseClient({ 
         SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
         SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
@@ -663,16 +828,87 @@ const setupRealtimeSubscription = () => {
                 table: 'battle_state',
                 filter: `id=eq.${BattleState.battleId}`
             },
-            throttle(async (payload) => {
-                BattleState.battleState = payload.new;
-                await updateGameStateFromRealtime();
-                
-                const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
-                if (layoutItems && Object.keys(layoutItems).length)
-                 renderEnvironmentItems(layoutItems);
-            }, 100)
+            debounce(async (payload) => {
+                await handleOptimizedBattleUpdate(payload.new);
+            }, REALTIME_CONFIG.debounceMs)
         )
         .subscribe();
+};
+
+// OPTIMIZED: Handle updates selectively
+const handleOptimizedBattleUpdate = async (newBattleState) => {
+    const oldBattleState = BattleState.battleState;
+    
+    // Update the battle state
+    BattleState.battleState = newBattleState;
+    
+    // Handle battle status changes (victory/defeat)
+    if (newBattleState.status !== oldBattleState?.status) {
+        if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
+            await assignLoot(newBattleState);
+            showBattleResultModal(newBattleState.status);
+            return;
+        }
+    }
+    
+    // Handle turn changes
+    if (newBattleState.current_turn !== oldBattleState?.current_turn) {
+        updateTurnDisplay();
+        updateCharacterAvailability();
+        handleTurnLogic();
+    }
+    
+    // Handle character state changes (only if characters_state actually changed)
+    if (newBattleState.characters_state && 
+        JSON.stringify(newBattleState.characters_state) !== JSON.stringify(oldBattleState?.characters_state)) {
+        
+        const newCharacters = Object.values(newBattleState.characters_state)
+            .map(processCharacterState);
+        
+        await updateCharactersWithAnimationsOptimized(newCharacters);
+    }
+    
+    // Handle environment changes (only if environment_items_pos changed)
+    const newEnvItems = newBattleState?.layout_data?.environment_items_pos;
+    const oldEnvItems = oldBattleState?.layout_data?.environment_items_pos;
+    
+    if (newEnvItems && JSON.stringify(newEnvItems) !== JSON.stringify(oldEnvItems)) {
+        renderEnvironmentItems(newEnvItems);
+    }
+};
+
+// OPTIMIZED: Replace the old update function
+const updateGameStateFromRealtimeOptimized = async () => {
+    if (!BattleState.battleState) return;
+    
+    const status = BattleState.battleState.status;
+    if (status === 'victory' || status === 'defeat') {
+        await assignLoot(BattleState.battleState);
+        showBattleResultModal(status);
+        return; 
+    }
+        
+    if (!BattleState.battleState.characters_state) {
+        console.warn('Battle state missing characters_state:', BattleState.battleState);
+        return;
+    }
+
+    const newCharacters = Object.values(BattleState.battleState.characters_state)
+        .map(processCharacterState);
+    
+    await updateCharactersWithAnimationsOptimized(newCharacters);
+    
+    requestAnimationFrame(() => {
+        updateTurnDisplay();
+        updateCharacterAvailability();
+    });
+    
+    handleTurnLogic();
+    
+    const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
+    if (layoutItems && Object.keys(layoutItems).length) {
+        renderEnvironmentItems(layoutItems);
+    }
 };
 
 async function showTutorialModal(chatId) {
@@ -722,37 +958,6 @@ async function showTutorialModal(chatId) {
             headers: { 'Content-Type': 'application/json' }
         });
     });
-}
-
-async function updateGameStateFromRealtime() {
-    if (!BattleState.battleState) return;
-    
-    const status = BattleState.battleState.status;
-      if (status === 'victory' || status === 'defeat') {
-        await assignLoot(BattleState.battleState);
-        showBattleResultModal(status);
-        return; 
-      }
-        
-    if (!BattleState.battleState.characters_state) {
-        console.warn('Battle state missing characters_state:', BattleState.battleState);
-        return;
-    }
-
-    const newCharacters = Object.values(BattleState.battleState.characters_state)
-        .map(processCharacterState);
-    
-    await updateCharactersWithAnimations(newCharacters);
-    
-    requestAnimationFrame(() => {
-        updateTurnDisplay();
-        updateCharacterAvailability();
-    });
-    
-    handleTurnLogic();
-    const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
-    if (layoutItems && Object.keys(layoutItems).length)
-      renderEnvironmentItems(layoutItems);
 }
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
@@ -1038,97 +1243,6 @@ function computeEffect(caster, ability, target) {
   return ally ? 'heal' : 'damage';
 }
 
-async function updateCharactersWithAnimations(newCharacters) {
-    const container = BattleState.main.querySelector('.battle-grid-container');
-    if (!container) return;
-
-    const animations = [];
-
-    for (const newChar of newCharacters) {
-        const oldChar = BattleState.characters.find(c => c.id === newChar.id);
-        const charEl = BattleState.characterElements.get(newChar.id);
-
-        if (newChar.current_hp <= 0 || newChar.status === 'dead') {
-            if (charEl) {
-                animations.push(new Promise(resolve => {
-                    charEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeOutDuration}ms ease-out`;
-                    charEl.style.opacity = '0';
-                    setTimeout(() => {
-                        if (charEl.parentNode) {
-                            charEl.parentNode.removeChild(charEl);
-                        }
-                        BattleState.characterElements.delete(newChar.id);
-                        resolve();
-                    }, ANIMATION_CONFIG.fadeOutDuration);
-                }));
-            }
-            continue;
-        }
-
-        if (!oldChar) {
-            const newCharEl = createCharacterElement(newChar);
-            const targetCell = container.querySelector(
-                `td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`
-            );
-
-            if (targetCell) {
-                newCharEl.style.opacity = '0';
-                targetCell.appendChild(newCharEl);
-                BattleState.characterElements.set(newChar.id, newCharEl);
-
-                animations.push(new Promise(resolve => {
-                    newCharEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeInDuration}ms ease-in`;
-                    newCharEl.style.opacity = '1';
-                    setTimeout(resolve, ANIMATION_CONFIG.fadeInDuration);
-                }));
-            }
-        } else if (charEl) {
-            const [oldX, oldY] = oldChar.position;
-            const [newX, newY] = newChar.position;
-
-            if (oldX !== newX || oldY !== newY) {
-                const fromCell = container.querySelector(`td[data-x="${oldX}"][data-y="${oldY}"]`);
-                const toCell = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
-
-                if (fromCell && toCell) {
-                    animations.push(animateCharacterMovement(charEl, fromCell, toCell));
-                }
-            }
-
-            if (oldChar.current_hp !== newChar.current_hp) {
-                const hpBar = charEl.querySelector('.character-hp-bar');
-                if (hpBar) {
-                    animateHPChange(hpBar, oldChar.current_hp, newChar.current_hp, newChar.max_hp);
-                }
-            }
-
-            updateCharacterVisualState(charEl, newChar);
-        }
-    }
-
-    for (const oldChar of BattleState.characters) {
-        if (!newCharacters.find(c => c.id === oldChar.id)) {
-            const charEl = BattleState.characterElements.get(oldChar.id);
-            if (charEl) {
-                animations.push(new Promise(resolve => {
-                    charEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeOutDuration}ms ease-out`;
-                    charEl.style.opacity = '0';
-                    setTimeout(() => {
-                        if (charEl.parentNode) {
-                            charEl.parentNode.removeChild(charEl);
-                        }
-                        BattleState.characterElements.delete(oldChar.id);
-                        resolve();
-                    }, ANIMATION_CONFIG.fadeOutDuration);
-                }));
-            }
-        }
-    }
-
-    await Promise.all(animations);
-    BattleState.characters = newCharacters;
-}
-
 const updateCharacterVisualState = (charEl, character) => {
     charEl.title = `${character.name} (${character.current_hp}/${character.max_hp} HP)`;
     
@@ -1224,7 +1338,7 @@ const handleAITurn = async () => {
   const timeout = setTimeout(() => {
     if (BattleState.isProcessingAITurn) {
       console.warn("AI turn timeout, forcing refresh...");
-      handleRefresh();
+      handleRefreshOptimized();
       BattleState.isProcessingAITurn = false;
     }
   }, 8000);
@@ -1318,7 +1432,7 @@ function renderBattleScreen(mode, level, layoutData) {
     if (turnStatusEl) {
         turnStatusEl.style.cursor = "pointer";
         turnStatusEl.title = "Click to refresh if frozen";
-        turnStatusEl.addEventListener("click", handleRefresh);
+        turnStatusEl.addEventListener("click", handleRefreshOptimized);
     }
 }
 
@@ -1735,12 +1849,6 @@ const attemptMoveCharacter = async (character, targetX, targetY) => {
     character.position = [targetX, targetY];
     BattleState.isMoveQueued = true;
     unhighlightAllTiles();
-
-    // if (BattleState.selectedCharacterEl) {
-    //     BattleState.selectedCharacterEl.classList.remove('character-selected');
-    //     BattleState.selectedCharacterEl = null;
-    // }
-    // BattleState.selectedPlayerCharacter = null;
 };
 
 async function getAbility(abilityName) {
@@ -2046,27 +2154,29 @@ const handleUseConsumable = async () => {
     }
 };
 
-const handleRefresh = async () => {
+// OPTIMIZED: Refresh function with selective fields
+const handleRefreshOptimized = async () => {
     try {
         const supabase = getSupabaseClient({ 
             SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
             SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
         });
         
+        // Only select the fields we actually need
         const { data: battleState, error } = await supabase
             .from('battle_state')
-            .select('*')
+            .select('characters_state, current_turn, status, layout_data')
             .eq('id', BattleState.battleId)
             .single();
             
         if (error) throw error;
         
-        BattleState.battleState = battleState;
-        await updateGameStateFromRealtime();
+        await handleOptimizedBattleUpdate(battleState);
         
         displayMessage('Battle state refreshed successfully.', 'success');
         BattleState.isMoveQueued = false;
     } catch (error) {
+        console.error('Refresh error:', error);
         displayMessage('Failed to refresh battle state.', 'error');
     }
 };
@@ -2434,16 +2544,23 @@ export function cleanup() {
         BattleState.supabaseClient.removeChannel(BattleState.unsubscribeFromBattle);
     }
     
+    if (BattleState.updateDebounceTimer) {
+        clearTimeout(BattleState.updateDebounceTimer);
+    }
+    
     Object.assign(BattleState, {
         main: null, apiCall: null, getCurrentProfile: null, profile: null,
         characters: [], selectedCharacterEl: null, selectedPlayerCharacter: null,
         currentTurnCharacter: null, highlightedTiles: [], supabaseClient: null,
         battleState: null, battleId: null, unsubscribeFromBattle: null,
-        isProcessingAITurn: false, isMoveQueued: false
+        isProcessingAITurn: false, isMoveQueued: false,
+        lastCharacterStates: new Map(),
+        updateDebounceTimer: null
     });
     
     BattleState.tileMap.clear();
     BattleState.characterElements.clear();
+    BattleState.abilityCache.clear();
     
     const existingMessage = document.querySelector('.custom-message-box');
     if (existingMessage) existingMessage.remove();
