@@ -883,14 +883,10 @@ const setupOptimizedRealtimeSubscription = () => {
         .subscribe();
 };
 
-// OPTIMIZED: Handle updates selectively
 const handleOptimizedBattleUpdate = async (newBattleState) => {
     const oldBattleState = BattleState.battleState;
-    
-    // Update the battle state
     BattleState.battleState = newBattleState;
     
-    // Handle battle status changes (victory/defeat)
     if (newBattleState.status !== oldBattleState?.status) {
         if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
             await assignLoot(newBattleState);
@@ -899,14 +895,12 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
         }
     }
     
-    // Handle turn changes
     if (newBattleState.current_turn !== oldBattleState?.current_turn) {
         updateTurnDisplay();
         updateCharacterAvailability();
         handleTurnLogic();
     }
     
-    // Handle character state changes (only if characters_state actually changed)
     if (newBattleState.characters_state && 
         JSON.stringify(newBattleState.characters_state) !== JSON.stringify(oldBattleState?.characters_state)) {
         
@@ -2003,24 +1997,14 @@ async function renderBottomUI() {
                     if (caster) toggleAbilitySelection(caster, ability);
                 }, 150));
             } else if (btnIndex === 5) {
-                const consumableName = currentChar?.equipped_items?.equipped_consumable;
-                if (consumableName && consumableName !== 'none') {
-                    const consumableAbility = await getAbility(consumableName);
-                    if (consumableAbility) {
-                        const itemSprite = consumableName.replace(/\s+/g, '');
-                        btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumableName}" style="width:36px;height:36px;object-fit:contain;">`;
-                        btn.id = 'consumableButton';
-                        btn.title = consumableName;
-                        btn.dataset.abilityName = consumableAbility.name;
-                        btn.disabled = false;
-                        btn.addEventListener('click', debounce(() => {
-                            const caster = BattleState.selectedPlayerCharacter;
-                            if (caster) toggleAbilitySelection(caster, consumableAbility);
-                        }, 150));
-                    } else {
-                        btn.textContent = 'No Item';
-                        btn.disabled = true;
-                    }
+                const consumable = currentChar?.equipped_items?.equipped_consumable;
+                if (consumable && consumable !== 'none') {
+                    const itemSprite = consumable.replace(/\s+/g, '');
+                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
+                    btn.id = 'consumableButton';
+                    btn.disabled = false;
+                    btn.title = consumable;
+                    btn.addEventListener('click', debounce(() => handleUseConsumable(currentChar), 500));
                 } else {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
