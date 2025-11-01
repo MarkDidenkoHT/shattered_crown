@@ -118,7 +118,6 @@ const processCharacterState = (charState) => {
     };
 };
 
-// Optimized character diffing function
 const findCharacterChanges = (oldCharacters, newCharacters) => {
     const changes = {
         moved: [],
@@ -132,9 +131,10 @@ const findCharacterChanges = (oldCharacters, newCharacters) => {
     const oldCharMap = new Map(oldCharacters.map(c => [c.id, c]));
     const newCharMap = new Map(newCharacters.map(c => [c.id, c]));
 
-    // Find added characters
+    // Find added characters (new characters or characters that were dead and are now alive)
     for (const newChar of newCharacters) {
-        if (!oldCharMap.has(newChar.id)) {
+        const oldChar = oldCharMap.get(newChar.id);
+        if (!oldChar || (oldChar.current_hp <= 0 && newChar.current_hp > 0)) {
             changes.added.push(newChar);
         }
     }
@@ -143,38 +143,34 @@ const findCharacterChanges = (oldCharacters, newCharacters) => {
     for (const oldChar of oldCharacters) {
         const newChar = newCharMap.get(oldChar.id);
         
-        if (!newChar) {
+        // Character was removed from battle state or died
+        if (!newChar || (oldChar.current_hp > 0 && newChar.current_hp <= 0)) {
             changes.removed.push(oldChar);
             continue;
         }
 
-        // Check position changes
-        if (oldChar.position[0] !== newChar.position[0] || oldChar.position[1] !== newChar.position[1]) {
-            changes.moved.push({ oldChar, newChar });
-        }
+        // Only process changes for alive characters
+        if (newChar.current_hp > 0) {
+            // Check position changes
+            if (oldChar.position[0] !== newChar.position[0] || oldChar.position[1] !== newChar.position[1]) {
+                changes.moved.push({ oldChar, newChar });
+            }
 
-        // Check HP changes
-        if (oldChar.current_hp !== newChar.current_hp) {
-            changes.hpChanged.push({ oldChar, newChar });
-        }
+            // Check HP changes
+            if (oldChar.current_hp !== newChar.current_hp) {
+                changes.hpChanged.push({ oldChar, newChar });
+            }
 
-        // Check status changes (dead/alive)
-        const oldDead = oldChar.current_hp <= 0;
-        const newDead = newChar.current_hp <= 0;
-        if (oldDead !== newDead) {
-            changes.statusChanged.push({ oldChar, newChar });
-        }
-
-        // Check turn state changes
-        if (oldChar.has_moved !== newChar.has_moved || oldChar.has_acted !== newChar.has_acted) {
-            changes.turnStateChanged.push({ oldChar, newChar });
+            // Check turn state changes
+            if (oldChar.has_moved !== newChar.has_moved || oldChar.has_acted !== newChar.has_acted) {
+                changes.turnStateChanged.push({ oldChar, newChar });
+            }
         }
     }
 
     return changes;
 };
 
-// Optimized update function that only processes changes
 const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
     const container = BattleState.main.querySelector('.battle-grid-container');
     if (!container) return;
@@ -183,7 +179,7 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
     const changes = findCharacterChanges(oldCharacters, newCharacters);
     const animations = [];
 
-    // Handle removed characters (deaths)
+    // Handle removed characters (deaths) - FIXED: Check if character is actually dead
     for (const oldChar of changes.removed) {
         const charEl = BattleState.characterElements.get(oldChar.id);
         if (charEl) {
@@ -202,45 +198,82 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
     }
 
     // Handle added characters (spawns)
-    for (const newChar of changes.added) {
-        const newCharEl = createCharacterElement(newChar);
-        const targetCell = container.querySelector(
-            `td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`
-        );
+    for (const newChar of newCharacters) {
+        const oldChar = oldCharacters.find(c => c.id === newChar.id);
+        
+        // Only add if it's actually new OR if it was dead and is now alive again
+        if (!oldChar || (oldChar.current_hp <= 0 && newChar.current_hp > 0)) {
+            const charEl = BattleState.characterElements.get(newChar.id);
+            
+            // If character element exists but character was dead, remove it first
+            if (charEl && oldChar?.current_hp <= 0) {
+                charEl.remove();
+                BattleState.characterElements.delete(newChar.id);
+            }
+            
+            // Create new character element if it doesn't exist or was dead
+            if (!BattleState.characterElements.has(newChar.id) && newChar.current_hp > 0) {
+                const newCharEl = createCharacterElement(newChar);
+                const targetCell = container.querySelector(
+                    `td[data-x="${newChar.position[0]}"][data-y="${newChar.position[1]}"]`
+                );
 
-        if (targetCell) {
-            newCharEl.style.opacity = '0';
-            targetCell.appendChild(newCharEl);
-            BattleState.characterElements.set(newChar.id, newCharEl);
+                if (targetCell) {
+                    newCharEl.style.opacity = '0';
+                    targetCell.appendChild(newCharEl);
+                    BattleState.characterElements.set(newChar.id, newCharEl);
 
-            animations.push(new Promise(resolve => {
-                newCharEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeInDuration}ms ease-in`;
-                newCharEl.style.opacity = '1';
-                setTimeout(resolve, ANIMATION_CONFIG.fadeInDuration);
-            }));
-        }
-    }
-
-    // Handle moved characters
-    for (const { oldChar, newChar } of changes.moved) {
-        const charEl = BattleState.characterElements.get(newChar.id);
-        if (charEl) {
-            const [oldX, oldY] = oldChar.position;
-            const [newX, newY] = newChar.position;
-
-            const fromCell = container.querySelector(`td[data-x="${oldX}"][data-y="${oldY}"]`);
-            const toCell = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
-
-            if (fromCell && toCell) {
-                animations.push(animateCharacterMovement(charEl, fromCell, toCell));
+                    animations.push(new Promise(resolve => {
+                        newCharEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeInDuration}ms ease-in`;
+                        newCharEl.style.opacity = '1';
+                        setTimeout(resolve, ANIMATION_CONFIG.fadeInDuration);
+                    }));
+                }
             }
         }
     }
 
-    // Handle HP changes
-    for (const { oldChar, newChar } of changes.hpChanged) {
+    // Handle moved characters - FIXED: Only move alive characters
+    for (const { oldChar, newChar } of changes.moved) {
+        if (newChar.current_hp > 0) {
+            const charEl = BattleState.characterElements.get(newChar.id);
+            if (charEl) {
+                const [oldX, oldY] = oldChar.position;
+                const [newX, newY] = newChar.position;
+
+                const fromCell = container.querySelector(`td[data-x="${oldX}"][data-y="${oldY}"]`);
+                const toCell = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
+
+                if (fromCell && toCell) {
+                    animations.push(animateCharacterMovement(charEl, fromCell, toCell));
+                }
+            }
+        }
+    }
+
+    // Handle HP changes and deaths - FIXED: Handle character deaths properly
+    for (const newChar of newCharacters) {
+        const oldChar = oldCharacters.find(c => c.id === newChar.id);
         const charEl = BattleState.characterElements.get(newChar.id);
-        if (charEl) {
+
+        if (!charEl) continue;
+
+        // Handle character death (HP dropped to 0)
+        if (oldChar && oldChar.current_hp > 0 && newChar.current_hp <= 0) {
+            animations.push(new Promise(resolve => {
+                charEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeOutDuration}ms ease-out`;
+                charEl.style.opacity = '0';
+                setTimeout(() => {
+                    if (charEl.parentNode) {
+                        charEl.parentNode.removeChild(charEl);
+                    }
+                    BattleState.characterElements.delete(newChar.id);
+                    resolve();
+                }, ANIMATION_CONFIG.fadeOutDuration);
+            }));
+        }
+        // Handle HP changes for alive characters
+        else if (newChar.current_hp > 0 && oldChar && oldChar.current_hp !== newChar.current_hp) {
             const hpBar = charEl.querySelector('.character-hp-bar');
             if (hpBar) {
                 animateHPChange(hpBar, oldChar.current_hp, newChar.current_hp, newChar.max_hp);
@@ -248,16 +281,31 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
         }
     }
 
-    // Handle visual state updates
+    // Handle visual state updates for alive characters
     for (const newChar of newCharacters) {
-        const charEl = BattleState.characterElements.get(newChar.id);
-        if (charEl) {
-            updateCharacterVisualState(charEl, newChar);
+        if (newChar.current_hp > 0) {
+            const charEl = BattleState.characterElements.get(newChar.id);
+            if (charEl) {
+                updateCharacterVisualState(charEl, newChar);
+            }
+        }
+    }
+
+    // Clean up any characters that are dead but still in characterElements
+    for (const [charId, charEl] of BattleState.characterElements.entries()) {
+        const currentChar = newCharacters.find(c => c.id === charId);
+        if (!currentChar || currentChar.current_hp <= 0) {
+            if (charEl.parentNode) {
+                charEl.remove();
+            }
+            BattleState.characterElements.delete(charId);
         }
     }
 
     await Promise.all(animations);
-    BattleState.characters = newCharacters;
+    
+    // Update characters state, filtering out dead characters from the active characters array
+    BattleState.characters = newCharacters.filter(char => char.current_hp > 0);
     
     // Store for next diff
     BattleState.lastCharacterStates = new Map(newCharacters.map(c => [c.id, {
@@ -1520,6 +1568,7 @@ function renderCharacters() {
     container.querySelectorAll('.character-token').forEach(token => token.remove());
 
     BattleState.characters.forEach(char => {
+        // FIXED: Only render alive characters
         if (!Array.isArray(char.position) || char.current_hp <= 0) return;
 
         const [x, y] = char.position;
