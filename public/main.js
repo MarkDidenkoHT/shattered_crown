@@ -492,7 +492,6 @@ function addTutorialStyles() {
     }
 
     .fantasy-button {
-      padding: 0.75rem 2rem;
       font-family: 'Cinzel', serif;
       font-size: 1.1rem;
       font-weight: bold;
