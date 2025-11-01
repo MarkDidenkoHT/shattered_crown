@@ -12,114 +12,63 @@ function initializeAudio() {
     mainThemeAudio = document.getElementById('mainTheme');
     if (!mainThemeAudio) return;
     
-    // Set initial volume to 30%
     mainThemeAudio.volume = 0.3;
-    
-    // Android Chrome specific: Force load immediately
     mainThemeAudio.preload = 'auto';
     mainThemeAudio.load();
     
-    // Handle audio loading and playback
-    mainThemeAudio.addEventListener('canplaythrough', () => {
-      console.log('[AUDIO] Main theme ready to play');
-      // Don't auto-play here, wait for user interaction
-    });
-    
-    mainThemeAudio.addEventListener('loadeddata', () => {
-      console.log('[AUDIO] Audio data loaded');
-    });
-    
-    mainThemeAudio.addEventListener('loadstart', () => {
-      console.log('[AUDIO] Started loading main theme');
-    });
-    
-    mainThemeAudio.addEventListener('error', (e) => {
-      console.error('[AUDIO] Error loading main theme:', e);
-      console.error('[AUDIO] Error details:', {
-        code: e.target?.error?.code,
-        message: e.target?.error?.message
-      });
-    });
-    
-    // Handle audio interruptions gracefully
-    mainThemeAudio.addEventListener('stalled', () => {
-      console.log('[AUDIO] Audio stalled, will resume when buffer fills');
-    });
-    
-    mainThemeAudio.addEventListener('waiting', () => {
-      console.log('[AUDIO] Audio waiting for data');
-    });
+    mainThemeAudio.addEventListener('canplaythrough', () => {});
+    mainThemeAudio.addEventListener('loadeddata', () => {});
+    mainThemeAudio.addEventListener('loadstart', () => {});
+    mainThemeAudio.addEventListener('error', (e) => {});
+    mainThemeAudio.addEventListener('stalled', () => {});
+    mainThemeAudio.addEventListener('waiting', () => {});
     
     audioInitialized = true;
-    
-    // Set up user interaction listeners immediately
     setupUserInteractionListeners();
     
-  } catch (error) {
-    console.error('[AUDIO] Failed to initialize audio:', error);
-  }
+  } catch (error) {}
 }
 
 function setupUserInteractionListeners() {
-  console.log('[AUDIO] Setting up interaction listeners');
-  
   const events = ['touchstart', 'touchend', 'click', 'keydown'];
   
   const unlockAudio = async (e) => {
-    console.log('[AUDIO] User interaction detected:', e.type);
-    
     if (audioUnlocked) return;
     
     try {
-      // Create AudioContext if needed (Android Chrome requirement)
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        console.log('[AUDIO] AudioContext created');
       }
       
-      // Resume AudioContext if suspended
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
-        console.log('[AUDIO] AudioContext resumed');
       }
       
-      // Try to play the audio
       if (mainThemeAudio && mainThemeAudio.readyState >= 2) {
         const playPromise = mainThemeAudio.play();
         
         if (playPromise !== undefined) {
           try {
             await playPromise;
-            console.log('[AUDIO] Audio unlocked and playing!');
             audioUnlocked = true;
             
-            // Remove listeners once successful
             events.forEach(event => {
               document.removeEventListener(event, unlockAudio, { passive: false });
               document.body.removeEventListener(event, unlockAudio, { passive: false });
             });
             
-          } catch (playError) {
-            console.error('[AUDIO] Play failed:', playError);
-            // Don't remove listeners, keep trying
-          }
+          } catch (playError) {}
         }
-      } else {
-        console.log('[AUDIO] Audio not ready yet, readyState:', mainThemeAudio?.readyState);
       }
       
-    } catch (error) {
-      console.error('[AUDIO] Error in unlockAudio:', error);
-    }
+    } catch (error) {}
   };
   
-  // Add listeners to document and body for better coverage
   events.forEach(event => {
     document.addEventListener(event, unlockAudio, { passive: false });
     document.body.addEventListener(event, unlockAudio, { passive: false });
   });
   
-  // Special handling for Telegram WebApp button clicks
   if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
     Telegram.WebApp.onEvent('mainButtonClicked', unlockAudio);
     Telegram.WebApp.onEvent('backButtonClicked', unlockAudio);
@@ -128,63 +77,43 @@ function setupUserInteractionListeners() {
 
 async function playMainTheme() {
   if (!mainThemeAudio || audioInitialized === false) {
-    console.log('[AUDIO] Audio not initialized');
     return;
   }
   
   try {
-    // Ensure AudioContext is running
     if (audioContext && audioContext.state === 'suspended') {
       await audioContext.resume();
     }
     
-    // Check if we have enough buffered content to start playing
-    if (mainThemeAudio.readyState >= 2) { // HAVE_CURRENT_DATA
+    if (mainThemeAudio.readyState >= 2) {
       const playPromise = mainThemeAudio.play();
       
       if (playPromise !== undefined) {
         await playPromise;
-        console.log('[AUDIO] Main theme started playing');
         audioUnlocked = true;
       }
-    } else {
-      console.log('[AUDIO] Audio not ready, readyState:', mainThemeAudio.readyState);
     }
-  } catch (error) {
-    console.error('[AUDIO] Error playing main theme:', error);
-    
-    if (error.name === 'NotAllowedError') {
-      console.log('[AUDIO] Autoplay blocked, need user interaction');
-    } else if (error.name === 'AbortError') {
-      console.log('[AUDIO] Play aborted, likely due to new play request');
-    } else if (error.name === 'NotSupportedError') {
-      console.log('[AUDIO] Audio format not supported');
-    }
-  }
+  } catch (error) {}
 }
 
 function handleFirstUserInteraction() {
-  console.log('[AUDIO] Manual user interaction handler called');
   playMainTheme();
 }
 
 function pauseMainTheme() {
   if (mainThemeAudio && !mainThemeAudio.paused) {
     mainThemeAudio.pause();
-    console.log('[AUDIO] Main theme paused');
   }
 }
 
 function setMainThemeVolume(volume) {
   if (mainThemeAudio) {
     mainThemeAudio.volume = Math.max(0, Math.min(1, volume));
-    console.log('[AUDIO] Volume set to:', mainThemeAudio.volume);
   }
 }
 
-// Add debug function to check audio state
 function debugAudioState() {
-  console.log('[AUDIO DEBUG] State check:', {
+  console.log({
     audioInitialized,
     audioUnlocked,
     readyState: mainThemeAudio?.readyState,
@@ -197,7 +126,6 @@ function debugAudioState() {
   });
 }
 
-// Language management functions
 function getCurrentLanguage() {
   if (typeof Weglot !== 'undefined') {
     return Weglot.getCurrentLang();
@@ -232,9 +160,7 @@ async function updateProfileLanguageSetting(language) {
       };
       localStorage.setItem('profile', JSON.stringify(currentProfile));
     }
-  } catch (error) {
-    // Silent error handling
-  }
+  } catch (error) {}
 }
 
 async function loadUserLanguageFromProfile(profile) {
@@ -273,12 +199,9 @@ function initializeLanguageDetection() {
       }
     }
     
-  } catch (error) {
-    // Silent error handling
-  }
+  } catch (error) {}
 }
 
-// Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
   const authStatus = document.getElementById('authStatus');
 
@@ -286,10 +209,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeLanguageDetection();
   }, 1000);
 
-  // Initialize audio earlier and more aggressively on Android
   setTimeout(() => {
     initializeAudio();
-    // Add debug button for testing (remove in production)
     if (window.location.hostname === 'localhost' || window.location.hostname.includes('test')) {
       const debugBtn = document.createElement('button');
       debugBtn.textContent = 'Debug Audio';
@@ -300,7 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       debugBtn.onclick = debugAudioState;
       document.body.appendChild(debugBtn);
     }
-  }, 500); // Earlier initialization
+  }, 500);
 
   try {
     const response = await fetch('/api/config');
@@ -339,8 +260,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       await loadUserLanguageFromProfile(currentProfile);
       
-      authStatus.textContent = 'Login successful!';
-      await redirectToGame();
+      if (!currentProfile.tutorial) {
+        showTutorial();
+      } else {
+        authStatus.textContent = 'Login successful!';
+        await redirectToGame();
+      }
     } else {
       const regResponse = await fetch('/api/auth/register', {
         method: 'POST',
@@ -429,9 +354,6 @@ function addTutorialEventListeners() {
       
       if (!action) return;
       
-      // This click should trigger audio unlock
-      console.log('[AUDIO] Tutorial button clicked:', action);
-      
       switch (action) {
         case 'next':
           nextSlide();
@@ -440,10 +362,38 @@ function addTutorialEventListeners() {
           prevSlide();
           break;
         case 'start-game':
-          startGame();
+          completeTutorial();
           break;
       }
     });
+  }
+}
+
+async function completeTutorial() {
+  try {
+    const chatId = localStorage.getItem('chatId');
+    
+    if (!chatId) {
+      console.error('No chatId found');
+      return;
+    }
+
+    const response = await fetch('/api/player/complete-tutorial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      currentProfile = data.profile;
+      localStorage.setItem('profile', JSON.stringify(currentProfile));
+      redirectToGame();
+    } else {
+      console.error('Failed to complete tutorial');
+    }
+  } catch (error) {
+    console.error('Error completing tutorial:', error);
   }
 }
 
@@ -533,7 +483,7 @@ function addTutorialStyles() {
       cursor: pointer;
       transition: all 0.3s ease;
       backdrop-filter: blur(5px);
-      touch-action: manipulation; /* Better touch handling */
+      touch-action: manipulation;
     }
 
     .tutorial-btn:disabled {
@@ -554,7 +504,7 @@ function addTutorialStyles() {
       transition: all 0.3s ease;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
       box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      touch-action: manipulation; /* Better touch handling */
+      touch-action: manipulation;
     }
   `;
   document.head.appendChild(style);
@@ -587,10 +537,6 @@ function updateTutorialUI() {
       slide.classList.add('prev');
     }
   });
-}
-
-function startGame() {
-  redirectToGame();
 }
 
 async function redirectToGame() {
@@ -653,9 +599,7 @@ function refreshWeglotTranslations() {
       const event = new CustomEvent('weglot:refresh');
       document.dispatchEvent(event);
       
-    } catch (error) {
-      // Silent error handling
-    }
+    } catch (error) {}
   } else {
     setTimeout(() => {
       if (typeof Weglot !== 'undefined') {
@@ -805,10 +749,8 @@ window.gameAuth = {
   supabaseConfig: null,
   getCurrentLanguage,
   switchLanguage,
-  // Audio controls
   playMainTheme,
   pauseMainTheme,
   setMainThemeVolume,
-  // Debug function
   debugAudioState
 };

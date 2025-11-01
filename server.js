@@ -163,6 +163,51 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
+app.post('/api/player/complete-tutorial', async (req, res) => {
+    try {
+        const { chatId } = req.body;
+        
+        if (!chatId) {
+            return res.status(400).json({ error: 'chatId is required' });
+        }
+
+        // Update the tutorial column to true
+        const updateResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?chat_id=eq.${chatId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': process.env.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ 
+                tutorial: true 
+            })
+        });
+
+        if (!updateResponse.ok) {
+            const error = await updateResponse.json();
+            console.error('[COMPLETE_TUTORIAL] Update failed:', error);
+            return res.status(400).json({ error: 'Failed to update tutorial status' });
+        }
+
+        const updated = await updateResponse.json();
+        
+        if (updated.length === 0) {
+            return res.status(404).json({ error: 'Profile not found' });
+        }
+
+        res.json({ 
+            success: true, 
+            profile: updated[0] 
+        });
+
+    } catch (err) {
+        console.error('[COMPLETE_TUTORIAL]', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Simplified middleware - just check if anon key is provided
 const requireAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
