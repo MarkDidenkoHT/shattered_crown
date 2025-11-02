@@ -174,9 +174,6 @@ function renderRaceSelection() {
                     <div class="slider-track">
                         ${_races.map(race => `
                             <div class="selection-slide" data-id="${race.id}" data-type="race">
-                                <div class="card-art-block">
-                                    <img src="assets/art/races/${race.name.toLowerCase().replace(/\s+/g, '_')}.png" alt="${race.name}" class="card-art">
-                                </div>
                                 <div class="card-info-block">
                                     <h3 class="card-name">${race.name}</h3>
                                     <p class="card-description">${race.description}</p>
@@ -210,14 +207,9 @@ function renderRaceSelection() {
         </div>
     `;
 
-    section.querySelectorAll('.card-art').forEach(img => {
-        img.addEventListener('error', function() {
-            this.style.display = 'none';
-            this.parentElement.innerHTML = '<div style="color: #8a6d3b; padding: 20px; text-align: center;">Race Art<br>Not Available</div>';
-        });
-    });
-
     initializeSelectionSlider();
+    setTimeout(() => loadRaceSelectionBackgrounds(), 100);
+    
     section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const raceId = parseInt(e.target.dataset.id);
