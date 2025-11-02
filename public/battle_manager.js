@@ -2163,13 +2163,25 @@ const handleUseConsumable = async () => {
         return;
     }
 
+    // Get the ability data to determine the effect
+    const abilityData = BattleState.abilities?.find(a => a.name === consumable);
+    if (!abilityData) {
+        displayMessage('Consumable ability data not found.');
+        return;
+    }
+
     // Build the payload exactly like an ability use
     const abilityPayload = {
         abilityName: consumable,
         casterPos: activeCharacter.position,
-        targetCenter: activeCharacter.position, // self-cast by default
+        targetCenter: activeCharacter.position,
         affectedTargets: [
-            { id: activeCharacter.id } // server determines effect itself
+            { 
+                id: activeCharacter.id,
+                pos: activeCharacter.position,
+                faction: 'ally',
+                intendedEffect: abilityData.effects // 'heal', 'damage', etc.
+            }
         ]
     };
 
@@ -2197,8 +2209,6 @@ const handleUseConsumable = async () => {
             return;
         }
 
-        displayMessage(`Used ${consumable}!`, 'success');
-
         // Reset UI/selection like normal ability end
         BattleState.currentTurnCharacter = null;
         BattleState.selectedPlayerCharacter = null;
@@ -2211,7 +2221,6 @@ const handleUseConsumable = async () => {
         displayMessage('Error using consumable. Please try again.', 'error');
     }
 };
-
 
 // OPTIMIZED: Refresh function with selective fields
 const handleRefreshOptimized = async () => {
