@@ -92,6 +92,10 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
         0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
+    .art-header {
+      background: unset;        
+    }
+
     .god-art-block {
       width: 100%;
       height: 74vh;
