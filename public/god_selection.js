@@ -41,7 +41,6 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
                          onerror="this.src='assets/art/placeholder.jpg'">
                   </div>
                   <div class="god-info-block">
-                    <h3 class="god-name">${god.name}</h3>
                     <p class="god-description">${god.description}</p>
                     <button class="fantasy-button select-god-btn" data-god-id="${god.id}">
                       Choose ${god.name}
@@ -74,20 +73,11 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
       padding: 0.5rem;
       position: relative;
       z-index: 2;
-      background: rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(10px);
     }
 
     .gods-slider {
       width: 100%;
       max-width: 100vw;
-    }
-
-    .slider-container {
-      overflow: hidden;
-      border-radius: 8px;
-      margin-bottom: 0.75rem;
-      touch-action: pan-y;
     }
 
     .god-slide {
@@ -119,17 +109,6 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
     .god-info-block {
       padding: 0.75rem;
       text-align: center;
-      height: 16vh;
-    }
-
-    .god-name {
-      font-family: 'Cinzel', serif;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #c4975a;
-      margin-bottom: 0.5rem;
-      text-shadow: 1px 1px 0px #3d2914;
-      letter-spacing: 1px;
     }
 
     .god-description {
@@ -174,11 +153,6 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
     .select-god-btn.loading {
       opacity: 0.7;
       pointer-events: none;
-    }
-
-    .art-header {
-      background-image: unset;
-      padding: 0.5rem 0;
     }
 
     .art-header h1 {

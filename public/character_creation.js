@@ -62,11 +62,11 @@ function addGridSelectionStyles() {
         .name-selection-inline input:focus { outline: none; border-color: #c4975a; box-shadow: 0 0 10px rgba(196, 151, 90, 0.4); background: rgba(40, 25, 15, 0.9); }
         .name-selection-inline input::placeholder { color: #8a6d3b; }
         .name-error-message { color: #ff6b6b; font-size: 12px; margin-top: 5px; display: none; }
-        .summary-card { display: flex; gap: 20px; background: rgba(50, 35, 20, 0.95); border: 2px solid rgba(196, 151, 90, 0.8); border-radius: 12px; padding: 20px; margin: 20px auto; max-width: 900px; }
-        .summary-art-block { flex: 0 0 auto; width: 200px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .summary-card { display: flex; flex-direction: column; gap: 20px; background: rgba(50, 35, 20, 0.95); border: 2px solid rgba(196, 151, 90, 0.8); border-radius: 12px; padding: 8px; margin: 20px auto; max-width: 900px; }
+        .summary-art-block { height: 150px; }
         .summary-art { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 3px solid rgba(196, 151, 90, 0.8); }
         .summary-character-name { color: #c4975a; font-size: 18px; font-weight: bold; text-align: center; margin-top: 5px; }
-        .summary-info-block { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .summary-info-block { flex: 1; display: flex; flex-direction: column; padding: 0.5rem; }
         .summary-info-block h2 { color: #c4975a; margin: 0 0 10px 0; font-size: 24px; }
         .summary-info-block p { margin: 5px 0; color: #ddd; font-size: 14px; }
         .summary-info-block p strong { color: #c4975a; }
@@ -202,7 +202,7 @@ function renderRaceSelection() {
                 </div>
             </div>
         </div>
-        <div class="top-right-buttons">
+        <div class="confirm-return-buttons">
             <button class="fantasy-button god-return-btn">Change Deity</button>
         </div>
     `;
@@ -534,7 +534,7 @@ function renderClassSelection() {
                 </div>
             </div>
         </div>
-        <div class="top-right-buttons">
+        <div class="confirm-return-buttons">
             <button class="fantasy-button return-btn">Return</button>
             <button class="fantasy-button god-return-btn">Change Deity</button>
         </div>
@@ -659,7 +659,7 @@ function renderProfessionSelection() {
                 <h3>No Available Professions</h3>
                 <p>All professions have already been selected by your other characters. Each character must have a unique profession.</p>
             </div>
-            <div class="top-right-buttons">
+            <div class="confirm-return-buttons">
                 <button class="fantasy-button return-btn">Return</button>
                 <button class="fantasy-button god-return-btn">Change Deity</button>
             </div>
@@ -692,7 +692,7 @@ function renderProfessionSelection() {
                 `).join('')}
             </div>
         </div>
-        <div class="top-right-buttons">
+        <div class="confirm-return-buttons">
             <button class="fantasy-button return-btn">Return</button>
             <button class="fantasy-button god-return-btn">Change Deity</button>
         </div>

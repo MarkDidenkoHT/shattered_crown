@@ -6,7 +6,6 @@
       box-sizing: border-box;
     }
 
-/* new stat block info on click  */
 .weglot-container {
   display: none !important;   
 }
@@ -87,6 +86,10 @@
 .top-right-buttons .fantasy-button {
     padding: 0.6rem 1rem;
     font-size: 0.8rem;
+}
+
+.slider-dots {
+    display: noone;
 }
 
 /* end */
@@ -539,29 +542,6 @@
             font-style: italic;
         }
 
-        .summary-card {
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-            border: 2px solid #c4975a;
-            border-radius: 8px;
-            overflow: auto;
-            width: 100%;
-            max-width: 800px;
-            box-shadow: 
-                inset 0 1px 0 rgba(196, 151, 90, 0.2),
-                0 4px 12px rgba(0, 0, 0, 0.4);
-            margin-bottom: 2rem;
-        }
-
-        .summary-art {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .summary-info-block {
-            padding: 2rem;
-        }
-
         .summary-card h2 {
             font-family: 'Cinzel', serif;
             font-size: 1.8rem;
@@ -609,7 +589,8 @@
         .slider-container {
             overflow: hidden;
             border-radius: 8px;
-        }
+            touch-action: pan-y;
+    }
 
         .slider-track {
             display: flex;
@@ -629,10 +610,6 @@
                 inset 0 1px 0 rgba(196, 151, 90, 0.1),
                 0 2px 8px rgba(0, 0, 0, 0.3);
         }
-/* 
-        .selection-slide .card-art-block {
-            height: 300px;
-        } */
 
         .selection-slide .card-info-block {
             padding: 0.5rem;
@@ -659,10 +636,6 @@
             font-weight: 600;
         }
 
-        .slider-dots {
-            display: none;
-        }
-
         .slider-dot {
             width: 12px;
             height: 12px;
@@ -682,90 +655,10 @@
             .art-header h1 {
                 font-size: 1.3rem;
             }
-            .summary-card {
-                max-width: 100%;
-            }
-            .summary-art-block {
-                width: 100%;
-                height: 100px;
-                overflow: hidden;
-            }
-
-            .summary-info-block {
-                padding: 1rem;
-            }
-
             .card-art-block {
                 height: 70px;
             }
         }
-
-        /* Styles for Sex and Profession Selection Cards (similar to Race/Class) */
-    .sex-selection, .profession-selection {
-        width: 100%;
-        max-width: 800px; /* Adjust as needed */
-        margin-bottom: 2rem;
-    }
-
-    .sex-selection .selection-grid, .profession-selection .selection-grid {
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Adjust card width */
-    }
-    .sex-selection .selection-card, .profession-selection .selection-card {
-        background: linear-gradient(145deg, rgba(29, 20, 12, 0.9), rgba(42, 31, 22, 0.8));
-        border: 2px solid #3d2914;
-        border-radius: 8px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(5px);
-        box-shadow: 
-            inset 0 1px 0 rgba(196, 151, 90, 0.1),
-            0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .sex-selection .card-art-block, .profession-selection .card-art-block {
-        width: 100%;
-        height: 200px; /* Adjusted height for sex/profession images */
-        overflow: hidden;
-        position: relative;
-    }
-
-    .sex-selection .card-art, .profession-selection .card-art {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.3s ease;
-    }
-
-    .sex-selection .card-info-block, .profession-selection .card-info-block {
-        padding: 1rem;
-        text-align: center;
-    }
-
-    .sex-selection .card-name, .profession-selection .card-name {
-        font-family: 'Cinzel', serif;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #c4975a;
-        margin-bottom: 0.5rem;
-        text-shadow: 1px 1px 0px #3d2914;
-        letter-spacing: 1px;
-    }
-
-    .sex-selection .card-description, .profession-selection .card-description {
-        color: #b8b3a8;
-        font-size: 0.85rem;
-        line-height: 1.3;
-        margin-bottom: 0.75rem;
-        font-style: italic;
-        min-height: 2.5rem; /* Ensure consistent height */
-    }
-
-    .sex-selection .select-btn, .profession-selection .select-btn {
-        margin-top: 0.5rem;
-        width: calc(100% - 2rem); /* Adjust button width */
-        padding: 0.6rem 1rem;
-        font-size: 0.85rem;
-    }
 
     .selection-slide[data-type="class"] {
         background-size: cover;
