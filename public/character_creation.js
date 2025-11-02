@@ -177,16 +177,6 @@ function renderRaceSelection() {
                                 <div class="card-info-block">
                                     <h3 class="card-name">${race.name}</h3>
                                     <p class="card-description">${race.description}</p>
-                                    /* ${race.available_classes && race.available_classes.length > 0 ? `
-                                        <div class="available-classes-block">
-                                            <h4>Available Classes:</h4>
-                                            <div class="class-list">
-                                                ${race.available_classes.map(cls => `
-                                                    <span class="class-tag" data-class-id="${cls.id}" title="${cls.description}">${cls.name}</span>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    ` : ''} */
                                     <div class="stats-block">
                                         <h4>Base Stats:</h4>
                                         ${Object.entries(race.base_stats).map(([stat, value]) => `<p>${stat}: <span>${value}</span></p>`).join('')}
