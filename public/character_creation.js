@@ -93,10 +93,6 @@ function addGridSelectionStyles() {
         .god-reselect-body { color: #ddd; margin-bottom: 20px; }
         .god-reselect-warning { color: #ff6b6b; font-weight: bold; margin: 10px 0; }
         .god-reselect-buttons { display: flex; gap: 10px; justify-content: flex-end; }
-        .selection-slide { min-height: 500px; border-radius: 12px; padding: 20px; position: relative; display: flex; align-items: center; justify-content: center; }
-        .slider-container { overflow: hidden; border-radius: 12px; }
-        .slider-track { display: flex; transition: transform 0.3s ease-out; }
-        .selection-slide { flex: 0 0 100%; box-sizing: border-box; }
     `;
     document.head.appendChild(style);
 }
@@ -164,45 +160,6 @@ async function fetchAllClassesForRaces() {
     }
 }
 
-function loadRaceSelectionBackgrounds() {
-    const slides = _main.querySelectorAll('.selection-slide[data-type="race"]');
-    slides.forEach(slide => {
-        const raceId = parseInt(slide.dataset.id);
-        const race = _races.find(r => r.id === raceId);
-        if (!race) return;
-        
-        const raceName = race.name.toLowerCase().replace(/\s+/g, '_');
-        const backgroundImagePath = `assets/art/races/backgrounds/${raceName}_bg.png`;
-        
-        const testImage = new Image();
-        testImage.onload = function() {
-            slide.style.backgroundImage = `linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)), url('${backgroundImagePath}')`;
-            slide.style.backgroundSize = 'cover';
-            slide.style.backgroundPosition = 'center';
-            slide.style.backgroundRepeat = 'no-repeat';
-            applyRaceBorderToSlide(slide, raceName);
-        };
-        testImage.onerror = function() {
-            applyRaceBorderToSlide(slide, raceName);
-        };
-        testImage.src = backgroundImagePath;
-    });
-}
-
-function applyRaceBorderToSlide(slide, raceName) {
-    const borderColors = {
-        'human': 'rgba(196, 151, 90, 0.8)',
-        'elf': 'rgba(0, 255, 100, 0.8)',
-        'dwarf': 'rgba(139, 69, 19, 0.8)',
-        'orc': 'rgba(0, 128, 0, 0.8)',
-        'undead': 'rgba(128, 128, 128, 0.8)'
-    };
-    
-    const borderColor = borderColors[raceName] || 'rgba(196, 151, 90, 0.8)';
-    slide.style.border = `3px solid ${borderColor}`;
-    slide.style.borderRadius = '12px';
-}
-
 function renderRaceSelection() {
     const section = _main.querySelector('.character-creation-section');
     const currentCharacterNumber = _existingCharacterCount + 1;
@@ -250,9 +207,8 @@ function renderRaceSelection() {
         </div>
     `;
 
+    loadRaceSelectionBackgrounds();
     initializeSelectionSlider();
-    setTimeout(() => loadRaceSelectionBackgrounds(), 100);
-    
     section.querySelectorAll('.select-btn[data-type="race"]').forEach(button => {
         button.addEventListener('click', (e) => {
             const raceId = parseInt(e.target.dataset.id);
@@ -270,6 +226,28 @@ function renderRaceSelection() {
     });
 
     section.querySelector('.god-return-btn').addEventListener('click', handleGodReselection);
+}
+
+function loadRaceSelectionBackgrounds() {
+    const slides = _main.querySelectorAll('.selection-slide[data-type="race"]');
+    slides.forEach(slide => {
+        const raceId = parseInt(slide.dataset.id);
+        const selectedRace = _races.find(r => r.id === raceId);
+        if (!selectedRace) return;
+        const raceName = selectedRace.name.toLowerCase().replace(/\s+/g, '_');
+        const backgroundImagePath = `assets/art/races/${raceName}.png`;
+        const testImage = new Image();
+        testImage.onload = function() {
+            slide.style.backgroundImage = `linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)), url('${backgroundImagePath}')`;
+            slide.style.backgroundSize = 'cover';
+            slide.style.backgroundPosition = 'center';
+            slide.style.backgroundRepeat = 'no-repeat';
+        };
+        testImage.onerror = function() {
+            // No fallback needed, just don't set background
+        };
+        testImage.src = backgroundImagePath;
+    });
 }
 
 function showGodReselectConfirmation() {
@@ -447,16 +425,16 @@ async function showAbilityTooltip(abilityName) {
                 </div>
             </div>
         `;
-        document.body.appendChild(modal);
-        
-        const abilityIcon = modal.querySelector('.ability-icon');
-        abilityIcon.addEventListener('error', function() {
-            this.style.display = 'none';
-        });
-        
-        const closeModal = () => modal.remove();
-        modal.querySelector('.ability-tooltip-close').addEventListener('click', closeModal);
-        modal.querySelector('.ability-tooltip-overlay').addEventListener('click', closeModal);
+    document.body.appendChild(modal);
+    
+    const abilityIcon = modal.querySelector('.ability-icon');
+    abilityIcon.addEventListener('error', function() {
+        this.style.display = 'none';
+    });
+    
+    const closeModal = () => modal.remove();
+    modal.querySelector('.ability-tooltip-close').addEventListener('click', closeModal);
+    modal.querySelector('.ability-tooltip-overlay').addEventListener('click', closeModal);
     } catch (error) {
         displayMessage('Failed to load ability details.');
     }

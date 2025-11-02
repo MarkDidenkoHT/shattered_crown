@@ -26,7 +26,6 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
       
       <div class="art-header">
         <h1>Choose Your Deity</h1>
-        <p class="selection-subtitle">Select a god to continue</p>
       </div>
       
       <div class="god-selection-section">
