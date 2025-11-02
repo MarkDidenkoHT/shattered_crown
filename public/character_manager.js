@@ -542,7 +542,7 @@ async function showTalentModal(character) {
 
 function loadTalentBackground(modal, className) {
   const talentContainer = modal.querySelector('.talent-container');
-  const backgroundImagePath = `assets/art/classes/backgrounds/${className}_bg.png`;
+  const backgroundImagePath = `assets/art/classes/backgrounds/${raceName.toLowerCase()}_${className.toLowerCase()}_bg.png`;
   
   // Create and test the image
   const testImage = new Image();
