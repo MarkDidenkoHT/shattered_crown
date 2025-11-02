@@ -1,15 +1,15 @@
 let _main;
 let _getCurrentProfile;
 let _profile;
-let _apiCall; // Add this
-let _supabaseConfig; // Add this
+let _apiCall;
+let _supabaseConfig;
 
 export async function loadModule(main, { getCurrentProfile, apiCall, supabaseConfig }) {
   console.log('[EMBARK] --- Starting loadModule for Embark ---');
   _main = main;
   _getCurrentProfile = getCurrentProfile;
-  _apiCall = apiCall; // Add this line
-  _supabaseConfig = supabaseConfig; // Add this line
+  _apiCall = apiCall;
+  _supabaseConfig = supabaseConfig;
 
   _profile = _getCurrentProfile();
   if (!_profile) {
@@ -19,7 +19,6 @@ export async function loadModule(main, { getCurrentProfile, apiCall, supabaseCon
     return;
   }
 
-  // Clear main container and prepare structure
   _main.innerHTML = `
     <div class="main-app-container">
       <div class="particles"></div>
@@ -60,16 +59,14 @@ function renderEmbarkScreen() {
     window.gameAuth.loadModule('castle');
   });
 
-  // Make entire cards clickable
   section.querySelectorAll('.selection-card').forEach(card => {
     card.addEventListener('click', (e) => {
       const mode = e.currentTarget.dataset.mode;
       console.log(`[EMBARK] Selected mode: ${mode}`);
       
-      if (mode === 'PvP') {
-        showPvPModal();
+       if (mode === 'PvP' || mode === 'Dungeon' || mode === 'Trials') {
+        showPvPModal(mode);
       } else {
-        // Pass selectedMode to battle_manager when loading
         window.gameAuth.loadModule('battle_manager', { selectedMode: mode });
       }
     });
@@ -84,7 +81,6 @@ function renderEmbarkScreen() {
 }
 
 function createEmbarkCard(title, mode, imgSrc) {
-  // Extra info per mode
   const modeExtras = {
     PvP: '<p class="coming-soon-text">Coming soon!</p>',
     Trials: '<p class="coming-soon-text">Coming not so soon</p>'
@@ -103,27 +99,41 @@ function createEmbarkCard(title, mode, imgSrc) {
   `;
 }
 
-function showPvPModal() {
+function showPvPModal(mode = 'PvP') {
   const modalOverlay = _main.querySelector('.modal-overlay');
+  
+  const modalContent = getModalContent(mode);
   
   modalOverlay.innerHTML = `
     <div class="pvp-modal">
       <div class="modal-header">
-        <h2>PvP Arena</h2>
+        <h2>${modalContent.title}</h2>
         <button class="modal-close-btn">&times;</button>
       </div>
       <div class="modal-content">
-        <h3>Coming Soon!</h3>
-        <p>Player vs Player battles are currently in development.</p>
-        <p>Prepare your heroes for epic battles against other players!</p>
+        <div class="modal-status ${modalContent.statusClass}">
+          <span class="status-icon">${modalContent.statusIcon}</span>
+          <h3>${modalContent.statusText}</h3>
+        </div>
+        <div class="modal-description">
+          <p>${modalContent.description}</p>
+        </div>
         <div class="modal-features">
+          <h4>Planned Features:</h4>
           <ul>
-            <li>Real-time PvP battles</li>
-            <li>Ranked matchmaking</li>
-            <li>Seasonal rewards</li>
-            <li>Tournament modes</li>
+            ${modalContent.features.map(feature => `<li>${feature}</li>`).join('')}
           </ul>
         </div>
+        ${modalContent.timeline ? `
+          <div class="modal-timeline">
+            <p class="timeline-text"><strong>Estimated Release:</strong> ${modalContent.timeline}</p>
+          </div>
+        ` : ''}
+        ${modalContent.note ? `
+          <div class="modal-note">
+            <p>${modalContent.note}</p>
+          </div>
+        ` : ''}
       </div>
       <div class="modal-footer">
         <button class="fantasy-button modal-ok-btn">Got it!</button>
@@ -133,7 +143,6 @@ function showPvPModal() {
   
   modalOverlay.style.display = 'flex';
   
-  // Close modal handlers
   modalOverlay.querySelector('.modal-close-btn').addEventListener('click', closePvPModal);
   modalOverlay.querySelector('.modal-ok-btn').addEventListener('click', closePvPModal);
   modalOverlay.addEventListener('click', (e) => {
@@ -141,6 +150,69 @@ function showPvPModal() {
       closePvPModal();
     }
   });
+}
+
+function getModalContent(mode) {
+  const content = {
+    'PvP': {
+      title: 'PvP Arena',
+      statusClass: 'status-coming-soon',
+      statusIcon: '⚔️',
+      statusText: 'Coming Soon!',
+      description: 'Prepare to test your strategies against real players! The PvP Arena will pit your carefully assembled party against other players in tactical turn-based combat.',
+      features: [
+        'Real-time matchmaking with players of similar skill levels',
+        'Ranked ladder system with seasonal resets',
+        'Exclusive PvP rewards and cosmetics',
+        'Tournament modes with special prizes',
+        'Draft mode - build a party from random hero pools',
+        'Spectator mode to watch high-level matches',
+        'Replay system to review and learn from battles'
+      ],
+      timeline: 'Q1 2026',
+      note: 'Balance adjustments and new hero abilities are being fine-tuned specifically for competitive play.'
+    },
+    'Dungeon': {
+      title: 'Dungeon Expeditions',
+      statusClass: 'status-in-development',
+      statusIcon: '🗝️',
+      statusText: 'In Active Development',
+      description: 'Venture into procedurally generated dungeons filled with traps, treasures, and increasingly difficult challenges. Each run is unique, testing your adaptability and resource management.',
+      features: [
+        'Procedurally generated multi-floor dungeons',
+        'Progressive difficulty with elite monsters and bosses',
+        'Treasure rooms with rare loot and equipment',
+        'Trap rooms requiring careful decision-making',
+        'Persistent upgrades and meta-progression',
+        'Special themed dungeons with unique mechanics',
+        'Leaderboards for deepest dungeon cleared',
+        'Party permadeath mode for hardcore players'
+      ],
+      timeline: 'Q2 2026',
+      note: 'Currently implementing the dungeon generation algorithm and testing boss encounter mechanics.'
+    },
+    'Trials': {
+      title: 'Trials of Champions',
+      statusClass: 'status-planned',
+      statusIcon: '🏆',
+      statusText: 'Planned for Future Release',
+      description: 'Ultimate endgame challenges designed for seasoned adventurers. Each trial presents unique restrictions and modifiers that will push your tactical prowess to the limit.',
+      features: [
+        'Weekly rotating challenges with special modifiers',
+        'Class-restricted trials (warriors only, mages only, etc.)',
+        'Boss rush mode - face multiple bosses in succession',
+        'Time attack challenges for speedrunners',
+        'Ironman mode - single hero, no party backup',
+        'Unique cosmetic rewards for trial completion',
+        'Hall of Fame showcasing top performers',
+        'Custom trial builder for community challenges'
+      ],
+      timeline: 'TBD - Post-Launch Content',
+      note: 'Trials will be introduced after core game modes are polished and the player base is established.'
+    }
+  };
+  
+  return content[mode] || content['PvP'];
 }
 
 function closePvPModal() {
@@ -205,7 +277,6 @@ async function checkForActiveBattles() {
     if (result.success && result.hasActiveBattle) {
       console.log('[EMBARK] Found active battle:', result.battleData.id);
       
-      // Show reconnection modal
       showReconnectModal(result.battleData);
       return true;
     }
@@ -215,7 +286,6 @@ async function checkForActiveBattles() {
     
   } catch (error) {
     console.error('[EMBARK] Error checking for active battles:', error);
-    // Don't block embark screen if check fails
     return false;
   }
 }
@@ -249,15 +319,12 @@ function showReconnectModal(battleData) {
   
   modalOverlay.style.display = 'flex';
   
-  // Handle reconnection
   modalOverlay.querySelector('.reconnect-btn').addEventListener('click', () => {
     console.log('[EMBARK] Reconnecting to active battle:', battleData.id);
     closeBattleModal();
     
-    // Determine the selected mode from battle data
     const selectedMode = battleData.mode || 'forest';
     
-    // Load battle manager with existing battle data
     window.gameAuth.loadModule('battle_manager', { 
       selectedMode: selectedMode,
       existingBattleId: battleData.id,
@@ -265,7 +332,6 @@ function showReconnectModal(battleData) {
     });
   });
   
-  // Handle abandoning current battle
   modalOverlay.querySelector('.abandon-btn').addEventListener('click', async () => {
     if (confirm('Are you sure you want to abandon your current battle? This cannot be undone.')) {
       await abandonCurrentBattle(battleData.id);
