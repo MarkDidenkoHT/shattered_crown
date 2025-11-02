@@ -101,7 +101,6 @@ function createEmbarkCard(title, mode, imgSrc) {
 
 function showPvPModal(mode = 'PvP') {
   const modalOverlay = _main.querySelector('.modal-overlay');
-  
   const modalContent = getModalContent(mode);
   
   modalOverlay.innerHTML = `
@@ -146,9 +145,7 @@ function showPvPModal(mode = 'PvP') {
   modalOverlay.querySelector('.modal-close-btn').addEventListener('click', closePvPModal);
   modalOverlay.querySelector('.modal-ok-btn').addEventListener('click', closePvPModal);
   modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) {
-      closePvPModal();
-    }
+    if (e.target === modalOverlay) closePvPModal();
   });
 }
 
@@ -276,7 +273,6 @@ async function checkForActiveBattles() {
     
     if (result.success && result.hasActiveBattle) {
       console.log('[EMBARK] Found active battle:', result.battleData.id);
-      
       showReconnectModal(result.battleData);
       return true;
     }
@@ -306,7 +302,7 @@ function showReconnectModal(battleData) {
         <div class="reconnect-options">
           <p>Would you like to resume your battle or start a new one?</p>
           <div class="warning-text">
-            <small>Starting a new battle will abandon your current progress.</small>
+            <small>Abandoning will forfeit your current progress.</small>
           </div>
         </div>
       </div>
@@ -323,20 +319,16 @@ function showReconnectModal(battleData) {
     console.log('[EMBARK] Reconnecting to active battle:', battleData.id);
     closeBattleModal();
     
-    const selectedMode = battleData.mode || 'forest';
-    
     window.gameAuth.loadModule('battle_manager', { 
-      selectedMode: selectedMode,
+      selectedMode: battleData.mode || 'forest',
       existingBattleId: battleData.id,
       reconnecting: true
     });
   });
   
   modalOverlay.querySelector('.abandon-btn').addEventListener('click', async () => {
-    if (confirm('Are you sure you want to abandon your current battle? This cannot be undone.')) {
-      await abandonCurrentBattle(battleData.id);
-      closeBattleModal();
-    }
+    await abandonCurrentBattle(battleData.id);
+    closeBattleModal();
   });
 }
 
@@ -350,21 +342,12 @@ async function abandonCurrentBattle(battleId) {
   try {
     console.log('[EMBARK] Abandoning battle:', battleId);
     
-    const response = await _apiCall('/functions/v1/abandon-battle', 'POST', {
+    await _apiCall('/functions/v1/abandon-battle', 'POST', {
       battleId: battleId,
       profileId: _profile.id
     });
     
-    const result = await response.json();
-    
-    if (result.success) {
-      displayMessage('Previous battle abandoned successfully.');
-    } else {
-      displayMessage('Failed to abandon previous battle: ' + result.message);
-    }
-    
   } catch (error) {
     console.error('[EMBARK] Error abandoning battle:', error);
-    displayMessage('Error abandoning previous battle.');
   }
 }
