@@ -317,37 +317,36 @@ function showRoadmapModal() {
                 <button class="roadmap-close-btn">&times;</button>
             </div>
             <div class="roadmap-body">
+
                 <div class="roadmap-item">
-                    <div class="roadmap-date">30 August 2025</div>
-                    <div class="roadmap-feature">PvE - 2 regions, loot, crafting - 4 working professions!</div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-date">10 September 2025</div>
+                    <div class="roadmap-date">15 November 2025</div>
                     <div class="roadmap-feature">Exp, leveling and progressive score systems! Environmental tools and interactions!</div>
                 </div>
+
                 <div class="roadmap-item">
-                    <div class="roadmap-date">15 September 2025</div>
-                    <div class="roadmap-feature">New professions - enchanting and jewelcrafting!</div>
+                    <div class="roadmap-date">30 November 2025</div>
+                    <div class="roadmap-feature">More levels for existing PVE content and more monsters!</div>
+                </div>
+
+                <div class="roadmap-item">
+                    <div class="roadmap-date">15 December 2025</div>
+                    <div class="roadmap-feature">PvE - 1 new region, new loot, crafting - 2 new professions!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">30 September 2025</div>
-                    <div class="roadmap-feature">Talent trees!</div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-date">10 October 2025</div>
+                    <div class="roadmap-date">30 December 2025</div>
                     <div class="roadmap-feature">New Gods!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">30 October 2025</div>
-                    <div class="roadmap-feature">PvP</div>
+                    <div class="roadmap-date">30 January 2026</div>
+                    <div class="roadmap-feature">Trials - multiplayer PvE system!</div>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-date">30 February 2026</div>
+                    <div class="roadmap-feature">PvP!</div>
                 </div>
                 <div class="roadmap-item">
                     <div class="roadmap-date">November 2025</div>
                     <div class="roadmap-feature">Implementing store, lore, PvE/PvP story progress</div>
-                </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-date">December 2025</div>
-                    <div class="roadmap-feature">Second test phase!</div>
                 </div>
             </div>
         </div>
