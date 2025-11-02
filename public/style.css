@@ -395,7 +395,7 @@
     font-size: 0.9rem;
     line-height: 1.2;
     font-style: italic;
-    min-height: 49vh;
+    min-height: 47.5vh;
 }
 
 .stats-block {
@@ -605,7 +605,7 @@
 
         .selection-slide {
             min-width: 100%;
-            min-height: 80vh;
+            min-height: 77vh;
             background: linear-gradient(145deg, rgb(109 64 25 / 90%), rgba(42, 31, 22, 0.8));
             border: 2px solid #e59745;
             border-radius: 8px;

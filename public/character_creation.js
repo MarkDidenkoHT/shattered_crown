@@ -504,7 +504,7 @@ function renderClassSelection() {
                             <div class="selection-slide" data-id="${cls.id}" data-type="class">
                                 <div class="card-info-block">
                                     <h3 class="card-name">${cls.name}</h3>
-                                    <p class="card-description" style="height: 37vh; overflow-y: auto;">${cls.description}</p>
+                                    <p class="card-description" style="min-height: 33vh !important; overflow-y: auto;">${cls.description}</p>
                                     <div class="stats-block">
                                         <h4>Stat Bonuses:</h4>
                                         ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `<p>${stat}: <span>+${value}</span></p>`).join('')}
