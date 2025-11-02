@@ -504,7 +504,7 @@ function renderClassSelection() {
                             <div class="selection-slide" data-id="${cls.id}" data-type="class">
                                 <div class="card-info-block">
                                     <h3 class="card-name">${cls.name}</h3>
-                                    <p class="card-description">${cls.description}</p>
+                                    <p class="card-description" style="height: 37vh; overflow-y: auto;">${cls.description}</p>
                                     <div class="stats-block">
                                         <h4>Stat Bonuses:</h4>
                                         ${Object.entries(cls.stat_bonuses).map(([stat, value]) => `<p>${stat}: <span>+${value}</span></p>`).join('')}
@@ -777,8 +777,15 @@ async function confirmCharacter() {
         });
         if (!response.ok) { const errorText = await response.text(); try { const errorData = JSON.parse(errorText); throw new Error(errorData.error || `Edge function call failed with status ${response.status}`); } catch { throw new Error(`Edge function call failed with status ${response.status}: ${errorText}`); } }
         const result = await response.json();
-        if (result.success) { _usedProfessionIds.push(_selectedProfession.id); _existingCharacterCount++; displayMessage(`Character ${_existingCharacterCount} (${result.character.race} ${result.character.class}) created! (${_existingCharacterCount}/${_maxCharacters})`);
-            setTimeout(() => startCharacterCreationFlow(), 1000);
+        if (result.success) { 
+            _usedProfessionIds.push(_selectedProfession.id); 
+            _existingCharacterCount++;
+            
+            if (_existingCharacterCount >= _maxCharacters) {
+                showAllCharactersCompleteModal();
+            } else {
+                startCharacterCreationFlow();
+            }
         } else throw new Error(result.error || 'Unknown error occurred during character creation');
     } catch (error) { displayMessage(`Failed to save character: ${error.message}`); }
 }

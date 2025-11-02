@@ -401,6 +401,10 @@
 .stats-block {
     width: 100%;
     min-height: 10vh;
+    display: flex;
+    flex-direction: column;
+    align-content: center;
+    flex-wrap: wrap;
 }
 
  .abilities-block {
