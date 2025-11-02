@@ -2163,8 +2163,8 @@ const handleUseConsumable = async () => {
         return;
     }
 
-    // Get the ability data to determine the effect
-    const abilityData = BattleState.abilities?.find(a => a.name === consumable);
+    // Get the ability data using the existing getAbility function
+    const abilityData = await getAbility(consumable);
     if (!abilityData) {
         displayMessage('Consumable ability data not found.');
         return;
