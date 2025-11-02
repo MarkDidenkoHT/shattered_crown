@@ -2140,10 +2140,15 @@ const handleEndTurn = async () => {
 };
 
 const handleUseConsumable = async () => {
-    const activeCharacter = BattleState.currentTurnCharacter;
-    
+    const activeCharacter = BattleState.selectedPlayerCharacter;
+
     if (!activeCharacter) {
-        displayMessage('No character is currently active for this turn.');
+        displayMessage('No character selected to use consumable.');
+        return;
+    }
+
+    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
+        displayMessage('Missing battle or character data.');
         return;
     }
 
@@ -2158,15 +2163,32 @@ const handleUseConsumable = async () => {
         return;
     }
 
-    const requestData = {
-        battleId: BattleState.battleId,
-        characterId: activeCharacter.id,
-        playerId: BattleState.profile.id,
-        consumableItem: consumable
+    // Build the payload exactly like an ability use
+    const abilityPayload = {
+        abilityName: consumable,
+        casterPos: activeCharacter.position,
+        targetCenter: activeCharacter.position, // self-cast by default
+        affectedTargets: [
+            { id: activeCharacter.id } // server determines effect itself
+        ]
     };
 
+    // Mirror how handleAbilityUse stores and sends actions
+    activeCharacter.pendingAction = {
+        type: 'ability',
+        data: abilityPayload
+    };
+
+    hideAbilityTooltip();
+
     try {
-        const res = await BattleState.apiCall('/functions/v1/use-consumable', 'POST', requestData);
+        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
+            battleId: BattleState.battleId,
+            characterId: activeCharacter.id,
+            currentPosition: activeCharacter.originalPosition || activeCharacter.position,
+            targetPosition: activeCharacter.position,
+            action: activeCharacter.pendingAction
+        });
 
         const result = await res.json();
 
@@ -2176,16 +2198,20 @@ const handleUseConsumable = async () => {
         }
 
         displayMessage(`Used ${consumable}!`, 'success');
-        
-        setTimeout(() => {
-            handleEndTurn();
-        }, 1000);
+
+        // Reset UI/selection like normal ability end
+        BattleState.currentTurnCharacter = null;
+        BattleState.selectedPlayerCharacter = null;
+        BattleState.selectedCharacterEl = null;
+        BattleState.isMoveQueued = false;
+        unhighlightAllTiles();
 
     } catch (err) {
-        console.error('Use consumable error:', err);
+        console.error('Consumable use error:', err);
         displayMessage('Error using consumable. Please try again.', 'error');
     }
 };
+
 
 // OPTIMIZED: Refresh function with selective fields
 const handleRefreshOptimized = async () => {
