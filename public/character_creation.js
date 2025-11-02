@@ -325,8 +325,11 @@ function loadClassSelectionBackgrounds() {
         const classId = parseInt(slide.dataset.id);
         const selectedClass = _classes.find(c => c.id === classId);
         if (!selectedClass) return;
+        
+        const raceName = _selectedRace.name.toLowerCase().replace(/\s+/g, '_');
         const className = selectedClass.name.toLowerCase().replace(/\s+/g, '_');
-        const backgroundImagePath = `assets/art/classes/backgrounds/${className}_bg.png`;
+        const backgroundImagePath = `assets/art/classes/backgrounds/${raceName}_${className}_bg.png`;
+        
         const testImage = new Image();
         testImage.onload = function() {
             slide.style.backgroundImage = `linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)), url('${backgroundImagePath}')`;
