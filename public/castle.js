@@ -337,15 +337,15 @@ function showRoadmapModal() {
                     <div class="roadmap-feature">New Gods!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">30 January 2026</div>
+                    <div class="roadmap-date">January 2026</div>
                     <div class="roadmap-feature">Trials - multiplayer PvE system!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">30 February 2026</div>
+                    <div class="roadmap-date">February 2026</div>
                     <div class="roadmap-feature">PvP!</div>
                 </div>
                 <div class="roadmap-item">
-                    <div class="roadmap-date">November 2025</div>
+                    <div class="roadmap-date">March 2026</div>
                     <div class="roadmap-feature">Implementing store, lore, PvE/PvP story progress</div>
                 </div>
             </div>

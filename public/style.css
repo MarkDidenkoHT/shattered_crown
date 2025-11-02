@@ -400,12 +400,12 @@
 
 .stats-block {
     width: 100%;
-    min-height: 15vh;
+    min-height: 10vh;
 }
 
  .abilities-block {
     width: 100%;
-    min-height: 26vh;
+    min-height: 18vh;
 }
 
 .stats-block p, .stats-block ul, .abilities-block p {
@@ -459,7 +459,7 @@
             font-family: 'Cinzel', serif;
             color: #c4975a;
             font-size: 1rem;
-            margin-bottom: 0.5rem;
+            /* margin-bottom: 0.5rem; */
             text-align: center;
         }
 
@@ -576,8 +576,8 @@
         .confirm-return-buttons .fantasy-button {
             flex: 1;
             max-width: 180px;
-            padding: 0.5rem 1rem;
             font-size: 0.95rem;
+            min-height: 60px;
         }
 
         .selection-slider {
@@ -596,6 +596,7 @@
             display: flex;
             transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
             will-change: transform;
+            max-height: 80vh;
         }
 
         .selection-slide {

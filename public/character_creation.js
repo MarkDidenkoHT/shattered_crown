@@ -62,7 +62,7 @@ function addGridSelectionStyles() {
         .name-selection-inline input:focus { outline: none; border-color: #c4975a; box-shadow: 0 0 10px rgba(196, 151, 90, 0.4); background: rgba(40, 25, 15, 0.9); }
         .name-selection-inline input::placeholder { color: #8a6d3b; }
         .name-error-message { color: #ff6b6b; font-size: 12px; margin-top: 5px; display: none; }
-        .summary-card { display: flex; flex-direction: column; gap: 20px; background: rgba(50, 35, 20, 0.95); border: 2px solid rgba(196, 151, 90, 0.8); border-radius: 12px; padding: 8px; margin: 20px auto; max-width: 900px; }
+        .summary-card { display: flex; flex-direction: column; gap: 20px; background: rgba(50, 35, 20, 0.95); border: 2px solid rgba(196, 151, 90, 0.8); border-radius: 12px; padding: 8px; max-width: 900px; }
         .summary-art-block { height: 150px; }
         .summary-art { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 3px solid rgba(196, 151, 90, 0.8); }
         .summary-character-name { color: #c4975a; font-size: 18px; font-weight: bold; text-align: center; margin-top: 5px; }
