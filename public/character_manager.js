@@ -520,7 +520,7 @@ async function showTalentModal(character) {
     
     document.body.appendChild(modal);
     const talentContainer = modal.querySelector('.talent-container');
-    loadTalentBackground(modal, className);
+    loadTalentBackground(modal, character);
     applyClassBorder(talentContainer, className);
     initializeTalentTree(character, modal);
     
@@ -540,8 +540,10 @@ async function showTalentModal(character) {
   }
 }
 
-function loadTalentBackground(modal, className) {
+function loadTalentBackground(modal, character) {
   const talentContainer = modal.querySelector('.talent-container');
+  const raceName = character.races?.name || 'human';
+  const className = character.classes?.name || 'warrior';
   const backgroundImagePath = `assets/art/classes/backgrounds/${raceName.toLowerCase()}_${className.toLowerCase()}_bg.png`;
   
   // Create and test the image
@@ -562,7 +564,7 @@ function loadTalentBackground(modal, className) {
   
   testImage.onerror = function() {
     // Image doesn't exist, keep the default gradient background
-    console.log(`Background image not found for ${className}: ${backgroundImagePath}`);
+    console.log(`Background image not found: ${backgroundImagePath}`);
     // Fallback to enhanced gradient based on class
     applyFallbackBackground(talentContainer, className);
   };
