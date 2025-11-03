@@ -1070,9 +1070,9 @@ app.post('/api/auction/buy', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get auction with seller details
+    // Get auction details first (without join)
     const auctionResponse = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false&select=*,seller:seller_id(chat_id,account_name)`,
+      `${process.env.SUPABASE_URL}/rest/v1/auction?id=eq.${auction_id}&status=eq.false`,
       {
         headers: {
           'apikey': process.env.SUPABASE_ANON_KEY,
@@ -1087,12 +1087,25 @@ app.post('/api/auction/buy', async (req, res) => {
     }
 
     const auction = auctions[0];
-    const seller = auction.seller;
 
     // Prevent self-buy
     if (auction.seller_id === buyer_id) {
       return res.status(400).json({ error: 'Cannot buy your own auction' });
     }
+
+    // Get seller profile separately (like your working endpoints)
+    const sellerProfileResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${auction.seller_id}`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+
+    const sellerProfiles = await sellerProfileResponse.json();
+    const seller = sellerProfiles.length > 0 ? sellerProfiles[0] : null;
 
     // Fetch buyer profile (for notification)
     const buyerProfileResponse = await fetch(
@@ -1104,68 +1117,65 @@ app.post('/api/auction/buy', async (req, res) => {
         }
       }
     );
+
     const buyerProfiles = await buyerProfileResponse.json();
     const buyerProfile = buyerProfiles.length > 0 ? buyerProfiles[0] : null;
 
     // 1️⃣ Deduct wanted items from buyer
-    if (auction.item_wanted_type === 'gear') {
-      return res.status(400).json({ error: 'Trading gear for gear not supported yet' });
-    } else {
-      const buyerBankResponse = await fetch(
-        `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${buyer_id}&item=eq.${auction.item_wanted}`,
-        {
+    const buyerBankResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/bank?player_id=eq.${buyer_id}&item=eq.${encodeURIComponent(auction.item_wanted)}`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+
+    const buyerItems = await buyerBankResponse.json();
+    const buyerTotal = buyerItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+    if (buyerTotal < auction.amount_wanted) {
+      return res.status(400).json({ error: 'Insufficient items to complete purchase' });
+    }
+
+    // Remove items from buyer's bank
+    let remainingToRemove = auction.amount_wanted;
+    for (const bankItem of buyerItems) {
+      if (remainingToRemove <= 0) break;
+      const amountToTake = Math.min(remainingToRemove, bankItem.amount);
+      remainingToRemove -= amountToTake;
+
+      if (amountToTake === bankItem.amount) {
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+          method: 'DELETE',
           headers: {
             'apikey': process.env.SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
           }
-        }
-      );
-
-      const buyerItems = await buyerBankResponse.json();
-      const buyerTotal = buyerItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-
-      if (buyerTotal < auction.amount_wanted) {
-        return res.status(400).json({ error: 'Insufficient items to complete purchase' });
+        });
+      } else {
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ amount: bankItem.amount - amountToTake })
+        });
       }
-
-      // Remove items from buyer's bank
-      let remainingToRemove = auction.amount_wanted;
-      for (const bankItem of buyerItems) {
-        if (remainingToRemove <= 0) break;
-
-        const amountToTake = Math.min(remainingToRemove, bankItem.amount);
-        remainingToRemove -= amountToTake;
-
-        if (amountToTake === bankItem.amount) {
-          await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
-            method: 'DELETE',
-            headers: {
-              'apikey': process.env.SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            }
-          });
-        } else {
-          await fetch(`${process.env.SUPABASE_URL}/rest/v1/bank?id=eq.${bankItem.id}`, {
-            method: 'PATCH',
-            headers: {
-              'apikey': process.env.SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ amount: bankItem.amount - amountToTake })
-          });
-        }
-      }
-
-      // Seller receives wanted bank items
-      await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted, auction.item_wanted_type);
     }
 
+    // Seller receives wanted bank items
+    await addItemsToBank(auction.seller_id, auction.item_wanted, auction.amount_wanted, 'consumable');
+
     // 2️⃣ Transfer selling item → buyer
-    if (auction.item_selling_type === 'gear') {
-      await transferGearItem(auction.item_selling_id, buyer_id);
+    // Check if it's from craft_sessions (gear) or bank
+    if (auction.table === 'craft_sessions') {
+      await transferGearItem(auction.item_id, buyer_id);
     } else {
-      await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling, auction.item_selling_type);
+      await addItemsToBank(buyer_id, auction.item_selling, auction.amount_selling, 'consumable');
     }
 
     // 3️⃣ Update auction status
@@ -1190,14 +1200,7 @@ app.post('/api/auction/buy', async (req, res) => {
     // 4️⃣ Notify seller via Telegram
     if (seller && seller.chat_id) {
       const buyerName = buyerProfile?.account_name || 'Another player';
-      const message = `
-<b>Your item has been sold!</b>
-
-<b>Item sold:</b> ${auction.amount_selling}x ${auction.item_selling}
-<b>Received:</b> ${auction.amount_wanted}x ${auction.item_wanted}
-<b>Buyer:</b> ${buyerName}
-
-The items have been added to your bank.`;
+      const message = `<b>Your item has been sold!</b>\n\n<b>Item sold:</b> ${auction.amount_selling}x ${auction.item_selling}\n<b>Received:</b> ${auction.amount_wanted}x ${auction.item_wanted}\n<b>Buyer:</b> ${buyerName}\n\nThe items have been added to your bank.`;
       await sendTelegramNotification(seller.chat_id, message);
     }
 
