@@ -542,14 +542,12 @@ async function showTalentModal(character) {
 
 function loadTalentBackground(modal, character) {
   const talentContainer = modal.querySelector('.talent-container');
-  const raceName = character.races?.name || 'human';
-  const className = character.classes?.name || 'warrior';
-  const backgroundImagePath = `assets/art/classes/backgrounds/${raceName.toLowerCase()}_${className.toLowerCase()}_bg.png`;
-  
-  // Create and test the image
+  const raceName = (character.races?.name || 'human').toLowerCase().replace(/\s+/g, '_');
+  const className = (character.classes?.name || 'warrior').toLowerCase().replace(/\s+/g, '_');
+  const backgroundImagePath = `assets/art/classes/backgrounds/${raceName}_${className}_bg.png`;
+
   const testImage = new Image();
-  testImage.onload = function() {
-    // Image exists, apply it with overlay for readability
+  testImage.onload = function () {
     talentContainer.style.backgroundImage = `
       linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2)),
       url('${backgroundImagePath}')
@@ -557,23 +555,18 @@ function loadTalentBackground(modal, character) {
     talentContainer.style.backgroundSize = 'cover';
     talentContainer.style.backgroundPosition = 'center';
     talentContainer.style.backgroundRepeat = 'no-repeat';
-    
-    // Add a subtle animation when the background loads
     talentContainer.style.transition = 'background-image 0.5s ease-in-out';
   };
-  
-  testImage.onerror = function() {
-    // Image doesn't exist, keep the default gradient background
+
+  testImage.onerror = function () {
     console.log(`Background image not found: ${backgroundImagePath}`);
-    // Fallback to enhanced gradient based on class
     applyFallbackBackground(talentContainer, className);
   };
-  
+
   testImage.src = backgroundImagePath;
 }
 
 function applyFallbackBackground(container, className) {
-  // Use the existing background color from your current CSS
   container.style.backgroundImage = 'linear-gradient(135deg, #A0522D, #8B4513)';
 }
 
