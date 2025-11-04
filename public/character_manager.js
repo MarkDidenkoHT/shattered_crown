@@ -524,6 +524,12 @@ async function showTalentModal(character) {
         <div class="talent-container" data-class="${className}">
           <div class="talent-points">Talent Points: <span id="talentPointsCount">${talentPoints}</span></div>
           
+          <div class="ability-counter">
+            <span class="counter-item">Basic: ${selectedAbilities.basic?.length || 0}/4</span>
+            <span class="counter-item">Passive: ${selectedAbilities.passive?.length || 0}/2</span>
+            <span class="counter-item">Ultimate: ${selectedAbilities.ultimate?.length || 0}/1</span>
+          </div>
+          
           <div class="talent-grid">
             <div class="talent-column">
               ${generateTalentColumn(enrichedTalentAbilities['1'] || [], learnedAbilities, 1, selectedAbilities)}
@@ -542,49 +548,15 @@ async function showTalentModal(character) {
             <div class="selected-ability-info">
               <div class="ability-name">Click an ability to see details</div>
               <div class="ability-description">Select an ability from the tree above</div>
-              <div class="ability-limits" id="abilityLimits"></div>
             </div>
-            <button class="fantasy-button learn-button" disabled id="learnButton">
+            <button class="fantasy-button action-button" disabled id="actionButton">
               <div class="button-progress"></div>
               <span class="button-text">Select an Ability</span>
             </button>
-            <button class="fantasy-button select-button" disabled id="selectButton">
-              <span class="button-text">Select/Deselect</span>
-            </button>
-          </div>
-          
-          <div class="selected-abilities-display">
-            <h4>Selected Abilities</h4>
-            <div class="selected-abilities-grid">
-              <div class="selected-category">
-                <h5>Basic (${selectedAbilities.basic?.length || 0}/4)</h5>
-                <div class="selected-abilities-list" id="selectedBasic">
-                  ${(selectedAbilities.basic || []).map(ability => `
-                    <div class="selected-ability-item">${ability}</div>
-                  `).join('')}
-                </div>
-              </div>
-              <div class="selected-category">
-                <h5>Passive (${selectedAbilities.passive?.length || 0}/2)</h5>
-                <div class="selected-abilities-list" id="selectedPassive">
-                  ${(selectedAbilities.passive || []).map(ability => `
-                    <div class="selected-ability-item">${ability}</div>
-                  `).join('')}
-                </div>
-              </div>
-              <div class="selected-category">
-                <h5>Ultimate (${selectedAbilities.ultimate?.length || 0}/1)</h5>
-                <div class="selected-abilities-list" id="selectedUltimate">
-                  ${(selectedAbilities.ultimate || []).map(ability => `
-                    <div class="selected-ability-item">${ability}</div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
           </div>
           
           <div class="instructions">
-            Click abilities to see details. Learned abilities can be selected/deselected.
+            Click abilities to see details and manage selection
           </div>
           
           <div>
@@ -635,6 +607,8 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
     
     const isSelected = hasAbility && Array.isArray(selectedAbilities[typeKey]) && selectedAbilities[typeKey].includes(ability.name);
 
+    const typeBadge = hasAbility ? getTypeBadge(typeKey) : '';
+
     html += `
     <div class="talent-slot ${isLearned ? 'filled' : ''} ${isSelected ? 'selected-ability' : ''}"
         data-column="${column}" 
@@ -643,6 +617,7 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
       ${hasAbility ? `
         <img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}"
             style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
+        ${typeBadge}
         <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
       ` : ''}
     </div>
@@ -650,6 +625,17 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
   }
 
   return html;
+}
+
+function getTypeBadge(type) {
+  const badges = {
+    'basic': 'B',
+    'passive': 'P', 
+    'ultimate': 'U'
+  };
+  
+  const badgeText = badges[type] || '?';
+  return `<div class="ability-type-badge ability-type-${type}">${badgeText}</div>`;
 }
 
 function isAbilityLearned(ability, learnedAbilities) {
@@ -668,36 +654,22 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
   const className = character.classes?.name?.toLowerCase() || 'paladin';
   const talentAbilities = enrichedTalentAbilities || character.classes?.talent_abilities || {};
   const pointsDisplay = modal.querySelector('#talentPointsCount');
-  const learnButton = modal.querySelector('#learnButton');
-  const selectButton = modal.querySelector('#selectButton');
-  const buttonProgress = learnButton.querySelector('.button-progress');
-  const learnButtonText = learnButton.querySelector('.button-text');
+  const actionButton = modal.querySelector('#actionButton');
+  const buttonProgress = actionButton.querySelector('.button-progress');
+  const buttonText = actionButton.querySelector('.button-text');
   const abilityNameDisplay = modal.querySelector('.ability-name');
   const abilityDescriptionDisplay = modal.querySelector('.ability-description');
-  const abilityLimitsDisplay = modal.querySelector('#abilityLimits');
+  const counterItems = modal.querySelectorAll('.counter-item');
 
   let selectedAbility = null;
   let selectedAbilityIsLearned = false;
   let selectedAbilityIsSelected = false;
   let currentSelectedAbilities = { ...initialSelectedAbilities };
 
-  function updateSelectedAbilitiesDisplay() {
-    const limits = {
-      basic: 4,
-      passive: 2,
-      ultimate: 1
-    };
-
-    ['basic', 'passive', 'ultimate'].forEach(type => {
-      const container = modal.querySelector(`#selected${type.charAt(0).toUpperCase() + type.slice(1)}`);
-      const header = container.closest('.selected-category').querySelector('h5');
-      
-      header.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} (${currentSelectedAbilities[type]?.length || 0}/${limits[type]})`;
-      
-      container.innerHTML = (currentSelectedAbilities[type] || []).map(ability => `
-        <div class="selected-ability-item">${ability}</div>
-      `).join('');
-    });
+  function updateCounter() {
+    counterItems[0].textContent = `Basic: ${currentSelectedAbilities.basic?.length || 0}/4`;
+    counterItems[1].textContent = `Passive: ${currentSelectedAbilities.passive?.length || 0}/2`;
+    counterItems[2].textContent = `Ultimate: ${currentSelectedAbilities.ultimate?.length || 0}/1`;
   }
 
   function updatePoints() {
@@ -747,7 +719,7 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
     }
     
     buttonProgress.style.width = '0%';
-    updateLearnButton();
+    updateActionButton();
     
     const activeColumn = modal.querySelector('.talent-column.column-active');
     if (activeColumn) activeColumn.classList.remove('column-active');
@@ -801,8 +773,7 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
       }, 1000);
 
       selectedAbilityIsLearned = true;
-      updateLearnButton();
-      updateSelectButton();
+      updateActionButton();
 
       displayMessage(result.message);
     } catch (error) {
@@ -849,8 +820,8 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
         }
       });
 
-      updateSelectButton();
-      updateSelectedAbilitiesDisplay();
+      updateActionButton();
+      updateCounter();
       displayMessage(result.message);
 
     } catch (error) {
@@ -859,87 +830,53 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
     }
   }
 
-  function updateLearnButton() {
+  function updateActionButton() {
     buttonProgress.style.width = '0%';
     
     if (!selectedAbility) {
-      learnButton.disabled = true;
-      learnButtonText.textContent = 'Select an Ability';
-      learnButton.className = 'fantasy-button learn-button';
+      actionButton.disabled = true;
+      buttonText.textContent = 'Select an Ability';
+      actionButton.className = 'fantasy-button action-button';
       return;
     }
 
-    if (selectedAbilityIsLearned) {
-      learnButton.disabled = true;
-      learnButtonText.textContent = 'Already Learned';
-      learnButton.className = 'fantasy-button learn-button learned';
-    } else if (talentPoints <= 0) {
-      learnButton.disabled = true;
-      learnButtonText.textContent = 'No Talent Points';
-      learnButton.className = 'fantasy-button learn-button no-points';
-    } else {
-      learnButton.disabled = false;
-      learnButtonText.textContent = 'Hold to Learn (1.5s)';
-      learnButton.className = 'fantasy-button learn-button can-learn';
-    }
-  }
-
-  function updateSelectButton() {
-    if (!selectedAbility || !selectedAbilityIsLearned) {
-      selectButton.disabled = true;
-      selectButton.textContent = 'Select/Deselect';
-      selectButton.className = 'fantasy-button select-button';
-      return;
-    }
-
-    selectButton.disabled = false;
-    
-    if (selectedAbilityIsSelected) {
-      selectButton.textContent = 'Deselect Ability';
-      selectButton.className = 'fantasy-button select-button deselected';
-    } else {
-      const type = selectedAbility.type.toLowerCase() === 'active' ? 'basic' : selectedAbility.type.toLowerCase();
-      const limits = {
-        basic: 4,
-        passive: 2,
-        ultimate: 1
-      };
-      
-      const currentCount = currentSelectedAbilities[type]?.length || 0;
-      
-      if (currentCount >= limits[type]) {
-        selectButton.disabled = true;
-        selectButton.textContent = `Limit Reached (${limits[type]})`;
-        selectButton.className = 'fantasy-button select-button limit-reached';
+    if (!selectedAbilityIsLearned) {
+      if (talentPoints <= 0) {
+        actionButton.disabled = true;
+        buttonText.textContent = 'No Talent Points';
+        actionButton.className = 'fantasy-button action-button no-points';
       } else {
-        selectButton.textContent = 'Select Ability';
-        selectButton.className = 'fantasy-button select-button can-select';
+        actionButton.disabled = false;
+        buttonText.textContent = 'Hold to Learn (1.5s)';
+        actionButton.className = 'fantasy-button action-button can-learn';
+      }
+    } else {
+      // Ability is learned - show select/deselect
+      if (selectedAbilityIsSelected) {
+        actionButton.disabled = false;
+        buttonText.textContent = 'Deselect Ability';
+        actionButton.className = 'fantasy-button action-button deselected';
+      } else {
+        const type = selectedAbility.type.toLowerCase() === 'active' ? 'basic' : selectedAbility.type.toLowerCase();
+        const limits = {
+          basic: 4,
+          passive: 2,
+          ultimate: 1
+        };
+        
+        const currentCount = currentSelectedAbilities[type]?.length || 0;
+        
+        if (currentCount >= limits[type]) {
+          actionButton.disabled = true;
+          buttonText.textContent = 'Limit Reached';
+          actionButton.className = 'fantasy-button action-button limit-reached';
+        } else {
+          actionButton.disabled = false;
+          buttonText.textContent = 'Select Ability';
+          actionButton.className = 'fantasy-button action-button can-select';
+        }
       }
     }
-  }
-
-  function updateAbilityLimits() {
-    if (!selectedAbility) {
-      abilityLimitsDisplay.innerHTML = '';
-      return;
-    }
-
-    const type = selectedAbility.type.toLowerCase() === 'active' ? 'basic' : selectedAbility.type.toLowerCase();
-    const limits = {
-      basic: 4,
-      passive: 2,
-      ultimate: 1
-    };
-
-    const currentCount = currentSelectedAbilities[type]?.length || 0;
-    const limit = limits[type];
-    
-    abilityLimitsDisplay.innerHTML = `
-      <div class="limit-info">
-        ${type.charAt(0).toUpperCase() + type.slice(1)} Abilities: ${currentCount}/${limit}
-        ${currentCount >= limit ? '<span class="limit-warning">(Limit Reached)</span>' : ''}
-      </div>
-    `;
   }
 
   function selectAbility(slot, ability) {
@@ -959,9 +896,7 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
     abilityNameDisplay.textContent = ability.name;
     abilityDescriptionDisplay.textContent = ability.description || 'No description available.';
     
-    updateLearnButton();
-    updateSelectButton();
-    updateAbilityLimits();
+    updateActionButton();
   }
 
   modal.querySelectorAll('.talent-slot').forEach(slot => {
@@ -976,43 +911,77 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
     });
   });
 
-  learnButton.addEventListener('mousedown', (e) => {
-    if (learnButton.disabled) return;
+  actionButton.addEventListener('mousedown', (e) => {
+    if (actionButton.disabled) return;
+    if (selectedAbilityIsLearned) {
+      // For selection/deselection, just click, no hold
+      return;
+    }
     e.preventDefault();
     startHold();
   });
 
-  learnButton.addEventListener('mouseup', (e) => {
+  actionButton.addEventListener('mouseup', (e) => {
+    if (selectedAbilityIsLearned) {
+      // For selection/deselection, handle as click
+      e.preventDefault();
+      toggleAbilitySelection();
+      return;
+    }
     e.preventDefault();
     cancelHold();
   });
 
-  learnButton.addEventListener('mouseleave', cancelHold);
+  actionButton.addEventListener('mouseleave', () => {
+    if (!selectedAbilityIsLearned) {
+      cancelHold();
+    }
+  });
 
-  learnButton.addEventListener('touchstart', (e) => {
-    if (learnButton.disabled) return;
+  actionButton.addEventListener('click', (e) => {
+    if (selectedAbilityIsLearned) {
+      e.preventDefault();
+      toggleAbilitySelection();
+    }
+  });
+
+  actionButton.addEventListener('touchstart', (e) => {
+    if (actionButton.disabled) return;
+    if (selectedAbilityIsLearned) return;
     e.preventDefault();
     startHold();
   }, { passive: false });
 
-  learnButton.addEventListener('touchend', (e) => {
+  actionButton.addEventListener('touchend', (e) => {
+    if (selectedAbilityIsLearned) {
+      e.preventDefault();
+      toggleAbilitySelection();
+      return;
+    }
     e.preventDefault();
     cancelHold();
   }, { passive: false });
 
-  learnButton.addEventListener('touchcancel', cancelHold);
-
-  selectButton.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleAbilitySelection();
+  actionButton.addEventListener('touchcancel', () => {
+    if (!selectedAbilityIsLearned) {
+      cancelHold();
+    }
   });
 
-  document.addEventListener('mouseup', cancelHold);
-  document.addEventListener('touchend', cancelHold);
+  document.addEventListener('mouseup', () => {
+    if (!selectedAbilityIsLearned) {
+      cancelHold();
+    }
+  });
 
-  updateSelectedAbilitiesDisplay();
-  updateLearnButton();
-  updateSelectButton();
+  document.addEventListener('touchend', () => {
+    if (!selectedAbilityIsLearned) {
+      cancelHold();
+    }
+  });
+
+  updateCounter();
+  updateActionButton();
 }
 
 function loadTalentBackground(modal, character) {
@@ -1421,6 +1390,23 @@ function loadCharacterManagerStyles() {
     right: 10px;
 }
 
+/* Ability Counter */
+.ability-counter {
+    display: flex;
+    justify-content: space-around;
+    margin: 10px 0;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    border: 1px solid #c4975a;
+}
+
+.counter-item {
+    color: #FFD700;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
 /* Talent Action Panel */
 .talent-action-panel {
     background: rgba(0, 0, 0, 0.3);
@@ -1448,8 +1434,8 @@ function loadCharacterManagerStyles() {
     line-height: 1.4;
 }
 
-/* Learn Button with Progress */
-.learn-button {
+/* Action Button with Progress */
+.action-button {
     position: relative;
     width: 100%;
     padding: 15px;
@@ -1476,130 +1462,80 @@ function loadCharacterManagerStyles() {
     z-index: 2;
 }
 
-.learn-button.learned {
-    background: rgba(76, 175, 80, 0.6);
-    border-color: #4CAF50;
-    cursor: not-allowed;
-}
-
-.learn-button.no-points {
+.action-button.no-points {
     background: rgba(244, 67, 54, 0.6);
     border-color: #f44336;
     cursor: not-allowed;
 }
 
-.learn-button.can-learn {
+.action-button.can-learn {
     background: rgba(255, 193, 7, 0.8);
     border-color: #FFC107;
     color: #000;
     cursor: pointer;
 }
 
-.learn-button.can-learn:hover {
+.action-button.can-learn:hover {
     background: rgba(255, 193, 7, 1);
     transform: scale(1.02);
 }
 
-/* Selection/Deselection Styles */
-.select-button {
-    margin-top: 10px;
-    width: 100%;
-    padding: 12px;
-    font-size: 1rem;
-    font-weight: bold;
-    transition: all 0.3s ease;
-}
-
-.select-button.can-select {
+.action-button.can-select {
     background: rgba(76, 175, 80, 0.8);
     border-color: #4CAF50;
     color: white;
 }
 
-.select-button.can-select:hover {
+.action-button.can-select:hover {
     background: rgba(76, 175, 80, 1);
     transform: scale(1.02);
 }
 
-.select-button.deselected {
+.action-button.deselected {
     background: rgba(244, 67, 54, 0.8);
     border-color: #f44336;
     color: white;
 }
 
-.select-button.deselected:hover {
+.action-button.deselected:hover {
     background: rgba(244, 67, 54, 1);
     transform: scale(1.02);
 }
 
-.select-button.limit-reached {
+.action-button.limit-reached {
     background: rgba(158, 158, 158, 0.6);
     border-color: #9E9E9E;
     color: #ccc;
     cursor: not-allowed;
 }
 
-/* Selected Abilities Display */
-.selected-abilities-display {
-    background: rgba(0, 0, 0, 0.3);
-    border: 2px solid #c4975a;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 15px 0;
-}
-
-.selected-abilities-display h4 {
-    color: #c4975a;
-    text-align: center;
-    margin-bottom: 10px;
-    font-family: 'Cinzel', serif;
-}
-
-.selected-abilities-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-}
-
-.selected-category h5 {
-    color: #FFD700;
-    text-align: center;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-}
-
-.selected-abilities-list {
-    min-height: 60px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-    padding: 5px;
-}
-
-.selected-ability-item {
-    background: rgba(196, 151, 90, 0.2);
-    border: 1px solid rgba(196, 151, 90, 0.4);
-    border-radius: 4px;
-    padding: 4px 8px;
-    margin: 2px 0;
-    font-size: 0.8rem;
-    color: #b8b3a8;
-    text-align: center;
-}
-
-/* Ability Limits Info */
-.ability-limits {
-    margin-top: 8px;
-    font-size: 0.9rem;
-}
-
-.limit-info {
-    color: #b8b3a8;
-    text-align: center;
-}
-
-.limit-warning {
-    color: #f44336;
+/* Ability Type Badges */
+.ability-type-badge {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 0.6rem;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+}
+
+.ability-type-basic {
+    background: #4CAF50;
+}
+
+.ability-type-passive {
+    background: #2196F3;
+}
+
+.ability-type-ultimate {
+    background: #FF9800;
 }
 
 /* Column Glow Effects */
