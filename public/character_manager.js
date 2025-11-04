@@ -497,11 +497,17 @@ async function showTalentModal(character) {
     
     const enrichedTalentAbilities = {};
     Object.keys(talentAbilities).forEach(column => {
-      enrichedTalentAbilities[column] = talentAbilities[column].map(basicAbility => {
-        const completeAbility = abilityLookup[basicAbility.name];
-        return completeAbility || basicAbility;
-      });
+    enrichedTalentAbilities[column] = talentAbilities[column].map(basicAbility => {
+      const completeAbility = abilityLookup[basicAbility.name];
+      if (completeAbility) {
+        return {
+          ...basicAbility,
+          ...completeAbility
+        };
+      }
+      return basicAbility;
     });
+  });
     
     const modal = document.createElement('div');
     modal.className = 'custom-message-box';
@@ -660,7 +666,7 @@ function initializeTalentTree(character, modal) {
       const progress = Math.min((elapsed / 1500) * 100, 100);
       
       buttonProgress.style.width = progress + '%';
-      buttonText.textContent = `Learning... ${Math.round(progress)}%`;
+      //buttonText.textContent = `Learning... ${Math.round(progress)}%`;
 
       if (elapsed >= 1500) {
         clearInterval(holdTimer);
