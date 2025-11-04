@@ -522,12 +522,14 @@ async function showTalentModal(character) {
     modal.innerHTML = `
       <div class="talent-modal-content">
         <div class="talent-container" data-class="${className}">
-          <div class="talent-points">Talent Points: <span id="talentPointsCount">${talentPoints}</span></div>
-          
-          <div class="ability-counter">
-            <span class="counter-item">Basic: ${selectedAbilities.basic?.length || 0}/4</span>
-            <span class="counter-item">Passive: ${selectedAbilities.passive?.length || 0}/2</span>
-            <span class="counter-item">Ultimate: ${selectedAbilities.ultimate?.length || 0}/1</span>
+          <div class="talent-header">
+            <div class="talent-points">Talent Points: <span id="talentPointsCount">${talentPoints}</span></div>
+            <div class="ability-counter">
+              <span class="counter-item">Basic: ${selectedAbilities.basic?.length || 0}/4</span>
+              <span class="counter-item">Passive: ${selectedAbilities.passive?.length || 0}/2</span>
+              <span class="counter-item">Ultimate: ${selectedAbilities.ultimate?.length || 0}/1</span>
+            </div>
+            <button class="help-tutorial-close-button">X</button>
           </div>
           
           <div class="talent-grid">
@@ -553,14 +555,6 @@ async function showTalentModal(character) {
               <div class="button-progress"></div>
               <span class="button-text">Select an Ability</span>
             </button>
-          </div>
-          
-          <div class="instructions">
-            Click abilities to see details and manage selection
-          </div>
-          
-          <div>
-            <button class="help-tutorial-close-button">X</button>
           </div>
         </div>
       </div>
@@ -775,7 +769,6 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
       selectedAbilityIsLearned = true;
       updateActionButton();
 
-      displayMessage(result.message);
     } catch (error) {
       console.error('Error learning talent:', error);
       displayMessage(error.message || 'Failed to learn talent. Please try again.');
@@ -822,7 +815,6 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
 
       updateActionButton();
       updateCounter();
-      displayMessage(result.message);
 
     } catch (error) {
       console.error('Error selecting ability:', error);
@@ -1390,15 +1382,19 @@ function loadCharacterManagerStyles() {
     right: 10px;
 }
 
+/* Talent Header */
+.talent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 10px;
+}
+
 /* Ability Counter */
 .ability-counter {
     display: flex;
-    justify-content: space-around;
-    margin: 10px 0;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 6px;
-    border: 1px solid #c4975a;
+    gap: 15px;
 }
 
 .counter-item {
@@ -1891,7 +1887,6 @@ function loadCharacterManagerStyles() {
     color: #FFD700;
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 5px;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -1967,16 +1962,6 @@ function loadCharacterManagerStyles() {
 
 .talent-slot.level-up-flash {
     animation: levelUpFlash 1s ease-out;
-}
-
-.instructions {
-    text-align: center;
-    color: #FFD700;
-    font-size: 14px;
-    margin-top: 15px;
-    opacity: 0.8;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    displayL none;
 }
 `;
     document.head.appendChild(styleEl);
