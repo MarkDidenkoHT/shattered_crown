@@ -921,7 +921,7 @@ async function showEquipmentModal(character, slot, type) {
         item: item.result,
         type: item.type,
         stats: item.result_stats,
-        crafting_session_id = item.id
+        crafting_session_id : item.id
       }));
     }
     
