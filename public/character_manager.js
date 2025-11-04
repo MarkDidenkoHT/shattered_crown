@@ -487,27 +487,35 @@ async function showTalentModal(character) {
       });
     });
     
+    console.log('Fetching abilities:', abilityNames); // Debug log
+    
     const response = await _apiCall(`/api/supabase/rest/v1/abilities?name=in.(${abilityNames.map(name => `"${name}"`).join(',')})&select=*`);
     const completeAbilities = await response.json();
+    
+    console.log('Complete abilities from DB:', completeAbilities); // Debug log
     
     const abilityLookup = {};
     completeAbilities.forEach(ability => {
       abilityLookup[ability.name] = ability;
     });
     
+    console.log('Ability lookup:', abilityLookup); // Debug log
+    
     const enrichedTalentAbilities = {};
     Object.keys(talentAbilities).forEach(column => {
-    enrichedTalentAbilities[column] = talentAbilities[column].map(basicAbility => {
-      const completeAbility = abilityLookup[basicAbility.name];
-      if (completeAbility) {
-        return {
-          ...basicAbility,
-          ...completeAbility
-        };
-      }
-      return basicAbility;
+      enrichedTalentAbilities[column] = talentAbilities[column].map(basicAbility => {
+        const completeAbility = abilityLookup[basicAbility.name];
+        console.log(`Merging ${basicAbility.name}:`, { basic: basicAbility, complete: completeAbility }); // Debug log
+        
+        if (completeAbility) {
+          // Return the complete ability data from database
+          return completeAbility;
+        }
+        return basicAbility;
+      });
     });
-  });
+    
+    console.log('Enriched talents:', enrichedTalentAbilities); // Debug log
     
     const modal = document.createElement('div');
     modal.className = 'custom-message-box';
@@ -556,7 +564,7 @@ async function showTalentModal(character) {
     const talentContainer = modal.querySelector('.talent-container');
     loadTalentBackground(modal, character);
     applyClassBorder(talentContainer, className);
-    initializeTalentTree(character, modal);
+    initializeTalentTree(character, modal, enrichedTalentAbilities);
     
     modal.querySelector('.help-tutorial-close-button').addEventListener('click', () => {
       modal.remove();
@@ -624,7 +632,7 @@ function initializeTalentTree(character, modal) {
   let startTime = 0;
 
   const className = character.classes?.name?.toLowerCase() || 'paladin';
-  const talentAbilities = character.classes?.talent_abilities || {};
+  //const talentAbilities = character.classes?.talent_abilities || {};
   const pointsDisplay = modal.querySelector('#talentPointsCount');
   const learnButton = modal.querySelector('#learnButton');
   const buttonProgress = learnButton.querySelector('.button-progress');
