@@ -574,7 +574,9 @@ function applyClassBorder(container, className) {
   const borderColors = {
     'paladin': 'rgba(255, 255, 200, 0.8)',
     'warrior': 'rgba(200, 0, 0, 0.8)',
-    'priest': 'rgba(255, 255, 255, 0.8)'
+    'priest': 'rgba(255, 255, 255, 0.8)',
+    'grave warden': 'rgba(33, 91, 0, 0.8)',
+    'defiler': 'rgba(97, 0, 74, 0.8)'
   };
   
   const borderColor = borderColors[className] || '#DAA520';
