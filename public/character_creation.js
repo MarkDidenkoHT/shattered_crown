@@ -340,8 +340,8 @@ function applyClassBorderToSlide(slide, className) {
         'paladin': 'rgba(255, 255, 200, 0.8)',
         'warrior': 'rgba(200, 0, 0, 0.8)',
         'priest': 'rgba(255, 255, 255, 0.8)',
-        'defiler': 'rgba(68, 1, 57, 0.8)',
-        'grave warden': 'rgba(1, 53, 17, 0.8)'
+        'grave warden': 'rgba(33, 91, 0, 0.8)',
+        'defiler': 'rgba(97, 0, 74, 0.8)'
     };
     const borderColor = borderColors[className] || 'rgba(196, 151, 90, 0.8)';
     slide.style.border = `3px solid ${borderColor}`;
