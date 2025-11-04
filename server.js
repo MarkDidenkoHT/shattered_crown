@@ -1862,6 +1862,111 @@ app.post('/api/crafting/alchemy', async (req, res) => {
     }
 });
 
+// Add this to your server.js file, in the edge functions proxy section
+app.post('/api/supabase/functions/v1/select_ability', requireAuth, async (req, res) => {
+  try {
+    const { character_id, ability_name, ability_type, player_id } = req.body;
+
+    if (!character_id || !ability_name || !ability_type || !player_id) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: character_id, ability_name, ability_type, player_id' 
+      });
+    }
+
+    // Verify the character belongs to the player
+    const characterCheck = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/characters?id=eq.${character_id}&player_id=eq.${player_id}&select=id,learned_abilities,selected_abilities`,
+      {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        }
+      }
+    );
+
+    const characters = await characterCheck.json();
+    if (characters.length === 0) {
+      return res.status(404).json({ error: 'Character not found or does not belong to player' });
+    }
+
+    const character = characters[0];
+    const learnedAbilities = character.learned_abilities || { basic: [], passive: [], ultimate: [] };
+    const selectedAbilities = character.selected_abilities || { basic: [], passive: [], ultimate: [] };
+
+    // Normalize ability type (active -> basic)
+    const normalizedType = ability_type.toLowerCase() === 'active' ? 'basic' : ability_type.toLowerCase();
+
+    // Check if ability is learned
+    const isLearned = learnedAbilities[normalizedType]?.includes(ability_name);
+    if (!isLearned) {
+      return res.status(400).json({ error: 'Ability not learned yet' });
+    }
+
+    // Check limits
+    const limits = {
+      basic: 4,
+      passive: 2,
+      ultimate: 1
+    };
+
+    const currentSelected = selectedAbilities[normalizedType] || [];
+    
+    // If ability is already selected, deselect it
+    if (currentSelected.includes(ability_name)) {
+      const updatedSelected = currentSelected.filter(ab => ab !== ability_name);
+      selectedAbilities[normalizedType] = updatedSelected;
+    } else {
+      // If ability is not selected, check limits
+      if (currentSelected.length >= limits[normalizedType]) {
+        return res.status(400).json({ 
+          error: `Cannot select more than ${limits[normalizedType]} ${normalizedType} abilities`,
+          limit: limits[normalizedType],
+          current: currentSelected.length
+        });
+      }
+      
+      // Add the ability
+      selectedAbilities[normalizedType] = [...currentSelected, ability_name];
+    }
+
+    // Update the character
+    const updateResponse = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/characters?id=eq.${character_id}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ 
+          selected_abilities: selectedAbilities 
+        })
+      }
+    );
+
+    if (!updateResponse.ok) {
+      const error = await updateResponse.json();
+      throw new Error(error.message || 'Failed to update selected abilities');
+    }
+
+    const updated = await updateResponse.json();
+    
+    res.json({
+      success: true,
+      selected_abilities: selectedAbilities,
+      message: `Ability ${selectedAbilities[normalizedType].includes(ability_name) ? 'selected' : 'deselected'} successfully`
+    });
+
+  } catch (error) {
+    console.error('[SELECT_ABILITY]', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to update ability selection' 
+    });
+  }
+});
+
 // Reserve ores/ingredients for mining (alchemy start)
 app.post('/api/crafting/reserve-alchemy-ingredients', async (req, res) => {
   try {
@@ -2268,12 +2373,6 @@ app.get('/api/characters/:playerId', async (req, res) => {
     res.status(500).json({ error: "Server error fetching characters" });
   }
 });
-
-
-
-
-
-
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
