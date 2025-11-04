@@ -1863,7 +1863,7 @@ app.post('/api/crafting/alchemy', async (req, res) => {
 });
 
 // Add this to your server.js file, in the edge functions proxy section
-app.post('/api/supabase/functions/v1/select_ability', requireAuth, async (req, res) => {
+app.post('/api/supabase/functions/v1/select_abilities', requireAuth, async (req, res) => {
   try {
     const { character_id, ability_name, ability_type, player_id } = req.body;
 

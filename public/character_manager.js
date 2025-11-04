@@ -788,7 +788,7 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
     if (!selectedAbility || !selectedAbilityIsLearned) return;
 
     try {
-      const response = await _apiCall('/api/supabase/functions/v1/select_ability', {
+      const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
         method: 'POST',
         body: {
           character_id: character.id,
@@ -1976,6 +1976,7 @@ function loadCharacterManagerStyles() {
     margin-top: 15px;
     opacity: 0.8;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    displayL none;
 }
 `;
     document.head.appendChild(styleEl);
