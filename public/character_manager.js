@@ -917,6 +917,8 @@ function initializeTalentTree(character, modal) {
       e.preventDefault();
       e.stopPropagation();
 
+      createAbilityTooltip(ability, e.clientX, e.clientY);
+
       const selected = character.selected_abilities || { basic: [], passive: [], ultimate: [] };
       const list = selected[ability.type] || [];
 
