@@ -55,9 +55,11 @@ async function renderCharacters(characters) {
 
   section.innerHTML = `
     <div class="characters-slider-container">
+      <button class="slider-arrow slider-arrow-left">‹</button>
       <div class="characters-slider" id="charactersSlider">
         ${characters.map(character => characterCardHTML(character)).join('')}
       </div>
+      <button class="slider-arrow slider-arrow-right">›</button>
     </div>
     <div class="top-right-buttons">
       <button class="fantasy-button return-btn">Return</button>
@@ -74,14 +76,12 @@ async function renderCharacters(characters) {
   setupStatsClickHandlers(section, characters);
   setupDragSlider();
   
-  // Add this new line:
   const availableCounts = await checkAvailableItems(characters);
   updateAvailabilityLabels(section, availableCounts);
 }
 
 async function checkAvailableItems(characters) {
   try {
-    // Check consumables and tools
     const bankResponse = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&select=type,amount`);
     const bankItems = await bankResponse.json();
     
@@ -92,7 +92,6 @@ async function checkAvailableItems(characters) {
       }
     });
     
-    // Check crafted gear
     const gearResponse = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&equipped_by=is.null&select=type`);
     const gearItems = await gearResponse.json();
     
@@ -114,7 +113,6 @@ function updateAvailabilityLabels(section, availableCounts) {
     
     icon.dataset.hasItems = count > 0 ? 'true' : 'false';
     
-    // Add or update label
     let label = icon.querySelector('.availability-label');
     if (!label) {
       label = document.createElement('div');
@@ -274,6 +272,14 @@ function setupDragSlider() {
   const dragThreshold = 50;
   let animationId = null;
 
+  const leftArrow = _main.querySelector('.slider-arrow-left');
+  const rightArrow = _main.querySelector('.slider-arrow-right');
+
+  function updateArrows() {
+    leftArrow.style.display = currentIndex > 0 ? 'flex' : 'none';
+    rightArrow.style.display = currentIndex < cards.length - 1 ? 'flex' : 'none';
+  }
+
   function getCardWidth() {
     const containerWidth = slider.offsetWidth;
     const gap = 16;
@@ -301,6 +307,7 @@ function setupDragSlider() {
     }
     
     currentIndex = Math.max(0, Math.min(index, cards.length - 1));
+    updateArrows();
   }
 
   function handleStart(clientX) {
@@ -352,6 +359,18 @@ function setupDragSlider() {
     snapToCard(targetIndex);
   }
 
+  leftArrow.addEventListener('click', () => {
+    if (currentIndex > 0) {
+      snapToCard(currentIndex - 1);
+    }
+  });
+
+  rightArrow.addEventListener('click', () => {
+    if (currentIndex < cards.length - 1) {
+      snapToCard(currentIndex + 1);
+    }
+  });
+
   slider.addEventListener('mousedown', (e) => {
     e.preventDefault();
     handleStart(e.clientX);
@@ -393,6 +412,7 @@ function setupDragSlider() {
   slider.style.cursor = 'grab';
   requestAnimationFrame(() => {
     snapToCard(0, true);
+    updateArrows();
   });
 }
 
@@ -460,7 +480,6 @@ async function showTalentModal(character) {
   const talentPoints = character.points?.talent || 0;
   
   try {
-    // Fetch complete ability data
     const abilityNames = [];
     Object.values(talentAbilities).forEach(columnAbilities => {
       columnAbilities.forEach(ability => {
@@ -468,22 +487,19 @@ async function showTalentModal(character) {
       });
     });
     
-    // Get complete ability data from database
     const response = await _apiCall(`/api/supabase/rest/v1/abilities?name=in.(${abilityNames.map(name => `"${name}"`).join(',')})&select=*`);
     const completeAbilities = await response.json();
     
-    // Create lookup map
     const abilityLookup = {};
     completeAbilities.forEach(ability => {
       abilityLookup[ability.name] = ability;
     });
     
-    // Merge complete data with talent structure
     const enrichedTalentAbilities = {};
     Object.keys(talentAbilities).forEach(column => {
       enrichedTalentAbilities[column] = talentAbilities[column].map(basicAbility => {
         const completeAbility = abilityLookup[basicAbility.name];
-        return completeAbility || basicAbility; // Use complete data if available, fallback to basic
+        return completeAbility || basicAbility;
       });
     });
     
@@ -509,8 +525,8 @@ async function showTalentModal(character) {
           </div>
           
           <div class="instructions">
-            Hold column for 1.5s to spend talent point<br>
-            Click learned abilities to see details
+            Click abilities to see details<br>
+            Hold unlearned abilities to spend talent points
           </div>
           
           <div>
@@ -546,7 +562,6 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
   const maxSlots = 7;
   let html = '';
 
-  // normalize selected abilities
   selectedAbilities = {
     basic: Array.isArray(selectedAbilities?.basic) ? selectedAbilities.basic : [],
     passive: Array.isArray(selectedAbilities?.passive) ? selectedAbilities.passive : [],
@@ -573,6 +588,14 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
             style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
         <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
       ` : ''}
+      ${hasAbility ? `
+        <div class="ability-status">
+          ${isLearned ? 
+            '<div class="status-learned">Learned</div>' : 
+            '<button class="status-progress">Learn</button>'
+          }
+        </div>
+      ` : ''}
     </div>
     `;
   }
@@ -583,7 +606,7 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
 function isAbilityLearned(ability, learnedAbilities) {
   return Object.values(learnedAbilities)
     .flat()
-    .filter(Boolean) // Remove null values
+    .filter(Boolean)
     .includes(ability.name);
 }
 
@@ -598,8 +621,6 @@ function initializeTalentTree(character, modal) {
   const talentAbilities = character.classes?.talent_abilities || {};
   const pointsDisplay = modal.querySelector('#talentPointsCount');
 
-  // Add progress bar container
-  const talentGrid = modal.querySelector('.talent-grid');
   const progressBarContainer = document.createElement('div');
   progressBarContainer.className = 'learning-progress-container';
   progressBarContainer.style.display = 'none';
@@ -609,7 +630,7 @@ function initializeTalentTree(character, modal) {
     </div>
     <div class="learning-progress-text">Learning...</div>
   `;
-  talentGrid.parentNode.insertBefore(progressBarContainer, talentGrid.nextSibling);
+  modal.querySelector('.talent-grid').parentNode.insertBefore(progressBarContainer, modal.querySelector('.talent-grid').nextSibling);
 
   function updatePoints() {
     pointsDisplay.textContent = talentPoints;
@@ -619,7 +640,6 @@ function initializeTalentTree(character, modal) {
     const abilities = talentAbilities[column] || [];
     const learnedAbilities = character.learned_abilities || { basic: [], passive: [], ultimate: [] };
     
-    // Find the first unlearned ability from the bottom (row 0)
     for (let row = 0; row < abilities.length; row++) {
       const ability = abilities[row];
       if (ability && !isAbilityLearned(ability, learnedAbilities)) {
@@ -636,14 +656,12 @@ function initializeTalentTree(character, modal) {
     const targetSlot = modal.querySelector(`.talent-slot[data-column="${targetColumn}"][data-row="${targetAbility.row}"]`);
     if (!targetSlot) return null;
 
-    // Show progress bar container
     progressBarContainer.style.display = 'block';
     const progressFill = progressBarContainer.querySelector('.learning-progress-fill');
     progressFill.style.width = '0%';
 
-    // Position progress bar near the target ability
     const slotRect = targetSlot.getBoundingClientRect();
-    const containerRect = talentGrid.getBoundingClientRect();
+    const containerRect = modal.querySelector('.talent-grid').getBoundingClientRect();
     
     progressBarContainer.style.position = 'absolute';
     progressBarContainer.style.left = (slotRect.left - containerRect.left) + 'px';
@@ -668,14 +686,12 @@ function initializeTalentTree(character, modal) {
     const parentColumn = targetSlot.closest('.talent-column');
     if (parentColumn) parentColumn.classList.add('column-active');
 
-    // Show learning progress on lowest unlearned ability in this column
     const learningProgress = showLearningProgress(column);
     
     holdTimer = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min((elapsed / 1500) * 100, 100);
       
-      // Update both the hold progress and learning progress
       holdProgress.style.width = progress + '%';
       
       if (learningProgress) {
@@ -705,7 +721,6 @@ function initializeTalentTree(character, modal) {
       currentSlot = null;
     }
     
-    // Hide progress bar
     progressBarContainer.style.display = 'none';
   }
 
@@ -739,15 +754,24 @@ function initializeTalentTree(character, modal) {
       talentPoints = result.remaining_talent_points;
       updatePoints();
 
-      // Update both the clicked slot and the lowest unlearned ability
       currentSlot.classList.add('filled', 'level-up-flash');
       const abilityImage = currentSlot.querySelector('img');
       if (abilityImage) abilityImage.style.opacity = '1';
+
+      const statusElement = currentSlot.querySelector('.ability-status');
+      if (statusElement) {
+        statusElement.innerHTML = '<div class="status-learned">Learned</div>';
+      }
 
       if (learningProgress && learningProgress.targetSlot !== currentSlot) {
         learningProgress.targetSlot.classList.add('filled', 'level-up-flash');
         const targetAbilityImage = learningProgress.targetSlot.querySelector('img');
         if (targetAbilityImage) targetAbilityImage.style.opacity = '1';
+        
+        const targetStatusElement = learningProgress.targetSlot.querySelector('.ability-status');
+        if (targetStatusElement) {
+          targetStatusElement.innerHTML = '<div class="status-learned">Learned</div>';
+        }
       }
 
       setTimeout(() => {
@@ -766,15 +790,9 @@ function initializeTalentTree(character, modal) {
     cancelHold();
   }
 
-  // Add tooltip functionality
   function createAbilityTooltip(ability, x, y) {
-    // Remove any existing tooltip
     const existingTooltip = document.querySelector('.ability-tooltip');
-    if (existingTooltip) {
-      existingTooltip.remove();
-    }
-
-    if (!ability) return;
+    if (existingTooltip) existingTooltip.remove();
 
     const tooltip = document.createElement('div');
     tooltip.className = 'ability-tooltip';
@@ -806,12 +824,10 @@ function initializeTalentTree(character, modal) {
 
     document.body.appendChild(tooltip);
 
-    // Position the tooltip
     const rect = tooltip.getBoundingClientRect();
     let posX = x + 10;
     let posY = y + 10;
 
-    // Adjust if tooltip would go off screen
     if (posX + rect.width > window.innerWidth) {
       posX = x - rect.width - 10;
     }
@@ -823,33 +839,76 @@ function initializeTalentTree(character, modal) {
     tooltip.style.top = posY + 'px';
   }
 
-  // Add tooltip click handler to all talent slots
   modal.querySelectorAll('.talent-slot').forEach(slot => {
-    const abilityData = slot.dataset.ability;
-    if (abilityData) {
-      const ability = JSON.parse(abilityData);
+    const column = parseInt(slot.dataset.column);
+    const row = parseInt(slot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+    if (!ability) return;
+
+    const isLearned = slot.classList.contains('filled');
+    const progressButton = slot.querySelector('.status-progress');
+    const learnedStatus = slot.querySelector('.status-learned');
+
+    slot.addEventListener('click', (e) => {
+      if (e.target.closest('.status-progress')) return;
       
-      // Add click handler for tooltip
-      slot.addEventListener('click', (e) => {
-        // Only show tooltip if not holding/learning and ability is learned
-        const isLearned = slot.classList.contains('filled');
-        if (isLearned && !holdTimer) {
-          createAbilityTooltip(ability, e.clientX, e.clientY);
-          e.stopPropagation();
+      createAbilityTooltip(ability, e.clientX, e.clientY);
+      e.stopPropagation();
+    });
+
+    if (progressButton) {
+      progressButton.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startHold(slot);
+      });
+
+      progressButton.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelHold();
+      });
+
+      progressButton.addEventListener('mouseleave', cancelHold);
+
+      progressButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startHold(slot);
+      }, { passive: false });
+
+      progressButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelHold();
+      }, { passive: false });
+
+      progressButton.addEventListener('touchcancel', cancelHold);
+    }
+
+    if (isLearned) {
+      slot.addEventListener('dblclick', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const selected = character.selected_abilities || { basic: [], passive: [], ultimate: [] };
+        const list = selected[ability.type] || [];
+
+        if (list.includes(ability.name)) {
+          selected[ability.type] = list.filter(a => a !== ability.name);
+        } else {
+          selected[ability.type].push(ability.name);
+        }
+
+        const success = await updateSelectedAbilities(character, selected);
+        if (success) {
+          const isSelected = selected[ability.type].includes(ability.name);
+          slot.classList.toggle('selected-ability', isSelected);
         }
       });
     }
   });
 
-  // Close tooltip when clicking elsewhere
-  modal.addEventListener('click', (e) => {
-    if (!e.target.closest('.talent-slot') && !e.target.closest('.ability-tooltip')) {
-      const tooltip = document.querySelector('.ability-tooltip');
-      if (tooltip) tooltip.remove();
-    }
-  });
-
-  // Add handler to toggle selected abilities
   async function updateSelectedAbilities(character, selectedAbilities) {
     try {
       const safeAbilities = {
@@ -868,9 +927,6 @@ function initializeTalentTree(character, modal) {
       });
 
       const result = await response.json();
-      if (!result.success) {
-        console.warn('Failed to update selected abilities:', result.error);
-      }
       return result.success;
     } catch (err) {
       console.error('Error updating selected abilities:', err);
@@ -878,68 +934,15 @@ function initializeTalentTree(character, modal) {
     }
   }
 
-  // Attach events to slots for learning and selection
-  modal.querySelectorAll('.talent-slot').forEach(slot => {
-    const column = parseInt(slot.dataset.column);
-    const row = parseInt(slot.dataset.row);
-    const ability = talentAbilities[column]?.[row];
-    if (!ability) return;
-
-    // Learning logic
-    slot.addEventListener('mousedown', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      startHold(slot);
-    });
-    slot.addEventListener('mouseup', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      cancelHold();
-    });
-    slot.addEventListener('mouseleave', cancelHold);
-    slot.addEventListener('touchstart', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      startHold(slot);
-    }, { passive: false });
-    slot.addEventListener('touchend', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      cancelHold();
-    }, { passive: false });
-    slot.addEventListener('touchcancel', cancelHold);
-
-    // Selection toggle logic
-    slot.addEventListener('click', async e => {
-      const isLearned = slot.classList.contains('filled');
-      if (!isLearned) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      createAbilityTooltip(ability, e.clientX, e.clientY);
-
-      const selected = character.selected_abilities || { basic: [], passive: [], ultimate: [] };
-      const list = selected[ability.type] || [];
-
-      // Toggle selection
-      if (list.includes(ability.name)) {
-        selected[ability.type] = list.filter(a => a !== ability.name);
-      } else {
-        selected[ability.type].push(ability.name);
-      }
-
-      const success = await updateSelectedAbilities(character, selected);
-      if (success) {
-        const isSelected = selected[ability.type].includes(ability.name);
-        slot.classList.toggle('selected-ability', isSelected);
-      }
-    });
-  });
-
-  // Global cleanup
   document.addEventListener('mouseup', cancelHold);
   document.addEventListener('touchend', cancelHold);
+
+  modal.addEventListener('click', (e) => {
+    if (!e.target.closest('.talent-slot') && !e.target.closest('.ability-tooltip')) {
+      const tooltip = document.querySelector('.ability-tooltip');
+      if (tooltip) tooltip.remove();
+    }
+  });
 }
 
 function loadTalentBackground(modal, character) {
@@ -1007,12 +1010,10 @@ function getGearIconPath(itemName) {
 function formatItemStats(stats) {
   if (!stats) return '';
   
-  // Handle array format: [{ name: "Vitality", value: 3 }, ...]
   if (Array.isArray(stats)) {
     return stats.map(stat => `${stat.name}: +${stat.value}`).join(', ');
   }
   
-  // Handle object format: { vitality: 3, strength: 2, ... }
   return Object.entries(stats)
     .map(([key, value]) => {
       const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
@@ -1027,7 +1028,7 @@ async function showEquipmentModal(character, slot, type) {
     
     if (type === 'Consumable' || type === 'Tool') {
       const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
-      const bankItems = await bankResponse.json();
+      const bankItems = await response.json();
       availableItems = bankItems.filter(item => item.amount > 0);
     } else {
       const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
@@ -1307,6 +1308,49 @@ function loadCharacterManagerStyles() {
     const styleEl = document.createElement('style');
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
+/* Slider Arrows */
+.characters-slider-container {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.slider-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(196, 151, 90, 0.8);
+    border: 2px solid #c4975a;
+    border-radius: 50%;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+.slider-arrow:hover {
+    background: rgba(196, 151, 90, 1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.slider-arrow-left {
+    left: 10px;
+}
+
+.slider-arrow-right {
+    right: 10px;
+}
+
 /* Ability Tooltip Styles */
 .ability-tooltip {
   position: fixed;
@@ -1372,6 +1416,43 @@ function loadCharacterManagerStyles() {
 .tooltip-requirements li {
   margin: 2px 0;
   font-size: 0.8rem;
+}
+
+/* Ability Status Styles */
+.ability-status {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.status-learned {
+  background: rgba(76, 175, 80, 0.9);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.6rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.status-progress {
+  background: rgba(255, 193, 7, 0.9);
+  color: black;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.6rem;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.status-progress:hover {
+  background: rgba(255, 193, 7, 1);
+  transform: scale(1.05);
 }
 
 /* Learning Progress Bar Styles */
@@ -1444,15 +1525,6 @@ function loadCharacterManagerStyles() {
 
 .equipment-icon[data-has-items="false"] .availability-label {
     display: none;
-}
-
-.characters-slider-container {
-    flex: 1;
-    width: 100%;
-    overflow: hidden;
-    position: relative;
-    display: flex;
-    align-items: center;
 }
 
 .characters-slider {
