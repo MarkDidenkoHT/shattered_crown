@@ -625,14 +625,14 @@ function isAbilityLearned(ability, learnedAbilities) {
     .includes(ability.name);
 }
 
-function initializeTalentTree(character, modal) {
+function initializeTalentTree(character, modal, enrichedTalentAbilities) {
   let talentPoints = character.points?.talent || 0;
   let holdTimer = null;
   let currentSlot = null;
   let startTime = 0;
 
   const className = character.classes?.name?.toLowerCase() || 'paladin';
-  //const talentAbilities = character.classes?.talent_abilities || {};
+  const talentAbilities = enrichedTalentAbilities || character.classes?.talent_abilities || {};
   const pointsDisplay = modal.querySelector('#talentPointsCount');
   const learnButton = modal.querySelector('#learnButton');
   const buttonProgress = learnButton.querySelector('.button-progress');
