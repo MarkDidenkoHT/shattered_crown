@@ -78,6 +78,7 @@ async function renderCharacters(characters) {
   const availableCounts = await checkAvailableItems(characters);
   updateAvailabilityLabels(section, availableCounts);
 }
+
 async function checkAvailableItems(characters) {
   try {
     // Check consumables and tools
@@ -509,6 +510,7 @@ async function showTalentModal(character) {
           
           <div class="instructions">
             Hold column for 1.5s to spend talent point<br>
+            Click learned abilities to see details
           </div>
           
           <div>
@@ -538,6 +540,404 @@ async function showTalentModal(character) {
     console.error('Error loading talent abilities:', error);
     displayMessage('Failed to load talent data. Please try again.');
   }
+}
+
+function generateTalentColumn(abilities, learnedAbilities, column, selectedAbilities = { basic: [], passive: [], ultimate: [] }) {
+  const maxSlots = 7;
+  let html = '';
+
+  // normalize selected abilities
+  selectedAbilities = {
+    basic: Array.isArray(selectedAbilities?.basic) ? selectedAbilities.basic : [],
+    passive: Array.isArray(selectedAbilities?.passive) ? selectedAbilities.passive : [],
+    ultimate: Array.isArray(selectedAbilities?.ultimate) ? selectedAbilities.ultimate : []
+  };
+
+  for (let row = maxSlots - 1; row >= 0; row--) {
+    const ability = abilities[row];
+    const hasAbility = ability !== undefined;
+    const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
+    let typeKey = (ability?.type || '').toLowerCase();
+    if (typeKey === 'active') typeKey = 'basic';
+    
+    const isSelected = hasAbility && Array.isArray(selectedAbilities[typeKey]) && selectedAbilities[typeKey].includes(ability.name);
+
+    html += `
+    <div class="talent-slot ${isLearned ? 'filled' : ''} ${isSelected ? 'selected-ability' : ''}"
+        data-column="${column}" 
+        data-row="${row}"
+        ${hasAbility ? `data-ability='${JSON.stringify(ability).replace(/'/g, "&apos;")}'` : ''}>
+      <div class="hold-progress"></div>
+      ${hasAbility ? `
+        <img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}"
+            style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
+        <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
+      ` : ''}
+    </div>
+    `;
+  }
+
+  return html;
+}
+
+function isAbilityLearned(ability, learnedAbilities) {
+  return Object.values(learnedAbilities)
+    .flat()
+    .filter(Boolean) // Remove null values
+    .includes(ability.name);
+}
+
+function initializeTalentTree(character, modal) {
+  let talentPoints = character.points?.talent || 0;
+  let holdTimer = null;
+  let holdProgress = null;
+  let currentSlot = null;
+  let startTime = 0;
+
+  const className = character.classes?.name?.toLowerCase() || 'paladin';
+  const talentAbilities = character.classes?.talent_abilities || {};
+  const pointsDisplay = modal.querySelector('#talentPointsCount');
+
+  // Add progress bar container
+  const talentGrid = modal.querySelector('.talent-grid');
+  const progressBarContainer = document.createElement('div');
+  progressBarContainer.className = 'learning-progress-container';
+  progressBarContainer.style.display = 'none';
+  progressBarContainer.innerHTML = `
+    <div class="learning-progress-bar">
+      <div class="learning-progress-fill"></div>
+    </div>
+    <div class="learning-progress-text">Learning...</div>
+  `;
+  talentGrid.parentNode.insertBefore(progressBarContainer, talentGrid.nextSibling);
+
+  function updatePoints() {
+    pointsDisplay.textContent = talentPoints;
+  }
+
+  function findLowestUnlearnedAbility(column) {
+    const abilities = talentAbilities[column] || [];
+    const learnedAbilities = character.learned_abilities || { basic: [], passive: [], ultimate: [] };
+    
+    // Find the first unlearned ability from the bottom (row 0)
+    for (let row = 0; row < abilities.length; row++) {
+      const ability = abilities[row];
+      if (ability && !isAbilityLearned(ability, learnedAbilities)) {
+        return { ability, row, column };
+      }
+    }
+    return null;
+  }
+
+  function showLearningProgress(targetColumn) {
+    const targetAbility = findLowestUnlearnedAbility(targetColumn);
+    if (!targetAbility) return null;
+
+    const targetSlot = modal.querySelector(`.talent-slot[data-column="${targetColumn}"][data-row="${targetAbility.row}"]`);
+    if (!targetSlot) return null;
+
+    // Show progress bar container
+    progressBarContainer.style.display = 'block';
+    const progressFill = progressBarContainer.querySelector('.learning-progress-fill');
+    progressFill.style.width = '0%';
+
+    // Position progress bar near the target ability
+    const slotRect = targetSlot.getBoundingClientRect();
+    const containerRect = talentGrid.getBoundingClientRect();
+    
+    progressBarContainer.style.position = 'absolute';
+    progressBarContainer.style.left = (slotRect.left - containerRect.left) + 'px';
+    progressBarContainer.style.top = (slotRect.bottom - containerRect.top + 10) + 'px';
+
+    return { targetSlot, progressFill };
+  }
+
+  function startHold(targetSlot) {
+    if (talentPoints <= 0) return;
+    if (targetSlot.classList.contains('filled')) return;
+
+    const column = parseInt(targetSlot.dataset.column);
+    const row = parseInt(targetSlot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+    if (!ability) return;
+
+    currentSlot = targetSlot;
+    holdProgress = targetSlot.querySelector('.hold-progress');
+    startTime = Date.now();
+
+    const parentColumn = targetSlot.closest('.talent-column');
+    if (parentColumn) parentColumn.classList.add('column-active');
+
+    // Show learning progress on lowest unlearned ability in this column
+    const learningProgress = showLearningProgress(column);
+    
+    holdTimer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / 1500) * 100, 100);
+      
+      // Update both the hold progress and learning progress
+      holdProgress.style.width = progress + '%';
+      
+      if (learningProgress) {
+        learningProgress.progressFill.style.width = progress + '%';
+      }
+
+      if (elapsed >= 1500) {
+        clearInterval(holdTimer);
+        holdTimer = null;
+        completeHold(learningProgress);
+      }
+    }, 16);
+  }
+
+  function cancelHold() {
+    if (holdTimer) {
+      clearInterval(holdTimer);
+      holdTimer = null;
+    }
+    if (holdProgress) {
+      holdProgress.style.width = '0%';
+      holdProgress = null;
+    }
+    if (currentSlot) {
+      const activeColumn = modal.querySelector('.talent-column.column-active');
+      if (activeColumn) activeColumn.classList.remove('column-active');
+      currentSlot = null;
+    }
+    
+    // Hide progress bar
+    progressBarContainer.style.display = 'none';
+  }
+
+  async function completeHold(learningProgress) {
+    if (!currentSlot) return;
+
+    const column = parseInt(currentSlot.dataset.column);
+    const row = parseInt(currentSlot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+    if (!ability) return;
+
+    try {
+      const response = await _apiCall('/api/supabase/functions/v1/learn_talent', {
+        method: 'POST',
+        body: {
+          character_id: character.id,
+          ability_name: ability.name,
+          ability_type: ability.type,
+          player_id: _profile.id
+        }
+      });
+
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || 'Failed to learn talent');
+      }
+
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Failed to learn talent');
+
+      talentPoints = result.remaining_talent_points;
+      updatePoints();
+
+      // Update both the clicked slot and the lowest unlearned ability
+      currentSlot.classList.add('filled', 'level-up-flash');
+      const abilityImage = currentSlot.querySelector('img');
+      if (abilityImage) abilityImage.style.opacity = '1';
+
+      if (learningProgress && learningProgress.targetSlot !== currentSlot) {
+        learningProgress.targetSlot.classList.add('filled', 'level-up-flash');
+        const targetAbilityImage = learningProgress.targetSlot.querySelector('img');
+        if (targetAbilityImage) targetAbilityImage.style.opacity = '1';
+      }
+
+      setTimeout(() => {
+        currentSlot.classList.remove('level-up-flash');
+        if (learningProgress && learningProgress.targetSlot !== currentSlot) {
+          learningProgress.targetSlot.classList.remove('level-up-flash');
+        }
+      }, 1000);
+
+      displayMessage(result.message);
+    } catch (error) {
+      console.error('Error learning talent:', error);
+      displayMessage(error.message || 'Failed to learn talent. Please try again.');
+    }
+
+    cancelHold();
+  }
+
+  // Add tooltip functionality
+  function createAbilityTooltip(ability, x, y) {
+    // Remove any existing tooltip
+    const existingTooltip = document.querySelector('.ability-tooltip');
+    if (existingTooltip) {
+      existingTooltip.remove();
+    }
+
+    if (!ability) return;
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'ability-tooltip';
+    tooltip.innerHTML = `
+      <div class="tooltip-header">
+        <h4>${ability.name}</h4>
+        <span class="ability-type">${ability.type}</span>
+      </div>
+      <div class="tooltip-description">
+        ${ability.description || 'No description available.'}
+      </div>
+      ${ability.effects ? `
+        <div class="tooltip-effects">
+          <strong>Effects:</strong>
+          <ul>
+            ${Array.isArray(ability.effects) ? ability.effects.map(effect => `<li>${effect}</li>`).join('') : `<li>${ability.effects}</li>`}
+          </ul>
+        </div>
+      ` : ''}
+      ${ability.requirements ? `
+        <div class="tooltip-requirements">
+          <strong>Requirements:</strong>
+          <ul>
+            ${Array.isArray(ability.requirements) ? ability.requirements.map(req => `<li>${req}</li>`).join('') : `<li>${ability.requirements}</li>`}
+          </ul>
+        </div>
+      ` : ''}
+    `;
+
+    document.body.appendChild(tooltip);
+
+    // Position the tooltip
+    const rect = tooltip.getBoundingClientRect();
+    let posX = x + 10;
+    let posY = y + 10;
+
+    // Adjust if tooltip would go off screen
+    if (posX + rect.width > window.innerWidth) {
+      posX = x - rect.width - 10;
+    }
+    if (posY + rect.height > window.innerHeight) {
+      posY = y - rect.height - 10;
+    }
+
+    tooltip.style.left = posX + 'px';
+    tooltip.style.top = posY + 'px';
+  }
+
+  // Add tooltip click handler to all talent slots
+  modal.querySelectorAll('.talent-slot').forEach(slot => {
+    const abilityData = slot.dataset.ability;
+    if (abilityData) {
+      const ability = JSON.parse(abilityData);
+      
+      // Add click handler for tooltip
+      slot.addEventListener('click', (e) => {
+        // Only show tooltip if not holding/learning and ability is learned
+        const isLearned = slot.classList.contains('filled');
+        if (isLearned && !holdTimer) {
+          createAbilityTooltip(ability, e.clientX, e.clientY);
+          e.stopPropagation();
+        }
+      });
+    }
+  });
+
+  // Close tooltip when clicking elsewhere
+  modal.addEventListener('click', (e) => {
+    if (!e.target.closest('.talent-slot') && !e.target.closest('.ability-tooltip')) {
+      const tooltip = document.querySelector('.ability-tooltip');
+      if (tooltip) tooltip.remove();
+    }
+  });
+
+  // Add handler to toggle selected abilities
+  async function updateSelectedAbilities(character, selectedAbilities) {
+    try {
+      const safeAbilities = {
+        basic: Array.isArray(selectedAbilities.basic) ? selectedAbilities.basic : [],
+        passive: Array.isArray(selectedAbilities.passive) ? selectedAbilities.passive : [],
+        ultimate: Array.isArray(selectedAbilities.ultimate) ? selectedAbilities.ultimate : []
+      };
+
+      const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
+        method: 'POST',
+        body: {
+          character_id: character.id,
+          player_id: _profile.id,
+          selected_abilities: safeAbilities
+        }
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.warn('Failed to update selected abilities:', result.error);
+      }
+      return result.success;
+    } catch (err) {
+      console.error('Error updating selected abilities:', err);
+      return false;
+    }
+  }
+
+  // Attach events to slots for learning and selection
+  modal.querySelectorAll('.talent-slot').forEach(slot => {
+    const column = parseInt(slot.dataset.column);
+    const row = parseInt(slot.dataset.row);
+    const ability = talentAbilities[column]?.[row];
+    if (!ability) return;
+
+    // Learning logic
+    slot.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      startHold(slot);
+    });
+    slot.addEventListener('mouseup', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelHold();
+    });
+    slot.addEventListener('mouseleave', cancelHold);
+    slot.addEventListener('touchstart', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      startHold(slot);
+    }, { passive: false });
+    slot.addEventListener('touchend', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelHold();
+    }, { passive: false });
+    slot.addEventListener('touchcancel', cancelHold);
+
+    // Selection toggle logic
+    slot.addEventListener('click', async e => {
+      const isLearned = slot.classList.contains('filled');
+      if (!isLearned) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const selected = character.selected_abilities || { basic: [], passive: [], ultimate: [] };
+      const list = selected[ability.type] || [];
+
+      // Toggle selection
+      if (list.includes(ability.name)) {
+        selected[ability.type] = list.filter(a => a !== ability.name);
+      } else {
+        selected[ability.type].push(ability.name);
+      }
+
+      const success = await updateSelectedAbilities(character, selected);
+      if (success) {
+        const isSelected = selected[ability.type].includes(ability.name);
+        slot.classList.toggle('selected-ability', isSelected);
+      }
+    });
+  });
+
+  // Global cleanup
+  document.addEventListener('mouseup', cancelHold);
+  document.addEventListener('touchend', cancelHold);
 }
 
 function loadTalentBackground(modal, character) {
@@ -583,256 +983,6 @@ function applyClassBorder(container, className) {
   container.style.border = `3px solid ${borderColor}`;
 }
 
-function generateTalentColumn(abilities, learnedAbilities, column, selectedAbilities = { basic: [], passive: [], ultimate: [] }) {
-  const maxSlots = 7;
-  let html = '';
-  console.log('Selected abilities:', selectedAbilities);
-
-  // normalize selected abilities
-  selectedAbilities = {
-    basic: Array.isArray(selectedAbilities?.basic) ? selectedAbilities.basic : [],
-    passive: Array.isArray(selectedAbilities?.passive) ? selectedAbilities.passive : [],
-    ultimate: Array.isArray(selectedAbilities?.ultimate) ? selectedAbilities.ultimate : []
-  };
-
-  for (let row = maxSlots - 1; row >= 0; row--) {
-    const ability = abilities[row];
-    const hasAbility = ability !== undefined;
-    const isLearned = hasAbility && isAbilityLearned(ability, learnedAbilities);
-    let typeKey = (ability?.type || '').toLowerCase();
-    if (typeKey === 'active') typeKey = 'basic';
-    // Debug log to check type matching
-    if (hasAbility) {
-      console.log('[Talent Debug]', {
-        abilityName: ability.name,
-        abilityType: ability.type,
-        typeKey,
-        selectedAbilitiesKeys: Object.keys(selectedAbilities),
-        selectedList: selectedAbilities[typeKey]
-      });
-    }
-    const isSelected = hasAbility && Array.isArray(selectedAbilities[typeKey]) && selectedAbilities[typeKey].includes(ability.name);
-
-    html += `
-    <div class="talent-slot ${isLearned ? 'filled' : ''} ${isSelected ? 'selected-ability' : ''}"
-        data-column="${column}" 
-        data-row="${row}"
-        ${hasAbility ? `title="${ability.name} (${ability.type})"` : ''}>
-      <div class="hold-progress"></div>
-      ${hasAbility ? `
-        <img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}"
-            style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
-        <div class="ability-preview" style="display: none;">${ability.name.substring(0, 3).toUpperCase()}</div>
-      ` : ''}
-    </div>
-    `;
-  }
-
-  return html;
-}
-
-  function isAbilityLearned(ability, learnedAbilities) {
-    return Object.values(learnedAbilities)
-      .flat()
-      .filter(Boolean) // Remove null values
-      .includes(ability.name);
-  }
-
-function initializeTalentTree(character, modal) {
-  let talentPoints = character.points?.talent || 0;
-  let holdTimer = null;
-  let holdProgress = null;
-  let currentSlot = null;
-  let startTime = 0;
-
-  const className = character.classes?.name?.toLowerCase() || 'paladin';
-  const talentAbilities = character.classes?.talent_abilities || {};
-  const pointsDisplay = modal.querySelector('#talentPointsCount');
-
-  function updatePoints() {
-    pointsDisplay.textContent = talentPoints;
-  }
-
-  function startHold(targetSlot) {
-    if (talentPoints <= 0) return;
-    if (targetSlot.classList.contains('filled')) return;
-
-    const column = parseInt(targetSlot.dataset.column);
-    const row = parseInt(targetSlot.dataset.row);
-    const ability = talentAbilities[column]?.[row];
-    if (!ability) return;
-
-    currentSlot = targetSlot;
-    holdProgress = targetSlot.querySelector('.hold-progress');
-    startTime = Date.now();
-
-    const parentColumn = targetSlot.closest('.talent-column');
-    if (parentColumn) parentColumn.classList.add('column-active');
-
-    holdTimer = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min((elapsed / 1500) * 100, 100);
-      holdProgress.style.width = progress + '%';
-
-      if (elapsed >= 1500) {
-        clearInterval(holdTimer);
-        holdTimer = null;
-        completeHold();
-      }
-    }, 16);
-  }
-
-  function cancelHold() {
-    if (holdTimer) {
-      clearInterval(holdTimer);
-      holdTimer = null;
-    }
-    if (holdProgress) {
-      holdProgress.style.width = '0%';
-      holdProgress = null;
-    }
-    if (currentSlot) {
-      const activeColumn = modal.querySelector('.talent-column.column-active');
-      if (activeColumn) activeColumn.classList.remove('column-active');
-      currentSlot = null;
-    }
-  }
-
-  async function completeHold() {
-    if (!currentSlot) return;
-
-    const column = parseInt(currentSlot.dataset.column);
-    const row = parseInt(currentSlot.dataset.row);
-    const ability = talentAbilities[column]?.[row];
-    if (!ability) return;
-
-    try {
-      const response = await _apiCall('/api/supabase/functions/v1/learn_talent', {
-        method: 'POST',
-        body: {
-          character_id: character.id,
-          ability_name: ability.name,
-          ability_type: ability.type,
-          player_id: _profile.id
-        }
-      });
-
-      if (!response.ok) {
-        const errorResult = await response.json();
-        throw new Error(errorResult.error || 'Failed to learn talent');
-      }
-
-      const result = await response.json();
-      if (!result.success) throw new Error(result.error || 'Failed to learn talent');
-
-      talentPoints = result.remaining_talent_points;
-      updatePoints();
-
-      currentSlot.classList.add('filled', 'level-up-flash');
-      const abilityImage = currentSlot.querySelector('img');
-      if (abilityImage) abilityImage.style.opacity = '1';
-
-      setTimeout(() => currentSlot.classList.remove('level-up-flash'), 1000);
-      displayMessage(result.message);
-    } catch (error) {
-      console.error('Error learning talent:', error);
-      displayMessage(error.message || 'Failed to learn talent. Please try again.');
-    }
-
-    cancelHold();
-  }
-
-  // Add handler to toggle selected abilities
-  async function updateSelectedAbilities(character, selectedAbilities) {
-   try {
-      const safeAbilities = {
-        basic: Array.isArray(selectedAbilities.basic) ? selectedAbilities.basic : [],
-        passive: Array.isArray(selectedAbilities.passive) ? selectedAbilities.passive : [],
-        ultimate: Array.isArray(selectedAbilities.ultimate) ? selectedAbilities.ultimate : []
-      };
-
-      const response = await _apiCall('/api/supabase/functions/v1/select_abilities', {
-        method: 'POST',
-        body: {
-          character_id: character.id,
-          player_id: _profile.id,
-          selected_abilities: safeAbilities
-        }
-      });
-
-      const result = await response.json();
-      if (!result.success) {
-        console.warn('Failed to update selected abilities:', result.error);
-      }
-      return result.success;
-    } catch (err) {
-      console.error('Error updating selected abilities:', err);
-      return false;
-    }
-  }
-
-  // Attach events to slots
-  modal.querySelectorAll('.talent-slot').forEach(slot => {
-    const column = parseInt(slot.dataset.column);
-    const row = parseInt(slot.dataset.row);
-    const ability = talentAbilities[column]?.[row];
-    if (!ability) return;
-
-    // --- Learning logic ---
-    slot.addEventListener('mousedown', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      startHold(slot);
-    });
-    slot.addEventListener('mouseup', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      cancelHold();
-    });
-    slot.addEventListener('mouseleave', cancelHold);
-    slot.addEventListener('touchstart', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      startHold(slot);
-    }, { passive: false });
-    slot.addEventListener('touchend', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      cancelHold();
-    }, { passive: false });
-    slot.addEventListener('touchcancel', cancelHold);
-
-    // --- Selection toggle logic ---
-    slot.addEventListener('click', async e => {
-      const isLearned = slot.classList.contains('filled');
-      if (!isLearned) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const selected = character.selected_abilities || { basic: [], passive: [], ultimate: [] };
-      const list = selected[ability.type] || [];
-
-      // Toggle selection
-      if (list.includes(ability.name)) {
-        selected[ability.type] = list.filter(a => a !== ability.name);
-      } else {
-        selected[ability.type].push(ability.name);
-      }
-
-      const success = await updateSelectedAbilities(character, selected);
-      if (success) {
-        const isSelected = selected[ability.type].includes(ability.name);
-        slot.classList.toggle('selected-ability', isSelected);
-      }
-    });
-  });
-
-  // Global cleanup
-  document.addEventListener('mouseup', cancelHold);
-  document.addEventListener('touchend', cancelHold);
-}
-
 function getItemIcon(item, itemName, itemType) {
   const gearTypes = ['Armor', 'Boots', 'Gloves', 'Helmet', 'Weapon', 'Offhand'];
   
@@ -875,7 +1025,7 @@ async function showEquipmentModal(character, slot, type) {
     
     if (type === 'Consumable' || type === 'Tool') {
       const response = await _apiCall(`/api/supabase/rest/v1/bank?player_id=eq.${_profile.id}&type=eq.${type}&select=item,amount,type`);
-      const bankItems = await response.json();
+      const bankItems = await bankResponse.json();
       availableItems = bankItems.filter(item => item.amount > 0);
     } else {
       const response = await _apiCall(`/api/supabase/rest/v1/craft_sessions?player_id=eq.${_profile.id}&type=eq.${type}&equipped_by=is.null&select=id,result,type,result_stats`);
@@ -1155,6 +1305,108 @@ function loadCharacterManagerStyles() {
     const styleEl = document.createElement('style');
     styleEl.id = 'character-manager-styles';
     styleEl.textContent = `
+/* Ability Tooltip Styles */
+.ability-tooltip {
+  position: fixed;
+  background: linear-gradient(135deg, rgba(29,20,12,0.95), rgba(42,31,22,0.98));
+  border: 2px solid #c4975a;
+  border-radius: 8px;
+  padding: 12px;
+  max-width: 300px;
+  z-index: 10000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  backdrop-filter: blur(5px);
+  font-size: 0.9rem;
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(196,151,90,0.3);
+  padding-bottom: 6px;
+}
+
+.tooltip-header h4 {
+  margin: 0;
+  color: #c4975a;
+  font-size: 1rem;
+}
+
+.ability-type {
+  background: rgba(196,151,90,0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: #b8b3a8;
+}
+
+.tooltip-description {
+  color: #b8b3a8;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.tooltip-effects,
+.tooltip-requirements {
+  margin-top: 6px;
+}
+
+.tooltip-effects strong,
+.tooltip-requirements strong {
+  color: #c4975a;
+  font-size: 0.8rem;
+}
+
+.tooltip-effects ul,
+.tooltip-requirements ul {
+  margin: 4px 0;
+  padding-left: 16px;
+  color: #9a8f7e;
+}
+
+.tooltip-effects li,
+.tooltip-requirements li {
+  margin: 2px 0;
+  font-size: 0.8rem;
+}
+
+/* Learning Progress Bar Styles */
+.learning-progress-container {
+  position: absolute;
+  background: rgba(0,0,0,0.8);
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #c4975a;
+  z-index: 1000;
+  min-width: 120px;
+}
+
+.learning-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(196,151,90,0.3);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.learning-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FFD700, #FFA500);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+  width: 0%;
+}
+
+.learning-progress-text {
+  color: #FFD700;
+  font-size: 0.7rem;
+  text-align: center;
+  font-weight: bold;
+}
+
 .talent-slot.selected-ability {
   outline: 3px solid #4caf50;
   box-shadow: 0 0 12px rgba(76,175,80,0.7);
@@ -1583,6 +1835,6 @@ function loadCharacterManagerStyles() {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 `;
- document.head.appendChild(styleEl);
+    document.head.appendChild(styleEl);
     console.log('Character Manager styles loaded successfully');
 }
