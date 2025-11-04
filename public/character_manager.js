@@ -530,7 +530,8 @@ async function showTalentModal(character) {
               <div class="ability-description">Select an ability from the tree above</div>
             </div>
             <button class="fantasy-button learn-button" disabled id="learnButton">
-              Select an Ability
+              <div class="button-progress"></div>
+              <span class="button-text">Select an Ability</span>
             </button>
           </div>
           
@@ -591,7 +592,6 @@ function generateTalentColumn(abilities, learnedAbilities, column, selectedAbili
         data-column="${column}" 
         data-row="${row}"
         ${hasAbility ? `data-ability='${JSON.stringify(ability).replace(/'/g, "&apos;")}'` : ''}>
-      <div class="hold-progress"></div>
       ${hasAbility ? `
         <img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}"
             style="${isLearned ? 'opacity: 1;' : 'opacity: 0.3;'} width: 100%; height: 100%; object-fit: cover;">
@@ -621,19 +621,10 @@ function initializeTalentTree(character, modal) {
   const talentAbilities = character.classes?.talent_abilities || {};
   const pointsDisplay = modal.querySelector('#talentPointsCount');
   const learnButton = modal.querySelector('#learnButton');
+  const buttonProgress = learnButton.querySelector('.button-progress');
+  const buttonText = learnButton.querySelector('.button-text');
   const abilityNameDisplay = modal.querySelector('.ability-name');
   const abilityDescriptionDisplay = modal.querySelector('.ability-description');
-
-  const progressBarContainer = document.createElement('div');
-  progressBarContainer.className = 'learning-progress-container';
-  progressBarContainer.style.display = 'none';
-  progressBarContainer.innerHTML = `
-    <div class="learning-progress-bar">
-      <div class="learning-progress-fill"></div>
-    </div>
-    <div class="learning-progress-text">Learning...</div>
-  `;
-  modal.querySelector('.talent-grid').parentNode.insertBefore(progressBarContainer, modal.querySelector('.talent-grid').nextSibling);
 
   let selectedAbility = null;
   let selectedAbilityIsLearned = false;
@@ -655,47 +646,26 @@ function initializeTalentTree(character, modal) {
     return null;
   }
 
-  function showLearningProgress(targetColumn) {
-    const targetAbility = findLowestUnlearnedAbility(targetColumn);
-    if (!targetAbility) return null;
-
-    const targetSlot = modal.querySelector(`.talent-slot[data-column="${targetColumn}"][data-row="${targetAbility.row}"]`);
-    if (!targetSlot) return null;
-
-    progressBarContainer.style.display = 'block';
-    const progressFill = progressBarContainer.querySelector('.learning-progress-fill');
-    progressFill.style.width = '0%';
-
-    const slotRect = targetSlot.getBoundingClientRect();
-    const containerRect = modal.querySelector('.talent-grid').getBoundingClientRect();
-    
-    progressBarContainer.style.position = 'absolute';
-    progressBarContainer.style.left = (slotRect.left - containerRect.left) + 'px';
-    progressBarContainer.style.top = (slotRect.bottom - containerRect.top + 10) + 'px';
-
-    return { targetSlot, progressFill };
-  }
-
   function startHold() {
     if (talentPoints <= 0) return;
     if (!selectedAbility || selectedAbilityIsLearned) return;
 
     const column = parseInt(currentSlot.dataset.column);
-    const learningProgress = showLearningProgress(column);
-    
+    const parentColumn = currentSlot.closest('.talent-column');
+    if (parentColumn) parentColumn.classList.add('column-active');
+
     startTime = Date.now();
     holdTimer = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min((elapsed / 1500) * 100, 100);
       
-      if (learningProgress) {
-        learningProgress.progressFill.style.width = progress + '%';
-      }
+      buttonProgress.style.width = progress + '%';
+      buttonText.textContent = `Learning... ${Math.round(progress)}%`;
 
       if (elapsed >= 1500) {
         clearInterval(holdTimer);
         holdTimer = null;
-        completeHold(learningProgress);
+        completeHold();
       }
     }, 16);
   }
@@ -706,10 +676,14 @@ function initializeTalentTree(character, modal) {
       holdTimer = null;
     }
     
-    progressBarContainer.style.display = 'none';
+    buttonProgress.style.width = '0%';
+    updateLearnButton();
+    
+    const activeColumn = modal.querySelector('.talent-column.column-active');
+    if (activeColumn) activeColumn.classList.remove('column-active');
   }
 
-  async function completeHold(learningProgress) {
+  async function completeHold() {
     if (!selectedAbility) return;
 
     try {
@@ -738,16 +712,21 @@ function initializeTalentTree(character, modal) {
       const abilityImage = currentSlot.querySelector('img');
       if (abilityImage) abilityImage.style.opacity = '1';
 
-      if (learningProgress && learningProgress.targetSlot !== currentSlot) {
-        learningProgress.targetSlot.classList.add('filled', 'level-up-flash');
-        const targetAbilityImage = learningProgress.targetSlot.querySelector('img');
-        if (targetAbilityImage) targetAbilityImage.style.opacity = '1';
+      const targetAbility = findLowestUnlearnedAbility(parseInt(currentSlot.dataset.column));
+      if (targetAbility) {
+        const targetSlot = modal.querySelector(`.talent-slot[data-column="${targetAbility.column}"][data-row="${targetAbility.row}"]`);
+        if (targetSlot && targetSlot !== currentSlot) {
+          targetSlot.classList.add('filled', 'level-up-flash');
+          const targetAbilityImage = targetSlot.querySelector('img');
+          if (targetAbilityImage) targetAbilityImage.style.opacity = '1';
+        }
       }
 
       setTimeout(() => {
         currentSlot.classList.remove('level-up-flash');
-        if (learningProgress && learningProgress.targetSlot !== currentSlot) {
-          learningProgress.targetSlot.classList.remove('level-up-flash');
+        const targetSlot = modal.querySelector(`.talent-slot[data-column="${targetAbility.column}"][data-row="${targetAbility.row}"]`);
+        if (targetSlot && targetSlot !== currentSlot) {
+          targetSlot.classList.remove('level-up-flash');
         }
       }, 1000);
 
@@ -764,24 +743,26 @@ function initializeTalentTree(character, modal) {
   }
 
   function updateLearnButton() {
+    buttonProgress.style.width = '0%';
+    
     if (!selectedAbility) {
       learnButton.disabled = true;
-      learnButton.textContent = 'Select an Ability';
+      buttonText.textContent = 'Select an Ability';
       learnButton.className = 'fantasy-button learn-button';
       return;
     }
 
     if (selectedAbilityIsLearned) {
       learnButton.disabled = true;
-      learnButton.textContent = 'Already Learned';
+      buttonText.textContent = 'Already Learned';
       learnButton.className = 'fantasy-button learn-button learned';
     } else if (talentPoints <= 0) {
       learnButton.disabled = true;
-      learnButton.textContent = 'No Talent Points';
+      buttonText.textContent = 'No Talent Points';
       learnButton.className = 'fantasy-button learn-button no-points';
     } else {
       learnButton.disabled = false;
-      learnButton.textContent = 'Hold to Learn (1.5s)';
+      buttonText.textContent = 'Hold to Learn (1.5s)';
       learnButton.className = 'fantasy-button learn-button can-learn';
     }
   }
@@ -940,7 +921,7 @@ async function showEquipmentModal(character, slot, type) {
         item: item.result,
         type: item.type,
         stats: item.result_stats,
-        crafting_session_id: item.id
+        crafting_session_id = item.id
       }));
     }
     
@@ -1280,12 +1261,32 @@ function loadCharacterManagerStyles() {
     line-height: 1.4;
 }
 
+/* Learn Button with Progress */
 .learn-button {
+    position: relative;
     width: 100%;
     padding: 15px;
     font-size: 1.1rem;
     font-weight: bold;
     transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.button-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.6), rgba(255, 165, 0, 0.8));
+    border-radius: 4px;
+    transition: width 0.1s linear;
+    width: 0%;
+    z-index: 1;
+}
+
+.button-text {
+    position: relative;
+    z-index: 2;
 }
 
 .learn-button.learned {
@@ -1312,39 +1313,30 @@ function loadCharacterManagerStyles() {
     transform: scale(1.02);
 }
 
-/* Learning Progress Bar Styles */
-.learning-progress-container {
-    position: absolute;
-    background: rgba(0,0,0,0.8);
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #c4975a;
-    z-index: 1000;
-    min-width: 120px;
+/* Column Glow Effects */
+.talent-column.column-active {
+    filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 0 40px currentColor) !important;
+    transform: scale(1.02);
 }
 
-.learning-progress-bar {
-    width: 100%;
-    height: 6px;
-    background: rgba(196,151,90,0.3);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 4px;
+.talent-container[data-class="paladin"] .talent-column.column-active {
+    color: rgba(255, 255, 200, 0.9) !important;
 }
 
-.learning-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #FFD700, #FFA500);
-    border-radius: 3px;
-    transition: width 0.1s linear;
-    width: 0%;
+.talent-container[data-class="warrior"] .talent-column.column-active {
+    color: rgba(200, 0, 0, 0.9) !important;
 }
 
-.learning-progress-text {
-    color: #FFD700;
-    font-size: 0.7rem;
-    text-align: center;
-    font-weight: bold;
+.talent-container[data-class="priest"] .talent-column.column-active {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.talent-container[data-class="grave warden"] .talent-column.column-active {
+    color: rgba(33, 91, 0, 0.9) !important;
+}
+
+.talent-container[data-class="defiler"] .talent-column.column-active {
+    color: rgba(97, 0, 74, 0.9) !important;
 }
 
 .talent-slot.selected {
@@ -1723,11 +1715,6 @@ function loadCharacterManagerStyles() {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-.talent-column.column-active {
-    filter: drop-shadow(0 0 20px rgba(255, 255, 200, 0.9)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.6)) !important;
-    transform: scale(1.02);
-}
-
 @keyframes levelUpFlash {
     0% {
         box-shadow: 0 0 0px rgba(255, 215, 0, 0);
@@ -1749,17 +1736,6 @@ function loadCharacterManagerStyles() {
 
 .talent-slot.level-up-flash {
     animation: levelUpFlash 1s ease-out;
-}
-
-.hold-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #FFD700, #FFA500);
-    border-radius: 2px;
-    transition: width 0.1s linear;
-    width: 0%;
 }
 
 .instructions {
