@@ -916,8 +916,8 @@ function initializeTalentTree(character, modal, enrichedTalentAbilities, initial
   actionButton.addEventListener('mouseup', (e) => {
     if (selectedAbilityIsLearned) {
       // For selection/deselection, handle as click
-      e.preventDefault();
-      toggleAbilitySelection();
+      // e.preventDefault();
+      // toggleAbilitySelection();
       return;
     }
     e.preventDefault();
