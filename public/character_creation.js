@@ -93,6 +93,46 @@ function addGridSelectionStyles() {
         .god-reselect-body { color: #ddd; margin-bottom: 20px; }
         .god-reselect-warning { color: #ff6b6b; font-weight: bold; margin: 10px 0; }
         .god-reselect-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+
+        /* Slider Arrows */
+        .slider-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background: rgba(196, 151, 90, 0.8);
+            border: 2px solid #c4975a;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .slider-arrow:hover {
+            background: rgba(196, 151, 90, 1);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .slider-arrow-left {
+            left: 10px;
+        }
+
+        .slider-arrow-right {
+            right: 10px;
+        }
     `;
     document.head.appendChild(style);
 }
@@ -171,6 +211,7 @@ function renderRaceSelection() {
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
+                    <button class="slider-arrow slider-arrow-left">‹</button>
                     <div class="slider-track">
                         ${_races.map(race => `
                             <div class="selection-slide" data-id="${race.id}" data-type="race">
@@ -186,6 +227,7 @@ function renderRaceSelection() {
                             </div>
                         `).join('')}
                     </div>
+                    <button class="slider-arrow slider-arrow-right">›</button>
                 </div>
                 <div class="slider-dots">
                     ${_races.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
@@ -436,17 +478,47 @@ async function showAbilityTooltip(abilityName) {
 function initializeSelectionSlider() {
     const sliderTrack = _main.querySelector('.slider-track');
     const dots = _main.querySelectorAll('.slider-dot');
+    const leftArrow = _main.querySelector('.slider-arrow-left');
+    const rightArrow = _main.querySelector('.slider-arrow-right');
+    
     if (!sliderTrack || !dots.length) return;
+    
     let currentSlide = 0;
     const totalSlides = dots.length;
+    
     function updateSlider() {
         const translateX = -currentSlide * 100;
         sliderTrack.style.transform = `translateX(${translateX}%)`;
         dots.forEach((dot, index) => dot.classList.toggle('active', index === currentSlide));
+        
+        // Update arrow visibility
+        leftArrow.style.display = currentSlide > 0 ? 'flex' : 'none';
+        rightArrow.style.display = currentSlide < totalSlides - 1 ? 'flex' : 'none';
     }
-    function nextSlide() { currentSlide = (currentSlide + 1) % totalSlides; updateSlider(); }
-    function prevSlide() { currentSlide = (currentSlide - 1 + totalSlides) % totalSlides; updateSlider(); }
-    dots.forEach((dot, index) => dot.addEventListener('click', () => { currentSlide = index; updateSlider(); }));
+    
+    function nextSlide() { 
+        if (currentSlide < totalSlides - 1) {
+            currentSlide++;
+            updateSlider();
+        }
+    }
+    
+    function prevSlide() { 
+        if (currentSlide > 0) {
+            currentSlide--;
+            updateSlider();
+        }
+    }
+    
+    // Arrow event listeners
+    leftArrow.addEventListener('click', prevSlide);
+    rightArrow.addEventListener('click', nextSlide);
+    
+    dots.forEach((dot, index) => dot.addEventListener('click', () => { 
+        currentSlide = index; 
+        updateSlider(); 
+    }));
+    
     let startX = 0, currentX = 0, isDragging = false, startTime = 0;
     sliderTrack.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX; currentX = startX; isDragging = true; startTime = Date.now(); sliderTrack.style.transition = 'none';
@@ -468,6 +540,9 @@ function initializeSelectionSlider() {
         if (Math.abs(diffX) > threshold || velocity > velocityThreshold) { if (diffX > 0) nextSlide(); else prevSlide(); } else { updateSlider(); }
     });
     sliderTrack.addEventListener('mouseleave', () => { if (isMouseDown) { isMouseDown = false; sliderTrack.style.transition = 'transform 0.3s ease-out'; updateSlider(); } });
+    
+    // Initialize arrows
+    updateSlider();
 }
 
 async function handleRaceSelection(raceId) {
@@ -499,6 +574,7 @@ function renderClassSelection() {
         <div class="selection-section">
             <div class="selection-slider">
                 <div class="slider-container">
+                    <button class="slider-arrow slider-arrow-left">‹</button>
                     <div class="slider-track">
                         ${_classes.map(cls => `
                             <div class="selection-slide" data-id="${cls.id}" data-type="class">
@@ -518,6 +594,7 @@ function renderClassSelection() {
                             </div>
                         `).join('')}
                     </div>
+                    <button class="slider-arrow slider-arrow-right">›</button>
                 </div>
                 <div class="slider-dots">
                     ${_classes.map((_, index) => `<button class="slider-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`).join('')}
