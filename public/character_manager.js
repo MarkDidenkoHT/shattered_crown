@@ -1408,8 +1408,8 @@ function loadCharacterManagerStyles() {
     background: rgba(0, 0, 0, 0.3);
     border: 2px solid #c4975a;
     border-radius: 8px;
-    padding: 15px;
-    margin: 15px 0;
+    padding: 8px;
+    margin: 8px 0;
     text-align: center;
 }
 
@@ -1428,13 +1428,14 @@ function loadCharacterManagerStyles() {
     font-size: 0.9rem;
     color: #b8b3a8;
     line-height: 1.4;
+    height: 30px;
 }
 
 /* Action Button with Progress */
 .action-button {
     position: relative;
     width: 100%;
-    padding: 15px;
+    padding: 10px;
     font-size: 1.1rem;
     font-weight: bold;
     transition: all 0.3s ease;
