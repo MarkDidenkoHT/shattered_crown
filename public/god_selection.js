@@ -31,6 +31,7 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
       <div class="god-selection-section">
         <div class="gods-slider">
           <div class="slider-container">
+            <button class="slider-arrow slider-arrow-left">‹</button>
             <div class="slider-track" style="transform: translateX(0%)">
               ${gods.map((god, index) => `
                 <div class="god-slide" data-god-id="${god.id}">
@@ -49,6 +50,7 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
                 </div>
               `).join('')}
             </div>
+            <button class="slider-arrow slider-arrow-right">›</button>
           </div>
           
           <div class="slider-dots">
@@ -78,6 +80,45 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
     .gods-slider {
       width: 100%;
       max-width: 100vw;
+    }
+
+    .slider-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .slider-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      background: rgba(196, 151, 90, 0.8);
+      border: 2px solid #c4975a;
+      border-radius: 50%;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.3s ease;
+    }
+
+    .slider-arrow:hover {
+      background: rgba(196, 151, 90, 1);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .slider-arrow-left {
+      left: 10px;
+    }
+
+    .slider-arrow-right {
+      right: 10px;
     }
 
     .god-slide {
@@ -228,6 +269,8 @@ export async function loadModule(main, { getCurrentProfile, updateCurrentProfile
 function initializeSlider() {
   const sliderTrack = document.querySelector('.slider-track');
   const dots = document.querySelectorAll('.slider-dot');
+  const leftArrow = document.querySelector('.slider-arrow-left');
+  const rightArrow = document.querySelector('.slider-arrow-right');
   
   if (!sliderTrack || !dots.length) {
     return;
@@ -251,7 +294,29 @@ function initializeSlider() {
     dots.forEach((dot, index) => {
       dot.classList.toggle('active', index === currentSlide);
     });
+
+    // Update arrows
+    leftArrow.style.display = currentSlide > 0 ? 'flex' : 'none';
+    rightArrow.style.display = currentSlide < totalSlides - 1 ? 'flex' : 'none';
   }
+  
+  function nextSlide() {
+    if (currentSlide < totalSlides - 1) {
+      currentSlide++;
+      updateSlider();
+    }
+  }
+  
+  function prevSlide() {
+    if (currentSlide > 0) {
+      currentSlide--;
+      updateSlider();
+    }
+  }
+  
+  // Arrow event listeners
+  leftArrow.addEventListener('click', prevSlide);
+  rightArrow.addEventListener('click', nextSlide);
   
   function snapToSlide() {
     const slideWidth = sliderTrack.offsetWidth / totalSlides;
@@ -320,6 +385,9 @@ function initializeSlider() {
   sliderTrack.addEventListener('contextmenu', (e) => {
     e.preventDefault();
   });
+
+  // Initialize arrows
+  updateSlider();
 }
 
 async function selectGod(godId, getCurrentProfile) {
