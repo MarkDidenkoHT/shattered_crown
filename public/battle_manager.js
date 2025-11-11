@@ -595,6 +595,153 @@ function injectBattleLoadingStyles() {
       0% { background-position: -200% 0; }
       100% { background-position: 200% 0; }
     }
+
+    .tutorial-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 10000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Cinzel', serif;
+    }
+    
+    .tutorial-content {
+        background: linear-gradient(145deg, #1a120b, #2a1f15);
+        border: 3px solid #c4975a;
+        border-radius: 12px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        color: #e8e8e8;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        position: relative;
+        z-index: 10001;
+    }
+    
+    .tutorial-header {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .tutorial-title {
+        color: #c4975a;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+    
+    .tutorial-description {
+        font-size: 1rem;
+        line-height: 1.5;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .tutorial-highlight {
+        position: absolute;
+        border: 3px solid #ffd700;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        z-index: 10002;
+        pointer-events: none;
+        animation: tutorialPulse 2s infinite;
+    }
+    
+    .tutorial-arrow {
+        position: absolute;
+        z-index: 10003;
+        font-size: 2rem;
+        color: #ffd700;
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        animation: tutorialBounce 1s infinite;
+    }
+    
+    .tutorial-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+    }
+    
+    .tutorial-progress {
+        color: #b8b3a8;
+        font-size: 0.9rem;
+    }
+    
+    .tutorial-button {
+        background: linear-gradient(145deg, #c4975a, #a67c52);
+        border: 2px solid #d4af37;
+        border-radius: 6px;
+        color: #1a120b;
+        padding: 0.75rem 1.5rem;
+        font-family: 'Cinzel', serif;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .tutorial-button:hover {
+        background: linear-gradient(145deg, #d4af37, #c4975a);
+        transform: translateY(-2px);
+    }
+    
+    .tutorial-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .tutorial-skip {
+        background: transparent;
+        border: 1px solid #666;
+        color: #b8b3a8;
+    }
+    
+    .tutorial-skip:hover {
+        background: rgba(102, 102, 102, 0.3);
+        color: #e8e8e8;
+    }
+    
+    @keyframes tutorialPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    @keyframes tutorialBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .tutorial-element-blocked {
+        pointer-events: none !important;
+    }
+    
+    .tutorial-element-allowed {
+        pointer-events: auto !important;
+        z-index: 10004 !important;
+        position: relative;
+    }
+
+    .tutorial-help-button {
+        background: #c4975a;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        color: #1a120b;
+        font-weight: bold;
+        cursor: pointer;
+        margin-left: 10px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
     `;
     document.head.appendChild(style);
 }
@@ -740,149 +887,8 @@ function removeBattleLoadingModal(modal) {
     }
 }
 
-function injectTutorialStyles() {
-    if (document.getElementById('tutorial-styles')) return;
-    
-    const style = document.createElement('style');
-    style.id = 'tutorial-styles';
-    style.textContent = `
-        .tutorial-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 10000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Cinzel', serif;
-        }
-        
-        .tutorial-content {
-            background: linear-gradient(145deg, #1a120b, #2a1f15);
-            border: 3px solid #c4975a;
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 500px;
-            width: 90%;
-            color: #e8e8e8;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            position: relative;
-        }
-        
-        .tutorial-header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .tutorial-title {
-            color: #c4975a;
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        }
-        
-        .tutorial-description {
-            font-size: 1rem;
-            line-height: 1.5;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-        
-        .tutorial-highlight {
-            position: absolute;
-            border: 3px solid #ffd700;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-            z-index: 10001;
-            pointer-events: none;
-            animation: pulse 2s infinite;
-        }
-        
-        .tutorial-arrow {
-            position: absolute;
-            z-index: 10002;
-            font-size: 2rem;
-            color: #ffd700;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-            animation: bounce 1s infinite;
-        }
-        
-        .tutorial-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 1.5rem;
-        }
-        
-        .tutorial-progress {
-            color: #b8b3a8;
-            font-size: 0.9rem;
-        }
-        
-        .tutorial-button {
-            background: linear-gradient(145deg, #c4975a, #a67c52);
-            border: 2px solid #d4af37;
-            border-radius: 6px;
-            color: #1a120b;
-            padding: 0.75rem 1.5rem;
-            font-family: 'Cinzel', serif;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .tutorial-button:hover {
-            background: linear-gradient(145deg, #d4af37, #c4975a);
-            transform: translateY(-2px);
-        }
-        
-        .tutorial-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .tutorial-skip {
-            background: transparent;
-            border: 1px solid #666;
-            color: #b8b3a8;
-        }
-        
-        .tutorial-skip:hover {
-            background: rgba(102, 102, 102, 0.3);
-            color: #e8e8e8;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .tutorial-element-blocked {
-            pointer-events: none !important;
-        }
-        
-        .tutorial-element-allowed {
-            pointer-events: auto !important;
-            z-index: 10003 !important;
-        }
-    `;
-    
-    document.head.appendChild(style);
-}
-
 async function showTutorialModal(chatId) {
     return new Promise((resolve) => {
-        injectTutorialStyles();
-        
         const modal = document.createElement('div');
         modal.className = 'tutorial-overlay';
         modal.innerHTML = `
@@ -934,7 +940,6 @@ async function startTutorialSequence(chatId) {
     BattleState.tutorial.currentStep = 0;
     
     await ensureTutorialBattleState();
-    
     await executeTutorialStep();
 }
 
@@ -943,13 +948,6 @@ async function ensureTutorialBattleState() {
     while ((!BattleState.characters || BattleState.characters.length === 0) && attempts < 50) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
-    }
-    
-    const playerChars = BattleState.characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
-    const enemies = BattleState.characters.filter(c => !c.isPlayerControlled && c.current_hp > 0);
-    
-    if (playerChars.length === 0 || enemies.length === 0) {
-        console.warn('Tutorial: Missing required characters for tutorial');
     }
 }
 
@@ -963,18 +961,15 @@ async function executeTutorialStep() {
     }
     
     clearTutorialElements();
-    
     showTutorialStepUI(step);
-    
     await setupTutorialStep(step);
+    addTutorialHighlights(step);
 }
 
 function clearTutorialElements() {
     document.querySelectorAll('.tutorial-highlight').forEach(el => el.remove());
     document.querySelectorAll('.tutorial-arrow').forEach(el => el.remove());
-    document.querySelectorAll('.tutorial-overlay').forEach(el => {
-        if (el.id !== 'tutorial-step-ui') el.remove();
-    });
+    document.querySelectorAll('.tutorial-step-overlay').forEach(el => el.remove());
     
     document.querySelectorAll('.tutorial-element-blocked, .tutorial-element-allowed').forEach(el => {
         el.classList.remove('tutorial-element-blocked', 'tutorial-element-allowed');
@@ -987,7 +982,7 @@ function showTutorialStepUI(step) {
     
     const modal = document.createElement('div');
     modal.id = 'tutorial-step-ui';
-    modal.className = 'tutorial-overlay';
+    modal.className = 'tutorial-overlay tutorial-step-overlay';
     modal.innerHTML = `
         <div class="tutorial-content">
             <div class="tutorial-header">
@@ -1027,46 +1022,31 @@ async function setupTutorialStep(step) {
             await setupAbilityUseStep();
             break;
     }
-    
-    addTutorialHighlights(step);
 }
 
 async function setupCharacterSelectionStep() {
     const playerChars = BattleState.characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
     
-    if (playerChars.length === 0) {
-        console.warn('No player characters found for tutorial');
-        return;
-    }
-    
     playerChars.forEach(char => {
         const charEl = BattleState.characterElements.get(char.id);
         if (charEl) {
             charEl.classList.add('tutorial-element-allowed');
-            
-            charEl._originalOnClick = charEl.onclick;
-            charEl.onclick = (e) => {
-                e.stopPropagation();
-                handleTutorialCharacterSelection(char);
-            };
         }
     });
     
+    const originalHandleCharacterSelection = handleCharacterSelection;
+    handleCharacterSelection = function(character, tileEl) {
+        originalHandleCharacterSelection(character, tileEl);
+        
+        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 0) {
+            setTimeout(() => {
+                BattleState.tutorial.currentStep++;
+                executeTutorialStep();
+            }, 1000);
+        }
+    };
+    
     blockNonTutorialInteractions();
-}
-
-function handleTutorialCharacterSelection(character) {
-    if (!BattleState.tutorial.active) return;
-    
-    const charEl = BattleState.characterElements.get(character.id);
-    if (charEl) {
-        handleCharacterSelection(character, charEl);
-    }
-    
-    setTimeout(() => {
-        BattleState.tutorial.currentStep++;
-        executeTutorialStep();
-    }, 1000);
 }
 
 async function setupMovementStep() {
@@ -1076,23 +1056,20 @@ async function setupMovementStep() {
         attempts++;
     }
     
-    if (!BattleState.selectedPlayerCharacter) {
-        console.warn('No character selected for movement tutorial');
-        return;
-    }
-    
     const originalHandleTileClick = handleTileClick;
     handleTileClick = function(event) {
         const tileEl = event.currentTarget;
         if (tileEl.classList.contains('highlight-walkable')) {
             originalHandleTileClick.call(this, event);
             
-            setTimeout(() => {
-                if (BattleState.isMoveQueued) {
-                    BattleState.tutorial.currentStep++;
-                    executeTutorialStep();
-                }
-            }, 500);
+            if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 1) {
+                setTimeout(() => {
+                    if (BattleState.isMoveQueued) {
+                        BattleState.tutorial.currentStep++;
+                        executeTutorialStep();
+                    }
+                }, 500);
+            }
         }
     };
     
@@ -1108,26 +1085,21 @@ async function setupAbilitySelectionStep() {
     
     const abilityButtons = document.querySelectorAll('.battle-bottom-ui .fantasy-button.ui-btn[data-ability-name]');
     
-    if (abilityButtons.length === 0) {
-        console.warn('No ability buttons found for tutorial');
-        return;
-    }
-    
     abilityButtons.forEach(btn => {
         btn.classList.add('tutorial-element-allowed');
     });
     
     const originalToggleAbilitySelection = toggleAbilitySelection;
-    window._tutorialAbilitySelectionHandler = (caster, ability) => {
+    toggleAbilitySelection = function(caster, ability) {
         originalToggleAbilitySelection(caster, ability);
         
-        setTimeout(() => {
-            BattleState.tutorial.currentStep++;
-            executeTutorialStep();
-        }, 1000);
+        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 2) {
+            setTimeout(() => {
+                BattleState.tutorial.currentStep++;
+                executeTutorialStep();
+            }, 1000);
+        }
     };
-    
-    toggleAbilitySelection = window._tutorialAbilitySelectionHandler;
     
     blockNonTutorialInteractions();
 }
@@ -1139,62 +1111,41 @@ async function setupAbilityUseStep() {
         attempts++;
     }
     
-    if (!BattleState.selectingAbility) {
-        console.warn('No ability selected for targeting tutorial');
-        return;
-    }
-    
     const enemyTargets = document.querySelectorAll('.highlight-target-enemy');
-    
-    if (enemyTargets.length === 0) {
-        console.warn('No enemy targets found for tutorial');
-        return;
-    }
     
     enemyTargets.forEach(target => {
         target.classList.add('tutorial-element-allowed');
     });
     
     const originalHandleAbilityUse = handleAbilityUse;
-    window._tutorialAbilityUseHandler = function(payload) {
+    handleAbilityUse = function(payload) {
         originalHandleAbilityUse(payload);
         
-        setTimeout(() => {
-            endTutorial();
-        }, 2000);
+        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 3) {
+            setTimeout(() => {
+                endTutorial();
+            }, 2000);
+        }
     };
-    
-    handleAbilityUse = window._tutorialAbilityUseHandler;
     
     blockNonTutorialInteractions();
 }
 
 function addTutorialHighlights(step) {
     let highlightElement = null;
-    let arrowPosition = { top: '50%', left: '50%' };
     
     switch (step.highlight) {
         case 'battlefield':
             highlightElement = BattleState.main.querySelector('.battle-grid-container');
-            arrowPosition = { top: '20%', left: '50%' };
             break;
         case 'movementTiles':
-            const movementTile = document.querySelector('.highlight-walkable');
-            if (movementTile) {
-                highlightElement = movementTile;
-                arrowPosition = getElementPosition(movementTile, 'bottom');
-            }
+            highlightElement = document.querySelector('.highlight-walkable');
             break;
         case 'abilityPanel':
             highlightElement = document.querySelector('.battle-bottom-ui');
-            arrowPosition = { top: '80%', left: '50%' };
             break;
         case 'targeting':
-            const enemyTarget = document.querySelector('.highlight-target-enemy');
-            if (enemyTarget) {
-                highlightElement = enemyTarget;
-                arrowPosition = getElementPosition(enemyTarget, 'center');
-            }
+            highlightElement = document.querySelector('.highlight-target-enemy');
             break;
     }
     
@@ -1214,25 +1165,10 @@ function addTutorialHighlights(step) {
         arrow.className = 'tutorial-arrow';
         arrow.innerHTML = getArrowForDirection(step.arrow.direction);
         Object.assign(arrow.style, {
-            top: arrowPosition.top,
-            left: arrowPosition.left,
-            transform: `translate(-50%, -50%) ${getArrowTransform(step.arrow.direction)}`
+            top: `${rect.top - 40}px`,
+            left: `${rect.left + rect.width / 2}px`
         });
         document.body.appendChild(arrow);
-    }
-}
-
-function getElementPosition(element, placement) {
-    const rect = element.getBoundingClientRect();
-    
-    switch (placement) {
-        case 'top':
-            return { top: `${rect.top - 40}px`, left: `${rect.left + rect.width / 2}px` };
-        case 'bottom':
-            return { top: `${rect.bottom + 40}px`, left: `${rect.left + rect.width / 2}px` };
-        case 'center':
-        default:
-            return { top: `${rect.top + rect.height / 2}px`, left: `${rect.left + rect.width / 2}px` };
     }
 }
 
@@ -1246,21 +1182,9 @@ function getArrowForDirection(direction) {
     }
 }
 
-function getArrowTransform(direction) {
-    switch (direction) {
-        case 'up': return 'rotate(0deg)';
-        case 'down': return 'rotate(180deg)';
-        case 'left': return 'rotate(-90deg)';
-        case 'right': return 'rotate(90deg)';
-        default: return 'rotate(0deg)';
-    }
-}
-
 function blockNonTutorialInteractions() {
-    document.querySelectorAll('*').forEach(el => {
-        if (!el.classList.contains('tutorial-element-allowed') && 
-            !el.closest('.tutorial-overlay') &&
-            !el.closest('.tutorial-content')) {
+    document.querySelectorAll('button, .character-token, .battle-tile').forEach(el => {
+        if (!el.classList.contains('tutorial-element-allowed')) {
             el.classList.add('tutorial-element-blocked');
         }
     });
@@ -1274,16 +1198,6 @@ function endTutorial() {
     const tutorialUI = document.getElementById('tutorial-step-ui');
     if (tutorialUI) tutorialUI.remove();
     
-    if (window._tutorialAbilitySelectionHandler) {
-        toggleAbilitySelection = window._tutorialAbilitySelectionHandler;
-        delete window._tutorialAbilitySelectionHandler;
-    }
-    
-    if (window._tutorialAbilityUseHandler) {
-        handleAbilityUse = window._tutorialAbilityUseHandler;
-        delete window._tutorialAbilityUseHandler;
-    }
-    
     document.querySelectorAll('.tutorial-element-blocked').forEach(el => {
         el.classList.remove('tutorial-element-blocked');
     });
@@ -1291,7 +1205,19 @@ function endTutorial() {
     if (BattleState.profile?.chat_id) {
         markTutorialAsSeen(BattleState.profile.chat_id);
     }
+    
+    handleCharacterSelection = originalHandlers.characterSelection;
+    handleTileClick = originalHandlers.tileClick;
+    toggleAbilitySelection = originalHandlers.abilitySelection;
+    handleAbilityUse = originalHandlers.abilityUse;
 }
+
+const originalHandlers = {
+    characterSelection: null,
+    tileClick: null,
+    abilitySelection: null,
+    abilityUse: null
+};
 
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
@@ -1921,19 +1847,9 @@ function addTutorialButton() {
     if (topBar && !document.getElementById('tutorialButton')) {
         const tutorialBtn = document.createElement('button');
         tutorialBtn.id = 'tutorialButton';
+        tutorialBtn.className = 'tutorial-help-button';
         tutorialBtn.innerHTML = '?';
         tutorialBtn.title = 'Show Tutorial';
-        tutorialBtn.style.cssText = `
-            background: #c4975a;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            color: #1a120b;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 10px;
-        `;
         
         tutorialBtn.addEventListener('click', () => {
             if (BattleState.profile?.chat_id) {
@@ -2023,6 +1939,11 @@ function renderBattleScreen(mode, level, layoutData) {
     }
 
     addTutorialButton();
+    
+    originalHandlers.characterSelection = handleCharacterSelection;
+    originalHandlers.tileClick = handleTileClick;
+    originalHandlers.abilitySelection = toggleAbilitySelection;
+    originalHandlers.abilityUse = handleAbilityUse;
 }
 
 function renderBattleGrid(layoutJson) {
