@@ -11,8 +11,42 @@ const BattleState = {
     characterAbilities: {},
     environmentItems: {},
     abilityCache: new Map(),
-    lastCharacterStates: new Map(), // Track previous states for diffing
-    updateDebounceTimer: null
+    lastCharacterStates: new Map(),
+    updateDebounceTimer: null,
+    tutorial: {
+        active: false,
+        currentStep: 0,
+        steps: [
+            {
+                title: "Welcome to Battle",
+                description: "This is the battlefield. You control the characters on your side. Click on one of your characters to select it.",
+                highlight: "battlefield",
+                waitFor: "characterSelection",
+                arrow: { position: "center", direction: "up" }
+            },
+            {
+                title: "Moving Your Character",
+                description: "Great! Now you can see highlighted tiles where you can move. Click on one of the green highlighted tiles to move your character.",
+                highlight: "movementTiles",
+                waitFor: "movement",
+                arrow: { position: "bottom", direction: "up" }
+            },
+            {
+                title: "Using Abilities",
+                description: "Now let's use an ability. Click on any ability button in the bottom panel to select it.",
+                highlight: "abilityPanel",
+                waitFor: "abilitySelection",
+                arrow: { position: "bottom", direction: "up" }
+            },
+            {
+                title: "Targeting Enemies",
+                description: "Perfect! Now you can see highlighted targets. Click on an enemy to use your ability and complete the tutorial.",
+                highlight: "targeting",
+                waitFor: "abilityUse",
+                arrow: { position: "center", direction: "up" }
+            }
+        ]
+    }
 };
 
 const GRID_SIZE = { rows: 7, cols: 7 };
@@ -36,7 +70,6 @@ const PRELOAD_CONFIG = {
     tiles: true
 };
 
-// Add optimized real-time config
 const REALTIME_CONFIG = {
     debounceMs: 100,
     batchUpdates: true,
@@ -73,7 +106,7 @@ const getSupabaseClient = (config) => {
         auth: { flowType: 'pkce' },
         realtime: {
             params: {
-                eventsPerSecond: 10 // Limit real-time events
+                eventsPerSecond: 10
             }
         }
     });
@@ -131,7 +164,6 @@ const findCharacterChanges = (oldCharacters, newCharacters) => {
     const oldCharMap = new Map(oldCharacters.map(c => [c.id, c]));
     const newCharMap = new Map(newCharacters.map(c => [c.id, c]));
 
-    // Find added characters (new characters or characters that were dead and are now alive)
     for (const newChar of newCharacters) {
         const oldChar = oldCharMap.get(newChar.id);
         if (!oldChar || (oldChar.current_hp <= 0 && newChar.current_hp > 0)) {
@@ -139,29 +171,23 @@ const findCharacterChanges = (oldCharacters, newCharacters) => {
         }
     }
 
-    // Find removed characters and changes
     for (const oldChar of oldCharacters) {
         const newChar = newCharMap.get(oldChar.id);
         
-        // Character was removed from battle state or died
         if (!newChar || (oldChar.current_hp > 0 && newChar.current_hp <= 0)) {
             changes.removed.push(oldChar);
             continue;
         }
 
-        // Only process changes for alive characters
         if (newChar.current_hp > 0) {
-            // Check position changes
             if (oldChar.position[0] !== newChar.position[0] || oldChar.position[1] !== newChar.position[1]) {
                 changes.moved.push({ oldChar, newChar });
             }
 
-            // Check HP changes
             if (oldChar.current_hp !== newChar.current_hp) {
                 changes.hpChanged.push({ oldChar, newChar });
             }
 
-            // Check turn state changes
             if (oldChar.has_moved !== newChar.has_moved || oldChar.has_acted !== newChar.has_acted) {
                 changes.turnStateChanged.push({ oldChar, newChar });
             }
@@ -179,7 +205,6 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
     const changes = findCharacterChanges(oldCharacters, newCharacters);
     const animations = [];
 
-    // Handle removed characters (deaths) - FIXED: Check if character is actually dead
     for (const oldChar of changes.removed) {
         const charEl = BattleState.characterElements.get(oldChar.id);
         if (charEl) {
@@ -197,21 +222,17 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
         }
     }
 
-    // Handle added characters (spawns)
     for (const newChar of newCharacters) {
         const oldChar = oldCharacters.find(c => c.id === newChar.id);
         
-        // Only add if it's actually new OR if it was dead and is now alive again
         if (!oldChar || (oldChar.current_hp <= 0 && newChar.current_hp > 0)) {
             const charEl = BattleState.characterElements.get(newChar.id);
             
-            // If character element exists but character was dead, remove it first
             if (charEl && oldChar?.current_hp <= 0) {
                 charEl.remove();
                 BattleState.characterElements.delete(newChar.id);
             }
             
-            // Create new character element if it doesn't exist or was dead
             if (!BattleState.characterElements.has(newChar.id) && newChar.current_hp > 0) {
                 const newCharEl = createCharacterElement(newChar);
                 const targetCell = container.querySelector(
@@ -233,7 +254,6 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
         }
     }
 
-    // Handle moved characters - FIXED: Only move alive characters
     for (const { oldChar, newChar } of changes.moved) {
         if (newChar.current_hp > 0) {
             const charEl = BattleState.characterElements.get(newChar.id);
@@ -251,14 +271,12 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
         }
     }
 
-    // Handle HP changes and deaths - FIXED: Handle character deaths properly
     for (const newChar of newCharacters) {
         const oldChar = oldCharacters.find(c => c.id === newChar.id);
         const charEl = BattleState.characterElements.get(newChar.id);
 
         if (!charEl) continue;
 
-        // Handle character death (HP dropped to 0)
         if (oldChar && oldChar.current_hp > 0 && newChar.current_hp <= 0) {
             animations.push(new Promise(resolve => {
                 charEl.style.transition = `opacity ${ANIMATION_CONFIG.fadeOutDuration}ms ease-out`;
@@ -272,7 +290,6 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
                 }, ANIMATION_CONFIG.fadeOutDuration);
             }));
         }
-        // Handle HP changes for alive characters
         else if (newChar.current_hp > 0 && oldChar && oldChar.current_hp !== newChar.current_hp) {
             const hpBar = charEl.querySelector('.character-hp-bar');
             if (hpBar) {
@@ -281,7 +298,6 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
         }
     }
 
-    // Handle visual state updates for alive characters
     for (const newChar of newCharacters) {
         if (newChar.current_hp > 0) {
             const charEl = BattleState.characterElements.get(newChar.id);
@@ -291,7 +307,6 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
         }
     }
 
-    // Clean up any characters that are dead but still in characterElements
     for (const [charId, charEl] of BattleState.characterElements.entries()) {
         const currentChar = newCharacters.find(c => c.id === charId);
         if (!currentChar || currentChar.current_hp <= 0) {
@@ -304,10 +319,8 @@ const updateCharactersWithAnimationsOptimized = async (newCharacters) => {
 
     await Promise.all(animations);
     
-    // Update characters state, filtering out dead characters from the active characters array
     BattleState.characters = newCharacters.filter(char => char.current_hp > 0);
     
-    // Store for next diff
     BattleState.lastCharacterStates = new Map(newCharacters.map(c => [c.id, {
         position: [...c.position],
         current_hp: c.current_hp,
@@ -727,6 +740,559 @@ function removeBattleLoadingModal(modal) {
     }
 }
 
+function injectTutorialStyles() {
+    if (document.getElementById('tutorial-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'tutorial-styles';
+    style.textContent = `
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Cinzel', serif;
+        }
+        
+        .tutorial-content {
+            background: linear-gradient(145deg, #1a120b, #2a1f15);
+            border: 3px solid #c4975a;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            color: #e8e8e8;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+        
+        .tutorial-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .tutorial-title {
+            color: #c4975a;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        .tutorial-description {
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .tutorial-highlight {
+            position: absolute;
+            border: 3px solid #ffd700;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            z-index: 10001;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+        
+        .tutorial-arrow {
+            position: absolute;
+            z-index: 10002;
+            font-size: 2rem;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            animation: bounce 1s infinite;
+        }
+        
+        .tutorial-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+        
+        .tutorial-progress {
+            color: #b8b3a8;
+            font-size: 0.9rem;
+        }
+        
+        .tutorial-button {
+            background: linear-gradient(145deg, #c4975a, #a67c52);
+            border: 2px solid #d4af37;
+            border-radius: 6px;
+            color: #1a120b;
+            padding: 0.75rem 1.5rem;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tutorial-button:hover {
+            background: linear-gradient(145deg, #d4af37, #c4975a);
+            transform: translateY(-2px);
+        }
+        
+        .tutorial-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .tutorial-skip {
+            background: transparent;
+            border: 1px solid #666;
+            color: #b8b3a8;
+        }
+        
+        .tutorial-skip:hover {
+            background: rgba(102, 102, 102, 0.3);
+            color: #e8e8e8;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .tutorial-element-blocked {
+            pointer-events: none !important;
+        }
+        
+        .tutorial-element-allowed {
+            pointer-events: auto !important;
+            z-index: 10003 !important;
+        }
+    `;
+    
+    document.head.appendChild(style);
+}
+
+async function showTutorialModal(chatId) {
+    return new Promise((resolve) => {
+        injectTutorialStyles();
+        
+        const modal = document.createElement('div');
+        modal.className = 'tutorial-overlay';
+        modal.innerHTML = `
+            <div class="tutorial-content">
+                <div class="tutorial-header">
+                    <h2 class="tutorial-title">Battle Tutorial</h2>
+                </div>
+                <div class="tutorial-description">
+                    Welcome to the battle tutorial! This will guide you through the basic controls and mechanics.
+                    <br><br>
+                    You'll learn how to move characters, use abilities, and defeat enemies.
+                </div>
+                <div class="tutorial-controls">
+                    <button class="tutorial-button tutorial-skip" id="skipTutorial">Skip Tutorial</button>
+                    <button class="tutorial-button" id="startTutorial">Start Tutorial</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('skipTutorial').addEventListener('click', async () => {
+            modal.remove();
+            await markTutorialAsSeen(chatId);
+            resolve();
+        });
+        
+        document.getElementById('startTutorial').addEventListener('click', async () => {
+            modal.remove();
+            await startTutorialSequence(chatId);
+            resolve();
+        });
+    });
+}
+
+async function markTutorialAsSeen(chatId) {
+    try {
+        await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.warn('Failed to mark tutorial as seen:', error);
+    }
+}
+
+async function startTutorialSequence(chatId) {
+    BattleState.tutorial.active = true;
+    BattleState.tutorial.currentStep = 0;
+    
+    await ensureTutorialBattleState();
+    
+    await executeTutorialStep();
+}
+
+async function ensureTutorialBattleState() {
+    let attempts = 0;
+    while ((!BattleState.characters || BattleState.characters.length === 0) && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    const playerChars = BattleState.characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
+    const enemies = BattleState.characters.filter(c => !c.isPlayerControlled && c.current_hp > 0);
+    
+    if (playerChars.length === 0 || enemies.length === 0) {
+        console.warn('Tutorial: Missing required characters for tutorial');
+    }
+}
+
+async function executeTutorialStep() {
+    if (!BattleState.tutorial.active) return;
+    
+    const step = BattleState.tutorial.steps[BattleState.tutorial.currentStep];
+    if (!step) {
+        endTutorial();
+        return;
+    }
+    
+    clearTutorialElements();
+    
+    showTutorialStepUI(step);
+    
+    await setupTutorialStep(step);
+}
+
+function clearTutorialElements() {
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.remove());
+    document.querySelectorAll('.tutorial-arrow').forEach(el => el.remove());
+    document.querySelectorAll('.tutorial-overlay').forEach(el => {
+        if (el.id !== 'tutorial-step-ui') el.remove();
+    });
+    
+    document.querySelectorAll('.tutorial-element-blocked, .tutorial-element-allowed').forEach(el => {
+        el.classList.remove('tutorial-element-blocked', 'tutorial-element-allowed');
+    });
+}
+
+function showTutorialStepUI(step) {
+    const existingUI = document.getElementById('tutorial-step-ui');
+    if (existingUI) existingUI.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'tutorial-step-ui';
+    modal.className = 'tutorial-overlay';
+    modal.innerHTML = `
+        <div class="tutorial-content">
+            <div class="tutorial-header">
+                <h2 class="tutorial-title">${step.title}</h2>
+            </div>
+            <div class="tutorial-description">
+                ${step.description}
+            </div>
+            <div class="tutorial-controls">
+                <div class="tutorial-progress">
+                    Step ${BattleState.tutorial.currentStep + 1} of ${BattleState.tutorial.steps.length}
+                </div>
+                <button class="tutorial-button tutorial-skip" id="tutorialSkipStep">Skip Tutorial</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('tutorialSkipStep').addEventListener('click', () => {
+        endTutorial();
+    });
+}
+
+async function setupTutorialStep(step) {
+    switch (step.waitFor) {
+        case 'characterSelection':
+            await setupCharacterSelectionStep();
+            break;
+        case 'movement':
+            await setupMovementStep();
+            break;
+        case 'abilitySelection':
+            await setupAbilitySelectionStep();
+            break;
+        case 'abilityUse':
+            await setupAbilityUseStep();
+            break;
+    }
+    
+    addTutorialHighlights(step);
+}
+
+async function setupCharacterSelectionStep() {
+    const playerChars = BattleState.characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
+    
+    if (playerChars.length === 0) {
+        console.warn('No player characters found for tutorial');
+        return;
+    }
+    
+    playerChars.forEach(char => {
+        const charEl = BattleState.characterElements.get(char.id);
+        if (charEl) {
+            charEl.classList.add('tutorial-element-allowed');
+            
+            charEl._originalOnClick = charEl.onclick;
+            charEl.onclick = (e) => {
+                e.stopPropagation();
+                handleTutorialCharacterSelection(char);
+            };
+        }
+    });
+    
+    blockNonTutorialInteractions();
+}
+
+function handleTutorialCharacterSelection(character) {
+    if (!BattleState.tutorial.active) return;
+    
+    const charEl = BattleState.characterElements.get(character.id);
+    if (charEl) {
+        handleCharacterSelection(character, charEl);
+    }
+    
+    setTimeout(() => {
+        BattleState.tutorial.currentStep++;
+        executeTutorialStep();
+    }, 1000);
+}
+
+async function setupMovementStep() {
+    let attempts = 0;
+    while ((!BattleState.selectedPlayerCharacter) && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    if (!BattleState.selectedPlayerCharacter) {
+        console.warn('No character selected for movement tutorial');
+        return;
+    }
+    
+    const originalHandleTileClick = handleTileClick;
+    handleTileClick = function(event) {
+        const tileEl = event.currentTarget;
+        if (tileEl.classList.contains('highlight-walkable')) {
+            originalHandleTileClick.call(this, event);
+            
+            setTimeout(() => {
+                if (BattleState.isMoveQueued) {
+                    BattleState.tutorial.currentStep++;
+                    executeTutorialStep();
+                }
+            }, 500);
+        }
+    };
+    
+    blockNonTutorialInteractions();
+}
+
+async function setupAbilitySelectionStep() {
+    if (BattleState.selectedPlayerCharacter) {
+        renderBottomUI();
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const abilityButtons = document.querySelectorAll('.battle-bottom-ui .fantasy-button.ui-btn[data-ability-name]');
+    
+    if (abilityButtons.length === 0) {
+        console.warn('No ability buttons found for tutorial');
+        return;
+    }
+    
+    abilityButtons.forEach(btn => {
+        btn.classList.add('tutorial-element-allowed');
+    });
+    
+    const originalToggleAbilitySelection = toggleAbilitySelection;
+    window._tutorialAbilitySelectionHandler = (caster, ability) => {
+        originalToggleAbilitySelection(caster, ability);
+        
+        setTimeout(() => {
+            BattleState.tutorial.currentStep++;
+            executeTutorialStep();
+        }, 1000);
+    };
+    
+    toggleAbilitySelection = window._tutorialAbilitySelectionHandler;
+    
+    blockNonTutorialInteractions();
+}
+
+async function setupAbilityUseStep() {
+    let attempts = 0;
+    while ((!BattleState.selectingAbility) && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    if (!BattleState.selectingAbility) {
+        console.warn('No ability selected for targeting tutorial');
+        return;
+    }
+    
+    const enemyTargets = document.querySelectorAll('.highlight-target-enemy');
+    
+    if (enemyTargets.length === 0) {
+        console.warn('No enemy targets found for tutorial');
+        return;
+    }
+    
+    enemyTargets.forEach(target => {
+        target.classList.add('tutorial-element-allowed');
+    });
+    
+    const originalHandleAbilityUse = handleAbilityUse;
+    window._tutorialAbilityUseHandler = function(payload) {
+        originalHandleAbilityUse(payload);
+        
+        setTimeout(() => {
+            endTutorial();
+        }, 2000);
+    };
+    
+    handleAbilityUse = window._tutorialAbilityUseHandler;
+    
+    blockNonTutorialInteractions();
+}
+
+function addTutorialHighlights(step) {
+    let highlightElement = null;
+    let arrowPosition = { top: '50%', left: '50%' };
+    
+    switch (step.highlight) {
+        case 'battlefield':
+            highlightElement = BattleState.main.querySelector('.battle-grid-container');
+            arrowPosition = { top: '20%', left: '50%' };
+            break;
+        case 'movementTiles':
+            const movementTile = document.querySelector('.highlight-walkable');
+            if (movementTile) {
+                highlightElement = movementTile;
+                arrowPosition = getElementPosition(movementTile, 'bottom');
+            }
+            break;
+        case 'abilityPanel':
+            highlightElement = document.querySelector('.battle-bottom-ui');
+            arrowPosition = { top: '80%', left: '50%' };
+            break;
+        case 'targeting':
+            const enemyTarget = document.querySelector('.highlight-target-enemy');
+            if (enemyTarget) {
+                highlightElement = enemyTarget;
+                arrowPosition = getElementPosition(enemyTarget, 'center');
+            }
+            break;
+    }
+    
+    if (highlightElement) {
+        const rect = highlightElement.getBoundingClientRect();
+        const highlight = document.createElement('div');
+        highlight.className = 'tutorial-highlight';
+        Object.assign(highlight.style, {
+            top: `${rect.top}px`,
+            left: `${rect.left}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`
+        });
+        document.body.appendChild(highlight);
+        
+        const arrow = document.createElement('div');
+        arrow.className = 'tutorial-arrow';
+        arrow.innerHTML = getArrowForDirection(step.arrow.direction);
+        Object.assign(arrow.style, {
+            top: arrowPosition.top,
+            left: arrowPosition.left,
+            transform: `translate(-50%, -50%) ${getArrowTransform(step.arrow.direction)}`
+        });
+        document.body.appendChild(arrow);
+    }
+}
+
+function getElementPosition(element, placement) {
+    const rect = element.getBoundingClientRect();
+    
+    switch (placement) {
+        case 'top':
+            return { top: `${rect.top - 40}px`, left: `${rect.left + rect.width / 2}px` };
+        case 'bottom':
+            return { top: `${rect.bottom + 40}px`, left: `${rect.left + rect.width / 2}px` };
+        case 'center':
+        default:
+            return { top: `${rect.top + rect.height / 2}px`, left: `${rect.left + rect.width / 2}px` };
+    }
+}
+
+function getArrowForDirection(direction) {
+    switch (direction) {
+        case 'up': return '↑';
+        case 'down': return '↓';
+        case 'left': return '←';
+        case 'right': return '→';
+        default: return '↑';
+    }
+}
+
+function getArrowTransform(direction) {
+    switch (direction) {
+        case 'up': return 'rotate(0deg)';
+        case 'down': return 'rotate(180deg)';
+        case 'left': return 'rotate(-90deg)';
+        case 'right': return 'rotate(90deg)';
+        default: return 'rotate(0deg)';
+    }
+}
+
+function blockNonTutorialInteractions() {
+    document.querySelectorAll('*').forEach(el => {
+        if (!el.classList.contains('tutorial-element-allowed') && 
+            !el.closest('.tutorial-overlay') &&
+            !el.closest('.tutorial-content')) {
+            el.classList.add('tutorial-element-blocked');
+        }
+    });
+}
+
+function endTutorial() {
+    BattleState.tutorial.active = false;
+    
+    clearTutorialElements();
+    
+    const tutorialUI = document.getElementById('tutorial-step-ui');
+    if (tutorialUI) tutorialUI.remove();
+    
+    if (window._tutorialAbilitySelectionHandler) {
+        toggleAbilitySelection = window._tutorialAbilitySelectionHandler;
+        delete window._tutorialAbilitySelectionHandler;
+    }
+    
+    if (window._tutorialAbilityUseHandler) {
+        handleAbilityUse = window._tutorialAbilityUseHandler;
+        delete window._tutorialAbilityUseHandler;
+    }
+    
+    document.querySelectorAll('.tutorial-element-blocked').forEach(el => {
+        el.classList.remove('tutorial-element-blocked');
+    });
+    
+    if (BattleState.profile?.chat_id) {
+        markTutorialAsSeen(BattleState.profile.chat_id);
+    }
+}
+
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
 
@@ -744,8 +1310,10 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
             return;
         }
 
-        if (BattleState.profile.battle_tutorial === false) {
+        if (BattleState.profile.battle_tutorial === false && !reconnecting) {
+            removeBattleLoadingModal(loadingModal);
             await showTutorialModal(BattleState.profile.chat_id);
+            createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
         }
 
         updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
@@ -859,7 +1427,6 @@ const initializeBattle = async (selectedMode, areaLevel) => {
     BattleState.battleState = initialState;
 };
 
-// OPTIMIZED: Selective real-time subscription
 const setupOptimizedRealtimeSubscription = () => {
     const supabase = getSupabaseClient({ 
         SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
@@ -910,7 +1477,6 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
         await updateCharactersWithAnimationsOptimized(newCharacters);
     }
     
-    // Handle environment changes (only if environment_items_pos changed)
     const newEnvItems = newBattleState?.layout_data?.environment_items_pos;
     const oldEnvItems = oldBattleState?.layout_data?.environment_items_pos;
     
@@ -919,7 +1485,6 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
     }
 };
 
-// OPTIMIZED: Replace the old update function
 const updateGameStateFromRealtimeOptimized = async () => {
     if (!BattleState.battleState) return;
     
@@ -952,55 +1517,6 @@ const updateGameStateFromRealtimeOptimized = async () => {
         renderEnvironmentItems(layoutItems);
     }
 };
-
-async function showTutorialModal(chatId) {
-    const modal = document.createElement('div');
-    modal.className = 'tutorial-modal';
-    Object.assign(modal.style, {
-        position: 'fixed',
-        top: '0', left: '0',
-        width: '100%', height: '100%',
-        background: 'rgba(0,0,0,0.85)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: '99999',
-        color: '#fff',
-        flexDirection: 'column',
-        textAlign: 'center',
-        fontFamily: 'Cinzel, serif'
-    });
-
-    modal.innerHTML = `
-        <h2 style="margin-bottom:1rem;">Battle Tutorial</h2>
-        <p style="max-width:480px;margin-bottom:2rem;opacity:0.9;">
-            Welcome to the battle module! Here you'll learn basic controls.
-            <br><br>
-            (Later this will be replaced by a short video.)
-        </p>
-        <button id="closeTutorialBtn" 
-            style="padding:0.75rem 1.5rem;
-                   background:#c4975a;
-                   border:none;
-                   border-radius:8px;
-                   color:#222;
-                   font-weight:bold;
-                   cursor:pointer;">
-            Got it, let's play!
-        </button>
-    `;
-
-    document.body.appendChild(modal);
-
-    document.getElementById('closeTutorialBtn').addEventListener('click', async () => {
-        modal.remove();
-
-        await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' }
-        });
-    });
-}
 
 BattleState.selectingAbility = BattleState.selectingAbility || null;
 BattleState._abilityEscHandler = null;
@@ -1400,6 +1916,35 @@ const handleAITurn = async () => {
   }
 };
 
+function addTutorialButton() {
+    const topBar = document.querySelector('.battle-top-bar');
+    if (topBar && !document.getElementById('tutorialButton')) {
+        const tutorialBtn = document.createElement('button');
+        tutorialBtn.id = 'tutorialButton';
+        tutorialBtn.innerHTML = '?';
+        tutorialBtn.title = 'Show Tutorial';
+        tutorialBtn.style.cssText = `
+            background: #c4975a;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            color: #1a120b;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+        `;
+        
+        tutorialBtn.addEventListener('click', () => {
+            if (BattleState.profile?.chat_id) {
+                startTutorialSequence(BattleState.profile.chat_id);
+            }
+        });
+        
+        topBar.appendChild(tutorialBtn);
+    }
+}
+
 function renderBattleScreen(mode, level, layoutData) {
     BattleState.main.innerHTML = `
         <style>
@@ -1476,6 +2021,8 @@ function renderBattleScreen(mode, level, layoutData) {
         turnStatusEl.title = "Click to refresh if frozen";
         turnStatusEl.addEventListener("click", handleRefreshOptimized);
     }
+
+    addTutorialButton();
 }
 
 function renderBattleGrid(layoutJson) {
@@ -1562,7 +2109,6 @@ function renderCharacters() {
     container.querySelectorAll('.character-token').forEach(token => token.remove());
 
     BattleState.characters.forEach(char => {
-        // FIXED: Only render alive characters
         if (!Array.isArray(char.position) || char.current_hp <= 0) return;
 
         const [x, y] = char.position;
@@ -2163,14 +2709,12 @@ const handleUseConsumable = async () => {
         return;
     }
 
-    // Get the ability data using the existing getAbility function
     const abilityData = await getAbility(consumable);
     if (!abilityData) {
         displayMessage('Consumable ability data not found.');
         return;
     }
 
-    // Build the payload exactly like an ability use
     const abilityPayload = {
         abilityName: consumable,
         casterPos: activeCharacter.position,
@@ -2180,12 +2724,11 @@ const handleUseConsumable = async () => {
                 id: activeCharacter.id,
                 pos: activeCharacter.position,
                 faction: 'ally',
-                intendedEffect: abilityData.effects // 'heal', 'damage', etc.
+                intendedEffect: abilityData.effects
             }
         ]
     };
 
-    // Mirror how handleAbilityUse stores and sends actions
     activeCharacter.pendingAction = {
         type: 'ability',
         data: abilityPayload
@@ -2209,7 +2752,6 @@ const handleUseConsumable = async () => {
             return;
         }
 
-        // Reset UI/selection like normal ability end
         BattleState.currentTurnCharacter = null;
         BattleState.selectedPlayerCharacter = null;
         BattleState.selectedCharacterEl = null;
@@ -2222,7 +2764,6 @@ const handleUseConsumable = async () => {
     }
 };
 
-// OPTIMIZED: Refresh function with selective fields
 const handleRefreshOptimized = async () => {
     try {
         const supabase = getSupabaseClient({ 
@@ -2230,7 +2771,6 @@ const handleRefreshOptimized = async () => {
             SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
         });
         
-        // Only select the fields we actually need
         const { data: battleState, error } = await supabase
             .from('battle_state')
             .select('characters_state, current_turn, status, layout_data')
