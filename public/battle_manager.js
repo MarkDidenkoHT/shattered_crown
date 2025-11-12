@@ -1164,37 +1164,49 @@ async function setupTutorialStep(step) {
 }
 
 async function setupCharacterSelectionStep() {
+    console.log('Tutorial: Setting up character selection step');
+    
     const playerChars = BattleState.characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
+    console.log('Tutorial: Found player characters:', playerChars.length);
     
     playerChars.forEach(char => {
         const charEl = BattleState.characterElements.get(char.id);
         if (charEl) {
             charEl.classList.add('tutorial-element-allowed');
+            console.log('Tutorial: Enabled character', char.id);
         }
     });
     
-    // Store original handler
+    // Store the original handler properly
     if (!window._originalHandlers) window._originalHandlers = {};
     window._originalHandlers.characterSelection = handleCharacterSelection;
     
-    // Create tutorial-specific handler
-    handleCharacterSelection = function(character, tileEl) {
-        // Call original function first
-        window._originalHandlers.characterSelection(character, tileEl);
+    // Create a completely new function that properly handles tutorial progression
+    const tutorialCharacterSelection = function(character, tileEl) {
+        console.log('Tutorial: Character selection intercepted', character.id, character.isPlayerControlled);
         
-        // Check if this is a valid player character selection for tutorial
+        // First call the original function to maintain game functionality
+        window._originalHandlers.characterSelection.call(this, character, tileEl);
+        
+        // Then check for tutorial progression
         if (BattleState.tutorial.active && 
             BattleState.tutorial.currentStep === 0 && 
-            character.isPlayerControlled && 
-            (!character.has_moved || !character.has_acted)) {
+            character.isPlayerControlled) {
             
-            console.log('Tutorial: Character selected, advancing to step 2');
+            console.log('Tutorial: Valid character selection detected, advancing to step 2');
+            
+            // Clear this handler immediately to prevent multiple triggers
+            handleCharacterSelection = window._originalHandlers.characterSelection;
+            
             setTimeout(() => {
                 BattleState.tutorial.currentStep++;
                 executeTutorialStep();
-            }, 800);
+            }, 1000);
         }
     };
+    
+    // Replace the global handler
+    handleCharacterSelection = tutorialCharacterSelection;
 }
 
 async function setupMovementStep() {
