@@ -596,6 +596,34 @@ function injectBattleLoadingStyles() {
       100% { background-position: 200% 0; }
     }
 
+    .tutorial-top-left {
+        top: 20px;
+        left: 20px;
+        right: auto;
+        transform: none;
+    }
+    
+    .tutorial-top-right {
+        top: 20px;
+        right: 20px;
+        left: auto;
+        transform: none;
+    }
+    
+    .tutorial-bottom-left {
+        bottom: 120px;
+        left: 20px;
+        right: auto;
+        transform: none;
+    }
+    
+    .tutorial-bottom-right {
+        bottom: 120px;
+        right: 20px;
+        left: auto;
+        transform: none;
+    }
+
     .tutorial-overlay {
         position: fixed;
         top: 0;
@@ -1001,11 +1029,21 @@ function showTutorialStepUI(step) {
     modal.id = 'tutorial-step-ui';
     modal.className = 'tutorial-overlay';
     
-    let positionClass = 'tutorial-top';
-    if (step.highlight === 'abilityPanel') {
-        positionClass = 'tutorial-bottom';
-    } else if (step.highlight === 'targeting') {
-        positionClass = 'tutorial-center';
+    let positionClass = 'tutorial-bottom-left';
+    
+    switch (step.highlight) {
+        case 'battlefield':
+            positionClass = 'tutorial-bottom-right';
+            break;
+        case 'movementTiles':
+            positionClass = 'tutorial-bottom-right';
+            break;
+        case 'abilityPanel':
+            positionClass = 'tutorial-top-left';
+            break;
+        case 'targeting':
+            positionClass = 'tutorial-bottom-left';
+            break;
     }
     
     modal.innerHTML = `
@@ -1135,26 +1173,41 @@ async function setupCharacterSelectionStep() {
         }
     });
     
+    // Store original handler
     if (!window._originalHandlers) window._originalHandlers = {};
     window._originalHandlers.characterSelection = handleCharacterSelection;
     
+    // Create tutorial-specific handler
     handleCharacterSelection = function(character, tileEl) {
+        // Call original function first
         window._originalHandlers.characterSelection(character, tileEl);
         
-        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 0) {
+        // Check if this is a valid player character selection for tutorial
+        if (BattleState.tutorial.active && 
+            BattleState.tutorial.currentStep === 0 && 
+            character.isPlayerControlled && 
+            (!character.has_moved || !character.has_acted)) {
+            
+            console.log('Tutorial: Character selected, advancing to step 2');
             setTimeout(() => {
                 BattleState.tutorial.currentStep++;
                 executeTutorialStep();
-            }, 1000);
+            }, 800);
         }
     };
 }
 
 async function setupMovementStep() {
+    // Wait for character to be selected and movement tiles to appear
     let attempts = 0;
-    while ((!BattleState.selectedPlayerCharacter) && attempts < 50) {
+    while ((!BattleState.selectedPlayerCharacter || document.querySelectorAll('.highlight-walkable').length === 0) && attempts < 100) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
+    }
+    
+    if (attempts >= 100) {
+        console.warn('Tutorial: Movement step timeout');
+        return;
     }
     
     const movementTiles = document.querySelectorAll('.highlight-walkable');
@@ -1162,6 +1215,7 @@ async function setupMovementStep() {
         tile.classList.add('tutorial-element-allowed');
     });
     
+    // Store original handler
     if (!window._originalHandlers) window._originalHandlers = {};
     window._originalHandlers.tileClick = handleTileClick;
     
@@ -1171,10 +1225,11 @@ async function setupMovementStep() {
             window._originalHandlers.tileClick.call(this, event);
             
             if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 1) {
+                console.log('Tutorial: Movement detected, advancing to step 3');
                 setTimeout(() => {
                     BattleState.tutorial.currentStep++;
                     executeTutorialStep();
-                }, 1000);
+                }, 800);
             }
         }
     };
