@@ -22,12 +22,12 @@ const BattleState = {
                 description: "This is the battlefield. You control the characters on your side. Click on one of your characters to select it.",
                 highlight: "battlefield",
                 waitFor: "characterSelection",
-                arrow: { position: "center", direction: "up" }
+                arrow: { position: "top", direction: "down" }
             },
             {
                 title: "Moving Your Character",
                 description: "Great! Now you can see highlighted tiles where you can move. Click on one of the green highlighted tiles to move your character.",
-                highlight: "movementTiles",
+                highlight: "movementTiles", 
                 waitFor: "movement",
                 arrow: { position: "bottom", direction: "up" }
             },
@@ -43,7 +43,7 @@ const BattleState = {
                 description: "Perfect! Now you can see highlighted targets. Click on an enemy to use your ability and complete the tutorial.",
                 highlight: "targeting",
                 waitFor: "abilityUse",
-                arrow: { position: "center", direction: "up" }
+                arrow: { position: "center", direction: "down" }
             }
         ]
     }
@@ -602,43 +602,57 @@ function injectBattleLoadingStyles() {
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.85);
         z-index: 10000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-family: 'Cinzel', serif;
+        pointer-events: none;
     }
     
     .tutorial-content {
-        background: linear-gradient(145deg, #1a120b, #2a1f15);
+        position: absolute;
+        background: linear-gradient(145deg, rgba(26, 18, 11, 0.95), rgba(42, 31, 22, 0.95));
         border: 3px solid #c4975a;
         border-radius: 12px;
-        padding: 2rem;
-        max-width: 500px;
-        width: 90%;
+        padding: 1.5rem;
+        max-width: 400px;
         color: #e8e8e8;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-        position: relative;
+        pointer-events: auto;
         z-index: 10001;
+    }
+    
+    .tutorial-top {
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .tutorial-bottom {
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .tutorial-center {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
     }
     
     .tutorial-header {
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
     
     .tutorial-title {
         color: #c4975a;
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         margin-bottom: 0.5rem;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     }
     
     .tutorial-description {
-        font-size: 1rem;
-        line-height: 1.5;
-        margin-bottom: 2rem;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        margin-bottom: 1.5rem;
         text-align: center;
     }
     
@@ -659,18 +673,19 @@ function injectBattleLoadingStyles() {
         color: #ffd700;
         text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
         animation: tutorialBounce 1s infinite;
+        pointer-events: none;
     }
     
     .tutorial-controls {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 1.5rem;
+        margin-top: 1rem;
     }
     
     .tutorial-progress {
         color: #b8b3a8;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
     
     .tutorial-button {
@@ -678,22 +693,17 @@ function injectBattleLoadingStyles() {
         border: 2px solid #d4af37;
         border-radius: 6px;
         color: #1a120b;
-        padding: 0.75rem 1.5rem;
+        padding: 0.5rem 1rem;
         font-family: 'Cinzel', serif;
         font-weight: bold;
         cursor: pointer;
         transition: all 0.3s ease;
+        font-size: 0.8rem;
     }
     
     .tutorial-button:hover {
         background: linear-gradient(145deg, #d4af37, #c4975a);
         transform: translateY(-2px);
-    }
-    
-    .tutorial-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
     }
     
     .tutorial-skip {
@@ -741,6 +751,18 @@ function injectBattleLoadingStyles() {
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .tutorial-help-button:hover {
+        background: #d4af37;
+        transform: scale(1.1);
+    }
+
+    .tutorial-transparent {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(2px);
+        pointer-events: auto;
     }
     `;
     document.head.appendChild(style);
@@ -890,9 +912,9 @@ function removeBattleLoadingModal(modal) {
 async function showTutorialModal(chatId) {
     return new Promise((resolve) => {
         const modal = document.createElement('div');
-        modal.className = 'tutorial-overlay';
+        modal.className = 'tutorial-overlay tutorial-transparent';
         modal.innerHTML = `
-            <div class="tutorial-content">
+            <div class="tutorial-content tutorial-center">
                 <div class="tutorial-header">
                     <h2 class="tutorial-title">Battle Tutorial</h2>
                 </div>
@@ -962,18 +984,13 @@ async function executeTutorialStep() {
     
     clearTutorialElements();
     showTutorialStepUI(step);
-    await setupTutorialStep(step);
     addTutorialHighlights(step);
+    await setupTutorialStep(step);
 }
 
 function clearTutorialElements() {
     document.querySelectorAll('.tutorial-highlight').forEach(el => el.remove());
     document.querySelectorAll('.tutorial-arrow').forEach(el => el.remove());
-    document.querySelectorAll('.tutorial-step-overlay').forEach(el => el.remove());
-    
-    document.querySelectorAll('.tutorial-element-blocked, .tutorial-element-allowed').forEach(el => {
-        el.classList.remove('tutorial-element-blocked', 'tutorial-element-allowed');
-    });
 }
 
 function showTutorialStepUI(step) {
@@ -982,9 +999,17 @@ function showTutorialStepUI(step) {
     
     const modal = document.createElement('div');
     modal.id = 'tutorial-step-ui';
-    modal.className = 'tutorial-overlay tutorial-step-overlay';
+    modal.className = 'tutorial-overlay';
+    
+    let positionClass = 'tutorial-top';
+    if (step.highlight === 'abilityPanel') {
+        positionClass = 'tutorial-bottom';
+    } else if (step.highlight === 'targeting') {
+        positionClass = 'tutorial-center';
+    }
+    
     modal.innerHTML = `
-        <div class="tutorial-content">
+        <div class="tutorial-content ${positionClass}">
             <div class="tutorial-header">
                 <h2 class="tutorial-title">${step.title}</h2>
             </div>
@@ -1007,7 +1032,83 @@ function showTutorialStepUI(step) {
     });
 }
 
+function addTutorialHighlights(step) {
+    let highlightElement = null;
+    let arrowPosition = {};
+    
+    switch (step.highlight) {
+        case 'battlefield':
+            highlightElement = BattleState.main.querySelector('.battle-grid-container');
+            if (highlightElement) {
+                const rect = highlightElement.getBoundingClientRect();
+                arrowPosition = {
+                    top: rect.top - 50,
+                    left: rect.left + rect.width / 2
+                };
+            }
+            break;
+        case 'movementTiles':
+            const movementTile = document.querySelector('.highlight-walkable');
+            if (movementTile) {
+                highlightElement = movementTile;
+                const rect = movementTile.getBoundingClientRect();
+                arrowPosition = {
+                    top: rect.bottom + 30,
+                    left: rect.left + rect.width / 2
+                };
+            }
+            break;
+        case 'abilityPanel':
+            highlightElement = document.querySelector('.battle-bottom-ui');
+            if (highlightElement) {
+                const rect = highlightElement.getBoundingClientRect();
+                arrowPosition = {
+                    top: rect.top - 50,
+                    left: rect.left + rect.width / 2
+                };
+            }
+            break;
+        case 'targeting':
+            const enemyTarget = document.querySelector('.highlight-target-enemy');
+            if (enemyTarget) {
+                highlightElement = enemyTarget;
+                const rect = enemyTarget.getBoundingClientRect();
+                arrowPosition = {
+                    top: rect.top - 50,
+                    left: rect.left + rect.width / 2
+                };
+            }
+            break;
+    }
+    
+    if (highlightElement) {
+        const rect = highlightElement.getBoundingClientRect();
+        const highlight = document.createElement('div');
+        highlight.className = 'tutorial-highlight';
+        Object.assign(highlight.style, {
+            top: `${rect.top}px`,
+            left: `${rect.left}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`
+        });
+        document.body.appendChild(highlight);
+        
+        const arrow = document.createElement('div');
+        arrow.className = 'tutorial-arrow';
+        arrow.innerHTML = getArrowForDirection(step.arrow.direction);
+        Object.assign(arrow.style, {
+            top: `${arrowPosition.top}px`,
+            left: `${arrowPosition.left}px`
+        });
+        document.body.appendChild(arrow);
+    }
+}
+
 async function setupTutorialStep(step) {
+    document.querySelectorAll('.tutorial-element-allowed').forEach(el => {
+        el.classList.remove('tutorial-element-allowed');
+    });
+    
     switch (step.waitFor) {
         case 'characterSelection':
             await setupCharacterSelectionStep();
@@ -1034,9 +1135,11 @@ async function setupCharacterSelectionStep() {
         }
     });
     
-    const originalHandleCharacterSelection = handleCharacterSelection;
+    if (!window._originalHandlers) window._originalHandlers = {};
+    window._originalHandlers.characterSelection = handleCharacterSelection;
+    
     handleCharacterSelection = function(character, tileEl) {
-        originalHandleCharacterSelection(character, tileEl);
+        window._originalHandlers.characterSelection(character, tileEl);
         
         if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 0) {
             setTimeout(() => {
@@ -1045,8 +1148,6 @@ async function setupCharacterSelectionStep() {
             }, 1000);
         }
     };
-    
-    blockNonTutorialInteractions();
 }
 
 async function setupMovementStep() {
@@ -1056,24 +1157,27 @@ async function setupMovementStep() {
         attempts++;
     }
     
-    const originalHandleTileClick = handleTileClick;
+    const movementTiles = document.querySelectorAll('.highlight-walkable');
+    movementTiles.forEach(tile => {
+        tile.classList.add('tutorial-element-allowed');
+    });
+    
+    if (!window._originalHandlers) window._originalHandlers = {};
+    window._originalHandlers.tileClick = handleTileClick;
+    
     handleTileClick = function(event) {
         const tileEl = event.currentTarget;
         if (tileEl.classList.contains('highlight-walkable')) {
-            originalHandleTileClick.call(this, event);
+            window._originalHandlers.tileClick.call(this, event);
             
             if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 1) {
                 setTimeout(() => {
-                    if (BattleState.isMoveQueued) {
-                        BattleState.tutorial.currentStep++;
-                        executeTutorialStep();
-                    }
-                }, 500);
+                    BattleState.tutorial.currentStep++;
+                    executeTutorialStep();
+                }, 1000);
             }
         }
     };
-    
-    blockNonTutorialInteractions();
 }
 
 async function setupAbilitySelectionStep() {
@@ -1089,9 +1193,11 @@ async function setupAbilitySelectionStep() {
         btn.classList.add('tutorial-element-allowed');
     });
     
-    const originalToggleAbilitySelection = toggleAbilitySelection;
+    if (!window._originalHandlers) window._originalHandlers = {};
+    window._originalHandlers.abilitySelection = toggleAbilitySelection;
+    
     toggleAbilitySelection = function(caster, ability) {
-        originalToggleAbilitySelection(caster, ability);
+        window._originalHandlers.abilitySelection(caster, ability);
         
         if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 2) {
             setTimeout(() => {
@@ -1100,8 +1206,6 @@ async function setupAbilitySelectionStep() {
             }, 1000);
         }
     };
-    
-    blockNonTutorialInteractions();
 }
 
 async function setupAbilityUseStep() {
@@ -1117,9 +1221,11 @@ async function setupAbilityUseStep() {
         target.classList.add('tutorial-element-allowed');
     });
     
-    const originalHandleAbilityUse = handleAbilityUse;
+    if (!window._originalHandlers) window._originalHandlers = {};
+    window._originalHandlers.abilityUse = handleAbilityUse;
+    
     handleAbilityUse = function(payload) {
-        originalHandleAbilityUse(payload);
+        window._originalHandlers.abilityUse(payload);
         
         if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 3) {
             setTimeout(() => {
@@ -1127,49 +1233,6 @@ async function setupAbilityUseStep() {
             }, 2000);
         }
     };
-    
-    blockNonTutorialInteractions();
-}
-
-function addTutorialHighlights(step) {
-    let highlightElement = null;
-    
-    switch (step.highlight) {
-        case 'battlefield':
-            highlightElement = BattleState.main.querySelector('.battle-grid-container');
-            break;
-        case 'movementTiles':
-            highlightElement = document.querySelector('.highlight-walkable');
-            break;
-        case 'abilityPanel':
-            highlightElement = document.querySelector('.battle-bottom-ui');
-            break;
-        case 'targeting':
-            highlightElement = document.querySelector('.highlight-target-enemy');
-            break;
-    }
-    
-    if (highlightElement) {
-        const rect = highlightElement.getBoundingClientRect();
-        const highlight = document.createElement('div');
-        highlight.className = 'tutorial-highlight';
-        Object.assign(highlight.style, {
-            top: `${rect.top}px`,
-            left: `${rect.left}px`,
-            width: `${rect.width}px`,
-            height: `${rect.height}px`
-        });
-        document.body.appendChild(highlight);
-        
-        const arrow = document.createElement('div');
-        arrow.className = 'tutorial-arrow';
-        arrow.innerHTML = getArrowForDirection(step.arrow.direction);
-        Object.assign(arrow.style, {
-            top: `${rect.top - 40}px`,
-            left: `${rect.left + rect.width / 2}px`
-        });
-        document.body.appendChild(arrow);
-    }
 }
 
 function getArrowForDirection(direction) {
@@ -1182,14 +1245,6 @@ function getArrowForDirection(direction) {
     }
 }
 
-function blockNonTutorialInteractions() {
-    document.querySelectorAll('button, .character-token, .battle-tile').forEach(el => {
-        if (!el.classList.contains('tutorial-element-allowed')) {
-            el.classList.add('tutorial-element-blocked');
-        }
-    });
-}
-
 function endTutorial() {
     BattleState.tutorial.active = false;
     
@@ -1198,26 +1253,56 @@ function endTutorial() {
     const tutorialUI = document.getElementById('tutorial-step-ui');
     if (tutorialUI) tutorialUI.remove();
     
-    document.querySelectorAll('.tutorial-element-blocked').forEach(el => {
-        el.classList.remove('tutorial-element-blocked');
+    if (window._originalHandlers) {
+        if (window._originalHandlers.characterSelection) {
+            handleCharacterSelection = window._originalHandlers.characterSelection;
+        }
+        if (window._originalHandlers.tileClick) {
+            handleTileClick = window._originalHandlers.tileClick;
+        }
+        if (window._originalHandlers.abilitySelection) {
+            toggleAbilitySelection = window._originalHandlers.abilitySelection;
+        }
+        if (window._originalHandlers.abilityUse) {
+            handleAbilityUse = window._originalHandlers.abilityUse;
+        }
+        delete window._originalHandlers;
+    }
+    
+    document.querySelectorAll('.tutorial-element-allowed').forEach(el => {
+        el.classList.remove('tutorial-element-allowed');
     });
     
     if (BattleState.profile?.chat_id) {
         markTutorialAsSeen(BattleState.profile.chat_id);
     }
     
-    handleCharacterSelection = originalHandlers.characterSelection;
-    handleTileClick = originalHandlers.tileClick;
-    toggleAbilitySelection = originalHandlers.abilitySelection;
-    handleAbilityUse = originalHandlers.abilityUse;
+    displayMessage('Tutorial completed! You can replay it anytime using the ? button.', 'success');
 }
 
-const originalHandlers = {
-    characterSelection: null,
-    tileClick: null,
-    abilitySelection: null,
-    abilityUse: null
-};
+function addTutorialButton() {
+    const topBar = document.querySelector('.battle-top-bar');
+    if (topBar && !document.getElementById('tutorialButton')) {
+        const tutorialBtn = document.createElement('button');
+        tutorialBtn.id = 'tutorialButton';
+        tutorialBtn.className = 'tutorial-help-button';
+        tutorialBtn.innerHTML = '?';
+        tutorialBtn.title = 'Show Tutorial';
+        
+        tutorialBtn.addEventListener('click', () => {
+            if (BattleState.profile?.chat_id) {
+                startTutorialSequence(BattleState.profile.chat_id);
+            }
+        });
+        
+        const turnStatus = document.getElementById('turnStatus');
+        if (turnStatus && turnStatus.parentNode === topBar) {
+            topBar.insertBefore(tutorialBtn, turnStatus.nextSibling);
+        } else {
+            topBar.appendChild(tutorialBtn);
+        }
+    }
+}
 
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
@@ -1842,25 +1927,6 @@ const handleAITurn = async () => {
   }
 };
 
-function addTutorialButton() {
-    const topBar = document.querySelector('.battle-top-bar');
-    if (topBar && !document.getElementById('tutorialButton')) {
-        const tutorialBtn = document.createElement('button');
-        tutorialBtn.id = 'tutorialButton';
-        tutorialBtn.className = 'tutorial-help-button';
-        tutorialBtn.innerHTML = '?';
-        tutorialBtn.title = 'Show Tutorial';
-        
-        tutorialBtn.addEventListener('click', () => {
-            if (BattleState.profile?.chat_id) {
-                startTutorialSequence(BattleState.profile.chat_id);
-            }
-        });
-        
-        topBar.appendChild(tutorialBtn);
-    }
-}
-
 function renderBattleScreen(mode, level, layoutData) {
     BattleState.main.innerHTML = `
         <style>
@@ -1891,9 +1957,11 @@ function renderBattleScreen(mode, level, layoutData) {
         </style>
         <div class="main-app-container">
             <div class="battle-grid-container"></div>
-            <div class="battle-top-bar" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="battle-top-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
                 <p class="battle-status">${mode.toUpperCase()} — Level ${level}</p>
-                <div id="turnStatus" style="width: 25%; text-align: center; font-size: 16px; background: rgba(0,0,0,0.3); border-radius: 4px;">—</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div id="turnStatus" style="text-align: center; font-size: 16px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 5px 10px;">—</div>
+                </div>
             </div>
             <div class="battle-info-panel" id="entityInfoPanel">
                 <div style="display: flex; width: 100%; height: 100%; max-height: 15vh; min-height: 15vh;">
@@ -1939,11 +2007,6 @@ function renderBattleScreen(mode, level, layoutData) {
     }
 
     addTutorialButton();
-    
-    originalHandlers.characterSelection = handleCharacterSelection;
-    originalHandlers.tileClick = handleTileClick;
-    originalHandlers.abilitySelection = toggleAbilitySelection;
-    originalHandlers.abilityUse = handleAbilityUse;
 }
 
 function renderBattleGrid(layoutJson) {
