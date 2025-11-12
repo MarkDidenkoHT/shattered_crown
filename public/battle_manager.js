@@ -999,16 +999,29 @@ async function ensureTutorialBattleState() {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
+    
+    // Ensure characters are properly processed
+    if (BattleState.battleState?.characters_state) {
+        const newCharacters = Object.values(BattleState.battleState.characters_state)
+            .map(processCharacterState);
+        BattleState.characters = newCharacters.filter(char => char.current_hp > 0);
+    }
 }
 
 async function executeTutorialStep() {
-    if (!BattleState.tutorial.active) return;
+    if (!BattleState.tutorial.active) {
+        console.log('Tutorial: Not active');
+        return;
+    }
     
     const step = BattleState.tutorial.steps[BattleState.tutorial.currentStep];
     if (!step) {
+        console.log('Tutorial: No step found, ending');
         endTutorial();
         return;
     }
+    
+    console.log(`Tutorial: Executing step ${BattleState.tutorial.currentStep}`, step);
     
     clearTutorialElements();
     showTutorialStepUI(step);
@@ -1169,44 +1182,63 @@ async function setupCharacterSelectionStep() {
     const playerChars = BattleState.characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
     console.log('Tutorial: Found player characters:', playerChars.length);
     
+    // Store reference to the original handler
+    if (!window._originalHandlers) window._originalHandlers = {};
+    
+    // Override the global character selection handler
+    window._originalHandlers.characterSelection = window.handleCharacterSelection;
+    
+    window.handleCharacterSelection = function(character, tileEl) {
+        console.log('Tutorial: Character selection intercepted', character?.id);
+        
+        // Call original handler first
+        if (window._originalHandlers.characterSelection) {
+            window._originalHandlers.characterSelection.call(this, character, tileEl);
+        }
+        
+        // Check if this is a valid tutorial progression
+        if (BattleState.tutorial.active && 
+            BattleState.tutorial.currentStep === 0 && 
+            character?.isPlayerControlled) {
+            
+            console.log('Tutorial: Valid character selection detected, advancing to step 2');
+            
+            // Restore original handler
+            window.handleCharacterSelection = window._originalHandlers.characterSelection;
+            
+            // Advance tutorial after a short delay
+            setTimeout(() => {
+                BattleState.tutorial.currentStep++;
+                executeTutorialStep();
+            }, 800);
+        }
+    };
+    
+    // Add visual indicators to player characters
     playerChars.forEach(char => {
         const charEl = BattleState.characterElements.get(char.id);
         if (charEl) {
             charEl.classList.add('tutorial-element-allowed');
+            
+            // Add pulsing animation to make characters more noticeable
+            charEl.style.animation = 'pulse 1.5s infinite';
             console.log('Tutorial: Enabled character', char.id);
         }
     });
     
-    // Store the original handler properly
-    if (!window._originalHandlers) window._originalHandlers = {};
-    window._originalHandlers.characterSelection = handleCharacterSelection;
-    
-    // Create a completely new function that properly handles tutorial progression
-    const tutorialCharacterSelection = function(character, tileEl) {
-        console.log('Tutorial: Character selection intercepted', character.id, character.isPlayerControlled);
-        
-        // First call the original function to maintain game functionality
-        window._originalHandlers.characterSelection.call(this, character, tileEl);
-        
-        // Then check for tutorial progression
-        if (BattleState.tutorial.active && 
-            BattleState.tutorial.currentStep === 0 && 
-            character.isPlayerControlled) {
-            
-            console.log('Tutorial: Valid character selection detected, advancing to step 2');
-            
-            // Clear this handler immediately to prevent multiple triggers
-            handleCharacterSelection = window._originalHandlers.characterSelection;
-            
-            setTimeout(() => {
-                BattleState.tutorial.currentStep++;
-                executeTutorialStep();
-            }, 1000);
-        }
-    };
-    
-    // Replace the global handler
-    handleCharacterSelection = tutorialCharacterSelection;
+    // Add the pulse animation to styles
+    if (!document.getElementById('tutorial-animations')) {
+        const style = document.createElement('style');
+        style.id = 'tutorial-animations';
+        style.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 async function setupMovementStep() {
