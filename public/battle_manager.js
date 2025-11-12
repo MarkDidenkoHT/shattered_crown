@@ -1231,13 +1231,17 @@ async function setupMovementStep() {
     if (!window._originalHandlers) window._originalHandlers = {};
     window._originalHandlers.tileClick = handleTileClick;
     
-    handleTileClick = function(event) {
+    const tutorialTileClick = function(event) {
         const tileEl = event.currentTarget;
         if (tileEl.classList.contains('highlight-walkable')) {
             window._originalHandlers.tileClick.call(this, event);
             
             if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 1) {
                 console.log('Tutorial: Movement detected, advancing to step 3');
+                
+                // Restore original handler
+                handleTileClick = window._originalHandlers.tileClick;
+                
                 setTimeout(() => {
                     BattleState.tutorial.currentStep++;
                     executeTutorialStep();
@@ -1245,6 +1249,8 @@ async function setupMovementStep() {
             }
         }
     };
+    
+    handleTileClick = tutorialTileClick;
 }
 
 async function setupAbilitySelectionStep() {
@@ -1263,16 +1269,21 @@ async function setupAbilitySelectionStep() {
     if (!window._originalHandlers) window._originalHandlers = {};
     window._originalHandlers.abilitySelection = toggleAbilitySelection;
     
-    toggleAbilitySelection = function(caster, ability) {
+    const tutorialAbilitySelection = function(caster, ability) {
         window._originalHandlers.abilitySelection(caster, ability);
         
         if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 2) {
+            // Restore original handler
+            toggleAbilitySelection = window._originalHandlers.abilitySelection;
+            
             setTimeout(() => {
                 BattleState.tutorial.currentStep++;
                 executeTutorialStep();
             }, 1000);
         }
     };
+    
+    toggleAbilitySelection = tutorialAbilitySelection;
 }
 
 async function setupAbilityUseStep() {
@@ -1291,15 +1302,20 @@ async function setupAbilityUseStep() {
     if (!window._originalHandlers) window._originalHandlers = {};
     window._originalHandlers.abilityUse = handleAbilityUse;
     
-    handleAbilityUse = function(payload) {
+    const tutorialAbilityUse = function(payload) {
         window._originalHandlers.abilityUse(payload);
         
         if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 3) {
+            // Restore original handler
+            handleAbilityUse = window._originalHandlers.abilityUse;
+            
             setTimeout(() => {
                 endTutorial();
             }, 2000);
         }
     };
+    
+    handleAbilityUse = tutorialAbilityUse;
 }
 
 function getArrowForDirection(direction) {
