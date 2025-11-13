@@ -1,49 +1,59 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.0';
 
 const BattleState = {
-    main: null, apiCall: null, getCurrentProfile: null, profile: null,
-    tileMap: new Map(), characters: [], selectedCharacterEl: null,
-    selectedPlayerCharacter: null, currentTurnCharacter: null,
-    highlightedTiles: [], supabaseClient: null, battleState: null,
-    battleId: null, unsubscribeFromBattle: null, isProcessingAITurn: false,
-    characterElements: new Map(),
-    isMoveQueued: false,
+    main: null, 
+    apiCall: null, 
+    getCurrentProfile: null, 
+    profile: null,
+    tileMap: new Map(), 
+    characters: [], 
+    selectedCharacterEl: null,
+    selectedPlayerCharacter: null, 
+    currentTurnCharacter: null,
+    highlightedTiles: [], 
+    supabaseClient: null, 
+    battleState: null,
+    battleId: null, 
+    unsubscribeFromBattle: null, 
+    isProcessingAITurn: false,
+    characterElements: new Map(), 
+    isMoveQueued: false, 
     characterAbilities: {},
-    environmentItems: {},
-    abilityCache: new Map(),
+    environmentItems: {}, 
+    abilityCache: new Map(), 
     lastCharacterStates: new Map(),
-    updateDebounceTimer: null,
-    tutorial: {
-        active: false,
-        currentStep: 0,
+    updateDebounceTimer: null, 
+    tutorial: { 
+        active: false, 
+        currentStep: 0, 
         steps: [
-            {
-                title: "Welcome to Battle",
-                description: "This is the battlefield. You control the characters on your side. Click on one of your characters to select it.",
-                highlight: "battlefield",
-                waitFor: "characterSelection",
-                arrow: { position: "top", direction: "down" }
+            { 
+                title: "Welcome to Battle", 
+                description: "This is the battlefield. You control the characters on your side. Click on one of your characters to select it.", 
+                highlight: "battlefield", 
+                waitFor: "characterSelection", 
+                arrow: { position: "top", direction: "down" } 
             },
-            {
-                title: "Moving Your Character",
-                description: "Great! Now you can see highlighted tiles where you can move. Click on one of the green highlighted tiles to move your character.",
+            { 
+                title: "Moving Your Character", 
+                description: "Great! Now you can see highlighted tiles where you can move. Click on one of the green highlighted tiles to move your character.", 
                 highlight: "movementTiles", 
-                waitFor: "movement",
-                arrow: { position: "bottom", direction: "up" }
+                waitFor: "movement", 
+                arrow: { position: "bottom", direction: "up" } 
             },
-            {
-                title: "Using Abilities",
-                description: "Now let's use an ability. Click on any ability button in the bottom panel to select it.",
-                highlight: "abilityPanel",
-                waitFor: "abilitySelection",
-                arrow: { position: "bottom", direction: "up" }
+            { 
+                title: "Using Abilities", 
+                description: "Now let's use an ability. Click on any ability button in the bottom panel to select it.", 
+                highlight: "abilityPanel", 
+                waitFor: "abilitySelection", 
+                arrow: { position: "bottom", direction: "up" } 
             },
-            {
-                title: "Targeting Enemies",
-                description: "Perfect! Now you can see highlighted targets. Click on an enemy to use your ability and complete the tutorial.",
-                highlight: "targeting",
-                waitFor: "abilityUse",
-                arrow: { position: "center", direction: "down" }
+            { 
+                title: "Targeting Enemies", 
+                description: "Perfect! Now you can see highlighted targets. Click on an enemy to use your ability and complete the tutorial.", 
+                highlight: "targeting", 
+                waitFor: "abilityUse", 
+                arrow: { position: "center", direction: "down" } 
             }
         ]
     }
@@ -426,523 +436,188 @@ function injectBattleLoadingStyles() {
     const style = document.createElement('style');
     style.id = 'battle-loading-styles';
     style.textContent = `
-    .battle-result-modal {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7); display: flex;
-      align-items: center; justify-content: center; z-index: 9999;
-    }
-    .battle-result-content {
-      background: #222; padding: 20px; border-radius: 8px;
-      text-align: center; color: #fff;
-    }
-    
-    .loading-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(5px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
-      animation: fadeIn 0.3s ease;
-    }
-    .loading-content {
-      background: linear-gradient(145deg, rgba(29, 20, 12, 0.95), rgba(42, 31, 22, 0.9));
-      border: 2px solid #c4975a;
-      border-radius: 12px;
-      padding: 2.5rem;
-      text-align: center;
-      box-shadow: 
-        inset 0 1px 0 rgba(196, 151, 90, 0.2),
-        0 8px 32px rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(10px);
-      min-width: 320px;
-      max-width: 90vw;
-    }
-    .loading-header h2 {
-      font-family: 'Cinzel', serif;
-      color: #c4975a;
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
-      text-shadow: 1px 1px 0 #3d2914;
-      letter-spacing: 1px;
-    }
-    .loading-message {
-      color: #b8b3a8;
-      font-size: 1rem;
-      margin-bottom: 2rem;
-      font-style: italic;
-      opacity: 0.9;
-    }
-    .loading-animation {
-      position: relative;
-      width: 120px;
-      height: 120px;
-      margin: 0 auto 2rem;
-    }
-    .crafting-wheel {
-      width: 100%;
-      height: 100%;
-      border: 3px solid #3d2914;
-      border-radius: 50%;
-      position: relative;
-      background: radial-gradient(circle, rgba(196, 151, 90, 0.1), transparent);
-      animation: rotateWheel 3s linear infinite;
-      box-shadow: 
-        inset 0 0 10px rgba(196, 151, 90, 0.3),
-        0 0 20px rgba(196, 151, 90, 0.2);
-    }
-    .wheel-spoke {
-      position: absolute;
-      width: 2px;
-      height: 50px;
-      background: linear-gradient(to bottom, #c4975a, transparent);
-      left: 50%;
-      top: 50%;
-      transform-origin: 0 0;
-      border-radius: 1px;
-    }
-    .wheel-spoke:nth-child(1) { transform: translate(-50%, -100%) rotate(0deg); }
-    .wheel-spoke:nth-child(2) { transform: translate(-50%, -100%) rotate(60deg); }
-    .wheel-spoke:nth-child(3) { transform: translate(-50%, -100%) rotate(120deg); }
-    .wheel-spoke:nth-child(4) { transform: translate(-50%, -100%) rotate(180deg); }
-    .wheel-spoke:nth-child(5) { transform: translate(-50%, -100%) rotate(240deg); }
-    .wheel-spoke:nth-child(6) { transform: translate(-50%, -100%) rotate(300deg); }
-    .loading-particles {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-    .loading-particles .particle {
-      position: absolute;
-      width: 4px;
-      height: 4px;
-      background: #c4975a;
-      border-radius: 50%;
-      opacity: 0;
-      animation: floatParticle 2s ease-in-out infinite;
-      box-shadow: 0 0 6px rgba(196, 151, 90, 0.5);
-    }
-    .loading-particles .particle:nth-child(1) { top: 20%; left: 30%; animation-delay: 0s; }
-    .loading-particles .particle:nth-child(2) { top: 60%; right: 25%; animation-delay: 0.4s; }
-    .loading-particles .particle:nth-child(3) { bottom: 30%; left: 20%; animation-delay: 0.8s; }
-    .loading-particles .particle:nth-child(4) { top: 40%; right: 40%; animation-delay: 1.2s; }
-    .loading-particles .particle:nth-child(5) { bottom: 20%; right: 30%; animation-delay: 1.6s; }
-    .loading-progress {
-      width: 100%;
-      margin-bottom: 1.5rem;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: rgba(61, 41, 20, 0.8);
-      border-radius: 4px;
-      overflow: hidden;
-      border: 1px solid #3d2914;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #c4975a, #e6b573, #c4975a);
-      background-size: 200% 100%;
-      border-radius: 3px;
-      transition: width 0.3s ease;
-      animation: progressShimmer 2s ease-in-out infinite;
-      box-shadow: 0 0 10px rgba(196, 151, 90, 0.4);
-    }
-    .progress-text {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-    }
-    .progress-step {
-      color: #b8b3a8;
-      font-style: italic;
-    }
-    .progress-percent {
-      color: #c4975a;
-      font-weight: bold;
-      font-family: 'Cinzel', serif;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.9); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    @keyframes rotateWheel {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    @keyframes floatParticle {
-      0%, 100% { 
-        opacity: 0; 
-        transform: translateY(0px) scale(1); 
-      }
-      50% { 
-        opacity: 1; 
-        transform: translateY(-20px) scale(1.2); 
-      }
-    }
-    @keyframes progressShimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-
-    .tutorial-top-left {
-        top: 20px;
-        left: 20px;
-        right: auto;
-        transform: none;
-    }
-    
-    .tutorial-top-right {
-        top: 20px;
-        right: 20px;
-        left: auto;
-        transform: none;
-    }
-    
-    .tutorial-bottom-left {
-        bottom: 120px;
-        left: 20px;
-        right: auto;
-        transform: none;
-    }
-    
-    .tutorial-bottom-right {
-        bottom: 120px;
-        right: 20px;
-        left: auto;
-        transform: none;
-    }
-
-    .tutorial-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 10000;
-        pointer-events: none;
-    }
-    
-    .tutorial-content {
-        position: absolute;
-        background: linear-gradient(145deg, rgba(26, 18, 11, 0.95), rgba(42, 31, 22, 0.95));
-        border: 3px solid #c4975a;
-        border-radius: 12px;
-        padding: 1.5rem;
-        max-width: 400px;
-        color: #e8e8e8;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-        pointer-events: auto;
-        z-index: 10001;
-    }
-    
-    .tutorial-top {
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .tutorial-bottom {
-        bottom: 120px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .tutorial-center {
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-    }
-    
-    .tutorial-header {
-        text-align: center;
-        margin-bottom: 1rem;
-    }
-    
-    .tutorial-title {
-        color: #c4975a;
-        font-size: 1.3rem;
-        margin-bottom: 0.5rem;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    }
-    
-    .tutorial-description {
-        font-size: 0.9rem;
-        line-height: 1.4;
-        margin-bottom: 1.5rem;
-        text-align: center;
-    }
-    
-    .tutorial-highlight {
-        position: absolute;
-        border: 3px solid #ffd700;
-        border-radius: 8px;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-        z-index: 10002;
-        pointer-events: none;
-        animation: tutorialPulse 2s infinite;
-    }
-    
-    .tutorial-arrow {
-        position: absolute;
-        z-index: 10003;
-        font-size: 2rem;
-        color: #ffd700;
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-        animation: tutorialBounce 1s infinite;
-        pointer-events: none;
-    }
-    
-    .tutorial-controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 1rem;
-    }
-    
-    .tutorial-progress {
-        color: #b8b3a8;
-        font-size: 0.8rem;
-    }
-    
-    .tutorial-button {
-        background: linear-gradient(145deg, #c4975a, #a67c52);
-        border: 2px solid #d4af37;
-        border-radius: 6px;
-        color: #1a120b;
-        padding: 0.5rem 1rem;
-        font-family: 'Cinzel', serif;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 0.8rem;
-    }
-    
-    .tutorial-button:hover {
-        background: linear-gradient(145deg, #d4af37, #c4975a);
-        transform: translateY(-2px);
-    }
-    
-    .tutorial-skip {
-        background: transparent;
-        border: 1px solid #666;
-        color: #b8b3a8;
-    }
-    
-    .tutorial-skip:hover {
-        background: rgba(102, 102, 102, 0.3);
-        color: #e8e8e8;
-    }
-    
-    @keyframes tutorialPulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-    
-    @keyframes tutorialBounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-    }
-    
-    .tutorial-element-blocked {
-        pointer-events: none !important;
-    }
-    
-    .tutorial-element-allowed {
-        pointer-events: auto !important;
-        z-index: 10004 !important;
-        position: relative;
-    }
-
-    .tutorial-help-button {
-        background: #c4975a;
-        border: none;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        color: #1a120b;
-        font-weight: bold;
-        cursor: pointer;
-        margin-left: 10px;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-    }
-
-    .tutorial-help-button:hover {
-        background: #d4af37;
-        transform: scale(1.1);
-    }
-
-    .tutorial-transparent {
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(2px);
-        pointer-events: auto;
-    }
-    `;
-    document.head.appendChild(style);
-}
-
-function createBattleLoadingModal(title = "Loading Battle", message = "Preparing your battlefield...") {
-    injectBattleLoadingStyles();
-    const modal = document.createElement('div');
-    modal.className = 'loading-modal';
-    modal.innerHTML = `
-      <div class="loading-content">
-        <div class="loading-header">
-          <h2>${title}</h2>
-          <p class="loading-message">${message}</p>
-        </div>
-        <div class="loading-animation">
-          <div class="crafting-wheel">
-            ${Array(6).fill().map(() => '<div class="wheel-spoke"></div>').join('')}
-          </div>
-          <div class="loading-particles">
-            ${Array(5).fill().map(() => '<div class="particle"></div>').join('')}
-          </div>
-        </div>
-        <div class="loading-progress">
-          <div class="progress-bar">
-            <div class="progress-fill"></div>
-          </div>
-          <div class="progress-text">
-            <span class="progress-step">Connecting to server...</span>
-            <span class="progress-percent">0%</span>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    return modal;
-}
-
-const preloadAssets = async (battleState, selectedMode) => {
-    const loadingPromises = [];
-    
-    if (PRELOAD_CONFIG.backgrounds) {
-        const bgName = battleState?.layout_data?.background || battleState?.background || 'default';
-        const bgUrl = `assets/art/backgrounds/${bgName}.png`;
-        loadingPromises.push(preloadImage(bgUrl));
-    }
-    
-    if (PRELOAD_CONFIG.portraits && battleState?.characters_state) {
-        Object.values(battleState.characters_state).forEach(char => {
-            if (char.portrait && char.portrait !== 'none') {
-                const portraitUrl = `assets/art/portraits/${char.portrait}.png`;
-                loadingPromises.push(preloadImage(portraitUrl));
-            }
-        });
-    }
-    
-    if (PRELOAD_CONFIG.abilities && battleState?.player_abilities) {
-        Object.values(battleState.player_abilities).forEach(charAbilities => {
-            Object.keys(charAbilities.basic || {}).forEach(abilityName => {
-                loadingPromises.push(preloadAbility(abilityName));
-            });
-            
-            Object.keys(charAbilities.ultimate || {}).forEach(abilityName => {
-                loadingPromises.push(preloadAbility(abilityName));
-            });
-            
-            Object.keys(charAbilities.passive || {}).slice(0, 2).forEach(abilityName => {
-                loadingPromises.push(preloadAbility(abilityName));
-            });
-        });
-    }
-    
-    if (PRELOAD_CONFIG.environment && battleState?.layout_data?.environment_items_pos) {
-        Object.values(battleState.layout_data.environment_items_pos).forEach(item => {
-            if (item.sprite) {
-                const envUrl = `assets/art/environment/${item.sprite.toLowerCase()}.png`;
-                loadingPromises.push(preloadImage(envUrl));
-            }
-        });
-    }
-    
-    if (PRELOAD_CONFIG.tiles && battleState?.layout_data?.layout?.tiles) {
-        const uniqueTiles = new Set();
-        battleState.layout_data.layout.tiles.forEach(row => {
-            row.forEach(tile => {
-                const tileName = typeof tile === 'object' ? tile.name : tile;
-                const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
-                uniqueTiles.add(normalized);
-            });
-        });
-        
-        uniqueTiles.forEach(tileName => {
-            const tileData = BattleState.tileMap.get(tileName);
-            if (tileData?.art) {
-                const tileUrl = `assets/art/tiles/${tileData.art}.png`;
-                loadingPromises.push(preloadImage(tileUrl));
-            }
-        });
-    }
-    
-    return Promise.allSettled(loadingPromises);
-};
-
-const preloadImage = (url) => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = resolve;
-        img.onerror = () => {
-            console.warn(`Failed to preload image: ${url}`);
-            resolve();
-        };
-        img.src = url;
-    });
-};
-
-const preloadAbility = async (abilityName) => {
-    try {
-        const ability = await getAbility(abilityName);
-        if (ability?.sprite) {
-            const abilityUrl = `assets/art/abilities/${ability.sprite}.png`;
-            await preloadImage(abilityUrl);
+        .tutorial-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 10000; 
+            pointer-events: none; 
         }
-    } catch (error) {
-        console.warn(`Failed to preload ability: ${abilityName}`, error);
-    }
-};
-
-function updateBattleLoadingProgress(modal, step, message, percent) {
-    if (!modal?.parentNode) return;
-    const progressStep = modal.querySelector('.progress-step');
-    const loadingMessage = modal.querySelector('.loading-message');
-    const progressFill = modal.querySelector('.progress-fill');
-    const progressPercent = modal.querySelector('.progress-percent');
-    if (progressStep) progressStep.textContent = step;
-    if (loadingMessage) loadingMessage.textContent = message;
-    if (progressFill && typeof percent === 'number') progressFill.style.width = `${percent}%`;
-    if (progressPercent && typeof percent === 'number') progressPercent.textContent = `${Math.round(percent)}%`;
-}
-
-function removeBattleLoadingModal(modal) {
-    if (modal?.parentNode) {
-        modal.style.animation = 'fadeOut 0.3s ease';
-        setTimeout(() => modal.parentNode && modal.remove(), 300);
-    }
+        
+        .tutorial-content { 
+            position: absolute; 
+            background: linear-gradient(145deg, rgba(26, 18, 11, 0.95), rgba(42, 31, 22, 0.95)); 
+            border: 3px solid #c4975a; 
+            border-radius: 12px; 
+            padding: 1.5rem; 
+            max-width: 400px; 
+            color: #e8e8e8; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); 
+            pointer-events: auto; 
+            z-index: 10001; 
+        }
+        
+        .tutorial-bottom-right { 
+            bottom: 120px; 
+            right: 20px; 
+            left: auto; 
+            transform: none; 
+        }
+        
+        .tutorial-top-left { 
+            top: 20px; 
+            left: 20px; 
+            right: auto; 
+            transform: none; 
+        }
+        
+        .tutorial-bottom-left { 
+            bottom: 120px; 
+            left: 20px; 
+            right: auto; 
+            transform: none; 
+        }
+        
+        .tutorial-header { 
+            text-align: center; 
+            margin-bottom: 1rem; 
+        }
+        
+        .tutorial-title { 
+            color: #c4975a; 
+            font-size: 1.3rem; 
+            margin-bottom: 0.5rem; 
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); 
+        }
+        
+        .tutorial-description { 
+            font-size: 0.9rem; 
+            line-height: 1.4; 
+            margin-bottom: 1.5rem; 
+            text-align: center; 
+        }
+        
+        .tutorial-highlight { 
+            position: absolute; 
+            border: 3px solid #ffd700; 
+            border-radius: 8px; 
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); 
+            z-index: 10002; 
+            pointer-events: none; 
+            animation: tutorialPulse 2s infinite; 
+        }
+        
+        .tutorial-arrow { 
+            position: absolute; 
+            z-index: 10003; 
+            font-size: 2rem; 
+            color: #ffd700; 
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8); 
+            animation: tutorialBounce 1s infinite; 
+            pointer-events: none; 
+        }
+        
+        .tutorial-controls { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-top: 1rem; 
+        }
+        
+        .tutorial-progress { 
+            color: #b8b3a8; 
+            font-size: 0.8rem; 
+        }
+        
+        .tutorial-button { 
+            background: linear-gradient(145deg, #c4975a, #a67c52); 
+            border: 2px solid #d4af37; 
+            border-radius: 6px; 
+            color: #1a120b; 
+            padding: 0.5rem 1rem; 
+            font-family: 'Cinzel', serif; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-size: 0.8rem; 
+        }
+        
+        .tutorial-button:hover { 
+            background: linear-gradient(145deg, #d4af37, #c4975a); 
+            transform: translateY(-2px); 
+        }
+        
+        .tutorial-skip { 
+            background: transparent; 
+            border: 1px solid #666; 
+            color: #b8b3a8; 
+        }
+        
+        .tutorial-skip:hover { 
+            background: rgba(102, 102, 102, 0.3); 
+            color: #e8e8e8; 
+        }
+        
+        .tutorial-help-button { 
+            background: #c4975a; 
+            border: none; 
+            border-radius: 50%; 
+            width: 30px; 
+            height: 30px; 
+            color: #1a120b; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-left: 10px; 
+            font-size: 16px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+        }
+        
+        .tutorial-help-button:hover { 
+            background: #d4af37; 
+            transform: scale(1.1); 
+        }
+        
+        .tutorial-element-allowed { 
+            pointer-events: auto !important; 
+            z-index: 10004 !important; 
+            position: relative; 
+        }
+        
+        @keyframes tutorialPulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.7; } 
+        }
+        
+        @keyframes tutorialBounce { 
+            0%, 100% { transform: translateY(0); } 
+            50% { transform: translateY(-10px); } 
+        }
+        
+        @keyframes pulse { 
+            0% { transform: scale(1); } 
+            50% { transform: scale(1.1); } 
+            100% { transform: scale(1); } 
+        }
+    `;
+    
+    document.head.appendChild(style);
 }
 
 async function showTutorialModal(chatId) {
     return new Promise((resolve) => {
         const modal = document.createElement('div');
-        modal.className = 'tutorial-overlay tutorial-transparent';
+        modal.className = 'tutorial-overlay';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+        modal.style.backdropFilter = 'blur(2px)';
+        modal.style.pointerEvents = 'auto';
+        
         modal.innerHTML = `
-            <div class="tutorial-content tutorial-center">
+            <div class="tutorial-content" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
                 <div class="tutorial-header">
                     <h2 class="tutorial-title">Battle Tutorial</h2>
                 </div>
@@ -976,9 +651,9 @@ async function showTutorialModal(chatId) {
 
 async function markTutorialAsSeen(chatId) {
     try {
-        await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' }
+        await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, { 
+            method: 'PATCH', 
+            headers: { 'Content-Type': 'application/json' } 
         });
     } catch (error) {
         console.warn('Failed to mark tutorial as seen:', error);
@@ -988,50 +663,12 @@ async function markTutorialAsSeen(chatId) {
 async function startTutorialSequence(chatId) {
     BattleState.tutorial.active = true;
     BattleState.tutorial.currentStep = 0;
-    
-    await ensureTutorialBattleState();
+    injectBattleLoadingStyles();
     await executeTutorialStep();
 }
 
-async function ensureTutorialBattleState() {
-    let attempts = 0;
-    while ((!BattleState.characters || BattleState.characters.length === 0) && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    // Ensure characters are properly processed
-    if (BattleState.battleState?.characters_state) {
-        const newCharacters = Object.values(BattleState.battleState.characters_state)
-            .map(processCharacterState);
-        BattleState.characters = newCharacters.filter(char => char.current_hp > 0);
-    }
-}
-
-async function executeTutorialStep() {
-    if (!BattleState.tutorial.active) {
-        console.log('Tutorial: Not active');
-        return;
-    }
-    
-    const step = BattleState.tutorial.steps[BattleState.tutorial.currentStep];
-    if (!step) {
-        console.log('Tutorial: No step found, ending');
-        endTutorial();
-        return;
-    }
-    
-    console.log(`Tutorial: Executing step ${BattleState.tutorial.currentStep}`, step);
-    
-    clearTutorialElements();
-    showTutorialStepUI(step);
-    addTutorialHighlights(step);
-    await setupTutorialStep(step);
-}
-
 function clearTutorialElements() {
-    document.querySelectorAll('.tutorial-highlight').forEach(el => el.remove());
-    document.querySelectorAll('.tutorial-arrow').forEach(el => el.remove());
+    document.querySelectorAll('.tutorial-highlight, .tutorial-arrow').forEach(el => el.remove());
 }
 
 function showTutorialStepUI(step) {
@@ -1043,19 +680,18 @@ function showTutorialStepUI(step) {
     modal.className = 'tutorial-overlay';
     
     let positionClass = 'tutorial-bottom-left';
-    
     switch (step.highlight) {
-        case 'battlefield':
-            positionClass = 'tutorial-bottom-right';
+        case 'battlefield': 
+            positionClass = 'tutorial-bottom-right'; 
             break;
-        case 'movementTiles':
-            positionClass = 'tutorial-bottom-right';
+        case 'movementTiles': 
+            positionClass = 'tutorial-bottom-right'; 
             break;
-        case 'abilityPanel':
-            positionClass = 'tutorial-top-left';
+        case 'abilityPanel': 
+            positionClass = 'tutorial-top-left'; 
             break;
-        case 'targeting':
-            positionClass = 'tutorial-bottom-left';
+        case 'targeting': 
+            positionClass = 'tutorial-bottom-left'; 
             break;
     }
     
@@ -1092,9 +728,9 @@ function addTutorialHighlights(step) {
             highlightElement = BattleState.main.querySelector('.battle-grid-container');
             if (highlightElement) {
                 const rect = highlightElement.getBoundingClientRect();
-                arrowPosition = {
-                    top: rect.top - 50,
-                    left: rect.left + rect.width / 2
+                arrowPosition = { 
+                    top: rect.top - 50, 
+                    left: rect.left + rect.width / 2 
                 };
             }
             break;
@@ -1103,9 +739,9 @@ function addTutorialHighlights(step) {
             if (movementTile) {
                 highlightElement = movementTile;
                 const rect = movementTile.getBoundingClientRect();
-                arrowPosition = {
-                    top: rect.bottom + 30,
-                    left: rect.left + rect.width / 2
+                arrowPosition = { 
+                    top: rect.bottom + 30, 
+                    left: rect.left + rect.width / 2 
                 };
             }
             break;
@@ -1113,9 +749,9 @@ function addTutorialHighlights(step) {
             highlightElement = document.querySelector('.battle-bottom-ui');
             if (highlightElement) {
                 const rect = highlightElement.getBoundingClientRect();
-                arrowPosition = {
-                    top: rect.top - 50,
-                    left: rect.left + rect.width / 2
+                arrowPosition = { 
+                    top: rect.top - 50, 
+                    left: rect.left + rect.width / 2 
                 };
             }
             break;
@@ -1124,9 +760,9 @@ function addTutorialHighlights(step) {
             if (enemyTarget) {
                 highlightElement = enemyTarget;
                 const rect = enemyTarget.getBoundingClientRect();
-                arrowPosition = {
-                    top: rect.top - 50,
-                    left: rect.left + rect.width / 2
+                arrowPosition = { 
+                    top: rect.top - 50, 
+                    left: rect.left + rect.width / 2 
                 };
             }
             break;
@@ -1155,7 +791,29 @@ function addTutorialHighlights(step) {
     }
 }
 
-async function setupTutorialStep(step) {
+function getArrowForDirection(direction) {
+    switch (direction) {
+        case 'up': return '↑';
+        case 'down': return '↓';
+        case 'left': return '←';
+        case 'right': return '→';
+        default: return '↑';
+    }
+}
+
+async function executeTutorialStep() {
+    if (!BattleState.tutorial.active) return;
+    
+    const step = BattleState.tutorial.steps[BattleState.tutorial.currentStep];
+    if (!step) {
+        endTutorial();
+        return;
+    }
+    
+    clearTutorialElements();
+    showTutorialStepUI(step);
+    addTutorialHighlights(step);
+    
     document.querySelectorAll('.tutorial-element-allowed').forEach(el => {
         el.classList.remove('tutorial-element-allowed');
     });
@@ -1177,112 +835,28 @@ async function setupTutorialStep(step) {
 }
 
 async function setupCharacterSelectionStep() {
-    console.log('Tutorial: Setting up character selection step');
-    
     const playerChars = BattleState.characters.filter(c => c.isPlayerControlled && c.current_hp > 0);
-    console.log('Tutorial: Found player characters:', playerChars.length);
     
-    // Store reference to the original handler
-    if (!window._originalHandlers) window._originalHandlers = {};
-    
-    // Override the global character selection handler
-    window._originalHandlers.characterSelection = window.handleCharacterSelection;
-    
-    window.handleCharacterSelection = function(character, tileEl) {
-        console.log('Tutorial: Character selection intercepted', character?.id);
-        
-        // Call original handler first
-        if (window._originalHandlers.characterSelection) {
-            window._originalHandlers.characterSelection.call(this, character, tileEl);
-        }
-        
-        // Check if this is a valid tutorial progression
-        if (BattleState.tutorial.active && 
-            BattleState.tutorial.currentStep === 0 && 
-            character?.isPlayerControlled) {
-            
-            console.log('Tutorial: Valid character selection detected, advancing to step 2');
-            
-            // Restore original handler
-            window.handleCharacterSelection = window._originalHandlers.characterSelection;
-            
-            // Advance tutorial after a short delay
-            setTimeout(() => {
-                BattleState.tutorial.currentStep++;
-                executeTutorialStep();
-            }, 800);
-        }
-    };
-    
-    // Add visual indicators to player characters
     playerChars.forEach(char => {
         const charEl = BattleState.characterElements.get(char.id);
         if (charEl) {
             charEl.classList.add('tutorial-element-allowed');
-            
-            // Add pulsing animation to make characters more noticeable
             charEl.style.animation = 'pulse 1.5s infinite';
-            console.log('Tutorial: Enabled character', char.id);
         }
     });
-    
-    // Add the pulse animation to styles
-    if (!document.getElementById('tutorial-animations')) {
-        const style = document.createElement('style');
-        style.id = 'tutorial-animations';
-        style.textContent = `
-            @keyframes pulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.1); }
-                100% { transform: scale(1); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
 }
 
 async function setupMovementStep() {
-    // Wait for character to be selected and movement tiles to appear
     let attempts = 0;
     while ((!BattleState.selectedPlayerCharacter || document.querySelectorAll('.highlight-walkable').length === 0) && attempts < 100) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
     
-    if (attempts >= 100) {
-        console.warn('Tutorial: Movement step timeout');
-        return;
-    }
-    
     const movementTiles = document.querySelectorAll('.highlight-walkable');
     movementTiles.forEach(tile => {
         tile.classList.add('tutorial-element-allowed');
     });
-    
-    // Store original handler
-    if (!window._originalHandlers) window._originalHandlers = {};
-    window._originalHandlers.tileClick = handleTileClick;
-    
-    const tutorialTileClick = function(event) {
-        const tileEl = event.currentTarget;
-        if (tileEl.classList.contains('highlight-walkable')) {
-            window._originalHandlers.tileClick.call(this, event);
-            
-            if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 1) {
-                console.log('Tutorial: Movement detected, advancing to step 3');
-                
-                // Restore original handler
-                handleTileClick = window._originalHandlers.tileClick;
-                
-                setTimeout(() => {
-                    BattleState.tutorial.currentStep++;
-                    executeTutorialStep();
-                }, 800);
-            }
-        }
-    };
-    
-    handleTileClick = tutorialTileClick;
 }
 
 async function setupAbilitySelectionStep() {
@@ -1293,29 +867,9 @@ async function setupAbilitySelectionStep() {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     const abilityButtons = document.querySelectorAll('.battle-bottom-ui .fantasy-button.ui-btn[data-ability-name]');
-    
     abilityButtons.forEach(btn => {
         btn.classList.add('tutorial-element-allowed');
     });
-    
-    if (!window._originalHandlers) window._originalHandlers = {};
-    window._originalHandlers.abilitySelection = toggleAbilitySelection;
-    
-    const tutorialAbilitySelection = function(caster, ability) {
-        window._originalHandlers.abilitySelection(caster, ability);
-        
-        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 2) {
-            // Restore original handler
-            toggleAbilitySelection = window._originalHandlers.abilitySelection;
-            
-            setTimeout(() => {
-                BattleState.tutorial.currentStep++;
-                executeTutorialStep();
-            }, 1000);
-        }
-    };
-    
-    toggleAbilitySelection = tutorialAbilitySelection;
 }
 
 async function setupAbilityUseStep() {
@@ -1326,73 +880,26 @@ async function setupAbilityUseStep() {
     }
     
     const enemyTargets = document.querySelectorAll('.highlight-target-enemy');
-    
     enemyTargets.forEach(target => {
         target.classList.add('tutorial-element-allowed');
     });
-    
-    if (!window._originalHandlers) window._originalHandlers = {};
-    window._originalHandlers.abilityUse = handleAbilityUse;
-    
-    const tutorialAbilityUse = function(payload) {
-        window._originalHandlers.abilityUse(payload);
-        
-        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 3) {
-            // Restore original handler
-            handleAbilityUse = window._originalHandlers.abilityUse;
-            
-            setTimeout(() => {
-                endTutorial();
-            }, 2000);
-        }
-    };
-    
-    handleAbilityUse = tutorialAbilityUse;
-}
-
-function getArrowForDirection(direction) {
-    switch (direction) {
-        case 'up': return '↑';
-        case 'down': return '↓';
-        case 'left': return '←';
-        case 'right': return '→';
-        default: return '↑';
-    }
 }
 
 function endTutorial() {
     BattleState.tutorial.active = false;
-    
     clearTutorialElements();
     
     const tutorialUI = document.getElementById('tutorial-step-ui');
     if (tutorialUI) tutorialUI.remove();
     
-    if (window._originalHandlers) {
-        if (window._originalHandlers.characterSelection) {
-            handleCharacterSelection = window._originalHandlers.characterSelection;
-        }
-        if (window._originalHandlers.tileClick) {
-            handleTileClick = window._originalHandlers.tileClick;
-        }
-        if (window._originalHandlers.abilitySelection) {
-            toggleAbilitySelection = window._originalHandlers.abilitySelection;
-        }
-        if (window._originalHandlers.abilityUse) {
-            handleAbilityUse = window._originalHandlers.abilityUse;
-        }
-        delete window._originalHandlers;
-    }
-    
     document.querySelectorAll('.tutorial-element-allowed').forEach(el => {
         el.classList.remove('tutorial-element-allowed');
+        el.style.animation = '';
     });
     
     if (BattleState.profile?.chat_id) {
         markTutorialAsSeen(BattleState.profile.chat_id);
     }
-    
-    displayMessage('Tutorial completed! You can replay it anytime using the ? button.', 'success');
 }
 
 function addTutorialButton() {
@@ -1419,228 +926,546 @@ function addTutorialButton() {
     }
 }
 
-export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
-    Object.assign(BattleState, { main, apiCall, getCurrentProfile });
-
-    const loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
-    const loadingStartTime = Date.now();
-
-    try {
-        updateBattleLoadingProgress(loadingModal, "Connecting to server...", "Authenticating player...", 10);
-
-        BattleState.profile = BattleState.getCurrentProfile();
-        if (!BattleState.profile) {
-            removeBattleLoadingModal(loadingModal);
-            displayMessage('User profile not found. Please log in again.');
-            window.gameAuth.loadModule('login');
-            return;
-        }
-
-        if (BattleState.profile.battle_tutorial === false && !reconnecting) {
-            removeBattleLoadingModal(loadingModal);
-            await showTutorialModal(BattleState.profile.chat_id);
-            createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
-        }
-
-        updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
-
-        if (!selectedMode && !reconnecting) {
-            removeBattleLoadingModal(loadingModal);
-            displayMessage('No mode selected. Returning to embark.');
-            window.gameAuth.loadModule('embark');
-            return;
-        }
-
-        await loadTileData();
-        updateBattleLoadingProgress(loadingModal, "Connecting to battle...", "Setting up battle state...", 50);
-
-        const supabase = getSupabaseClient(supabaseConfig);
-        if (BattleState.unsubscribeFromBattle) {
-            await supabase.removeChannel(BattleState.unsubscribeFromBattle);
-        }
-
-        if (reconnecting && existingBattleId) {
-            updateBattleLoadingProgress(loadingModal, "Reconnecting...", "Restoring previous battle...", 70);
-            await reconnectToBattle(existingBattleId);
-        } else {
-            const areaLevel = selectedMode !== 'pvp'
-                ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
-                : Math.floor(Math.random() * 10) + 1;
-            updateBattleLoadingProgress(loadingModal, "Initializing battle...", "Generating battlefield...", 80);
-            await initializeBattle(selectedMode, areaLevel);
-        }
-
-        updateBattleLoadingProgress(loadingModal, "Loading assets...", "Preloading images and abilities...", 85);
-        await preloadAssets(BattleState.battleState, selectedMode);
-
-        setupOptimizedRealtimeSubscription();
-        updateBattleLoadingProgress(loadingModal, "Finalizing...", "Rendering battlefield...", 95);
-
-        const areaLevel = selectedMode !== 'pvp' 
-            ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
-            : BattleState.battleState?.round_number || 1;
-
-        renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState?.layout_data);
-        await updateGameStateFromRealtimeOptimized();
-
-    } catch (err) {
-        console.error('Battle loading error:', err);
-        removeBattleLoadingModal(loadingModal);
-        displayMessage('Failed to start battle. Returning to embark.');
-        window.gameAuth.loadModule('embark');
+const handleCharacterSelection = (character, tileEl) => {
+    if (BattleState.isMoveQueued) {
+        displayMessage('Finish your move by pressing "End Turn" before selecting another character.', 'warning');
         return;
     }
 
-    const minTime = 2000;
-    const elapsed = Date.now() - loadingStartTime;
-    await new Promise(resolve => setTimeout(resolve, Math.max(0, minTime - elapsed)));
+    unhighlightAllTiles();
+    
+    if (BattleState.selectedCharacterEl) {
+        BattleState.selectedCharacterEl.classList.remove('character-selected');
+    }
+    
+    if (character.isPlayerControlled && (!character.has_moved || !character.has_acted)) {
+        const el = BattleState.characterElements.get(character.id);
+        if (el) {
+            el.classList.add('character-selected');
+            BattleState.selectedCharacterEl = el;
+            BattleState.selectedPlayerCharacter = character;
+            BattleState.currentTurnCharacter = character;
+            highlightWalkableTiles(character);
+        }
+        renderBottomUI();
+        
+        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 0) {
+            BattleState.tutorial.currentStep++;
+            executeTutorialStep();
+        }
+    } else {
+        BattleState.selectedPlayerCharacter = null;
+        BattleState.selectedCharacterEl = null;
+        unhighlightAllTiles();
+        const ui = BattleState.main.querySelector('.battle-bottom-ui');
+        if (ui) ui.innerHTML = '';
+    }
+    
+    showEntityInfo(character);
+};
 
-    removeBattleLoadingModal(loadingModal);
+const handleTileClick = throttle((event) => {
+    if (BattleState.selectingAbility) return; 
+
+    const clickedTileEl = event.currentTarget;
+    const targetX = parseInt(clickedTileEl.dataset.x);
+    const targetY = parseInt(clickedTileEl.dataset.y);
+
+    const charInCell = BattleState.characters.find(c => 
+        Array.isArray(c.position) && 
+        c.position[0] === targetX && 
+        c.position[1] === targetY &&
+        c.current_hp > 0 && 
+        c.status !== 'dead'
+    );
+
+    const itemsInCell = Object.values(BattleState.environmentItems).filter(it =>
+        Array.isArray(it.position) &&
+        it.position[0] === targetX &&
+        it.position[1] === targetY
+    );
+
+    if (BattleState.battleState?.current_turn === 'AI') {
+        displayMessage('Please wait for AI turn to complete.');
+        return;
+    }
+
+    if (charInCell) {
+        handleCharacterSelection(charInCell, clickedTileEl);
+    } else {
+        if (BattleState.selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
+            attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
+            
+            if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 1) {
+                BattleState.tutorial.currentStep++;
+                executeTutorialStep();
+            }
+        } else {
+            unhighlightAllTiles();
+            
+            if (BattleState.selectedCharacterEl) {
+                BattleState.selectedCharacterEl.classList.remove('character-selected');
+                BattleState.selectedCharacterEl = null;
+            }
+            
+            BattleState.selectedPlayerCharacter = null;
+            
+            const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
+            const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
+            const tileData = BattleState.tileMap.get(tileKey);
+            
+            showEntityInfo({ 
+                tile: tileData || { 
+                    name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' 
+                } 
+            });
+        }
+    }
+
+    const envList = document.getElementById('envList');
+    if (envList) envList.innerHTML = '';
+    
+    itemsInCell.forEach(item => {
+        showEntityInfo({ item });
+    });
+}, 150);
+
+const toggleAbilitySelection = (caster, ability) => {
+    if (BattleState.selectingAbility?.ability?.name === ability.name) {
+        clearAbilitySelection();
+        resetAbilityButtonsUI();
+        return;
+    }
+
+    startAbilitySelection(caster, ability);
+    highlightSelectedAbilityButton(ability.name);
+    showAbilityTooltip(ability);
+    
+    if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 2) {
+        BattleState.tutorial.currentStep++;
+        executeTutorialStep();
+    }
+};
+
+const handleAbilityUse = async (abilityPayload) => {
+    const activeCharacter = BattleState.selectedPlayerCharacter;
+    if (!activeCharacter) {
+        displayMessage('No character selected to cast ability.');
+        return;
+    }
+
+    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
+        displayMessage('Missing battle or character data.');
+        return;
+    }
+
+    activeCharacter.pendingAction = {
+        type: 'ability',
+        data: abilityPayload
+    };
+
+    hideAbilityTooltip();
+
+    try {
+        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
+            battleId: BattleState.battleId,
+            characterId: activeCharacter.id,
+            currentPosition: activeCharacter.originalPosition || activeCharacter.position,
+            targetPosition: activeCharacter.position,
+            action: activeCharacter.pendingAction
+        });
+
+        const result = await res.json();
+        if (!result.success) {
+            displayMessage(`Error: ${result.message}`, 'error');
+            return;
+        }
+
+        BattleState.currentTurnCharacter = null;
+        BattleState.selectedPlayerCharacter = null;
+        BattleState.selectedCharacterEl = null;
+        BattleState.isMoveQueued = false;
+        unhighlightAllTiles();
+
+        if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 3) {
+            endTutorial();
+            displayMessage('Tutorial completed! You can replay it anytime using the ? button.', 'success');
+        }
+
+    } catch (err) {
+        console.error('Ability use error:', err);
+        displayMessage('Error completing ability. Please try again.', 'error');
+    }
+};
+
+function highlightWalkableTiles(character) {
+    unhighlightAllTiles();
+    if (!character || !Array.isArray(character.position) || character.has_moved) return;
+
+    const [charX, charY] = character.position;
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    
+    MOVEMENT_OFFSETS.forEach(offset => {
+        const newX = charX + offset.dx;
+        const newY = charY + offset.dy;
+        
+        if (newX >= 0 && newX < GRID_SIZE.cols && newY >= 0 && newY < GRID_SIZE.rows) {
+            const tileEl = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
+            if (tileEl && tileEl.dataset.walkable === 'true') {
+                const envItemEl = tileEl.querySelector('.environment-item');
+                if (envItemEl && envItemEl.dataset.walkable !== 'true') {
+                    return;
+                }
+                
+                const isOccupied = BattleState.characters.some(c => 
+                    Array.isArray(c.position) && 
+                    c.position[0] === newX && 
+                    c.position[1] === newY &&
+                    c.current_hp > 0 && 
+                    c.status !== 'dead'
+                );
+                if (!isOccupied) {
+                    tileEl.classList.add('highlight-walkable');
+                    BattleState.highlightedTiles.push(tileEl);
+                }
+            }
+        }
+    });
 }
 
-const loadTileData = async () => {
-    try {
-        const tileRes = await BattleState.apiCall(`/api/supabase/rest/v1/tiles?select=name,walkable,vision_block,art`);
-        const tileRows = await tileRes.json();
-        
-        BattleState.tileMap.clear();
-        tileRows.forEach(tile => {
-            BattleState.tileMap.set(tile.name.toLowerCase(), tile);
-        });
-    } catch (err) {
-        console.warn('Could not load tile data');
-    }
-};
-
-const reconnectToBattle = async (battleId) => {
-    const supabase = getSupabaseClient({ 
-        SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
-        SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
+function unhighlightAllTiles() {
+    BattleState.highlightedTiles.forEach(tileEl => {
+        tileEl.classList.remove('highlight-walkable');
     });
-    
-    const { data: battleState, error } = await supabase
-        .from('battle_state')
-        .select('*')
-        .eq('id', battleId)
-        .single();
-        
-    if (error || !battleState) {
-        throw new Error('Failed to reconnect to existing battle.');
-    }
-    
-    if (!battleState.players?.includes(BattleState.profile.id)) {
-        throw new Error('You are not a participant in this battle.');
-    }
-    
-    BattleState.battleId = battleId;
-    BattleState.battleState = battleState;
-};
+    BattleState.highlightedTiles = [];
 
-const initializeBattle = async (selectedMode, areaLevel) => {
-    const startBattleRes = await BattleState.apiCall('/functions/v1/start-battle', 'POST', {
-        profileId: BattleState.profile.id,
-        selectedMode: selectedMode,
-        areaLevel: areaLevel,
+    document.querySelectorAll('.character-selected').forEach(el => {
+        el.classList.remove('character-selected');
     });
+}
 
-    const startBattleResponse = await startBattleRes.json();
-    if (!startBattleResponse.success) {
-        throw new Error(startBattleResponse.error || 'Failed to start battle.');
-    }
+const attemptMoveCharacter = async (character, targetX, targetY) => {
+    const [startX, startY] = character.position;
+    const distanceX = Math.abs(targetX - startX);
+    const distanceY = Math.abs(targetY - startY);
+    const chebyshevDistance = Math.max(distanceX, distanceY);
 
-    const { battleId, initialState } = startBattleResponse;
-    BattleState.battleId = battleId;
-    BattleState.battleState = initialState;
-};
-
-const setupOptimizedRealtimeSubscription = () => {
-    const supabase = getSupabaseClient({ 
-        SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
-        SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
-    });
-    
-    BattleState.unsubscribeFromBattle = supabase
-        .channel(`battle_state:${BattleState.battleId}`)
-        .on(
-            'postgres_changes',
-            {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'battle_state',
-                filter: `id=eq.${BattleState.battleId}`
-            },
-            debounce(async (payload) => {
-                await handleOptimizedBattleUpdate(payload.new);
-            }, REALTIME_CONFIG.debounceMs)
-        )
-        .subscribe();
-};
-
-const handleOptimizedBattleUpdate = async (newBattleState) => {
-    const oldBattleState = BattleState.battleState;
-    BattleState.battleState = newBattleState;
-    
-    if (newBattleState.status !== oldBattleState?.status) {
-        if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
-            await assignLoot(newBattleState);
-            showBattleResultModal(newBattleState.status);
-            return;
-        }
-    }
-    
-    if (newBattleState.current_turn !== oldBattleState?.current_turn) {
-        updateTurnDisplay();
-        updateCharacterAvailability();
-        handleTurnLogic();
-    }
-    
-    if (newBattleState.characters_state && 
-        JSON.stringify(newBattleState.characters_state) !== JSON.stringify(oldBattleState?.characters_state)) {
-        
-        const newCharacters = Object.values(newBattleState.characters_state)
-            .map(processCharacterState);
-        
-        await updateCharactersWithAnimationsOptimized(newCharacters);
-    }
-    
-    const newEnvItems = newBattleState?.layout_data?.environment_items_pos;
-    const oldEnvItems = oldBattleState?.layout_data?.environment_items_pos;
-    
-    if (newEnvItems && JSON.stringify(newEnvItems) !== JSON.stringify(oldEnvItems)) {
-        renderEnvironmentItems(newEnvItems);
-    }
-};
-
-const updateGameStateFromRealtimeOptimized = async () => {
-    if (!BattleState.battleState) return;
-    
-    const status = BattleState.battleState.status;
-    if (status === 'victory' || status === 'defeat') {
-        await assignLoot(BattleState.battleState);
-        showBattleResultModal(status);
-        return; 
-    }
-        
-    if (!BattleState.battleState.characters_state) {
-        console.warn('Battle state missing characters_state:', BattleState.battleState);
+    if (chebyshevDistance !== 1 || (distanceX === 0 && distanceY === 0)) {
+        displayMessage('Characters can only move 1 tile at a time to an adjacent square.');
+        unhighlightAllTiles();
         return;
     }
 
-    const newCharacters = Object.values(BattleState.battleState.characters_state)
-        .map(processCharacterState);
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    const targetTileEl = container.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
+    if (!targetTileEl || targetTileEl.dataset.walkable !== 'true') {
+        displayMessage('Cannot move to an unwalkable tile.');
+        unhighlightAllTiles();
+        return;
+    }
+
+    const isOccupied = BattleState.characters.some(c => 
+        Array.isArray(c.position) && 
+        c.position[0] === targetX && 
+        c.position[1] === targetY &&
+        c.current_hp > 0 && 
+        c.status !== 'dead'
+    );
     
-    await updateCharactersWithAnimationsOptimized(newCharacters);
+    if (isOccupied) {
+        displayMessage('That tile is already occupied by another character.');
+        unhighlightAllTiles();
+        return;
+    }
+
+    const charEl = BattleState.characterElements.get(character.id);
+    const fromCell = container.querySelector(`td[data-x="${startX}"][data-y="${startY}"]`);
+    const toCell = targetTileEl;
     
-    requestAnimationFrame(() => {
-        updateTurnDisplay();
-        updateCharacterAvailability();
-    });
+    if (charEl && fromCell && toCell) {
+        await animateCharacterMovement(charEl, fromCell, toCell);
+    }
+
+    character.position = [targetX, targetY];
+    BattleState.isMoveQueued = true;
+    unhighlightAllTiles();
+};
+
+async function getAbility(abilityName) {
+    if (BattleState.abilityCache.has(abilityName)) {
+        return BattleState.abilityCache.get(abilityName);
+    }
     
-    handleTurnLogic();
+    try {
+        const res = await fetch(`/api/abilities/${encodeURIComponent(abilityName)}`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        
+        const abilityData = await res.json();
+        const ability = Array.isArray(abilityData) ? abilityData[0] : abilityData;
+        
+        if (ability) {
+            BattleState.abilityCache.set(abilityName, ability);
+            return ability;
+        }
+    } catch (err) {
+        console.error('Failed fetching ability', abilityName, err);
+        return {
+            name: abilityName,
+            range: 1,
+            area: 0,
+            targeting: 'single',
+            target_type: 'enemy',
+            effects: 'damage',
+            description: 'Ability data not available'
+        };
+    }
     
-    const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
-    if (layoutItems && Object.keys(layoutItems).length) {
-        renderEnvironmentItems(layoutItems);
+    return null;
+}
+
+async function renderBottomUI() {
+    const ui = BattleState.main.querySelector('.battle-bottom-ui');
+    ui.innerHTML = '';
+    
+    if (!BattleState.selectedPlayerCharacter) return;
+    
+    const currentChar = BattleState.selectedPlayerCharacter;
+    const fragment = document.createDocumentFragment();
+
+    BattleState.characterAbilities = BattleState.characterAbilities || {};
+    let abilityObjs = {};
+
+    if (BattleState.characterAbilities[currentChar.id]) {
+        abilityObjs = BattleState.characterAbilities[currentChar.id];
+    } else {
+        abilityObjs = { basic: [], passives: [], ultimate: null };
+
+        const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
+
+        for (const abilityName of Object.keys(charAbilities.basic || {})) {
+            const ability = await getAbility(abilityName);
+            if (ability) abilityObjs.basic.push(ability);
+        }
+
+        const passiveNames = Object.keys(charAbilities.passive || {});
+        for (let i = 0; i < Math.min(passiveNames.length, 2); i++) {
+            const ability = await getAbility(passiveNames[i]);
+            if (ability) abilityObjs.passives.push(ability);
+        }
+
+        const ultimateNames = Object.keys(charAbilities.ultimate || {});
+        if (ultimateNames[0]) {
+            abilityObjs.ultimate = await getAbility(ultimateNames[0]);
+        }
+
+        BattleState.characterAbilities[currentChar.id] = abilityObjs;
+    }
+
+    for (let row = 0; row < 2; row++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'battle-ui-row';
+
+        for (let i = 0; i < 5; i++) {
+            const btnIndex = row * 5 + i;
+            const btn = document.createElement('button');
+            btn.className = 'fantasy-button ui-btn';
+
+            let ability = null;
+
+            if (btnIndex >= 0 && btnIndex <= 3) {
+                ability = abilityObjs.basic[btnIndex] || null;
+            } else if (btnIndex === 4) {
+                ability = abilityObjs.ultimate;
+            }
+
+            if (ability) {
+                if (ability.sprite) {
+                    btn.innerHTML = `<img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}" style="width:100%;height:100%;">`;
+                } else {
+                    btn.textContent = ability.name || 'Unknown';
+                }
+                btn.title = ability.name;
+                btn.dataset.abilityName = ability.name;
+                btn.disabled = false;
+                btn.addEventListener('click', debounce(() => {
+                    const caster = BattleState.selectedPlayerCharacter;
+                    if (caster) toggleAbilitySelection(caster, ability);
+                }, 150));
+            } else if (btnIndex === 5) {
+                const consumable = currentChar?.equipped_items?.equipped_consumable;
+                if (consumable && consumable !== 'none') {
+                    const itemSprite = consumable.replace(/\s+/g, '');
+                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
+                    btn.id = 'consumableButton';
+                    btn.disabled = false;
+                    btn.title = consumable;
+                    btn.addEventListener('click', debounce(() => handleUseConsumable(currentChar), 500));
+                } else {
+                    btn.textContent = 'No Item';
+                    btn.disabled = true;
+                }
+            } else if (btnIndex === 6 || btnIndex === 7) {
+                const passive = abilityObjs.passives[btnIndex - 6] || null;
+                if (passive) {
+                    if (passive.sprite) {
+                        btn.innerHTML = `<img src="assets/art/abilities/${passive.sprite}.png" alt="${passive.name}" style="width:100%;height:100%;">`;
+                    } else {
+                        btn.textContent = passive.name || 'Passive';
+                    }
+                    btn.title = passive.name;
+                } else {
+                    btn.textContent = 'Passive';
+                    btn.disabled = true;
+                }
+            } else if (btnIndex === 8) {
+                btn.textContent = 'Interact';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            } else if (btnIndex === 9) {
+                btn.textContent = 'End Turn';
+                btn.id = 'endTurnButtonBottom';
+                btn.disabled = false;
+            } else {
+                btn.textContent = `Btn ${btnIndex}`;
+                btn.disabled = true;
+            }
+
+            rowDiv.appendChild(btn);
+        }
+        fragment.appendChild(rowDiv);
+    }
+
+    ui.appendChild(fragment);
+
+    const endTurnBtn = document.getElementById('endTurnButtonBottom');
+    if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
+}
+
+const handleEndTurn = async () => {
+    const activeCharacter = BattleState.selectedPlayerCharacter;
+    if (!activeCharacter) {
+        displayMessage('No character selected to end turn.');
+        return;
+    }
+
+    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
+        displayMessage('Missing battle or character data.');
+        return;
+    }
+
+    const characterId = activeCharacter.id;
+    const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
+    const targetPosition = activeCharacter.position;
+    const action = activeCharacter.pendingAction || null;
+
+    hideAbilityTooltip();
+
+    try {
+        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
+            battleId: BattleState.battleId,
+            characterId,
+            currentPosition,
+            targetPosition,
+            action
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            displayMessage(`Error: ${result.message}`, 'error');
+            return;
+        }
+
+        BattleState.currentTurnCharacter = null;
+        BattleState.selectedPlayerCharacter = null;
+        BattleState.selectedCharacterEl = null;
+        BattleState.isMoveQueued = false;
+        unhighlightAllTiles();
+
+    } catch (err) {
+        console.error('End turn error:', err);
+        displayMessage('Error completing turn. Please try again.', 'error');
+    }
+};
+
+const handleUseConsumable = async () => {
+    const activeCharacter = BattleState.selectedPlayerCharacter;
+
+    if (!activeCharacter) {
+        displayMessage('No character selected to use consumable.');
+        return;
+    }
+
+    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
+        displayMessage('Missing battle or character data.');
+        return;
+    }
+
+    if (!activeCharacter.isPlayerControlled) {
+        displayMessage('Cannot use consumables for AI characters.');
+        return;
+    }
+
+    const consumable = activeCharacter.equipped_items?.equipped_consumable;
+    if (!consumable || consumable === 'none') {
+        displayMessage('No consumable equipped.');
+        return;
+    }
+
+    const abilityData = await getAbility(consumable);
+    if (!abilityData) {
+        displayMessage('Consumable ability data not found.');
+        return;
+    }
+
+    const abilityPayload = {
+        abilityName: consumable,
+        casterPos: activeCharacter.position,
+        targetCenter: activeCharacter.position,
+        affectedTargets: [
+            { 
+                id: activeCharacter.id,
+                pos: activeCharacter.position,
+                faction: 'ally',
+                intendedEffect: abilityData.effects
+            }
+        ]
+    };
+
+    activeCharacter.pendingAction = {
+        type: 'ability',
+        data: abilityPayload
+    };
+
+    hideAbilityTooltip();
+
+    try {
+        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
+            battleId: BattleState.battleId,
+            characterId: activeCharacter.id,
+            currentPosition: activeCharacter.originalPosition || activeCharacter.position,
+            targetPosition: activeCharacter.position,
+            action: activeCharacter.pendingAction
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            displayMessage(`Error using ${consumable}: ${result.message}`, 'error');
+            return;
+        }
+
+        BattleState.currentTurnCharacter = null;
+        BattleState.selectedPlayerCharacter = null;
+        BattleState.selectedCharacterEl = null;
+        BattleState.isMoveQueued = false;
+        unhighlightAllTiles();
+
+    } catch (err) {
+        console.error('Consumable use error:', err);
+        displayMessage('Error using consumable. Please try again.', 'error');
     }
 };
 
@@ -1692,18 +1517,6 @@ function clearAbilitySelection() {
 
   resetAbilityButtonsUI();
   hideAbilityTooltip();
-}
-
-function toggleAbilitySelection(caster, ability) {
-  if (BattleState.selectingAbility?.ability?.name === ability.name) {
-    clearAbilitySelection();
-    resetAbilityButtonsUI();
-    return;
-  }
-
-  startAbilitySelection(caster, ability);
-  highlightSelectedAbilityButton(ability.name);
-  showAbilityTooltip(ability);
 }
 
 function highlightSelectedAbilityButton(abilityName) {
@@ -2352,539 +2165,369 @@ const createTurnIndicator = () => {
     return indicator;
 };
 
-const handleTileClick = throttle((event) => {
-    if (BattleState.selectingAbility) return; 
-
-    const clickedTileEl = event.currentTarget;
-    const targetX = parseInt(clickedTileEl.dataset.x);
-    const targetY = parseInt(clickedTileEl.dataset.y);
-
-    const charInCell = BattleState.characters.find(c => 
-        Array.isArray(c.position) && 
-        c.position[0] === targetX && 
-        c.position[1] === targetY &&
-        c.current_hp > 0 && 
-        c.status !== 'dead'
-    );
-
-    const itemsInCell = Object.values(BattleState.environmentItems).filter(it =>
-        Array.isArray(it.position) &&
-        it.position[0] === targetX &&
-        it.position[1] === targetY
-    );
-
-    if (BattleState.battleState?.current_turn === 'AI') {
-        displayMessage('Please wait for AI turn to complete.');
-        return;
+const preloadAssets = async (battleState, selectedMode) => {
+    const loadingPromises = [];
+    
+    if (PRELOAD_CONFIG.backgrounds) {
+        const bgName = battleState?.layout_data?.background || battleState?.background || 'default';
+        const bgUrl = `assets/art/backgrounds/${bgName}.png`;
+        loadingPromises.push(preloadImage(bgUrl));
     }
-
-    if (charInCell) {
-        handleCharacterSelection(charInCell, clickedTileEl);
-    } else {
-        if (BattleState.selectedPlayerCharacter && clickedTileEl.classList.contains('highlight-walkable')) {
-            attemptMoveCharacter(BattleState.selectedPlayerCharacter, targetX, targetY);
-        } else {
-            unhighlightAllTiles();
-            
-            if (BattleState.selectedCharacterEl) {
-                BattleState.selectedCharacterEl.classList.remove('character-selected');
-                BattleState.selectedCharacterEl = null;
+    
+    if (PRELOAD_CONFIG.portraits && battleState?.characters_state) {
+        Object.values(battleState.characters_state).forEach(char => {
+            if (char.portrait && char.portrait !== 'none') {
+                const portraitUrl = `assets/art/portraits/${char.portrait}.png`;
+                loadingPromises.push(preloadImage(portraitUrl));
             }
-            
-            BattleState.selectedPlayerCharacter = null;
-            
-            const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
-            const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
-            const tileData = BattleState.tileMap.get(tileKey);
-            
-            showEntityInfo({ 
-                tile: tileData || { 
-                    name: 'Unknown', walkable: false, vision_block: false, art: 'placeholder' 
-                } 
+        });
+    }
+    
+    if (PRELOAD_CONFIG.abilities && battleState?.player_abilities) {
+        Object.values(battleState.player_abilities).forEach(charAbilities => {
+            Object.keys(charAbilities.basic || {}).forEach(abilityName => {
+                loadingPromises.push(preloadAbility(abilityName));
             });
-        }
-    }
-
-    const envList = document.getElementById('envList');
-    if (envList) envList.innerHTML = '';
-    
-    itemsInCell.forEach(item => {
-        showEntityInfo({ item });
-    });
-}, 150);
-
-const handleCharacterSelection = (character, tileEl) => {
-    if (BattleState.isMoveQueued) {
-        displayMessage('Finish your move by pressing "End Turn" before selecting another character.', 'warning');
-        return;
-    }
-
-    unhighlightAllTiles();
-    
-    if (BattleState.selectedCharacterEl) {
-        BattleState.selectedCharacterEl.classList.remove('character-selected');
-    }
-    
-    if (character.isPlayerControlled && (!character.has_moved || !character.has_acted)) {
-        const el = BattleState.characterElements.get(character.id);
-        if (el) {
-            el.classList.add('character-selected');
-            BattleState.selectedCharacterEl = el;
-            BattleState.selectedPlayerCharacter = character;
-            BattleState.currentTurnCharacter = character;
-            highlightWalkableTiles(character);
-        }
-        renderBottomUI();
-    } else {
-        BattleState.selectedPlayerCharacter = null;
-        BattleState.selectedCharacterEl = null;
-        unhighlightAllTiles();
-        const ui = BattleState.main.querySelector('.battle-bottom-ui');
-        if (ui) ui.innerHTML = '';
-    }
-    
-    showEntityInfo(character);
-};
-
-function highlightWalkableTiles(character) {
-    unhighlightAllTiles();
-    if (!character || !Array.isArray(character.position) || character.has_moved) return;
-
-    const [charX, charY] = character.position;
-    const container = BattleState.main.querySelector('.battle-grid-container');
-    
-    MOVEMENT_OFFSETS.forEach(offset => {
-        const newX = charX + offset.dx;
-        const newY = charY + offset.dy;
-        
-        if (newX >= 0 && newX < GRID_SIZE.cols && newY >= 0 && newY < GRID_SIZE.rows) {
-            const tileEl = container.querySelector(`td[data-x="${newX}"][data-y="${newY}"]`);
-            if (tileEl && tileEl.dataset.walkable === 'true') {
-                const envItemEl = tileEl.querySelector('.environment-item');
-                if (envItemEl && envItemEl.dataset.walkable !== 'true') {
-                    return;
-                }
-                
-                const isOccupied = BattleState.characters.some(c => 
-                    Array.isArray(c.position) && 
-                    c.position[0] === newX && 
-                    c.position[1] === newY &&
-                    c.current_hp > 0 && 
-                    c.status !== 'dead'
-                );
-                if (!isOccupied) {
-                    tileEl.classList.add('highlight-walkable');
-                    BattleState.highlightedTiles.push(tileEl);
-                }
-            }
-        }
-    });
-}
-
-function unhighlightAllTiles() {
-    BattleState.highlightedTiles.forEach(tileEl => {
-        tileEl.classList.remove('highlight-walkable');
-    });
-    BattleState.highlightedTiles = [];
-
-    document.querySelectorAll('.character-selected').forEach(el => {
-        el.classList.remove('character-selected');
-    });
-}
-
-const attemptMoveCharacter = async (character, targetX, targetY) => {
-    const [startX, startY] = character.position;
-    const distanceX = Math.abs(targetX - startX);
-    const distanceY = Math.abs(targetY - startY);
-    const chebyshevDistance = Math.max(distanceX, distanceY);
-
-    if (chebyshevDistance !== 1 || (distanceX === 0 && distanceY === 0)) {
-        displayMessage('Characters can only move 1 tile at a time to an adjacent square.');
-        unhighlightAllTiles();
-        return;
-    }
-
-    const container = BattleState.main.querySelector('.battle-grid-container');
-    const targetTileEl = container.querySelector(`td[data-x="${targetX}"][data-y="${targetY}"]`);
-    if (!targetTileEl || targetTileEl.dataset.walkable !== 'true') {
-        displayMessage('Cannot move to an unwalkable tile.');
-        unhighlightAllTiles();
-        return;
-    }
-
-    const isOccupied = BattleState.characters.some(c => 
-        Array.isArray(c.position) && 
-        c.position[0] === targetX && 
-        c.position[1] === targetY &&
-        c.current_hp > 0 && 
-        c.status !== 'dead'
-    );
-    
-    if (isOccupied) {
-        displayMessage('That tile is already occupied by another character.');
-        unhighlightAllTiles();
-        return;
-    }
-
-    const charEl = BattleState.characterElements.get(character.id);
-    const fromCell = container.querySelector(`td[data-x="${startX}"][data-y="${startY}"]`);
-    const toCell = targetTileEl;
-    
-    if (charEl && fromCell && toCell) {
-        await animateCharacterMovement(charEl, fromCell, toCell);
-    }
-
-    character.position = [targetX, targetY];
-    BattleState.isMoveQueued = true;
-    unhighlightAllTiles();
-};
-
-async function getAbility(abilityName) {
-    if (BattleState.abilityCache.has(abilityName)) {
-        return BattleState.abilityCache.get(abilityName);
-    }
-    
-    try {
-        const res = await fetch(`/api/abilities/${encodeURIComponent(abilityName)}`);
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-        
-        const abilityData = await res.json();
-        const ability = Array.isArray(abilityData) ? abilityData[0] : abilityData;
-        
-        if (ability) {
-            BattleState.abilityCache.set(abilityName, ability);
-            return ability;
-        }
-    } catch (err) {
-        console.error('Failed fetching ability', abilityName, err);
-        return {
-            name: abilityName,
-            range: 1,
-            area: 0,
-            targeting: 'single',
-            target_type: 'enemy',
-            effects: 'damage',
-            description: 'Ability data not available'
-        };
-    }
-    
-    return null;
-}
-
-async function renderBottomUI() {
-    const ui = BattleState.main.querySelector('.battle-bottom-ui');
-    ui.innerHTML = '';
-    
-    if (!BattleState.selectedPlayerCharacter) return;
-    
-    const currentChar = BattleState.selectedPlayerCharacter;
-    const fragment = document.createDocumentFragment();
-
-    BattleState.characterAbilities = BattleState.characterAbilities || {};
-    let abilityObjs = {};
-
-    if (BattleState.characterAbilities[currentChar.id]) {
-        abilityObjs = BattleState.characterAbilities[currentChar.id];
-    } else {
-        abilityObjs = { basic: [], passives: [], ultimate: null };
-
-        const charAbilities = BattleState.battleState?.player_abilities?.[currentChar.id] || {};
-
-        for (const abilityName of Object.keys(charAbilities.basic || {})) {
-            const ability = await getAbility(abilityName);
-            if (ability) abilityObjs.basic.push(ability);
-        }
-
-        const passiveNames = Object.keys(charAbilities.passive || {});
-        for (let i = 0; i < Math.min(passiveNames.length, 2); i++) {
-            const ability = await getAbility(passiveNames[i]);
-            if (ability) abilityObjs.passives.push(ability);
-        }
-
-        const ultimateNames = Object.keys(charAbilities.ultimate || {});
-        if (ultimateNames[0]) {
-            abilityObjs.ultimate = await getAbility(ultimateNames[0]);
-        }
-
-        BattleState.characterAbilities[currentChar.id] = abilityObjs;
-    }
-
-    for (let row = 0; row < 2; row++) {
-        const rowDiv = document.createElement('div');
-        rowDiv.className = 'battle-ui-row';
-
-        for (let i = 0; i < 5; i++) {
-            const btnIndex = row * 5 + i;
-            const btn = document.createElement('button');
-            btn.className = 'fantasy-button ui-btn';
-
-            let ability = null;
-
-            if (btnIndex >= 0 && btnIndex <= 3) {
-                ability = abilityObjs.basic[btnIndex] || null;
-            } else if (btnIndex === 4) {
-                ability = abilityObjs.ultimate;
-            }
-
-            if (ability) {
-                if (ability.sprite) {
-                    btn.innerHTML = `<img src="assets/art/abilities/${ability.sprite}.png" alt="${ability.name}" style="width:100%;height:100%;">`;
-                } else {
-                    btn.textContent = ability.name || 'Unknown';
-                }
-                btn.title = ability.name;
-                btn.dataset.abilityName = ability.name;
-                btn.disabled = false;
-                btn.addEventListener('click', debounce(() => {
-                    const caster = BattleState.selectedPlayerCharacter;
-                    if (caster) toggleAbilitySelection(caster, ability);
-                }, 150));
-            } else if (btnIndex === 5) {
-                const consumable = currentChar?.equipped_items?.equipped_consumable;
-                if (consumable && consumable !== 'none') {
-                    const itemSprite = consumable.replace(/\s+/g, '');
-                    btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
-                    btn.id = 'consumableButton';
-                    btn.disabled = false;
-                    btn.title = consumable;
-                    btn.addEventListener('click', debounce(() => handleUseConsumable(currentChar), 500));
-                } else {
-                    btn.textContent = 'No Item';
-                    btn.disabled = true;
-                }
-            } else if (btnIndex === 6 || btnIndex === 7) {
-                const passive = abilityObjs.passives[btnIndex - 6] || null;
-                if (passive) {
-                    if (passive.sprite) {
-                        btn.innerHTML = `<img src="assets/art/abilities/${passive.sprite}.png" alt="${passive.name}" style="width:100%;height:100%;">`;
-                    } else {
-                        btn.textContent = passive.name || 'Passive';
-                    }
-                    btn.title = passive.name;
-                } else {
-                    btn.textContent = 'Passive';
-                    btn.disabled = true;
-                }
-            } else if (btnIndex === 8) {
-                btn.textContent = 'Interact';
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-            } else if (btnIndex === 9) {
-                btn.textContent = 'End Turn';
-                btn.id = 'endTurnButtonBottom';
-                btn.disabled = false;
-            } else {
-                btn.textContent = `Btn ${btnIndex}`;
-                btn.disabled = true;
-            }
-
-            rowDiv.appendChild(btn);
-        }
-        fragment.appendChild(rowDiv);
-    }
-
-    ui.appendChild(fragment);
-
-    const endTurnBtn = document.getElementById('endTurnButtonBottom');
-    if (endTurnBtn) endTurnBtn.addEventListener('click', debounce(handleEndTurn, 500));
-}
-
-const handleAbilityUse = async (abilityPayload) => {
-    const activeCharacter = BattleState.selectedPlayerCharacter;
-    if (!activeCharacter) {
-        displayMessage('No character selected to cast ability.');
-        return;
-    }
-
-    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
-        displayMessage('Missing battle or character data.');
-        return;
-    }
-
-    activeCharacter.pendingAction = {
-        type: 'ability',
-        data: abilityPayload
-    };
-
-    hideAbilityTooltip();
-
-    try {
-        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
-            battleId: BattleState.battleId,
-            characterId: activeCharacter.id,
-            currentPosition: activeCharacter.originalPosition || activeCharacter.position,
-            targetPosition: activeCharacter.position,
-            action: activeCharacter.pendingAction
-        });
-
-        const result = await res.json();
-        if (!result.success) {
-            displayMessage(`Error: ${result.message}`, 'error');
-            return;
-        }
-
-        BattleState.currentTurnCharacter = null;
-        BattleState.selectedPlayerCharacter = null;
-        BattleState.selectedCharacterEl = null;
-        BattleState.isMoveQueued = false;
-        unhighlightAllTiles();
-
-    } catch (err) {
-        console.error('Ability use error:', err);
-        displayMessage('Error completing ability. Please try again.', 'error');
-    }
-};
-
-const handleEndTurn = async () => {
-    const activeCharacter = BattleState.selectedPlayerCharacter;
-    if (!activeCharacter) {
-        displayMessage('No character selected to end turn.');
-        return;
-    }
-
-    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
-        displayMessage('Missing battle or character data.');
-        return;
-    }
-
-    const characterId = activeCharacter.id;
-    const currentPosition = activeCharacter.originalPosition || activeCharacter.position;
-    const targetPosition = activeCharacter.position;
-    const action = activeCharacter.pendingAction || null;
-
-    hideAbilityTooltip();
-
-    try {
-        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
-            battleId: BattleState.battleId,
-            characterId,
-            currentPosition,
-            targetPosition,
-            action
-        });
-
-        const result = await res.json();
-
-        if (!result.success) {
-            displayMessage(`Error: ${result.message}`, 'error');
-            return;
-        }
-
-        BattleState.currentTurnCharacter = null;
-        BattleState.selectedPlayerCharacter = null;
-        BattleState.selectedCharacterEl = null;
-        BattleState.isMoveQueued = false;
-        unhighlightAllTiles();
-
-    } catch (err) {
-        console.error('End turn error:', err);
-        displayMessage('Error completing turn. Please try again.', 'error');
-    }
-};
-
-const handleUseConsumable = async () => {
-    const activeCharacter = BattleState.selectedPlayerCharacter;
-
-    if (!activeCharacter) {
-        displayMessage('No character selected to use consumable.');
-        return;
-    }
-
-    if (!BattleState.battleId || !activeCharacter.id || !Array.isArray(activeCharacter.position)) {
-        displayMessage('Missing battle or character data.');
-        return;
-    }
-
-    if (!activeCharacter.isPlayerControlled) {
-        displayMessage('Cannot use consumables for AI characters.');
-        return;
-    }
-
-    const consumable = activeCharacter.equipped_items?.equipped_consumable;
-    if (!consumable || consumable === 'none') {
-        displayMessage('No consumable equipped.');
-        return;
-    }
-
-    const abilityData = await getAbility(consumable);
-    if (!abilityData) {
-        displayMessage('Consumable ability data not found.');
-        return;
-    }
-
-    const abilityPayload = {
-        abilityName: consumable,
-        casterPos: activeCharacter.position,
-        targetCenter: activeCharacter.position,
-        affectedTargets: [
-            { 
-                id: activeCharacter.id,
-                pos: activeCharacter.position,
-                faction: 'ally',
-                intendedEffect: abilityData.effects
-            }
-        ]
-    };
-
-    activeCharacter.pendingAction = {
-        type: 'ability',
-        data: abilityPayload
-    };
-
-    hideAbilityTooltip();
-
-    try {
-        const res = await BattleState.apiCall('/functions/v1/combined-action-end', 'POST', {
-            battleId: BattleState.battleId,
-            characterId: activeCharacter.id,
-            currentPosition: activeCharacter.originalPosition || activeCharacter.position,
-            targetPosition: activeCharacter.position,
-            action: activeCharacter.pendingAction
-        });
-
-        const result = await res.json();
-
-        if (!result.success) {
-            displayMessage(`Error using ${consumable}: ${result.message}`, 'error');
-            return;
-        }
-
-        BattleState.currentTurnCharacter = null;
-        BattleState.selectedPlayerCharacter = null;
-        BattleState.selectedCharacterEl = null;
-        BattleState.isMoveQueued = false;
-        unhighlightAllTiles();
-
-    } catch (err) {
-        console.error('Consumable use error:', err);
-        displayMessage('Error using consumable. Please try again.', 'error');
-    }
-};
-
-const handleRefreshOptimized = async () => {
-    try {
-        const supabase = getSupabaseClient({ 
-            SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
-            SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
-        });
-        
-        const { data: battleState, error } = await supabase
-            .from('battle_state')
-            .select('characters_state, current_turn, status, layout_data')
-            .eq('id', BattleState.battleId)
-            .single();
             
-        if (error) throw error;
+            Object.keys(charAbilities.ultimate || {}).forEach(abilityName => {
+                loadingPromises.push(preloadAbility(abilityName));
+            });
+            
+            Object.keys(charAbilities.passive || {}).slice(0, 2).forEach(abilityName => {
+                loadingPromises.push(preloadAbility(abilityName));
+            });
+        });
+    }
+    
+    if (PRELOAD_CONFIG.environment && battleState?.layout_data?.environment_items_pos) {
+        Object.values(battleState.layout_data.environment_items_pos).forEach(item => {
+            if (item.sprite) {
+                const envUrl = `assets/art/environment/${item.sprite.toLowerCase()}.png`;
+                loadingPromises.push(preloadImage(envUrl));
+            }
+        });
+    }
+    
+    if (PRELOAD_CONFIG.tiles && battleState?.layout_data?.layout?.tiles) {
+        const uniqueTiles = new Set();
+        battleState.layout_data.layout.tiles.forEach(row => {
+            row.forEach(tile => {
+                const tileName = typeof tile === 'object' ? tile.name : tile;
+                const normalized = tileName.toLowerCase().replace(/\s+/g, '_');
+                uniqueTiles.add(normalized);
+            });
+        });
         
-        await handleOptimizedBattleUpdate(battleState);
-        
-        displayMessage('Battle state refreshed successfully.', 'success');
-        BattleState.isMoveQueued = false;
+        uniqueTiles.forEach(tileName => {
+            const tileData = BattleState.tileMap.get(tileName);
+            if (tileData?.art) {
+                const tileUrl = `assets/art/tiles/${tileData.art}.png`;
+                loadingPromises.push(preloadImage(tileUrl));
+            }
+        });
+    }
+    
+    return Promise.allSettled(loadingPromises);
+};
+
+const preloadImage = (url) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = resolve;
+        img.onerror = () => {
+            console.warn(`Failed to preload image: ${url}`);
+            resolve();
+        };
+        img.src = url;
+    });
+};
+
+const preloadAbility = async (abilityName) => {
+    try {
+        const ability = await getAbility(abilityName);
+        if (ability?.sprite) {
+            const abilityUrl = `assets/art/abilities/${ability.sprite}.png`;
+            await preloadImage(abilityUrl);
+        }
     } catch (error) {
-        console.error('Refresh error:', error);
-        displayMessage('Failed to refresh battle state.', 'error');
+        console.warn(`Failed to preload ability: ${abilityName}`, error);
+    }
+};
+
+function createBattleLoadingModal(title = "Loading Battle", message = "Preparing your battlefield...") {
+    injectBattleLoadingStyles();
+    const modal = document.createElement('div');
+    modal.className = 'loading-modal';
+    modal.innerHTML = `
+      <div class="loading-content">
+        <div class="loading-header">
+          <h2>${title}</h2>
+          <p class="loading-message">${message}</p>
+        </div>
+        <div class="loading-animation">
+          <div class="crafting-wheel">
+            ${Array(6).fill().map(() => '<div class="wheel-spoke"></div>').join('')}
+          </div>
+          <div class="loading-particles">
+            ${Array(5).fill().map(() => '<div class="particle"></div>').join('')}
+          </div>
+        </div>
+        <div class="loading-progress">
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+          <div class="progress-text">
+            <span class="progress-step">Connecting to server...</span>
+            <span class="progress-percent">0%</span>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function updateBattleLoadingProgress(modal, step, message, percent) {
+    if (!modal?.parentNode) return;
+    const progressStep = modal.querySelector('.progress-step');
+    const loadingMessage = modal.querySelector('.loading-message');
+    const progressFill = modal.querySelector('.progress-fill');
+    const progressPercent = modal.querySelector('.progress-percent');
+    if (progressStep) progressStep.textContent = step;
+    if (loadingMessage) loadingMessage.textContent = message;
+    if (progressFill && typeof percent === 'number') progressFill.style.width = `${percent}%`;
+    if (progressPercent && typeof percent === 'number') progressPercent.textContent = `${Math.round(percent)}%`;
+}
+
+function removeBattleLoadingModal(modal) {
+    if (modal?.parentNode) {
+        modal.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => modal.parentNode && modal.remove(), 300);
+    }
+}
+
+export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
+    Object.assign(BattleState, { main, apiCall, getCurrentProfile });
+
+    const loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
+    const loadingStartTime = Date.now();
+
+    try {
+        updateBattleLoadingProgress(loadingModal, "Connecting to server...", "Authenticating player...", 10);
+
+        BattleState.profile = BattleState.getCurrentProfile();
+        if (!BattleState.profile) {
+            removeBattleLoadingModal(loadingModal);
+            displayMessage('User profile not found. Please log in again.');
+            window.gameAuth.loadModule('login');
+            return;
+        }
+
+        if (BattleState.profile.battle_tutorial === false && !reconnecting) {
+            removeBattleLoadingModal(loadingModal);
+            await showTutorialModal(BattleState.profile.chat_id);
+            createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
+        }
+
+        updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
+
+        if (!selectedMode && !reconnecting) {
+            removeBattleLoadingModal(loadingModal);
+            displayMessage('No mode selected. Returning to embark.');
+            window.gameAuth.loadModule('embark');
+            return;
+        }
+
+        await loadTileData();
+        updateBattleLoadingProgress(loadingModal, "Connecting to battle...", "Setting up battle state...", 50);
+
+        const supabase = getSupabaseClient(supabaseConfig);
+        if (BattleState.unsubscribeFromBattle) {
+            await supabase.removeChannel(BattleState.unsubscribeFromBattle);
+        }
+
+        if (reconnecting && existingBattleId) {
+            updateBattleLoadingProgress(loadingModal, "Reconnecting...", "Restoring previous battle...", 70);
+            await reconnectToBattle(existingBattleId);
+        } else {
+            const areaLevel = selectedMode !== 'pvp'
+                ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
+                : Math.floor(Math.random() * 10) + 1;
+            updateBattleLoadingProgress(loadingModal, "Initializing battle...", "Generating battlefield...", 80);
+            await initializeBattle(selectedMode, areaLevel);
+        }
+
+        updateBattleLoadingProgress(loadingModal, "Loading assets...", "Preloading images and abilities...", 85);
+        await preloadAssets(BattleState.battleState, selectedMode);
+
+        setupOptimizedRealtimeSubscription();
+        updateBattleLoadingProgress(loadingModal, "Finalizing...", "Rendering battlefield...", 95);
+
+        const areaLevel = selectedMode !== 'pvp' 
+            ? (BattleState.profile.progress?.[selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)] || 1)
+            : BattleState.battleState?.round_number || 1;
+
+        renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState?.layout_data);
+        await updateGameStateFromRealtimeOptimized();
+
+    } catch (err) {
+        console.error('Battle loading error:', err);
+        removeBattleLoadingModal(loadingModal);
+        displayMessage('Failed to start battle. Returning to embark.');
+        window.gameAuth.loadModule('embark');
+        return;
+    }
+
+    const minTime = 2000;
+    const elapsed = Date.now() - loadingStartTime;
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, minTime - elapsed)));
+
+    removeBattleLoadingModal(loadingModal);
+}
+
+const loadTileData = async () => {
+    try {
+        const tileRes = await BattleState.apiCall(`/api/supabase/rest/v1/tiles?select=name,walkable,vision_block,art`);
+        const tileRows = await tileRes.json();
+        
+        BattleState.tileMap.clear();
+        tileRows.forEach(tile => {
+            BattleState.tileMap.set(tile.name.toLowerCase(), tile);
+        });
+    } catch (err) {
+        console.warn('Could not load tile data');
+    }
+};
+
+const reconnectToBattle = async (battleId) => {
+    const supabase = getSupabaseClient({ 
+        SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
+        SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
+    });
+    
+    const { data: battleState, error } = await supabase
+        .from('battle_state')
+        .select('*')
+        .eq('id', battleId)
+        .single();
+        
+    if (error || !battleState) {
+        throw new Error('Failed to reconnect to existing battle.');
+    }
+    
+    if (!battleState.players?.includes(BattleState.profile.id)) {
+        throw new Error('You are not a participant in this battle.');
+    }
+    
+    BattleState.battleId = battleId;
+    BattleState.battleState = battleState;
+};
+
+const initializeBattle = async (selectedMode, areaLevel) => {
+    const startBattleRes = await BattleState.apiCall('/functions/v1/start-battle', 'POST', {
+        profileId: BattleState.profile.id,
+        selectedMode: selectedMode,
+        areaLevel: areaLevel,
+    });
+
+    const startBattleResponse = await startBattleRes.json();
+    if (!startBattleResponse.success) {
+        throw new Error(startBattleResponse.error || 'Failed to start battle.');
+    }
+
+    const { battleId, initialState } = startBattleResponse;
+    BattleState.battleId = battleId;
+    BattleState.battleState = initialState;
+};
+
+const setupOptimizedRealtimeSubscription = () => {
+    const supabase = getSupabaseClient({ 
+        SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
+        SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
+    });
+    
+    BattleState.unsubscribeFromBattle = supabase
+        .channel(`battle_state:${BattleState.battleId}`)
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'battle_state',
+                filter: `id=eq.${BattleState.battleId}`
+            },
+            debounce(async (payload) => {
+                await handleOptimizedBattleUpdate(payload.new);
+            }, REALTIME_CONFIG.debounceMs)
+        )
+        .subscribe();
+};
+
+const handleOptimizedBattleUpdate = async (newBattleState) => {
+    const oldBattleState = BattleState.battleState;
+    BattleState.battleState = newBattleState;
+    
+    if (newBattleState.status !== oldBattleState?.status) {
+        if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
+            await assignLoot(newBattleState);
+            showBattleResultModal(newBattleState.status);
+            return;
+        }
+    }
+    
+    if (newBattleState.current_turn !== oldBattleState?.current_turn) {
+        updateTurnDisplay();
+        updateCharacterAvailability();
+        handleTurnLogic();
+    }
+    
+    if (newBattleState.characters_state && 
+        JSON.stringify(newBattleState.characters_state) !== JSON.stringify(oldBattleState?.characters_state)) {
+        
+        const newCharacters = Object.values(newBattleState.characters_state)
+            .map(processCharacterState);
+        
+        await updateCharactersWithAnimationsOptimized(newCharacters);
+    }
+    
+    const newEnvItems = newBattleState?.layout_data?.environment_items_pos;
+    const oldEnvItems = oldBattleState?.layout_data?.environment_items_pos;
+    
+    if (newEnvItems && JSON.stringify(newEnvItems) !== JSON.stringify(oldEnvItems)) {
+        renderEnvironmentItems(newEnvItems);
+    }
+};
+
+const updateGameStateFromRealtimeOptimized = async () => {
+    if (!BattleState.battleState) return;
+    
+    const status = BattleState.battleState.status;
+    if (status === 'victory' || status === 'defeat') {
+        await assignLoot(BattleState.battleState);
+        showBattleResultModal(status);
+        return; 
+    }
+        
+    if (!BattleState.battleState.characters_state) {
+        console.warn('Battle state missing characters_state:', BattleState.battleState);
+        return;
+    }
+
+    const newCharacters = Object.values(BattleState.battleState.characters_state)
+        .map(processCharacterState);
+    
+    await updateCharactersWithAnimationsOptimized(newCharacters);
+    
+    requestAnimationFrame(() => {
+        updateTurnDisplay();
+        updateCharacterAvailability();
+    });
+    
+    handleTurnLogic();
+    
+    const layoutItems = BattleState.battleState?.layout_data?.environment_items_pos;
+    if (layoutItems && Object.keys(layoutItems).length) {
+        renderEnvironmentItems(layoutItems);
     }
 };
 
@@ -3246,34 +2889,30 @@ function displayMessage(msg, type = 'info') {
     }
 }
 
-export function cleanup() {
-    if (BattleState.unsubscribeFromBattle && BattleState.supabaseClient) {
-        BattleState.supabaseClient.removeChannel(BattleState.unsubscribeFromBattle);
+const handleRefreshOptimized = async () => {
+    try {
+        const supabase = getSupabaseClient({ 
+            SUPABASE_URL: BattleState.main.supabaseConfig?.SUPABASE_URL, 
+            SUPABASE_ANON_KEY: BattleState.main.supabaseConfig?.SUPABASE_ANON_KEY 
+        });
+        
+        const { data: battleState, error } = await supabase
+            .from('battle_state')
+            .select('characters_state, current_turn, status, layout_data')
+            .eq('id', BattleState.battleId)
+            .single();
+            
+        if (error) throw error;
+        
+        await handleOptimizedBattleUpdate(battleState);
+        
+        displayMessage('Battle state refreshed successfully.', 'success');
+        BattleState.isMoveQueued = false;
+    } catch (error) {
+        console.error('Refresh error:', error);
+        displayMessage('Failed to refresh battle state.', 'error');
     }
-    
-    if (BattleState.updateDebounceTimer) {
-        clearTimeout(BattleState.updateDebounceTimer);
-    }
-    
-    Object.assign(BattleState, {
-        main: null, apiCall: null, getCurrentProfile: null, profile: null,
-        characters: [], selectedCharacterEl: null, selectedPlayerCharacter: null,
-        currentTurnCharacter: null, highlightedTiles: [], supabaseClient: null,
-        battleState: null, battleId: null, unsubscribeFromBattle: null,
-        isProcessingAITurn: false, isMoveQueued: false,
-        lastCharacterStates: new Map(),
-        updateDebounceTimer: null
-    });
-    
-    BattleState.tileMap.clear();
-    BattleState.characterElements.clear();
-    BattleState.abilityCache.clear();
-    
-    const existingMessage = document.querySelector('.custom-message-box');
-    if (existingMessage) existingMessage.remove();
-
-    hideAbilityTooltip();
-}
+};
 
 function navigateToCastle() {
   window.gameAuth.loadModule('castle');
@@ -3328,4 +2967,33 @@ function showBattleResultModal(status) {
     modal.remove();
     navigateToCastle();
   });
+}
+
+export function cleanup() {
+    if (BattleState.unsubscribeFromBattle && BattleState.supabaseClient) {
+        BattleState.supabaseClient.removeChannel(BattleState.unsubscribeFromBattle);
+    }
+    
+    if (BattleState.updateDebounceTimer) {
+        clearTimeout(BattleState.updateDebounceTimer);
+    }
+    
+    Object.assign(BattleState, {
+        main: null, apiCall: null, getCurrentProfile: null, profile: null,
+        characters: [], selectedCharacterEl: null, selectedPlayerCharacter: null,
+        currentTurnCharacter: null, highlightedTiles: [], supabaseClient: null,
+        battleState: null, battleId: null, unsubscribeFromBattle: null,
+        isProcessingAITurn: false, isMoveQueued: false,
+        lastCharacterStates: new Map(),
+        updateDebounceTimer: null
+    });
+    
+    BattleState.tileMap.clear();
+    BattleState.characterElements.clear();
+    BattleState.abilityCache.clear();
+    
+    const existingMessage = document.querySelector('.custom-message-box');
+    if (existingMessage) existingMessage.remove();
+
+    hideAbilityTooltip();
 }
