@@ -907,7 +907,7 @@ function addTutorialButton() {
     if (topBar && !document.getElementById('tutorialButton')) {
         const tutorialBtn = document.createElement('button');
         tutorialBtn.id = 'tutorialButton';
-        tutorialBtn.className = 'addTutorialButton';
+        tutorialBtn.className = 'help-tutorial-fantasy-button';
         tutorialBtn.innerHTML = '?';
         tutorialBtn.title = 'Show Tutorial';
         
