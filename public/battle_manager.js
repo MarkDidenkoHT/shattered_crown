@@ -2284,7 +2284,13 @@ function renderBattleScreen(mode, level, layoutData) {
                         </div>
                 </div>
             </div>
-            <div class="tooltip-container"></div>
+            <div class="tooltip-container">
+                <div class="ability-tooltip" id="abilityTooltip">
+                    <div class="ability-tooltip-header">
+                        <div class="ability-tooltip-name">—</div>
+                    </div>
+                </div>
+            </div>
             <div class="battle-bottom-ui" style="display: block; width: 100%; margin: auto; position: fixed; bottom: 4px;"></div>
         </div>
     `;    renderBattleGrid(layoutData.layout);
