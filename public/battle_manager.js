@@ -1259,6 +1259,7 @@ const handleCharacterSelection = (character, tileEl) => {
             BattleState.currentTurnCharacter = character;
             highlightWalkableTiles(character);
         }
+        // This will now load the specific character's abilities
         renderBottomUI();
         
         if (BattleState.tutorial.active && BattleState.tutorial.currentStep === 0) {
@@ -1269,8 +1270,8 @@ const handleCharacterSelection = (character, tileEl) => {
         BattleState.selectedPlayerCharacter = null;
         BattleState.selectedCharacterEl = null;
         unhighlightAllTiles();
-        const ui = BattleState.main.querySelector('.battle-bottom-ui');
-        if (ui) ui.innerHTML = '';
+        // This will show the empty state
+        renderBottomUI();
     }
     
     showEntityInfo(character);
@@ -1539,9 +1540,17 @@ async function getAbility(abilityName) {
 
 async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
-    ui.innerHTML = '';
+    if (!ui) return;
     
-    if (!BattleState.selectedPlayerCharacter) return;
+    // Clear existing content
+    ui.innerHTML = '';
+    ui.classList.remove('empty');
+    
+    if (!BattleState.selectedPlayerCharacter) {
+        // No character selected - show empty state
+        renderEmptyBottomUI();
+        return;
+    }
     
     const currentChar = BattleState.selectedPlayerCharacter;
     const fragment = document.createDocumentFragment();
@@ -1695,6 +1704,9 @@ const handleEndTurn = async () => {
         BattleState.selectedCharacterEl = null;
         BattleState.isMoveQueued = false;
         unhighlightAllTiles();
+        
+        // Reset to empty bottom UI
+        renderBottomUI();
 
     } catch (err) {
         console.error('End turn error:', err);
@@ -2194,6 +2206,18 @@ function renderBattleScreen(mode, level, layoutData) {
             box-shadow: inset 0 0 0 2px #4CAF50;
             background-color: rgba(76, 175, 80, 0.2) !important;
         }
+        
+        /* Add styles for empty bottom UI state */
+        .battle-bottom-ui.empty {
+            opacity: 0.6;
+        }
+        .empty-ui-message {
+            text-align: center;
+            color: #b8b3a8;
+            font-style: italic;
+            padding: 20px;
+            font-size: 14px;
+        }
         </style>
         <div class="main-app-container">
             <div class="battle-grid-container"></div>
@@ -2230,7 +2254,9 @@ function renderBattleScreen(mode, level, layoutData) {
                 </div>
             </div>
             <div class="tooltip-container"></div>
-            <div class="battle-bottom-ui" style="display: block; width: 100%; margin: auto; position: fixed; bottom: 4px;"></div>
+            <div class="battle-bottom-ui" style="display: block; width: 100%; margin: auto; position: fixed; bottom: 4px;">
+                <!-- Bottom UI will be populated here -->
+            </div>
         </div>
     `;
 
@@ -2238,6 +2264,9 @@ function renderBattleScreen(mode, level, layoutData) {
     renderCharacters();
     createParticles();
     renderEnvironmentItems(BattleState.battleState?.layout_data?.environment_items_pos);
+    
+    // Initialize empty bottom UI
+    renderEmptyBottomUI();
 
     const turnStatusEl = document.getElementById('turnStatus');
     if (turnStatusEl) {
@@ -2247,6 +2276,19 @@ function renderBattleScreen(mode, level, layoutData) {
     }
 
     addTutorialButton();
+}
+
+function renderEmptyBottomUI() {
+    const ui = BattleState.main.querySelector('.battle-bottom-ui');
+    if (!ui) return;
+    
+    ui.innerHTML = '';
+    ui.classList.add('empty');
+    
+    const emptyMessage = document.createElement('div');
+    emptyMessage.className = 'empty-ui-message';
+    emptyMessage.textContent = 'Select a character to see abilities';
+    ui.appendChild(emptyMessage);
 }
 
 function renderBattleGrid(layoutJson) {
@@ -3019,6 +3061,9 @@ function showAbilityTooltip(ability) {
     
     const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
     if (!tooltipContainer) return;
+    
+    // Only show tooltip if we have a valid ability
+    if (!ability) return;
     
     const tooltip = document.createElement('div');
     tooltip.className = 'ability-tooltip';
