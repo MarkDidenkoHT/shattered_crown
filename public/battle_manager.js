@@ -1564,6 +1564,17 @@ function initializeEmptyBottomUI() {
     ui.appendChild(fragment);
 }
 
+function initializeEmptyTooltip() {
+    const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
+    if (!tooltipContainer) return;
+    tooltipContainer.innerHTML = '';
+    const emptyTooltip = document.createElement('div');
+    emptyTooltip.className = 'ability-tooltip';
+    emptyTooltip.id = 'abilityTooltip';
+    emptyTooltip.innerHTML = '<div class="ability-tooltip-header"><div class="ability-tooltip-name">—</div></div>';
+    tooltipContainer.appendChild(emptyTooltip);
+}
+
 async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
     if (!ui) return;
@@ -2290,6 +2301,7 @@ function renderBattleScreen(mode, level, layoutData) {
 
     // Initialize empty bottom UI and tooltip on page load
     initializeEmptyBottomUI();
+    initializeEmptyTooltip();
 
     addTutorialButton();
 }
