@@ -1537,9 +1537,36 @@ async function getAbility(abilityName) {
     return null;
 }
 
+function initializeEmptyBottomUI() {
+    const ui = BattleState.main.querySelector('.battle-bottom-ui');
+    if (!ui) return;
+    
+    ui.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    
+    // Create empty grid layout (2 rows x 5 cols)
+    for (let row = 0; row < 2; row++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'battle-ui-row';
+        
+        for (let i = 0; i < 5; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'fantasy-button ui-btn';
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'default';
+            btn.innerHTML = '';
+            rowDiv.appendChild(btn);
+        }
+        fragment.appendChild(rowDiv);
+    }
+    
+    ui.appendChild(fragment);
+}
+
 async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
-    ui.innerHTML = '';
+    if (!ui) return;
     
     if (!BattleState.selectedPlayerCharacter) return;
     
@@ -1601,6 +1628,8 @@ async function renderBottomUI() {
                 btn.title = ability.name;
                 btn.dataset.abilityName = ability.name;
                 btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
                 btn.addEventListener('click', debounce(() => {
                     const caster = BattleState.selectedPlayerCharacter;
                     if (caster) toggleAbilitySelection(caster, ability);
@@ -1612,11 +1641,15 @@ async function renderBottomUI() {
                     btn.innerHTML = `<img src="assets/art/recipes/${itemSprite}.png" alt="${consumable}" style="width: 36px; height: 36px; object-fit: contain;">`;
                     btn.id = 'consumableButton';
                     btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
                     btn.title = consumable;
                     btn.addEventListener('click', debounce(() => handleUseConsumable(currentChar), 500));
                 } else {
                     btn.textContent = 'No Item';
                     btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'default';
                 }
             } else if (btnIndex === 6 || btnIndex === 7) {
                 const passive = abilityObjs.passives[btnIndex - 6] || null;
@@ -1627,21 +1660,31 @@ async function renderBottomUI() {
                         btn.textContent = passive.name || 'Passive';
                     }
                     btn.title = passive.name;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'default';
                 } else {
                     btn.textContent = 'Passive';
                     btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'default';
                 }
             } else if (btnIndex === 8) {
                 btn.textContent = 'Interact';
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
+                btn.style.cursor = 'default';
             } else if (btnIndex === 9) {
                 btn.textContent = 'End Turn';
                 btn.id = 'endTurnButtonBottom';
                 btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
             } else {
                 btn.textContent = `Btn ${btnIndex}`;
                 btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'default';
             }
 
             rowDiv.appendChild(btn);
@@ -1649,6 +1692,7 @@ async function renderBottomUI() {
         fragment.appendChild(rowDiv);
     }
 
+    ui.innerHTML = '';
     ui.appendChild(fragment);
 
     const endTurnBtn = document.getElementById('endTurnButtonBottom');
@@ -2232,9 +2276,7 @@ function renderBattleScreen(mode, level, layoutData) {
             <div class="tooltip-container"></div>
             <div class="battle-bottom-ui" style="display: block; width: 100%; margin: auto; position: fixed; bottom: 4px;"></div>
         </div>
-    `;
-
-    renderBattleGrid(layoutData.layout);
+    `;    renderBattleGrid(layoutData.layout);
     renderCharacters();
     createParticles();
     renderEnvironmentItems(BattleState.battleState?.layout_data?.environment_items_pos);
@@ -2245,6 +2287,9 @@ function renderBattleScreen(mode, level, layoutData) {
         turnStatusEl.title = "Click to refresh if frozen";
         turnStatusEl.addEventListener("click", handleRefreshOptimized);
     }
+
+    // Initialize empty bottom UI and tooltip on page load
+    initializeEmptyBottomUI();
 
     addTutorialButton();
 }
