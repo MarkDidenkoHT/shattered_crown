@@ -436,6 +436,16 @@ function injectBattleLoadingStyles() {
     const style = document.createElement('style');
     style.id = 'battle-loading-styles';
     style.textContent = `
+        .tooltip-container .ability-tooltip[style*="opacity: 0.5"] {
+            background: rgba(29, 20, 12, 0.7);
+            border: 1px solid #3d2914;
+            color: #b8b3a8;
+        }
+        
+        .tooltip-container .ability-tooltip[style*="opacity: 0.5"] .ability-tooltip-name {
+                color: #b8b3a8;
+            }
+    
          .loading-modal {
               position: fixed;
               top: 0;
@@ -900,124 +910,6 @@ function injectBattleLoadingStyles() {
             position: relative; 
         }
         
-        .battle-controls-column {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-left: 10px;
-        }
-        
-        .battle-control-button {
-            background: linear-gradient(145deg, #c4975a, #a67c52);
-            border: 2px solid #d4af37;
-            border-radius: 6px;
-            color: #1a120b;
-            padding: 8px 12px;
-            font-family: 'Cinzel', serif;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.8rem;
-            min-width: 80px;
-            text-align: center;
-        }
-        
-        .battle-control-button:hover {
-            background: linear-gradient(145deg, #d4af37, #c4975a);
-            transform: translateY(-2px);
-        }
-        
-        .settings-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-        }
-        
-        .settings-content {
-            background: linear-gradient(145deg, rgba(29, 20, 12, 0.95), rgba(42, 31, 22, 0.9));
-            border: 2px solid #c4975a;
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 400px;
-            width: 90%;
-            color: #e8e8e8;
-        }
-        
-        .settings-header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .settings-title {
-            color: #c4975a;
-            font-family: 'Cinzel', serif;
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .settings-option {
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .settings-label {
-            color: #b8b3a8;
-            font-size: 0.9rem;
-        }
-        
-        .settings-toggle {
-            position: relative;
-            width: 50px;
-            height: 24px;
-            background: #3d2914;
-            border-radius: 12px;
-            cursor: pointer;
-        }
-        
-        .settings-toggle.active {
-            background: #c4975a;
-        }
-        
-        .settings-toggle-handle {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 20px;
-            height: 20px;
-            background: #e8e8e8;
-            border-radius: 50%;
-            transition: transform 0.3s ease;
-        }
-        
-        .settings-toggle.active .settings-toggle-handle {
-            transform: translateX(26px);
-        }
-        
-        .ability-tooltip-empty {
-            opacity: 0.6;
-            pointer-events: none;
-            background: rgba(29, 20, 12, 0.8);
-            border-color: #3d2914;
-        }
-        
-        .ability-tooltip-empty .ability-tooltip-name {
-            color: #b8b3a8;
-        }
-        
-        .ability-tooltip-empty .ability-tooltip-stat-label {
-            color: #b8b3a8;
-            font-style: italic;
-        }
-        
         @keyframes tutorialPulse { 
             0%, 100% { opacity: 1; } 
             50% { opacity: 0.7; } 
@@ -1332,63 +1224,28 @@ function endTutorial() {
     }
 }
 
-function showSettingsModal() {
-    const modal = document.createElement('div');
-    modal.className = 'settings-modal';
-    
-    modal.innerHTML = `
-        <div class="settings-content">
-            <div class="settings-header">
-                <h2 class="settings-title">Battle Settings</h2>
-            </div>
-            <div class="settings-option">
-                <span class="settings-label">Sound Effects</span>
-                <div class="settings-toggle active">
-                    <div class="settings-toggle-handle"></div>
-                </div>
-            </div>
-            <div class="settings-option">
-                <span class="settings-label">Music</span>
-                <div class="settings-toggle active">
-                    <div class="settings-toggle-handle"></div>
-                </div>
-            </div>
-            <div class="settings-option">
-                <span class="settings-label">Animations</span>
-                <div class="settings-toggle active">
-                    <div class="settings-toggle-handle"></div>
-                </div>
-            </div>
-            <div class="settings-option">
-                <span class="settings-label">Tooltips</span>
-                <div class="settings-toggle active">
-                    <div class="settings-toggle-handle"></div>
-                </div>
-            </div>
-            <div style="text-align: center; margin-top: 1.5rem;">
-                <button class="tutorial-button" id="closeSettings">Close</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const toggles = modal.querySelectorAll('.settings-toggle');
-    toggles.forEach(toggle => {
-        toggle.addEventListener('click', () => {
-            toggle.classList.toggle('active');
+function addTutorialButton() {
+    const topBar = document.querySelector('.battle-top-bar');
+    if (topBar && !document.getElementById('tutorialButton')) {
+        const tutorialBtn = document.createElement('button');
+        tutorialBtn.id = 'tutorialButton';
+        tutorialBtn.className = 'help-tutorial-fantasy-button';
+        tutorialBtn.innerHTML = '?';
+        tutorialBtn.title = 'Show Tutorial';
+        
+        tutorialBtn.addEventListener('click', () => {
+            if (BattleState.profile?.chat_id) {
+                startTutorialSequence(BattleState.profile.chat_id);
+            }
         });
-    });
-    
-    document.getElementById('closeSettings').addEventListener('click', () => {
-        modal.remove();
-    });
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
+        
+        const turnStatus = document.getElementById('turnStatus');
+        if (turnStatus && turnStatus.parentNode === topBar) {
+            topBar.insertBefore(tutorialBtn, turnStatus.nextSibling);
+        } else {
+            topBar.appendChild(tutorialBtn);
         }
-    });
+    }
 }
 
 const handleCharacterSelection = (character, tileEl) => {
@@ -1697,22 +1554,10 @@ function initializeEmptyBottomUI() {
     ui.innerHTML = '';
     const fragment = document.createDocumentFragment();
     
-    const mainContainer = document.createElement('div');
-    mainContainer.style.display = 'flex';
-    mainContainer.style.justifyContent = 'space-between';
-    mainContainer.style.alignItems = 'flex-end';
-    mainContainer.style.width = '100%';
-    
-    const abilitiesGrid = document.createElement('div');
-    abilitiesGrid.style.display = 'flex';
-    abilitiesGrid.style.flexDirection = 'column';
-    abilitiesGrid.style.gap = '8px';
-    
+    // Create empty grid layout (2 rows x 5 cols)
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
-        rowDiv.style.display = 'flex';
-        rowDiv.style.gap = '8px';
         
         for (let i = 0; i < 5; i++) {
             const btn = document.createElement('button');
@@ -1721,37 +1566,11 @@ function initializeEmptyBottomUI() {
             btn.style.opacity = '0.5';
             btn.style.cursor = 'default';
             btn.innerHTML = '';
-            btn.style.minWidth = '50px';
-            btn.style.minHeight = '50px';
             rowDiv.appendChild(btn);
         }
-        abilitiesGrid.appendChild(rowDiv);
+        fragment.appendChild(rowDiv);
     }
     
-    const controlsColumn = document.createElement('div');
-    controlsColumn.className = 'battle-controls-column';
-    
-    const tutorialBtn = document.createElement('button');
-    tutorialBtn.className = 'battle-control-button';
-    tutorialBtn.textContent = 'Tutorial';
-    tutorialBtn.addEventListener('click', () => {
-        if (BattleState.profile?.chat_id) {
-            startTutorialSequence(BattleState.profile.chat_id);
-        }
-    });
-    
-    const settingsBtn = document.createElement('button');
-    settingsBtn.className = 'battle-control-button';
-    settingsBtn.textContent = 'Settings';
-    settingsBtn.addEventListener('click', showSettingsModal);
-    
-    controlsColumn.appendChild(tutorialBtn);
-    controlsColumn.appendChild(settingsBtn);
-    
-    mainContainer.appendChild(abilitiesGrid);
-    mainContainer.appendChild(controlsColumn);
-    
-    fragment.appendChild(mainContainer);
     ui.appendChild(fragment);
 }
 
@@ -1759,6 +1578,7 @@ function initializeEmptyTooltip() {
     const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
     if (!tooltipContainer) return;
     
+    // Instead of clearing everything, ensure the tooltip exists but is empty
     let tooltip = document.getElementById('abilityTooltip');
     if (!tooltip) {
         tooltip = document.createElement('div');
@@ -1767,18 +1587,21 @@ function initializeEmptyTooltip() {
         tooltipContainer.appendChild(tooltip);
     }
     
+    // Set empty content but maintain the structure
     tooltip.innerHTML = `
         <div class="ability-tooltip-header">
             <div class="ability-tooltip-name">—</div>
         </div>
-        <div class="ability-tooltip-body">
+        <div class="ability-tooltip-body" style="opacity: 0.5;">
             <div class="ability-tooltip-stat">
-                <span class="ability-tooltip-stat-label">Select an ability to view details</span>
+                <span class="ability-tooltip-stat-label">Select an ability</span>
             </div>
         </div>
     `;
     
-    tooltip.classList.add('ability-tooltip-empty');
+    // Make it visually appear empty but present
+    tooltip.style.opacity = '0.5';
+    tooltip.style.pointerEvents = 'none';
 }
 
 async function renderBottomUI() {
@@ -1789,12 +1612,6 @@ async function renderBottomUI() {
     
     const currentChar = BattleState.selectedPlayerCharacter;
     const fragment = document.createDocumentFragment();
-
-    const mainContainer = document.createElement('div');
-    mainContainer.style.display = 'flex';
-    mainContainer.style.justifyContent = 'space-between';
-    mainContainer.style.alignItems = 'flex-end';
-    mainContainer.style.width = '100%';
 
     BattleState.characterAbilities = BattleState.characterAbilities || {};
     let abilityObjs = {};
@@ -1825,23 +1642,14 @@ async function renderBottomUI() {
         BattleState.characterAbilities[currentChar.id] = abilityObjs;
     }
 
-    const abilitiesGrid = document.createElement('div');
-    abilitiesGrid.style.display = 'flex';
-    abilitiesGrid.style.flexDirection = 'column';
-    abilitiesGrid.style.gap = '8px';
-
     for (let row = 0; row < 2; row++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'battle-ui-row';
-        rowDiv.style.display = 'flex';
-        rowDiv.style.gap = '8px';
 
         for (let i = 0; i < 5; i++) {
             const btnIndex = row * 5 + i;
             const btn = document.createElement('button');
             btn.className = 'fantasy-button ui-btn';
-            btn.style.minWidth = '50px';
-            btn.style.minHeight = '50px';
 
             let ability = null;
 
@@ -1921,33 +1729,9 @@ async function renderBottomUI() {
 
             rowDiv.appendChild(btn);
         }
-        abilitiesGrid.appendChild(rowDiv);
+        fragment.appendChild(rowDiv);
     }
 
-    const controlsColumn = document.createElement('div');
-    controlsColumn.className = 'battle-controls-column';
-    
-    const tutorialBtn = document.createElement('button');
-    tutorialBtn.className = 'battle-control-button';
-    tutorialBtn.textContent = 'Tutorial';
-    tutorialBtn.addEventListener('click', () => {
-        if (BattleState.profile?.chat_id) {
-            startTutorialSequence(BattleState.profile.chat_id);
-        }
-    });
-    
-    const settingsBtn = document.createElement('button');
-    settingsBtn.className = 'battle-control-button';
-    settingsBtn.textContent = 'Settings';
-    settingsBtn.addEventListener('click', showSettingsModal);
-
-    controlsColumn.appendChild(tutorialBtn);
-    controlsColumn.appendChild(settingsBtn);
-
-    mainContainer.appendChild(abilitiesGrid);
-    mainContainer.appendChild(controlsColumn);
-
-    fragment.appendChild(mainContainer);
     ui.innerHTML = '';
     ui.appendChild(fragment);
 
@@ -2550,8 +2334,11 @@ function renderBattleScreen(mode, level, layoutData) {
         turnStatusEl.addEventListener("click", handleRefreshOptimized);
     }
 
+    // Initialize empty bottom UI and tooltip on page load
     initializeEmptyBottomUI();
     initializeEmptyTooltip();
+
+    addTutorialButton();
 }
 
 function renderBattleGrid(layoutJson) {
@@ -3325,15 +3112,9 @@ function showAbilityTooltip(ability) {
     const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
     if (!tooltipContainer) return;
     
-    const tooltip = document.getElementById('abilityTooltip');
-    if (tooltip) {
-        tooltip.classList.remove('ability-tooltip-empty');
-    } else {
-        const newTooltip = document.createElement('div');
-        newTooltip.className = 'ability-tooltip';
-        newTooltip.id = 'abilityTooltip';
-        tooltipContainer.appendChild(newTooltip);
-    }
+    const tooltip = document.createElement('div');
+    tooltip.className = 'ability-tooltip';
+    tooltip.id = 'abilityTooltip';
     
     const normalizedAbility = normalizeAbility(ability);
     
@@ -3369,6 +3150,8 @@ function showAbilityTooltip(ability) {
             }
     `;
     
+    tooltipContainer.appendChild(tooltip);
+    
     requestAnimationFrame(() => {
         tooltip.classList.add('visible');
     });
@@ -3379,7 +3162,9 @@ function hideAbilityTooltip() {
     if (existingTooltip) {
         existingTooltip.classList.remove('visible');
         setTimeout(() => {
-            initializeEmptyTooltip();
+            if (existingTooltip.parentNode) {
+                existingTooltip.remove();
+            }
         }, 300);
     }
 }
