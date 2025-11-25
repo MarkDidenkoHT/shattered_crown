@@ -1172,7 +1172,7 @@
         0 4px 16px rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(5px);
     z-index: 800;
-    visibility: hidden;
+    /* visibility: hidden; */
     transition: opacity 0.3s ease, visibility 0.3s ease;
     pointer-events: none;
     margin: auto;
