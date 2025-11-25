@@ -1567,12 +1567,31 @@ function initializeEmptyBottomUI() {
 function initializeEmptyTooltip() {
     const tooltipContainer = BattleState.main.querySelector('.tooltip-container');
     if (!tooltipContainer) return;
-    tooltipContainer.innerHTML = '';
-    const emptyTooltip = document.createElement('div');
-    emptyTooltip.className = 'ability-tooltip';
-    emptyTooltip.id = 'abilityTooltip';
-    emptyTooltip.innerHTML = '<div class="ability-tooltip-header"><div class="ability-tooltip-name">—</div></div>';
-    tooltipContainer.appendChild(emptyTooltip);
+    
+    // Instead of clearing everything, ensure the tooltip exists but is empty
+    let tooltip = document.getElementById('abilityTooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'ability-tooltip';
+        tooltip.id = 'abilityTooltip';
+        tooltipContainer.appendChild(tooltip);
+    }
+    
+    // Set empty content but maintain the structure
+    tooltip.innerHTML = `
+        <div class="ability-tooltip-header">
+            <div class="ability-tooltip-name">—</div>
+        </div>
+        <div class="ability-tooltip-body" style="opacity: 0.5;">
+            <div class="ability-tooltip-stat">
+                <span class="ability-tooltip-stat-label">Select an ability</span>
+            </div>
+        </div>
+    `;
+    
+    // Make it visually appear empty but present
+    tooltip.style.opacity = '0.5';
+    tooltip.style.pointerEvents = 'none';
 }
 
 async function renderBottomUI() {
