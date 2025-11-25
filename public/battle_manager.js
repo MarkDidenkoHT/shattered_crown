@@ -436,6 +436,16 @@ function injectBattleLoadingStyles() {
     const style = document.createElement('style');
     style.id = 'battle-loading-styles';
     style.textContent = `
+        .tooltip-container .ability-tooltip[style*="opacity: 0.5"] {
+            background: rgba(29, 20, 12, 0.7);
+            border: 1px solid #3d2914;
+            color: #b8b3a8;
+        }
+        
+        .tooltip-container .ability-tooltip[style*="opacity: 0.5"] .ability-tooltip-name {
+                color: #b8b3a8;
+            }
+    
          .loading-modal {
               position: fixed;
               top: 0;
