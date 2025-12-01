@@ -835,7 +835,8 @@ function injectBattleLoadingStyles() {
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            margin-top: 1rem; 
+            margin-top: 1rem;
+            gaop: 10px;
         }
         
         .tutorial-progress { 
@@ -2714,7 +2715,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         if (BattleState.profile.battle_tutorial === false && !reconnecting) {
             removeBattleLoadingModal(loadingModal);
             await showTutorialModal(BattleState.profile.chat_id);
-            createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
+            //createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
         }
 
         updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);

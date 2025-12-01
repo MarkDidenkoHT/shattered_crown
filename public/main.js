@@ -496,7 +496,6 @@ function addTutorialStyles() {
       font-size: 1.1rem;
       font-weight: bold;
       color: #ffffff;
-      background: linear-gradient(135deg, #c4975a, #8b6914);
       border: 2px solid #c4975a;
       border-radius: 4px;
       cursor: pointer;
