@@ -1,59 +1,59 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.0';
 
 const BattleState = {
-    main: null, 
-    apiCall: null, 
-    getCurrentProfile: null, 
+    main: null,
+    apiCall: null,
+    getCurrentProfile: null,
     profile: null,
-    tileMap: new Map(), 
-    characters: [], 
+    tileMap: new Map(),
+    characters: [],
     selectedCharacterEl: null,
-    selectedPlayerCharacter: null, 
+    selectedPlayerCharacter: null,
     currentTurnCharacter: null,
-    highlightedTiles: [], 
-    supabaseClient: null, 
+    highlightedTiles: [],
+    supabaseClient: null,
     battleState: null,
-    battleId: null, 
-    unsubscribeFromBattle: null, 
+    battleId: null,
+    unsubscribeFromBattle: null,
     isProcessingAITurn: false,
-    characterElements: new Map(), 
-    isMoveQueued: false, 
+    characterElements: new Map(),
+    isMoveQueued: false,
     characterAbilities: {},
-    environmentItems: {}, 
-    abilityCache: new Map(), 
+    environmentItems: {},
+    abilityCache: new Map(),
     lastCharacterStates: new Map(),
-    updateDebounceTimer: null, 
-    tutorial: { 
-        active: false, 
-        currentStep: 0, 
+    updateDebounceTimer: null,
+    tutorial: {
+        active: false,
+        currentStep: 0,
         steps: [
-            { 
-                title: "Welcome to Battle", 
-                description: "This is the battlefield. You control the characters on your side. Click on one of your characters to select it.", 
-                highlight: "battlefield", 
-                waitFor: "characterSelection", 
-                arrow: { position: "top", direction: "down" } 
+            {
+                title: "Welcome to Battle",
+                description: "This is the battlefield. You control the characters on your side. Click on one of your characters to select it.",
+                highlight: "battlefield",
+                waitFor: "characterSelection",
+                arrow: { position: "top", direction: "down" }
             },
-            { 
-                title: "Moving Your Character", 
-                description: "Great! Now you can see highlighted tiles where you can move. Click on one of the green highlighted tiles to move your character.", 
-                highlight: "movementTiles", 
-                waitFor: "movement", 
-                arrow: { position: "bottom", direction: "up" } 
+            {
+                title: "Moving Your Character",
+                description: "Great! Now you can see highlighted tiles where you can move. Click on one of the green highlighted tiles to move your character.",
+                highlight: "movementTiles",
+                waitFor: "movement",
+                arrow: { position: "bottom", direction: "up" }
             },
-            { 
-                title: "Using Abilities", 
-                description: "Now let's use an ability. Click on any ability button in the bottom panel to select it.", 
-                highlight: "abilityPanel", 
-                waitFor: "abilitySelection", 
-                arrow: { position: "bottom", direction: "up" } 
+            {
+                title: "Using Abilities",
+                description: "Now let's use an ability. Click on any ability button in the bottom panel to select it.",
+                highlight: "abilityPanel",
+                waitFor: "abilitySelection",
+                arrow: { position: "bottom", direction: "down" }
             },
-            { 
-                title: "Targeting Enemies", 
-                description: "Perfect! Now you can see highlighted targets. Click on an enemy to use your ability and complete the tutorial.", 
-                highlight: "targeting", 
-                waitFor: "abilityUse", 
-                arrow: { position: "center", direction: "down" } 
+            {
+                title: "Targeting Enemies",
+                description: "Perfect! Now you can see highlighted targets. Click on an enemy to use your ability and complete the tutorial.",
+                highlight: "targeting",
+                waitFor: "abilityUse",
+                arrow: { position: "center", direction: "down" }
             }
         ]
     }
@@ -66,7 +66,7 @@ const MOVEMENT_OFFSETS = [
 ];
 
 const ANIMATION_CONFIG = {
-    moveDuration: 500, 
+    moveDuration: 500,
     fadeInDuration: 300,
     fadeOutDuration: 200,
     easingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
@@ -347,7 +347,7 @@ const animateCharacterMovement = (characterEl, fromCell, toCell) => {
         }
 
         const fromRect = fromCell.getBoundingClientRect();
-        const toRect = toCell.getBoundingClientRect(); 
+        const toRect = toCell.getBoundingClientRect();
         const deltaX = toRect.left - fromRect.left;
         const deltaY = toRect.top - fromRect.top;
         const animationClone = characterEl.cloneNode(true);
@@ -875,23 +875,26 @@ function injectBattleLoadingStyles() {
         .tutorial-help-button { 
             background: #c4975a; 
             border: none; 
-            border-radius: 50%; 
-            width: 30px; 
-            height: 30px; 
+            border-radius: 8px; 
+            width: auto; 
+            height: 32px; 
             color: #1a120b; 
             font-weight: bold; 
             cursor: pointer; 
             margin-left: 10px; 
-            font-size: 16px; 
+            font-size: 14px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             transition: all 0.3s ease; 
+            padding: 0 12px; 
+            font-family: 'Cinzel', serif; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
         }
         
         .tutorial-help-button:hover { 
             background: #d4af37; 
-            transform: scale(1.1); 
+            transform: scale(1.05); 
         }
         
         .tutorial-element-allowed { 
@@ -1047,14 +1050,16 @@ function addTutorialHighlights(step) {
             }
             break;
         case 'movementTiles':
-            const movementTile = document.querySelector('.highlight-walkable');
-            if (movementTile) {
+            if (BattleState.selectedPlayerCharacter) {
+                const movementTile = findNearestEnemyMovementTile();
                 highlightElement = movementTile;
-                const rect = movementTile.getBoundingClientRect();
-                arrowPosition = { 
-                    top: rect.bottom + 30, 
-                    left: rect.left + rect.width / 2 
-                };
+                if (movementTile) {
+                    const rect = movementTile.getBoundingClientRect();
+                    arrowPosition = { 
+                        top: rect.bottom + 30, 
+                        left: rect.left + rect.width / 2 
+                    };
+                }
             }
             break;
         case 'abilityPanel':
@@ -1101,6 +1106,49 @@ function addTutorialHighlights(step) {
         });
         document.body.appendChild(arrow);
     }
+}
+
+function findNearestEnemyMovementTile() {
+    if (!BattleState.selectedPlayerCharacter) return null;
+    
+    const playerChar = BattleState.selectedPlayerCharacter;
+    const playerPos = playerChar.position;
+    
+    const enemies = BattleState.characters.filter(c => !c.isPlayerControlled && c.current_hp > 0);
+    if (enemies.length === 0) return null;
+    
+    let nearestEnemy = null;
+    let nearestDistance = Infinity;
+    
+    for (const enemy of enemies) {
+        const dist = Math.max(Math.abs(enemy.position[0] - playerPos[0]), Math.abs(enemy.position[1] - playerPos[1]));
+        if (dist < nearestDistance) {
+            nearestDistance = dist;
+            nearestEnemy = enemy;
+        }
+    }
+    
+    if (!nearestEnemy) return null;
+    
+    const container = BattleState.main.querySelector('.battle-grid-container');
+    const allTiles = container.querySelectorAll('.highlight-walkable');
+    
+    let bestTile = null;
+    let bestDistance = Infinity;
+    
+    for (const tile of allTiles) {
+        const tileX = parseInt(tile.dataset.x);
+        const tileY = parseInt(tile.dataset.y);
+        
+        const distToEnemy = Math.max(Math.abs(tileX - nearestEnemy.position[0]), Math.abs(tileY - nearestEnemy.position[1]));
+        
+        if (distToEnemy < bestDistance) {
+            bestDistance = distToEnemy;
+            bestTile = tile;
+        }
+    }
+    
+    return bestTile;
 }
 
 function getArrowForDirection(direction) {
@@ -1209,9 +1257,18 @@ function endTutorial() {
         el.style.animation = '';
     });
     
+    clearCharacterHighlights();
+    
     if (BattleState.profile?.chat_id) {
         markTutorialAsSeen(BattleState.profile.chat_id);
     }
+}
+
+function clearCharacterHighlights() {
+    const characterElements = document.querySelectorAll('.character-token');
+    characterElements.forEach(el => {
+        el.style.animation = '';
+    });
 }
 
 function addTutorialButton() {
@@ -1220,7 +1277,7 @@ function addTutorialButton() {
         const tutorialBtn = document.createElement('button');
         tutorialBtn.id = 'tutorialButton';
         tutorialBtn.className = 'tutorial-help-button';
-        tutorialBtn.innerHTML = 'tutorial';
+        tutorialBtn.innerHTML = '?';
         tutorialBtn.title = 'Show Tutorial';
         
         tutorialBtn.addEventListener('click', () => {
@@ -1269,14 +1326,14 @@ const handleCharacterSelection = (character, tileEl) => {
         BattleState.selectedPlayerCharacter = null;
         BattleState.selectedCharacterEl = null;
         unhighlightAllTiles();
-        renderBottomUI(); // Always render bottom UI, even when no character selected
+        renderBottomUI();
     }
     
     showEntityInfo(character);
 };
 
 const handleTileClick = throttle((event) => {
-    if (BattleState.selectingAbility) return; 
+    if (BattleState.selectingAbility) return;
 
     const clickedTileEl = event.currentTarget;
     const targetX = parseInt(clickedTileEl.dataset.x);
@@ -1320,7 +1377,7 @@ const handleTileClick = throttle((event) => {
             }
             
             BattleState.selectedPlayerCharacter = null;
-            renderBottomUI(); // Always render bottom UI
+            renderBottomUI();
             
             const tileName = clickedTileEl.className.split(' ').find(cls => cls.startsWith('tile-'));
             const tileKey = tileName ? tileName.replace('tile-', '') : 'plain';
@@ -1541,7 +1598,6 @@ async function renderBottomUI() {
     const ui = BattleState.main.querySelector('.battle-bottom-ui');
     if (!ui) return;
     
-    // Always render the UI structure, even when no character is selected
     const fragment = document.createDocumentFragment();
 
     for (let row = 0; row < 2; row++) {
@@ -1554,13 +1610,11 @@ async function renderBottomUI() {
             btn.className = 'fantasy-button ui-btn';
 
             if (!BattleState.selectedPlayerCharacter) {
-                // Empty state - disabled placeholder buttons
                 btn.textContent = `Ability ${btnIndex + 1}`;
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
                 btn.title = 'Select a character to view abilities';
             } else {
-                // Character selected - load actual abilities
                 const currentChar = BattleState.selectedPlayerCharacter;
                 BattleState.characterAbilities = BattleState.characterAbilities || {};
                 let abilityObjs = {};
@@ -2259,7 +2313,6 @@ function renderBattleScreen(mode, level, layoutData) {
     createParticles();
     renderEnvironmentItems(BattleState.battleState?.layout_data?.environment_items_pos);
 
-    // Always render bottom UI with placeholder buttons
     renderBottomUI();
 
     const turnStatusEl = document.getElementById('turnStatus');
@@ -3082,7 +3135,6 @@ function hideAbilityTooltip() {
     const tooltip = document.getElementById('abilityTooltip');
     if (tooltip) {
         tooltip.classList.remove('visible');
-        // Reset to default message
         tooltip.innerHTML = `
             <div class="ability-tooltip-header">
                 <div class="ability-tooltip-name">No Ability Selected</div>
