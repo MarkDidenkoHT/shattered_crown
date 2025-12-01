@@ -953,18 +953,12 @@ async function showTutorialModal(chatId) {
         
         const skipTutorial = () => {
             modal.remove();
-            markTutorialAsSeen(chatId).catch(err => {
-                console.warn('Failed to mark tutorial as seen:', err);
-            });
-            resolve();
+            resolve('skip');
         };
         
         const startTutorial = () => {
             modal.remove();
-            startTutorialSequence(chatId).catch(err => {
-                console.error('Failed to start tutorial:', err);
-                resolve();
-            });
+            resolve('start');
         };
         
         document.getElementById('skipTutorial').addEventListener('click', skipTutorial);
@@ -1008,11 +1002,7 @@ async function markTutorialAsSeen(chatId) {
 
 async function startTutorialSequence(chatId) {
     try {
-        BattleState.tutorial.active = true;
-        BattleState.tutorial.currentStep = 0;
-        injectBattleLoadingStyles();
         await executeTutorialStep();
-        
         await markTutorialAsSeen(chatId);
     } catch (error) {
         console.error('Error starting tutorial sequence:', error);
@@ -2785,7 +2775,18 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
         if (BattleState.profile.battle_tutorial === false && !reconnecting) {
             removeBattleLoadingModal(loadingModal);
-            await showTutorialModal(BattleState.profile.chat_id);
+            const tutorialChoice = await showTutorialModal(BattleState.profile.chat_id);
+            
+            if (tutorialChoice === 'skip') {
+                await markTutorialAsSeen(BattleState.profile.chat_id);
+                BattleState.profile.battle_tutorial = true;
+                BattleState.tutorial.active = false;
+            }
+            else if (tutorialChoice === 'start') {
+                BattleState.tutorial.active = true;
+                BattleState.tutorial.currentStep = 0;
+            }
+            
             loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
         }
 
@@ -2829,6 +2830,10 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
 
         renderBattleScreen(selectedMode || BattleState.battleState?.mode || 'unknown', areaLevel, BattleState.battleState?.layout_data);
         await updateGameStateFromRealtimeOptimized();
+
+        if (BattleState.tutorial.active) {
+            await startTutorialSequence(BattleState.profile.chat_id);
+        }
 
     } catch (err) {
         console.error('Battle loading error:', err);
