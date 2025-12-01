@@ -951,36 +951,73 @@ async function showTutorialModal(chatId) {
         
         document.body.appendChild(modal);
         
-        document.getElementById('skipTutorial').addEventListener('click', async () => {
+        const skipTutorial = () => {
             modal.remove();
-            await markTutorialAsSeen(chatId);
+            markTutorialAsSeen(chatId).catch(err => {
+                console.warn('Failed to mark tutorial as seen:', err);
+            });
             resolve();
-        });
+        };
         
-        document.getElementById('startTutorial').addEventListener('click', async () => {
+        const startTutorial = () => {
             modal.remove();
-            await startTutorialSequence(chatId);
-            resolve();
-        });
+            startTutorialSequence(chatId).catch(err => {
+                console.error('Failed to start tutorial:', err);
+                resolve();
+            });
+        };
+        
+        document.getElementById('skipTutorial').addEventListener('click', skipTutorial);
+        document.getElementById('startTutorial').addEventListener('click', startTutorial);
+        
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                skipTutorial();
+            }
+        };
+        
+        document.addEventListener('keydown', handleEscape);
+        
+        const originalRemoveChild = modal.remove;
+        modal.remove = function() {
+            document.removeEventListener('keydown', handleEscape);
+            originalRemoveChild.call(this);
+        };
     });
 }
 
 async function markTutorialAsSeen(chatId) {
     try {
-        await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, { 
+        const response = await fetch(`/api/profile/mark-tutorial-seen/${chatId}`, { 
             method: 'PATCH', 
             headers: { 'Content-Type': 'application/json' } 
         });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        if (BattleState.profile && BattleState.profile.chat_id === chatId) {
+            BattleState.profile.battle_tutorial = true;
+        }
+        
     } catch (error) {
         console.warn('Failed to mark tutorial as seen:', error);
     }
 }
 
 async function startTutorialSequence(chatId) {
-    BattleState.tutorial.active = true;
-    BattleState.tutorial.currentStep = 0;
-    injectBattleLoadingStyles();
-    await executeTutorialStep();
+    try {
+        BattleState.tutorial.active = true;
+        BattleState.tutorial.currentStep = 0;
+        injectBattleLoadingStyles();
+        await executeTutorialStep();
+        
+        await markTutorialAsSeen(chatId);
+    } catch (error) {
+        console.error('Error starting tutorial sequence:', error);
+        BattleState.tutorial.active = false;
+    }
 }
 
 function clearTutorialElements() {
@@ -2122,8 +2159,8 @@ const updateCharacterVisualState = (charEl, character) => {
     const existingIndicator = charEl.querySelector('.turn-done-indicator');
     if (character.has_moved && character.has_acted) {
         if (!existingIndicator) {
-            const indicator = createTurnIndicator();
-            charEl.appendChild(indicator);
+            const doneIndicator = createTurnIndicator();
+            charEl.appendChild(doneIndicator);
         }
     } else if (existingIndicator) {
         existingIndicator.remove();
@@ -2645,6 +2682,14 @@ const preloadAbility = async (abilityName) => {
 
 function createBattleLoadingModal(title = "Loading Battle", message = "Preparing your battlefield...") {
     injectBattleLoadingStyles();
+    
+    const existingModals = document.querySelectorAll('.loading-modal');
+    existingModals.forEach(modal => {
+        if (modal.parentNode) {
+            modal.remove();
+        }
+    });
+    
     const modal = document.createElement('div');
     modal.className = 'loading-modal';
     modal.innerHTML = `
@@ -2689,16 +2734,42 @@ function updateBattleLoadingProgress(modal, step, message, percent) {
 }
 
 function removeBattleLoadingModal(modal) {
-    if (modal?.parentNode) {
-        modal.style.animation = 'fadeOut 0.3s ease';
-        setTimeout(() => modal.parentNode && modal.remove(), 300);
+    if (!modal) return;
+    
+    if (typeof modal === 'string') {
+        const modals = document.querySelectorAll(modal);
+        modals.forEach(m => {
+            if (m.parentNode) {
+                m.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    if (m.parentNode) m.remove();
+                }, 300);
+            }
+        });
+        return;
     }
+    
+    if (modal.parentNode) {
+        modal.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+            if (modal.parentNode) modal.remove();
+        }, 300);
+    }
+    
+    setTimeout(() => {
+        const strayModals = document.querySelectorAll('.loading-modal');
+        strayModals.forEach(strayModal => {
+            if (strayModal !== modal && strayModal.parentNode) {
+                strayModal.remove();
+            }
+        });
+    }, 500);
 }
 
 export async function loadModule(main, { apiCall, getCurrentProfile, selectedMode, supabaseConfig, existingBattleId = null, reconnecting = false }) {
     Object.assign(BattleState, { main, apiCall, getCurrentProfile });
 
-    const loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
+    let loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
     const loadingStartTime = Date.now();
 
     try {
@@ -2715,7 +2786,7 @@ export async function loadModule(main, { apiCall, getCurrentProfile, selectedMod
         if (BattleState.profile.battle_tutorial === false && !reconnecting) {
             removeBattleLoadingModal(loadingModal);
             await showTutorialModal(BattleState.profile.chat_id);
-            //createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
+            loadingModal = createBattleLoadingModal("Loading Battle", "Preparing your battlefield...");
         }
 
         updateBattleLoadingProgress(loadingModal, "Loading map data...", "Fetching tile information...", 30);
@@ -3353,7 +3424,30 @@ function showBattleResultModal(status) {
   });
 }
 
+function cleanupAllModals() {
+    const loadingModals = document.querySelectorAll('.loading-modal');
+    loadingModals.forEach(modal => {
+        if (modal.parentNode) modal.remove();
+    });
+    
+    const tutorialOverlays = document.querySelectorAll('.tutorial-overlay');
+    tutorialOverlays.forEach(overlay => {
+        if (overlay.parentNode) overlay.remove();
+    });
+    
+    const tutorialUI = document.getElementById('tutorial-step-ui');
+    if (tutorialUI && tutorialUI.parentNode) {
+        tutorialUI.remove();
+    }
+    
+    document.querySelectorAll('.tutorial-highlight, .tutorial-arrow').forEach(el => {
+        if (el.parentNode) el.remove();
+    });
+}
+
 export function cleanup() {
+    cleanupAllModals();
+    
     if (BattleState.unsubscribeFromBattle && BattleState.supabaseClient) {
         BattleState.supabaseClient.removeChannel(BattleState.unsubscribeFromBattle);
     }
@@ -3369,7 +3463,41 @@ export function cleanup() {
         battleState: null, battleId: null, unsubscribeFromBattle: null,
         isProcessingAITurn: false, isMoveQueued: false,
         lastCharacterStates: new Map(),
-        updateDebounceTimer: null
+        updateDebounceTimer: null,
+        tutorial: {
+            active: false,
+            currentStep: 0,
+            steps: [
+                {
+                    title: "Welcome to Battle",
+                    description: "This is the battlefield. You control the characters on your side. Click on one of your characters to select it.",
+                    highlight: "battlefield",
+                    waitFor: "characterSelection",
+                    arrow: { position: "top", direction: "down" }
+                },
+                {
+                    title: "Moving Your Character",
+                    description: "Great! Now you can see highlighted tiles where you can move. Click on one of the green highlighted tiles to move your character.",
+                    highlight: "movementTiles",
+                    waitFor: "movement",
+                    arrow: { position: "bottom", direction: "up" }
+                },
+                {
+                    title: "Using Abilities",
+                    description: "Now let's use an ability. Click on any ability button in the bottom panel to select it.",
+                    highlight: "abilityPanel",
+                    waitFor: "abilitySelection",
+                    arrow: { position: "bottom", direction: "down" }
+                },
+                {
+                    title: "Targeting Enemies",
+                    description: "Perfect! Now you can see highlighted targets. Click on an enemy to use your ability and complete the tutorial.",
+                    highlight: "targeting",
+                    waitFor: "abilityUse",
+                    arrow: { position: "center", direction: "down" }
+                }
+            ]
+        }
     });
     
     BattleState.tileMap.clear();
