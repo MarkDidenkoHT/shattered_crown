@@ -2964,12 +2964,12 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
 const updateGameStateFromRealtimeOptimized = async () => {
     if (!BattleState.battleState) return;
     
-    const status = BattleState.battleState.status;
-    if (status === 'victory' || status === 'defeat') {
-        await assignLoot(BattleState.battleState);
-        showBattleResultModal(status);
-        return; 
-    }
+    // const status = BattleState.battleState.status;
+    // if (status === 'victory' || status === 'defeat') {
+    //     await assignLoot(BattleState.battleState);
+    //     showBattleResultModal(status);
+    //     return; 
+    // }
         
     if (!BattleState.battleState.characters_state) {
         console.warn('Battle state missing characters_state:', BattleState.battleState);
