@@ -2932,6 +2932,39 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
     const oldBattleState = BattleState.battleState;
     BattleState.battleState = newBattleState;
     
+    if (newBattleState.characters_state) {
+        const characters = Object.values(newBattleState.characters_state);
+        const aliveEnemies = characters.filter(c => 
+            c.type === 'enemy' && 
+            c.status === 'alive' && 
+            c.current_hp > 0
+        );
+        const alivePlayers = characters.filter(c => 
+            c.type === 'player' && 
+            c.status === 'alive' && 
+            c.current_hp > 0
+        );
+        
+        console.log('Battle check:', {
+            enemies: aliveEnemies.length,
+            players: alivePlayers.length,
+            status: newBattleState.status
+        });
+        
+        if (aliveEnemies.length === 0 && alivePlayers.length > 0 && newBattleState.status !== 'victory') {
+            console.log('VICTORY DETECTED: No enemies remaining');
+            await assignLoot(newBattleState);
+            showBattleResultModal('victory');
+            return;
+        }
+        
+        if (alivePlayers.length === 0 && aliveEnemies.length > 0 && newBattleState.status !== 'defeat') {
+            console.log('DEFEAT DETECTED: No players remaining');
+            showBattleResultModal('defeat');
+            return;
+        }
+    }
+    
     if (newBattleState.status !== oldBattleState?.status) {
         if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
             await assignLoot(newBattleState);
