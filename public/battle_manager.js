@@ -53,6 +53,7 @@ const BattleState = {
     environmentItems: {},
     abilityCache: new Map(),
     lastCharacterStates: new Map(),
+    lootAssigned: false,
     updateDebounceTimer: null,
     tutorial: {
         active: false,
@@ -2440,8 +2441,17 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
     const oldBattleState = BattleState.battleState;
     BattleState.battleState = newBattleState;
 
-    if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
+    const battleJustEnded = (newBattleState.status === 'victory' || newBattleState.status === 'defeat') &&
+                           oldBattleState?.status !== newBattleState.status;
+
+    if (battleJustEnded && !BattleState.lootAssigned) {
+        BattleState.lootAssigned = true;
         await assignLoot(newBattleState);
+        showBattleResultModal(newBattleState.status);
+        return;
+    }
+    
+    if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
         showBattleResultModal(newBattleState.status);
         return;
     }
@@ -2977,6 +2987,7 @@ export function cleanup() {
         isProcessingAITurn: false, isMoveQueued: false,
         lastCharacterStates: new Map(),
         updateDebounceTimer: null,
+        lootAssigned: false,
         tutorial: {
             active: false,
             currentStep: 0,
