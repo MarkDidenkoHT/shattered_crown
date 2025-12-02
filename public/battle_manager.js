@@ -2933,36 +2933,9 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
     BattleState.battleState = newBattleState;
 
     if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
-        if (oldBattleState?.status !== newBattleState.status) {
-            await assignLoot(newBattleState);
-        }
+        await assignLoot(newBattleState);
         showBattleResultModal(newBattleState.status);
         return;
-    }
-
-    if (newBattleState.characters_state) {
-        const characters = Object.values(newBattleState.characters_state);
-        const aliveEnemies = characters.filter(c => 
-            c.type === 'enemy' && 
-            c.status === 'alive' && 
-            c.current_hp > 0
-        );
-        const alivePlayers = characters.filter(c => 
-            c.type === 'player' && 
-            c.status === 'alive' && 
-            c.current_hp > 0
-        );
-        
-        if (aliveEnemies.length === 0 && alivePlayers.length > 0 && newBattleState.status !== 'victory') {
-            await assignLoot(newBattleState);
-            showBattleResultModal('victory');
-            return;
-        }
-        
-        if (alivePlayers.length === 0 && aliveEnemies.length > 0 && newBattleState.status !== 'defeat') {
-            showBattleResultModal('defeat');
-            return;
-        }
     }
     
     if (newBattleState.current_turn !== oldBattleState?.current_turn) {
