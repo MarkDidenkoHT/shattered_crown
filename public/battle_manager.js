@@ -48,6 +48,7 @@ const BattleState = {
     unsubscribeFromBattle: null,
     isProcessingAITurn: false,
     characterElements: new Map(),
+    navigatingAway: false,
     isMoveQueued: false,
     characterAbilities: {},
     environmentItems: {},
@@ -1795,6 +1796,89 @@ function renderBattleScreen(mode, level, layoutData) {
             box-shadow: inset 0 0 0 2px #4CAF50;
             background-color: rgba(76, 175, 80, 0.2) !important;
         }
+            .battle-result-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .battle-result-content {
+            background: linear-gradient(135deg, #2c1810 0%, #1a0f0a 100%);
+            border: 2px solid #c4975a;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .battle-result-content h2 {
+            color: #f0c674;
+            font-family: Cinzel, serif;
+            font-size: 2.5rem;
+            margin: 0 0 15px 0;
+            text-shadow: 0 0 10px rgba(240, 198, 116, 0.5);
+        }
+        
+        .battle-result-content p {
+            color: #e8d8b6;
+            font-size: 1.1rem;
+            margin: 0 0 25px 0;
+            line-height: 1.5;
+        }
+        
+        .battle-result-content #resultConfirmBtn {
+            background: linear-gradient(to bottom, #c4975a, #8b5a2b);
+            border: 1px solid #e8d8b6;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-family: Cinzel, serif;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            width: 100%;
+            max-width: 200px;
+        }
+        
+        .battle-result-content #resultConfirmBtn:hover {
+            background: linear-gradient(to bottom, #d4af37, #b8860b);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+        
+        .battle-result-content #resultConfirmBtn:active {
+            transform: translateY(0);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { 
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
         </style>
         <div class="main-app-container">
             <div class="battle-grid-container"></div>
@@ -2928,6 +3012,17 @@ async function assignLoot(battleState) {
 }
 
 function showBattleResultModal(status) {
+  const existingModal = document.querySelector('.battle-result-modal');
+  if (existingModal) {
+    console.log('Battle result modal already showing');
+    return;
+  }
+  
+  if (BattleState.navigatingAway) {
+    console.log('Already navigating away from battle');
+    return;
+  }
+  
   const modal = document.createElement('div');
   modal.className = 'battle-result-modal';
   modal.innerHTML = `
@@ -2988,6 +3083,7 @@ export function cleanup() {
         lastCharacterStates: new Map(),
         updateDebounceTimer: null,
         lootAssigned: false,
+        navigatingAway: false,
         tutorial: {
             active: false,
             currentStep: 0,
