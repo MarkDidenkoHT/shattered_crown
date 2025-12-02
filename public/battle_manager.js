@@ -2929,15 +2929,17 @@ const setupOptimizedRealtimeSubscription = () => {
 };
 
 const handleOptimizedBattleUpdate = async (newBattleState) => {
-    console.log('=== BATTLE UPDATE DEBUG ===');
-    console.log('New status:', newBattleState.status);
-    console.log('Old status:', BattleState.battleState?.status);
-    console.log('Status changed?', newBattleState.status !== BattleState.battleState?.status);
-    console.log('Is victory?', newBattleState.status === 'victory');
-    console.log('Full new state:', JSON.stringify(newBattleState, null, 2));
     const oldBattleState = BattleState.battleState;
     BattleState.battleState = newBattleState;
-    
+
+    if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
+        if (oldBattleState?.status !== newBattleState.status) {
+            await assignLoot(newBattleState);
+        }
+        showBattleResultModal(newBattleState.status);
+        return;
+    }
+
     if (newBattleState.characters_state) {
         const characters = Object.values(newBattleState.characters_state);
         const aliveEnemies = characters.filter(c => 
@@ -2951,30 +2953,14 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
             c.current_hp > 0
         );
         
-        console.log('Battle check:', {
-            enemies: aliveEnemies.length,
-            players: alivePlayers.length,
-            status: newBattleState.status
-        });
-        
         if (aliveEnemies.length === 0 && alivePlayers.length > 0 && newBattleState.status !== 'victory') {
-            console.log('VICTORY DETECTED: No enemies remaining');
             await assignLoot(newBattleState);
             showBattleResultModal('victory');
             return;
         }
         
         if (alivePlayers.length === 0 && aliveEnemies.length > 0 && newBattleState.status !== 'defeat') {
-            console.log('DEFEAT DETECTED: No players remaining');
             showBattleResultModal('defeat');
-            return;
-        }
-    }
-    
-    if (newBattleState.status !== oldBattleState?.status) {
-        if (newBattleState.status === 'victory' || newBattleState.status === 'defeat') {
-            await assignLoot(newBattleState);
-            showBattleResultModal(newBattleState.status);
             return;
         }
     }
