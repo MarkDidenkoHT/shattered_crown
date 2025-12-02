@@ -836,7 +836,7 @@ function injectBattleLoadingStyles() {
             justify-content: space-between; 
             align-items: center; 
             margin-top: 1rem;
-            gaop: 10px;
+            gap: 10px;
         }
         
         .tutorial-progress { 
