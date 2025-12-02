@@ -2929,6 +2929,12 @@ const setupOptimizedRealtimeSubscription = () => {
 };
 
 const handleOptimizedBattleUpdate = async (newBattleState) => {
+    console.log('=== BATTLE UPDATE DEBUG ===');
+    console.log('New status:', newBattleState.status);
+    console.log('Old status:', BattleState.battleState?.status);
+    console.log('Status changed?', newBattleState.status !== BattleState.battleState?.status);
+    console.log('Is victory?', newBattleState.status === 'victory');
+    console.log('Full new state:', JSON.stringify(newBattleState, null, 2));
     const oldBattleState = BattleState.battleState;
     BattleState.battleState = newBattleState;
     
