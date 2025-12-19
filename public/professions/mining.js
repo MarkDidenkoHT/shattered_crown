@@ -1,117 +1,223 @@
 let context = null;
 let miningState = null;
 let oreCache = new Map();
+let dragState = {
+    dragging: null,
+    draggedFrom: null
+};
 
 export async function startCraftingSession(ctx) {
-  context = ctx;
-  const { loadingModal, loadingStartTime, updateLoadingProgress, finishLoading } = context;
-  
-  try {
-    updateLoadingProgress(loadingModal, "Accessing your ore vault...", "Loading bank items and recipes...");
+    context = ctx;
+    const { loadingModal, loadingStartTime, updateLoadingProgress, finishLoading } = context;
     
-    const [bankResponse, recipesPromise] = await Promise.all([
-      fetch(`/api/crafting/materials/${context.profile.id}/${context.professionId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
+    try {
+        updateLoadingProgress(loadingModal, "Accessing your ore vault...", "Loading bank items and recipes...");
+        
+        const [bankResponse, recipesPromise] = await Promise.all([
+            fetch(`/api/crafting/materials/${context.profile.id}/${context.professionId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }),
+            context.fetchRecipes(context.professionId)
+        ]);
+        
+        if (!bankResponse.ok) {
+            throw new Error(`HTTP error! status: ${bankResponse.status}`);
         }
-      }),
-      context.fetchRecipes(context.professionId)
-    ]);
-    
-    if (!bankResponse.ok) {
-      throw new Error(`HTTP error! status: ${bankResponse.status}`);
+        
+        const bankItems = await bankResponse.json();
+        updateLoadingProgress(loadingModal, "Analyzing mineral properties...", "Processing ore data...");
+        
+        const enriched = await batchEnrichOres(bankItems);
+        const recipes = await recipesPromise;
+        updateLoadingProgress(loadingModal, "Setting up mining equipment...", "Preparing interface...");
+        
+        miningState = {
+            professionId: context.professionId,
+            professionName: context.professionName,
+            availableOres: enriched,
+            selectedOres: [null, null, null],
+            randomizedProperties: [[], [], []],
+            originalProperties: [[], [], []],
+            currentAdjustedRow: null,
+            isCraftingStarted: false,
+            result: null,
+            adjustmentCount: 0,
+            maxAdjustments: 2,
+            enrichedOres: null,
+            recipes: recipes,
+            sessionId: null
+        };
+        
+        await finishLoading(loadingModal, loadingStartTime, 2000);
+        
+        renderCraftingModal();
+        injectMiningAnimationsCSS();
+        setupGlobalDragDrop();
+        
+    } catch (error) {
+        if (finishLoading && loadingModal) {
+            await finishLoading(loadingModal, loadingStartTime, 500);
+        }
+        throw error;
     }
-    
-    const bankItems = await bankResponse.json();
-    updateLoadingProgress(loadingModal, "Analyzing mineral properties...", "Processing ore data...");
-    
-    const enriched = await batchEnrichOres(bankItems);
-    const recipes = await recipesPromise;
-    updateLoadingProgress(loadingModal, "Setting up mining equipment...", "Preparing interface...");
-    
-    miningState = {
-      professionId: context.professionId,
-      professionName: context.professionName,
-      availableOres: enriched,
-      selectedOres: [null, null, null],
-      randomizedProperties: [[], [], []],
-      originalProperties: [[], [], []],
-      currentAdjustedRow: null,
-      isCraftingStarted: false,
-      result: null,
-      adjustmentCount: 0,
-      maxAdjustments: 2,
-      enrichedOres: null,
-      recipes: recipes,
-      sessionId: null
-    };
-    
-    await finishLoading(loadingModal, loadingStartTime, 2000);
-    
-    renderCraftingModal();
-    injectMiningAnimationsCSS();
-    
-  } catch (error) {
-    if (finishLoading && loadingModal) {
-      await finishLoading(loadingModal, loadingStartTime, 500);
-    }
-    throw error;
-  }
 }
 
 async function batchEnrichOres(bankItems) {
-  if (!bankItems.length) return [];
+    if (!bankItems.length) return [];
 
-  const oreNames = bankItems.map(item => item.item);
-  const uniqueNames = [...new Set(oreNames)];
-  const uncachedNames = uniqueNames.filter(name => !oreCache.has(name));
+    const oreNames = bankItems.map(item => item.item);
+    const uniqueNames = [...new Set(oreNames)];
+    const uncachedNames = uniqueNames.filter(name => !oreCache.has(name));
 
-  if (uncachedNames.length > 0) {
-    try {
-      const response = await fetch('/api/crafting/enrich-ingredients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemNames: uncachedNames })
-      });
+    if (uncachedNames.length > 0) {
+        try {
+            const response = await fetch('/api/crafting/enrich-ingredients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itemNames: uncachedNames })
+            });
 
-      if (!response.ok) {
-        console.error('[ORES] Enrich API failed:', response.status);
-        // return fallbackEnrichOres(bankItems);
-      }
+            if (!response.ok) {
+                console.error('[ORES] Enrich API failed:', response.status);
+            }
 
-      const { ingredientMap } = await response.json();
-      Object.values(ingredientMap).forEach(ore => oreCache.set(ore.name, ore));
+            const { ingredientMap } = await response.json();
+            Object.values(ingredientMap).forEach(ore => oreCache.set(ore.name, ore));
 
-    } catch (err) {
-      console.warn('[ORES] Batch enrichment failed:', err);
-      // return fallbackEnrichOres(bankItems);
+        } catch (err) {
+            console.warn('[ORES] Batch enrichment failed:', err);
+        }
     }
-  }
 
-  // Build enriched ores from cache
-  return bankItems.map(item => {
-    const cachedOre = oreCache.get(item.item);
-    if (cachedOre) {
-      return {
-        name: item.item,
-        amount: item.amount,
-        properties: cachedOre.properties,
-        sprite: cachedOre.sprite,
-      };
-    } else {
-      return {
-        name: item.item,
-        amount: item.amount,
-        properties: null,
-        sprite: 'default'
-      };
+    return bankItems.map(item => {
+        const cachedOre = oreCache.get(item.item);
+        if (cachedOre) {
+            return {
+                name: item.item,
+                amount: item.amount,
+                properties: cachedOre.properties,
+                sprite: cachedOre.sprite,
+            };
+        } else {
+            return {
+                name: item.item,
+                amount: item.amount,
+                properties: null,
+                sprite: 'default'
+            };
+        }
+    });
+}
+
+function setupGlobalDragDrop() {
+    document.addEventListener('dragstart', handleDragStart);
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('drop', handleDrop);
+    document.addEventListener('dragend', handleDragEnd);
+}
+
+function handleDragStart(e) {
+    if (!e.target.closest('.ore') || miningState.isCraftingStarted) {
+        e.preventDefault();
+        return;
     }
-  });
+    
+    const oreEl = e.target.closest('.ore');
+    if (!oreEl) return;
+    
+    const oreIndex = parseInt(oreEl.dataset.index);
+    const ore = miningState.availableOres[oreIndex];
+    
+    if (!ore || ore.amount <= 0) {
+        e.preventDefault();
+        return;
+    }
+    
+    dragState.dragging = {
+        ore: ore,
+        index: oreIndex,
+        element: oreEl
+    };
+    
+    e.dataTransfer.setData('text/plain', `ore:${oreIndex}`);
+    e.dataTransfer.effectAllowed = 'copy';
+    
+    oreEl.style.opacity = '0.5';
+    oreEl.style.cursor = 'grabbing';
+}
+
+function handleDragOver(e) {
+    if (!dragState.dragging) return;
+    
+    const slot = e.target.closest('.ore-input-slot');
+    if (slot && !slot.querySelector('img') && !miningState.isCraftingStarted) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        slot.style.border = '2px solid #00FF00';
+        slot.style.background = 'rgba(0,255,0,0.2)';
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    
+    if (!dragState.dragging) return;
+    
+    const slot = e.target.closest('.ore-input-slot');
+    if (!slot || slot.querySelector('img') || miningState.isCraftingStarted) {
+        resetDragState();
+        return;
+    }
+    
+    const row = slot.closest('.mining-row');
+    const rowIdx = parseInt(row.dataset.row);
+    
+    if (miningState.selectedOres[rowIdx] !== null) {
+        resetDragState();
+        return;
+    }
+    
+    miningState.selectedOres[rowIdx] = dragState.dragging.ere;
+    
+    slot.innerHTML = `
+        <img src="assets/art/ingridients/${dragState.dragging.ore.sprite}.png" 
+             style="width:60px;height:60px;cursor:pointer;" 
+             title="Click to remove ${dragState.dragging.ore.name}">
+    `;
+    slot.style.border = '2px solid #8B4513';
+    slot.style.background = 'rgba(139,69,19,0.4)';
+    
+    animateOreIntegration(row, dragState.dragging.ore);
+    updateCraftButtonState(document.querySelector('.custom-message-box'));
+    
+    resetDragState();
+}
+
+function handleDragEnd() {
+    resetDragState();
+    
+    document.querySelectorAll('.ore-input-slot').forEach(slot => {
+        if (!slot.querySelector('img')) {
+            slot.style.border = '2px dashed #FFD700';
+            slot.style.background = 'rgba(255,215,0,0.15)';
+        }
+    });
+}
+
+function resetDragState() {
+    if (dragState.dragging?.element) {
+        dragState.dragging.element.style.opacity = '1';
+        dragState.dragging.element.style.cursor = 'grab';
+    }
+    dragState.dragging = null;
+    dragState.draggedFrom = null;
 }
 
 function createMiningRowHTML(rowIndex) {
-  return `
+    return `
     <div class="mining-row" data-row="${rowIndex}" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; justify-content: center; position: relative;">
       <div class="arrow-left">
         <button class="fantasy-button adjust-left" data-row="${rowIndex}" style="padding: 0.3rem 0.6rem; font-size: 1.2rem; opacity: 0.3;" disabled>←</button>
@@ -121,7 +227,7 @@ function createMiningRowHTML(rowIndex) {
         <div class="rock-texture" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px); border-radius: 12px; pointer-events: none;"></div>
         
         <div class="ore-input-slot" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 65px; height: 65px; border: 2px dashed #FFD700; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,215,0,0.15); z-index: 15; transition: all 0.5s ease;">
-          <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore</span>
+          <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drag<br>Ore</span>
         </div>
         
         <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">-</div>
@@ -139,46 +245,45 @@ function createMiningRowHTML(rowIndex) {
 }
 
 function getRecipeType(recipeName) {
-  if (recipeName.toLowerCase().includes('bar')) return 'bars';
-  if (recipeName.toLowerCase().includes('powder')) return 'powders';
-  return 'gems';
+    if (recipeName.toLowerCase().includes('bar')) return 'bars';
+    if (recipeName.toLowerCase().includes('powder')) return 'powders';
+    return 'gems';
 }
 
 function filterRecipes(filterType) {
-  if (filterType === 'all') {
-    return miningState.recipes;
-  }
-  return miningState.recipes.filter(recipe => getRecipeType(recipe.name) === filterType);
+    if (filterType === 'all') {
+        return miningState.recipes;
+    }
+    return miningState.recipes.filter(recipe => getRecipeType(recipe.name) === filterType);
 }
 
 function updateRecipeDisplay(filterType = 'all') {
-  const recipesContainer = document.querySelector('#available-recipes');
-  if (!recipesContainer) return;
-  
-  const filteredRecipes = filterRecipes(filterType);
-  
-  if (filteredRecipes.length === 0) {
-    recipesContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes in this category</div>';
-    return;
-  }
-  
-  recipesContainer.innerHTML = filteredRecipes.map((recipe, idx) => {
-    // Find original index for data-recipe attribute
-    const originalIndex = miningState.recipes.findIndex(r => r.name === recipe.name);
-    return `
+    const recipesContainer = document.querySelector('#available-recipes');
+    if (!recipesContainer) return;
+    
+    const filteredRecipes = filterRecipes(filterType);
+    
+    if (filteredRecipes.length === 0) {
+        recipesContainer.innerHTML = '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes in this category</div>';
+        return;
+    }
+    
+    recipesContainer.innerHTML = filteredRecipes.map((recipe, idx) => {
+        const originalIndex = miningState.recipes.findIndex(r => r.name === recipe.name);
+        return `
       <div class="recipe-card" data-recipe="${originalIndex}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
         <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
         <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold;">${recipe.name}</div>
         <div class="info-icon" data-recipe="${originalIndex}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
       </div>
     `;
-  }).join('');
+    }).join('');
 }
 
 function renderCraftingModal() {
-  const modal = document.createElement('div');
-  modal.className = 'custom-message-box';
-  modal.innerHTML = `
+    const modal = document.createElement('div');
+    modal.className = 'custom-message-box';
+    modal.innerHTML = `
     <div class="message-content" style="width: 95%; max-width: 1000px; max-height: 90vh; height: 90vh; overflow-y: auto; text-align: center; scrollbar-width:none;">
                 
       <div id="craft-result" style="margin-top: 4px; font-weight: bold;">Select 3 ores to start mining</div>
@@ -227,40 +332,40 @@ function renderCraftingModal() {
             <h3 class="help-tutorial-modal-title">Tutorial</h3>
             <div class="help-tutorial-modal-body">
                 <p class="mb-4">
-                    Text
+                    Drag ores from your inventory into the mining slots.
                 </p>
                 <p class="mb-4">
-                    Text
+                    After placing 3 ores, click "Mine" to shatter them and reveal their properties.
                 </p>
                 <p>
-                    Text
+                    Use the arrow buttons to adjust property positions. Align matching properties in the center column for successful extraction!
                 </p>
             </div>
         </div>
     </div>
   `;
-  document.body.appendChild(modal);
-  setupModalEventListeners(modal);
-  setBackground(modal);
+    document.body.appendChild(modal);
+    setupModalEventListeners(modal);
+    setBackground(modal);
 }
 
 function renderOresHTML() {
-  return miningState.availableOres.map((ore, idx) => `
-    <div class="ore" data-index="${idx}" style="flex: 0 0 auto; cursor: pointer; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05);">
-      <img src="assets/art/ingridients/${ore.sprite}.png" title="${ore.name} (${ore.amount})" style="width: 48px; height: 48px;">
-      <div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center; margin-top: 2px;">${ore.name}</div>
-      <div style="font-size: 0.8rem;">x${ore.amount}</div>
-      <div class="info-icon" data-ore="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
+    return miningState.availableOres.map((ore, idx) => `
+    <div class="ore" data-index="${idx}" draggable="true" style="flex: 0 0 auto; cursor: grab; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05); user-select: none;">
+      <img src="assets/art/ingridients/${ore.sprite}.png" draggable="false" title="${ore.name} (${ore.amount})" style="width: 48px; height: 48px; pointer-events: none;">
+      <div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center; margin-top: 2px; pointer-events: none;">${ore.name}</div>
+      <div style="font-size: 0.8rem; pointer-events: none;">x${ore.amount}</div>
+      <div class="info-icon" data-ore="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto;">i</div>
     </div>
   `).join('');
 }
 
 function renderRecipesHTML() {
-  if (!miningState.recipes || miningState.recipes.length === 0) {
-    return '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes available</div>';
-  }
-  
-  return miningState.recipes.map((recipe, idx) => `
+    if (!miningState.recipes || miningState.recipes.length === 0) {
+        return '<div style="color: #666; font-style: italic; padding: 1rem;">No recipes available</div>';
+    }
+    
+    return miningState.recipes.map((recipe, idx) => `
     <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
       <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold;">${recipe.name}</div>
@@ -270,76 +375,76 @@ function renderRecipesHTML() {
 }
 
 function findOresWithProperty(targetProperty) {
-  if (!miningState?.availableOres) return [];
+    if (!miningState?.availableOres) return [];
 
-  const matchingOres = [];
-  
-  miningState.availableOres.forEach(ore => {
-    if (!ore.properties) return;
+    const matchingOres = [];
     
-    let oreProperties = [];
-    
-    if (Array.isArray(ore.properties)) {
-      oreProperties = ore.properties;
-    } else if (typeof ore.properties === 'object') {
-      oreProperties = Object.values(ore.properties);
-    } else if (typeof ore.properties === 'string') {
-      try {
-        const parsed = JSON.parse(ore.properties);
-        if (Array.isArray(parsed)) {
-          oreProperties = parsed;
+    miningState.availableOres.forEach(ore => {
+        if (!ore.properties) return;
+        
+        let oreProperties = [];
+        
+        if (Array.isArray(ore.properties)) {
+            oreProperties = ore.properties;
+        } else if (typeof ore.properties === 'object') {
+            oreProperties = Object.values(ore.properties);
+        } else if (typeof ore.properties === 'string') {
+            try {
+                const parsed = JSON.parse(ore.properties);
+                if (Array.isArray(parsed)) {
+                    oreProperties = parsed;
+                }
+            } catch (e) {
+                oreProperties = ore.properties.split(',').map(p => p.trim());
+            }
         }
-      } catch (e) {
-        oreProperties = ore.properties.split(',').map(p => p.trim());
-      }
-    }
-    
-    const hasProperty = oreProperties.some(prop => {
-      return prop && prop.toString().toLowerCase().trim() === targetProperty.toLowerCase().trim();
+        
+        const hasProperty = oreProperties.some(prop => {
+            return prop && prop.toString().toLowerCase().trim() === targetProperty.toLowerCase().trim();
+        });
+        
+        if (hasProperty && ore.amount > 0) {
+            matchingOres.push({
+                name: ore.name,
+                sprite: ore.sprite,
+                amount: ore.amount,
+                properties: oreProperties
+            });
+        }
     });
-    
-    if (hasProperty && ore.amount > 0) {
-      matchingOres.push({
-        name: ore.name,
-        sprite: ore.sprite,
-        amount: ore.amount,
-        properties: oreProperties
-      });
-    }
-  });
 
-  matchingOres.sort((a, b) => b.amount - a.amount);
-  return matchingOres;
+    matchingOres.sort((a, b) => b.amount - a.amount);
+    return matchingOres;
 }
 
 function generateIngredientMatching(recipe) {
-  if (!miningState?.availableOres || !recipe.ingridients) {
-    return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">Ingredient matching unavailable</div>';
-  }
+    if (!miningState?.availableOres || !recipe.ingridients) {
+        return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">Ingredient matching unavailable</div>';
+    }
 
-  let requiredProperties = [];
-  if (Array.isArray(recipe.ingridients)) {
-    requiredProperties = recipe.ingridients;
-  } else if (typeof recipe.ingridients === 'object') {
-    requiredProperties = Object.values(recipe.ingridients);
-  } else if (typeof recipe.ingridients === 'string') {
-    requiredProperties = recipe.ingridients.split(',').map(prop => prop.trim());
-  }
+    let requiredProperties = [];
+    if (Array.isArray(recipe.ingridients)) {
+        requiredProperties = recipe.ingridients;
+    } else if (typeof recipe.ingridients === 'object') {
+        requiredProperties = Object.values(recipe.ingridients);
+    } else if (typeof recipe.ingridients === 'string') {
+        requiredProperties = recipe.ingridients.split(',').map(prop => prop.trim());
+    }
 
-  if (requiredProperties.length === 0) {
-    return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">No properties specified for this recipe</div>';
-  }
+    if (requiredProperties.length === 0) {
+        return '<div style="background: rgba(255,193,7,0.1); border: 1px solid #FFC107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; color: #FFC107; font-size: 0.9rem;">No properties specified for this recipe</div>';
+    }
 
-  const matchingResults = requiredProperties.map((requiredProp, index) => {
-    const matchingOres = findOresWithProperty(requiredProp);
-    return {
-      property: requiredProp,
-      position: index + 1,
-      matchingOres: matchingOres
-    };
-  });
+    const matchingResults = requiredProperties.map((requiredProp, index) => {
+        const matchingOres = findOresWithProperty(requiredProp);
+        return {
+            property: requiredProp,
+            position: index + 1,
+            matchingOres: matchingOres
+        };
+    });
 
-  let matchingHTML = `
+    let matchingHTML = `
     <div style="background: rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
       <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Ore Matching Guide</h4>
       <div style="font-size: 0.85rem; color: #ccc; text-align: center; margin-bottom: 1rem; font-style: italic;">
@@ -347,47 +452,47 @@ function generateIngredientMatching(recipe) {
       </div>
   `;
 
-  matchingResults.forEach((result) => {
-    const hasMatches = result.matchingOres.length > 0;
-    const borderColor = hasMatches ? '#8B4513' : '#ff6b6b';
-    const bgColor = hasMatches ? 'rgba(139,69,19,0.5)' : 'rgba(255,107,107,0.1)';
-    
-    matchingHTML += `
+    matchingResults.forEach((result) => {
+        const hasMatches = result.matchingOres.length > 0;
+        const borderColor = hasMatches ? '#8B4513' : '#ff6b6b';
+        const bgColor = hasMatches ? 'rgba(139,69,19,0.5)' : 'rgba(255,107,107,0.1)';
+        
+        matchingHTML += `
       <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem;">
         <div style="color: #FFD700; font-weight: bold; margin-bottom: 0.5rem;">
           Property ${result.position}: "${result.property}"
         </div>
     `;
 
-    if (hasMatches) {
-      matchingHTML += `
+        if (hasMatches) {
+            matchingHTML += `
         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
           <span style="font-size: 0.8rem; margin-right: 0.5rem;">Available ores:</span>
       `;
-      
-      result.matchingOres.forEach((ore) => {
-        matchingHTML += `
+            
+            result.matchingOres.forEach((ore) => {
+                matchingHTML += `
           <div style="display: flex; align-items: center; background: rgba(139,69,19,0.2); border-radius: 4px; padding: 0.3rem 0.5rem; gap: 0.3rem;">
             <img src="assets/art/ingridients/${ore.sprite}.png" style="width: 20px; height: 20px;" title="${ore.name}">
             <span style="font-size: 0.75rem; color: #fff;">${ore.name}</span>
             <span style="font-size: 0.7rem; color: #999;">(${ore.amount})</span>
           </div>
         `;
-      });
-      
-      matchingHTML += '</div>';
-    } else {
-      matchingHTML += `
+            });
+            
+            matchingHTML += '</div>';
+        } else {
+            matchingHTML += `
         <div style="color: #ff6b6b; font-size: 0.8rem; font-style: italic;">
           ❌ No available ores have this property
         </div>
       `;
-    }
+        }
 
-    matchingHTML += '</div>';
-  });
+        matchingHTML += '</div>';
+    });
 
-  matchingHTML += `
+    matchingHTML += `
     <div style="background: rgba(255,215,0,0.1); border: 1px solid #FFD700; border-radius: 6px; padding: 0.6rem; margin-top: 1rem;">
       <div style="color: #FFD700; font-size: 0.8rem; text-align: center;">
         <strong>Mining Tip:</strong> Use adjustments to align all three <strong>center properties</strong> vertically for successful extraction!
@@ -395,27 +500,27 @@ function generateIngredientMatching(recipe) {
     </div>
   `;
 
-  matchingHTML += '</div>';
-  return matchingHTML;
+    matchingHTML += '</div>';
+    return matchingHTML;
 }
 
 function showRecipeDetails(recipe) {
-  const detailsModal = document.createElement('div');
-  detailsModal.className = 'custom-message-box';
-  detailsModal.style.zIndex = '10001';
-  
-  let ingredientsList = '';
-  if (Array.isArray(recipe.ingridients)) {
-    ingredientsList = recipe.ingridients.join(', ');
-  } else if (typeof recipe.ingridients === 'object') {
-    ingredientsList = Object.values(recipe.ingridients).join(', ');
-  } else {
-    ingredientsList = recipe.ingridients || 'Unknown ingredients';
-  }
-  
-  const ingredientMatchingHTML = generateIngredientMatching(recipe);
-  
-  detailsModal.innerHTML = `
+    const detailsModal = document.createElement('div');
+    detailsModal.className = 'custom-message-box';
+    detailsModal.style.zIndex = '10001';
+    
+    let ingredientsList = '';
+    if (Array.isArray(recipe.ingridients)) {
+        ingredientsList = recipe.ingridients.join(', ');
+    } else if (typeof recipe.ingridients === 'object') {
+        ingredientsList = Object.values(recipe.ingridients).join(', ');
+    } else {
+        ingredientsList = recipe.ingridients || 'Unknown ingredients';
+    }
+    
+    const ingredientMatchingHTML = generateIngredientMatching(recipe);
+    
+    detailsModal.innerHTML = `
     <div class="message-content" style="max-width: 500px; text-align: center; max-height: 80vh; overflow-y: auto; scrollbar-width:none;">
       <h3 style="color: #FFD700; margin-bottom: 1rem;">${recipe.name}</h3>
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
@@ -436,41 +541,41 @@ function showRecipeDetails(recipe) {
       <button class="fantasy-button close-details-btn" style="width: 100%;">Close</button>
     </div>
   `;
-  
-  document.body.appendChild(detailsModal);
-  
-  detailsModal.querySelector('.close-details-btn').addEventListener('click', () => detailsModal.remove());
-  detailsModal.addEventListener('click', (e) => {
-    if (e.target === detailsModal) detailsModal.remove();
-  });
+    
+    document.body.appendChild(detailsModal);
+    
+    detailsModal.querySelector('.close-details-btn').addEventListener('click', () => detailsModal.remove());
+    detailsModal.addEventListener('click', (e) => {
+        if (e.target === detailsModal) detailsModal.remove();
+    });
 }
 
 function showOreProperties(oreIndex) {
-  const ore = miningState.availableOres[oreIndex];
-  const propsModal = document.createElement('div');
-  propsModal.className = 'custom-message-box';
-  propsModal.style.zIndex = '10001';
-  
-  let propertiesDisplay = '';
-  if (typeof ore.properties === 'object' && ore.properties !== null) {
-    if (Array.isArray(ore.properties)) {
-      propertiesDisplay = ore.properties.map((prop, idx) => 
-        `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
+    const ore = miningState.availableOres[oreIndex];
+    const propsModal = document.createElement('div');
+    propsModal.className = 'custom-message-box';
+    propsModal.style.zIndex = '10001';
+    
+    let propertiesDisplay = '';
+    if (typeof ore.properties === 'object' && ore.properties !== null) {
+        if (Array.isArray(ore.properties)) {
+            propertiesDisplay = ore.properties.map((prop, idx) => 
+                `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
           <strong>Property ${idx + 1}:</strong> ${prop}
         </div>`
-      ).join('');
-    } else {
-      propertiesDisplay = Object.entries(ore.properties).map(([key, value]) => 
-        `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
+            ).join('');
+        } else {
+            propertiesDisplay = Object.entries(ore.properties).map(([key, value]) => 
+                `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
           <strong>${key.toUpperCase()}:</strong> ${value}
         </div>`
-      ).join('');
+            ).join('');
+        }
+    } else {
+        propertiesDisplay = '<div style="color: #999; font-style: italic;">No properties available</div>';
     }
-  } else {
-    propertiesDisplay = '<div style="color: #999; font-style: italic;">No properties available</div>';
-  }
-  
-  propsModal.innerHTML = `
+    
+    propsModal.innerHTML = `
     <div class="message-content" style="max-width: 350px; text-align: center; scrollbar-width:none;">
       <h3 style="margin-bottom: 1rem;">${ore.name}</h3>
       <img src="assets/art/ingridients/${ore.sprite}.png" alt="${ore.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
@@ -487,374 +592,364 @@ function showOreProperties(oreIndex) {
       <button class="fantasy-button close-props-btn" style="width: 100%;">Close</button>
     </div>
   `;
-  
-  document.body.appendChild(propsModal);
-  
-  propsModal.querySelector('.close-props-btn').addEventListener('click', () => propsModal.remove());
-  propsModal.addEventListener('click', (e) => {
-    if (e.target === propsModal) propsModal.remove();
-  });
+    
+    document.body.appendChild(propsModal);
+    
+    propsModal.querySelector('.close-props-btn').addEventListener('click', () => propsModal.remove());
+    propsModal.addEventListener('click', (e) => {
+        if (e.target === propsModal) propsModal.remove();
+    });
 }
 
 function setBackground(modal) {
-  const messageContent = modal.querySelector('.message-content');
-  if (messageContent) {
-    messageContent.style.backgroundSize = 'cover';
-    messageContent.style.backgroundPosition = 'center';
-    messageContent.style.backgroundRepeat = 'no-repeat';
-    messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_mining.png)';
-  }
+    const messageContent = modal.querySelector('.message-content');
+    if (messageContent) {
+        messageContent.style.backgroundSize = 'cover';
+        messageContent.style.backgroundPosition = 'center';
+        messageContent.style.backgroundRepeat = 'no-repeat';
+        messageContent.style.backgroundImage = 'url(assets/art/professions/prof_background_mining.png)';
+    }
 }
 
 function removeBackground(modal) {
-  const messageContent = modal.querySelector('.message-content');
-  if (messageContent) {
-    messageContent.style.backgroundSize = '';
-    messageContent.style.backgroundPosition = '';
-    messageContent.style.backgroundRepeat = '';
-    messageContent.style.backgroundImage = '';
-  }
+    const messageContent = modal.querySelector('.message-content');
+    if (messageContent) {
+        messageContent.style.backgroundSize = '';
+        messageContent.style.backgroundPosition = '';
+        messageContent.style.backgroundRepeat = '';
+        messageContent.style.backgroundImage = '';
+    }
 }
 
 function setupModalEventListeners(modal) {
-  const craftBtn = modal.querySelector('#craft-btn');
-  const finishBtn = modal.querySelector('#finish-btn');
-  const resultDiv = modal.querySelector('#craft-result');
-  const adjustmentCounter = modal.querySelector('#adjustment-counter');
+    const craftBtn = modal.querySelector('#craft-btn');
+    const finishBtn = modal.querySelector('#finish-btn');
+    const resultDiv = modal.querySelector('#craft-result');
+    const adjustmentCounter = modal.querySelector('#adjustment-counter');
 
-    // Help modal elements
-  const helpModal = modal.querySelector('#helpModal');
-  const helpBtn = modal.querySelector('#helpBtn');
-  const closeBtn = modal.querySelector('.help-tutorial-close-btn');
+    const helpModal = modal.querySelector('#helpModal');
+    const helpBtn = modal.querySelector('#helpBtn');
+    const closeBtn = modal.querySelector('.help-tutorial-close-btn');
 
-  // Help modal functions
-  function openHelpModal() {
-    helpModal.style.display = 'flex';
-    setTimeout(() => {
-      helpModal.classList.add('open');
-    }, 10);
-  }
-
-  function closeHelpModal() {
-    helpModal.classList.remove('open');
-    setTimeout(() => {
-      helpModal.style.display = 'none';
-    }, 300);
-  }
-
-  // Help modal event listeners
-  if (helpBtn) {
-    helpBtn.addEventListener('click', openHelpModal);
-  }
-
-  if (closeBtn) {
-    closeBtn.addEventListener('click', closeHelpModal);
-  }
-
-  // Close help modal when clicking outside or pressing Escape
-  window.addEventListener('click', (event) => {
-    if (event.target === helpModal) {
-      closeHelpModal();
+    function openHelpModal() {
+        helpModal.style.display = 'flex';
+        setTimeout(() => {
+            helpModal.classList.add('open');
+        }, 10);
     }
-  });
 
-  window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && helpModal && helpModal.style.display === 'flex') {
-      closeHelpModal();
+    function closeHelpModal() {
+        helpModal.classList.remove('open');
+        setTimeout(() => {
+            helpModal.style.display = 'none';
+        }, 300);
     }
-  });
 
-  modal.querySelector('.message-ok-btn').addEventListener('click', () => {
-    removeBackground(modal);
-    modal.remove();
-    miningState = null;
-    oreCache.clear();
-  });
+    if (helpBtn) {
+        helpBtn.addEventListener('click', openHelpModal);
+    }
 
-  const oresContainer = modal.querySelector('#available-ores');
-  oresContainer.addEventListener('click', (e) => {
-    const oreEl = e.target.closest('.ore');
-    const infoIcon = e.target.closest('.info-icon');
-    
-    if (infoIcon?.dataset.ore) {
-      e.stopPropagation();
-      showOreProperties(parseInt(infoIcon.dataset.ore));
-      return;
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeHelpModal);
     }
-    
-    if (oreEl && !miningState.isCraftingStarted) {
-      const idx = parseInt(oreEl.dataset.index);
-      const ore = miningState.availableOres[idx];
-      handleOreSelection(ore, modal);
-    }
-  });
 
-  const recipesContainer = modal.querySelector('#available-recipes');
-  recipesContainer.addEventListener('click', (e) => {
-    const recipeCard = e.target.closest('.recipe-card');
-    const infoIcon = e.target.closest('.info-icon');
-    
-    if (infoIcon?.dataset.recipe) {
-      e.stopPropagation();
-      const recipeIdx = parseInt(infoIcon.dataset.recipe);
-      showRecipeDetails(miningState.recipes[recipeIdx]);
-      return;
-    }
-    
-    if (recipeCard) {
-      const recipeIdx = parseInt(recipeCard.dataset.recipe);
-      showRecipeDetails(miningState.recipes[recipeIdx]);
-    }
-  });
+    window.addEventListener('click', (event) => {
+        if (event.target === helpModal) {
+            closeHelpModal();
+        }
+    });
+
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && helpModal && helpModal.style.display === 'flex') {
+            closeHelpModal();
+        }
+    });
+
+    modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+        removeBackground(modal);
+        modal.remove();
+        miningState = null;
+        oreCache.clear();
+    });
+
+    const oresContainer = modal.querySelector('#available-ores');
+    oresContainer.addEventListener('click', (e) => {
+        const infoIcon = e.target.closest('.info-icon');
+        
+        if (infoIcon?.dataset.ore) {
+            e.stopPropagation();
+            showOreProperties(parseInt(infoIcon.dataset.ore));
+            return;
+        }
+    });
+
+    const recipesContainer = modal.querySelector('#available-recipes');
+    recipesContainer.addEventListener('click', (e) => {
+        const recipeCard = e.target.closest('.recipe-card');
+        const infoIcon = e.target.closest('.info-icon');
+        
+        if (infoIcon?.dataset.recipe) {
+            e.stopPropagation();
+            const recipeIdx = parseInt(infoIcon.dataset.recipe);
+            showRecipeDetails(miningState.recipes[recipeIdx]);
+            return;
+        }
+        
+        if (recipeCard) {
+            const recipeIdx = parseInt(recipeCard.dataset.recipe);
+            showRecipeDetails(miningState.recipes[recipeIdx]);
+        }
+    });
 
     const filterButtons = modal.querySelectorAll('.filter-btn');
-      filterButtons.forEach(btn => {
+    filterButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
-          // Remove active class from all buttons
-          filterButtons.forEach(b => b.classList.remove('active'));
-          // Add active class to clicked button
-          e.target.classList.add('active');
-          // Update recipe display
-          updateRecipeDisplay(e.target.dataset.filter);
+            filterButtons.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            updateRecipeDisplay(e.target.dataset.filter);
         });
-      });
+    });
 
-  craftBtn.addEventListener('click', () => {
-    miningState.isCraftingStarted = true;
-    resultDiv.textContent = 'Starting mining operation...';
-    craftBtn.style.display = 'none';
-    finishBtn.style.display = 'block';
-    finishBtn.disabled = false;
-    adjustmentCounter.style.display = 'block';
+    craftBtn.addEventListener('click', () => {
+        miningState.isCraftingStarted = true;
+        resultDiv.textContent = 'Starting mining operation...';
+        craftBtn.style.display = 'none';
+        finishBtn.style.display = 'block';
+        finishBtn.disabled = false;
+        adjustmentCounter.style.display = 'block';
 
-    oresContainer.style.opacity = '0.5';
-    oresContainer.style.pointerEvents = 'none';
+        oresContainer.style.opacity = '0.5';
+        oresContainer.style.pointerEvents = 'none';
 
-    startMiningAnimation(resultDiv, modal);
-  });
+        document.querySelectorAll('.ore').forEach(ore => {
+            ore.draggable = false;
+            ore.style.cursor = 'default';
+        });
 
-  finishBtn.addEventListener('click', async () => {
-    finishBtn.disabled = true;
-    await patchAndSendCraftRequest(resultDiv);
-  });
+        startMiningAnimation(resultDiv, modal);
+    });
 
-  const rowsContainer = modal.querySelector('#mining-rows');
-  rowsContainer.addEventListener('click', (e) => {
-    const adjustBtn = e.target.closest('.adjust-left, .adjust-right');
-    if (adjustBtn && !adjustBtn.disabled) {
-      const rowIdx = parseInt(adjustBtn.dataset.row);
-      const direction = adjustBtn.classList.contains('adjust-left') ? 'left' : 'right';
-      handleAdjustment(rowIdx, direction, resultDiv);
-    }
-    
-    const oreInputSlot = e.target.closest('.ore-input-slot');
-    if (oreInputSlot && !miningState.isCraftingStarted) {
-      const row = oreInputSlot.closest('.mining-row');
-      const rowIdx = parseInt(row.dataset.row);
-      
-      const oreImg = oreInputSlot.querySelector('img');
-      if (oreImg) {
-        removeOreFromSlot(rowIdx, modal);
-      }
-    }
-  });
+    finishBtn.addEventListener('click', async () => {
+        finishBtn.disabled = true;
+        await patchAndSendCraftRequest(resultDiv);
+    });
+
+    const rowsContainer = modal.querySelector('#mining-rows');
+    rowsContainer.addEventListener('click', (e) => {
+        const adjustBtn = e.target.closest('.adjust-left, .adjust-right');
+        if (adjustBtn && !adjustBtn.disabled) {
+            const rowIdx = parseInt(adjustBtn.dataset.row);
+            const direction = adjustBtn.classList.contains('adjust-left') ? 'left' : 'right';
+            handleAdjustment(rowIdx, direction, resultDiv);
+        }
+        
+        const oreInputSlot = e.target.closest('.ore-input-slot');
+        if (oreInputSlot && !miningState.isCraftingStarted) {
+            const row = oreInputSlot.closest('.mining-row');
+            const rowIdx = parseInt(row.dataset.row);
+            
+            const oreImg = oreInputSlot.querySelector('img');
+            if (oreImg) {
+                removeOreFromSlot(rowIdx, modal);
+            }
+        }
+    });
 }
 
 function handleOreSelection(ore, modal) {
-  const slotIdx = miningState.selectedOres.findIndex(s => s === null);
-  if (slotIdx === -1) return;
+    const slotIdx = miningState.selectedOres.findIndex(s => s === null);
+    if (slotIdx === -1) return;
 
-  miningState.selectedOres[slotIdx] = ore;
-  
-  const row = modal.querySelector(`[data-row="${slotIdx}"]`);
-  const oreInputSlot = row.querySelector('.ore-input-slot');
-  
-  oreInputSlot.innerHTML = `<img src="assets/art/ingridients/${ore.sprite}.png" style="width:60px;height:60px;cursor:pointer;" title="Click to remove ${ore.name}">`;
-  oreInputSlot.style.border = '2px solid #8B4513';
-  oreInputSlot.style.background = 'rgba(139,69,19,0.4)';
-  
-  animateOreIntegration(row, ore);
-  updateCraftButtonState(modal);
+    miningState.selectedOres[slotIdx] = ore;
+    
+    const row = modal.querySelector(`[data-row="${slotIdx}"]`);
+    const oreInputSlot = row.querySelector('.ore-input-slot');
+    
+    oreInputSlot.innerHTML = `<img src="assets/art/ingridients/${ore.sprite}.png" style="width:60px;height:60px;cursor:pointer;" title="Click to remove ${ore.name}">`;
+    oreInputSlot.style.border = '2px solid #8B4513';
+    oreInputSlot.style.background = 'rgba(139,69,19,0.4)';
+    
+    animateOreIntegration(row, ore);
+    updateCraftButtonState(modal);
 }
 
 function removeOreFromSlot(slotIdx, modal) {
-  miningState.selectedOres[slotIdx] = null;
-  
-  const row = modal.querySelector(`[data-row="${slotIdx}"]`);
-  const oreInputSlot = row.querySelector('.ore-input-slot');
-  
-  oreInputSlot.innerHTML = '<span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drop<br>Ore</span>';
-  oreInputSlot.style.border = '2px dashed #FFD700';
-  oreInputSlot.style.background = 'rgba(255,215,0,0.15)';
-  
-  animateRockClear(row);
-  updateCraftButtonState(modal);
+    miningState.selectedOres[slotIdx] = null;
+    
+    const row = modal.querySelector(`[data-row="${slotIdx}"]`);
+    const oreInputSlot = row.querySelector('.ore-input-slot');
+    
+    oreInputSlot.innerHTML = '<span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drag<br>Ore</span>';
+    oreInputSlot.style.border = '2px dashed #FFD700';
+    oreInputSlot.style.background = 'rgba(255,215,0,0.15)';
+    
+    animateRockClear(row);
+    updateCraftButtonState(modal);
 }
 
 function updateCraftButtonState(modal) {
-  const craftBtn = modal.querySelector('#craft-btn');
-  const resultDiv = modal.querySelector('#craft-result');
-  
-  if (miningState.selectedOres.every(o => o !== null)) {
-    craftBtn.disabled = false;
-    resultDiv.textContent = 'Ready to mine!';
-  } else {
-    craftBtn.disabled = true;
-    resultDiv.textContent = 'Select 3 ores to start mining';
-  }
+    const craftBtn = modal.querySelector('#craft-btn');
+    const resultDiv = modal.querySelector('#craft-result');
+    
+    if (miningState.selectedOres.every(o => o !== null)) {
+        craftBtn.disabled = false;
+        resultDiv.textContent = 'Ready to mine!';
+    } else {
+        craftBtn.disabled = true;
+        resultDiv.textContent = 'Select 3 ores to start mining';
+    }
 }
 
 function animateOreIntegration(row, ore) {
-  const rockFormation = row.querySelector('.rock-formation');
-  const oreInputSlot = row.querySelector('.ore-input-slot');
-  const oreColor = getOreColor(ore.name);
-  
-  gsap.to(rockFormation, {
-    background: `linear-gradient(135deg, ${oreColor} 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%)`,
-    duration: 1.0,
-    ease: "power2.out"
-  });
-  
-  gsap.to(oreInputSlot, {
-    boxShadow: '0 0 20px rgba(255,215,0,0.8), inset 0 0 10px rgba(255,215,0,0.3)',
-    duration: 0.8,
-    ease: "power2.out"
-  });
-  
-  const rockTexture = row.querySelector('.rock-texture');
-  gsap.fromTo(rockTexture, { opacity: 0 }, { opacity: 1, duration: 1.2, ease: "power2.out" });
+    const rockFormation = row.querySelector('.rock-formation');
+    const oreInputSlot = row.querySelector('.ore-input-slot');
+    const oreColor = getOreColor(ore.name);
+    
+    gsap.to(rockFormation, {
+        background: `linear-gradient(135deg, ${oreColor} 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%)`,
+        duration: 1.0,
+        ease: "power2.out"
+    });
+    
+    gsap.to(oreInputSlot, {
+        boxShadow: '0 0 20px rgba(255,215,0,0.8), inset 0 0 10px rgba(255,215,0,0.3)',
+        duration: 0.8,
+        ease: "power2.out"
+    });
+    
+    const rockTexture = row.querySelector('.rock-texture');
+    gsap.fromTo(rockTexture, { opacity: 0 }, { opacity: 1, duration: 1.2, ease: "power2.out" });
 }
 
 function animateRockClear(row) {
-  const rockFormation = row.querySelector('.rock-formation');
-  const oreInputSlot = row.querySelector('.ore-input-slot');
-  const rockTexture = row.querySelector('.rock-texture');
-  
-  gsap.to(rockFormation, {
-    background: 'linear-gradient(135deg, #8B7355 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%)',
-    duration: 0.8,
-    ease: "power2.out"
-  });
-  
-  gsap.to(oreInputSlot, { boxShadow: 'none', duration: 0.6, ease: "power2.out" });
-  gsap.to(rockTexture, { opacity: 0.3, duration: 0.6, ease: "power2.out" });
+    const rockFormation = row.querySelector('.rock-formation');
+    const oreInputSlot = row.querySelector('.ore-input-slot');
+    const rockTexture = row.querySelector('.rock-texture');
+    
+    gsap.to(rockFormation, {
+        background: 'linear-gradient(135deg, #8B7355 0%, #A0522D 30%, #D2691E 60%, #8B4513 100%)',
+        duration: 0.8,
+        ease: "power2.out"
+    });
+    
+    gsap.to(oreInputSlot, { boxShadow: 'none', duration: 0.6, ease: "power2.out" });
+    gsap.to(rockTexture, { opacity: 0.3, duration: 0.6, ease: "power2.out" });
 }
 
 async function startMiningAnimation(resultDiv, modal) {
-  const rowsArea = modal.querySelector('#mining-rows');
-  resultDiv.textContent = 'Analyzing ore composition...';
+    const rowsArea = modal.querySelector('#mining-rows');
+    resultDiv.textContent = 'Analyzing ore composition...';
 
-  const selectedOreNames = miningState.selectedOres.map(o => o.name);
+    const selectedOreNames = miningState.selectedOres.map(o => o.name);
 
-  try {
-    // ✅ Call secure server endpoint
-    const reserveRes = await fetch('/api/crafting/reserve-alchemy-ingredients', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        player_id: context.profile.id,
-        profession_id: miningState.professionId,
-        selected_ingredients: selectedOreNames
-      })
-    });
+    try {
+        const reserveRes = await fetch('/api/crafting/reserve-alchemy-ingredients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                player_id: context.profile.id,
+                profession_id: miningState.professionId,
+                selected_ingredients: selectedOreNames
+            })
+        });
 
-    const reserveJson = await reserveRes.json();
+        const reserveJson = await reserveRes.json();
 
-    if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
-      resultDiv.textContent = `Ore verification failed: ${reserveJson?.error || 'Unknown error'}`;
-      return;
+        if (!reserveRes.ok || !reserveJson.success || !Array.isArray(reserveJson.herbs)) {
+            resultDiv.textContent = `Ore verification failed: ${reserveJson?.error || 'Unknown error'}`;
+            return;
+        }
+
+        miningState.sessionId = reserveJson.session_id;
+        miningState.enrichedOres = reserveJson.herbs;
+
+        for (let idx = 0; idx < miningState.enrichedOres.length; idx++) {
+            const ore = miningState.enrichedOres[idx];
+            const row = rowsArea.children[idx];
+            const props = ore.properties;
+
+            await animateOreBreaking(row, props, idx);
+        }
+
+        setTimeout(() => {
+            resultDiv.textContent = 'You may now apply adjustments.';
+        }, 1000);
+
+        miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
+        miningState.originalProperties = miningState.randomizedProperties.map(p => [...p]);
+        miningState.currentAdjustedRow = null;
+
+        miningState.adjustments = {};
+        for (let i = 0; i < 3; i++) {
+            miningState.adjustments[i] = { left: 0, right: 0 };
+        }
+
+    } catch (err) {
+        console.error('[MINING] Reserve request failed:', err);
+        resultDiv.textContent = 'Server error while verifying ores.';
     }
-
-    miningState.sessionId = reserveJson.session_id;
-    miningState.enrichedOres = reserveJson.herbs;
-
-    for (let idx = 0; idx < miningState.enrichedOres.length; idx++) {
-      const ore = miningState.enrichedOres[idx];
-      const row = rowsArea.children[idx];
-      const props = ore.properties;
-
-      await animateOreBreaking(row, props, idx);
-    }
-
-    setTimeout(() => {
-      resultDiv.textContent = 'You may now apply adjustments.';
-    }, 1000);
-
-    miningState.randomizedProperties = miningState.enrichedOres.map(o => Object.values(o.properties));
-    miningState.originalProperties = miningState.randomizedProperties.map(p => [...p]);
-    miningState.currentAdjustedRow = null;
-
-    miningState.adjustments = {};
-    for (let i = 0; i < 3; i++) {
-      miningState.adjustments[i] = { left: 0, right: 0 };
-    }
-
-  } catch (err) {
-    console.error('[MINING] Reserve request failed:', err);
-    resultDiv.textContent = 'Server error while verifying ores.';
-  }
 }
 
 async function animateOreBreaking(row, properties, rowIndex) {
-  const oreInputSlot = row.querySelector('.ore-input-slot');
-  const propertySlots = row.querySelectorAll('.property-slot');
-  const leftBtn = row.querySelector('.adjust-left');
-  const rightBtn = row.querySelector('.adjust-right');
-  const rockFormation = row.querySelector('.rock-formation');
-  
-  createOreBreakingEffect(oreInputSlot);
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  gsap.to(oreInputSlot, {
-    scale: 0.8,
-    opacity: 0,
-    duration: 0.5,
-    ease: "power2.in",
-    onComplete: () => oreInputSlot.style.display = 'none'
-  });
-  
-  gsap.to(propertySlots, {
-    opacity: 1,
-    scale: 1,
-    duration: 0.8,
-    stagger: 0.15,
-    ease: "back.out(1.4)",
-    delay: 0.3,
-    onStart: () => {
-      propertySlots[0].textContent = properties[0];
-      propertySlots[1].textContent = properties[1];
-      propertySlots[2].textContent = properties[2];
-    }
-  });
-  
-  gsap.to([leftBtn, rightBtn], {
-    opacity: 1,
-    duration: 0.6,
-    delay: 0.8,
-    onStart: () => {
-      leftBtn.disabled = false;
-      rightBtn.disabled = false;
-    }
-  });
-  
-  gsap.to(rockFormation, {
-    boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.4), 0 4px 12px rgba(255,215,0,0.3)',
-    duration: 0.8,
-    ease: "power2.out",
-    delay: 0.5
-  });
+    const oreInputSlot = row.querySelector('.ore-input-slot');
+    const propertySlots = row.querySelectorAll('.property-slot');
+    const leftBtn = row.querySelector('.adjust-left');
+    const rightBtn = row.querySelector('.adjust-right');
+    const rockFormation = row.querySelector('.rock-formation');
+    
+    createOreBreakingEffect(oreInputSlot);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    gsap.to(oreInputSlot, {
+        scale: 0.8,
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.in",
+        onComplete: () => oreInputSlot.style.display = 'none'
+    });
+    
+    gsap.to(propertySlots, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: "back.out(1.4)",
+        delay: 0.3,
+        onStart: () => {
+            propertySlots[0].textContent = properties[0];
+            propertySlots[1].textContent = properties[1];
+            propertySlots[2].textContent = properties[2];
+        }
+    });
+    
+    gsap.to([leftBtn, rightBtn], {
+        opacity: 1,
+        duration: 0.6,
+        delay: 0.8,
+        onStart: () => {
+            leftBtn.disabled = false;
+            rightBtn.disabled = false;
+        }
+    });
+    
+    gsap.to(rockFormation, {
+        boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.4), 0 4px 12px rgba(255,215,0,0.3)',
+        duration: 0.8,
+        ease: "power2.out",
+        delay: 0.5
+    });
 
-  createRockDustEffect(row);
+    createRockDustEffect(row);
 }
 
 function createOreBreakingEffect(oreInputSlot) {
-  const rect = oreInputSlot.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  
-  for (let i = 0; i < 12; i++) {
-    const particle = document.createElement('div');
-    particle.style.cssText = `
+    const rect = oreInputSlot.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        particle.style.cssText = `
       position: fixed;
       width: ${Math.random() * 6 + 3}px;
       height: ${Math.random() * 6 + 3}px;
@@ -866,41 +961,41 @@ function createOreBreakingEffect(oreInputSlot) {
       z-index: 1000;
       transform-origin: center;
     `;
+        
+        document.body.appendChild(particle);
+        
+        const angle = (i / 12) * Math.PI * 2;
+        const distance = Math.random() * 60 + 30;
+        const finalX = centerX + Math.cos(angle) * distance;
+        const finalY = centerY + Math.sin(angle) * distance;
+        
+        gsap.to(particle, {
+            x: finalX - centerX,
+            y: finalY - centerY,
+            rotation: Math.random() * 360,
+            opacity: 0,
+            scale: Math.random() * 0.5 + 0.5,
+            duration: Math.random() * 1.2 + 0.8,
+            ease: "power2.out",
+            onComplete: () => particle.remove()
+        });
+    }
     
-    document.body.appendChild(particle);
-    
-    const angle = (i / 12) * Math.PI * 2;
-    const distance = Math.random() * 60 + 30;
-    const finalX = centerX + Math.cos(angle) * distance;
-    const finalY = centerY + Math.sin(angle) * distance;
-    
-    gsap.to(particle, {
-      x: finalX - centerX,
-      y: finalY - centerY,
-      rotation: Math.random() * 360,
-      opacity: 0,
-      scale: Math.random() * 0.5 + 0.5,
-      duration: Math.random() * 1.2 + 0.8,
-      ease: "power2.out",
-      onComplete: () => particle.remove()
+    gsap.to(oreInputSlot, {
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        duration: 0.1,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 3
     });
-  }
-  
-  gsap.to(oreInputSlot, {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    duration: 0.1,
-    ease: "power2.out",
-    yoyo: true,
-    repeat: 3
-  });
 }
 
 function createRockDustEffect(row) {
-  const rockFormation = row.querySelector('.rock-formation');
-  
-  function createDustParticle() {
-    const particle = document.createElement('div');
-    particle.style.cssText = `
+    const rockFormation = row.querySelector('.rock-formation');
+    
+    function createDustParticle() {
+        const particle = document.createElement('div');
+        particle.style.cssText = `
       position: absolute;
       width: ${Math.random() * 3 + 1}px;
       height: ${Math.random() * 3 + 1}px;
@@ -911,220 +1006,220 @@ function createRockDustEffect(row) {
       pointer-events: none;
       z-index: 20;
     `;
-    
-    rockFormation.appendChild(particle);
-    
-    gsap.to(particle, {
-      y: -20,
-      x: `+=${Math.random() * 20 - 10}`,
-      opacity: 0,
-      duration: Math.random() * 2 + 1,
-      ease: "power1.out",
-      onComplete: () => particle.remove()
-    });
-  }
-  
-  const dustInterval = setInterval(() => {
-    if (document.contains(row)) {
-      createDustParticle();
-    } else {
-      clearInterval(dustInterval);
+        
+        rockFormation.appendChild(particle);
+        
+        gsap.to(particle, {
+            y: -20,
+            x: `+=${Math.random() * 20 - 10}`,
+            opacity: 0,
+            duration: Math.random() * 2 + 1,
+            ease: "power1.out",
+            onComplete: () => particle.remove()
+        });
     }
-  }, Math.random() * 600 + 300);
-  
-  return dustInterval;
+    
+    const dustInterval = setInterval(() => {
+        if (document.contains(row)) {
+            createDustParticle();
+        } else {
+            clearInterval(dustInterval);
+        }
+    }, Math.random() * 600 + 300);
+    
+    return dustInterval;
 }
 
 async function patchAndSendCraftRequest(resultDiv) {
-  try {
-    const adjustments = [];
+    try {
+        const adjustments = [];
 
-    for (const [rowIdx, adj] of Object.entries(miningState.adjustments || {})) {
-      if (adj.left > 0) {
-        adjustments.push({ bottle: Number(rowIdx), direction: 'up', count: adj.left });
-      }
-      if (adj.right > 0) {
-        adjustments.push({ bottle: Number(rowIdx), direction: 'down', count: adj.right });
-      }
-    }
+        for (const [rowIdx, adj] of Object.entries(miningState.adjustments || {})) {
+            if (adj.left > 0) {
+                adjustments.push({ bottle: Number(rowIdx), direction: 'up', count: adj.left });
+            }
+            if (adj.right > 0) {
+                adjustments.push({ bottle: Number(rowIdx), direction: 'down', count: adj.right });
+            }
+        }
 
-    const payload = {
-      player_id: context.profile.id,
-      profession_id: miningState.professionId,
-      session_id: miningState.sessionId,
-      adjustments
-    };
+        const payload = {
+            player_id: context.profile.id,
+            profession_id: miningState.professionId,
+            session_id: miningState.sessionId,
+            adjustments
+        };
 
-    const res = await fetch('/api/crafting/alchemy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+        const res = await fetch('/api/crafting/alchemy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    const json = await res.json();
+        const json = await res.json();
 
-    if (!res.ok) {
-      resultDiv.innerHTML = `
+        if (!res.ok) {
+            resultDiv.innerHTML = `
         <span style="color:red;">💥 Server Error (${res.status})</span>
         <br><small style="color:#999;">${json.error || json.message || 'Unknown server error'}</small>
       `;
-      
-      const finishBtn = document.querySelector('#finish-btn');
-      if (finishBtn) finishBtn.disabled = false;
-      return; 
-    }
+            
+            const finishBtn = document.querySelector('#finish-btn');
+            if (finishBtn) finishBtn.disabled = false;
+            return; 
+        }
 
-    const claimBtn = document.querySelector('#claim-btn');
-    const finishBtn = document.querySelector('#finish-btn');
-    const craftBtn = document.querySelector('#craft-btn');
+        const claimBtn = document.querySelector('#claim-btn');
+        const finishBtn = document.querySelector('#finish-btn');
+        const craftBtn = document.querySelector('#craft-btn');
 
-    if (json.success) {
-      miningState.result = json.crafted.name;
-      resultDiv.innerHTML = `<span style="color:lime;">Extracted: <strong>${json.crafted.name}</strong>!</span>`;
+        if (json.success) {
+            miningState.result = json.crafted.name;
+            resultDiv.innerHTML = `<span style="color:lime;">Extracted: <strong>${json.crafted.name}</strong>!</span>`;
 
-      animateMiningSuccess();
+            animateMiningSuccess();
 
-      if (finishBtn) finishBtn.style.display = 'none';
-      if (claimBtn) {
-        claimBtn.style.display = 'block';
-        claimBtn.disabled = false;
+            if (finishBtn) finishBtn.style.display = 'none';
+            if (claimBtn) {
+                claimBtn.style.display = 'block';
+                claimBtn.disabled = false;
 
-        const newClaimBtn = claimBtn.cloneNode(true);
-        claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
+                const newClaimBtn = claimBtn.cloneNode(true);
+                claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
 
-        newClaimBtn.addEventListener('click', () => {
-          context.displayMessage(`${json.crafted.name} added to your bank!`);
-          document.querySelector('.custom-message-box')?.remove();
-          miningState = null;
-        });
-      }
-    } else {
-      miningState.result = 'Failed';
-      resultDiv.innerHTML = `
+                newClaimBtn.addEventListener('click', () => {
+                    context.displayMessage(`${json.crafted.name} added to your bank!`);
+                    document.querySelector('.custom-message-box')?.remove();
+                    miningState = null;
+                });
+            }
+        } else {
+            miningState.result = 'Failed';
+            resultDiv.innerHTML = `
         <span style="color:red;">💥 Mining failed — ores crumbled to dust.</span>
         <br><small style="color:#999;">${json.message || 'Properties not properly aligned'}</small>
       `;
 
-      animateMiningFailure();
+            animateMiningFailure();
 
-      if (finishBtn) finishBtn.style.display = 'none';
-      if (claimBtn) claimBtn.style.display = 'none';
+            if (finishBtn) finishBtn.style.display = 'none';
+            if (claimBtn) claimBtn.style.display = 'none';
 
-      if (craftBtn) {
-        craftBtn.style.display = 'block';
-        craftBtn.textContent = 'Mine Again';
-        craftBtn.disabled = false;
+            if (craftBtn) {
+                craftBtn.style.display = 'block';
+                craftBtn.textContent = 'Mine Again';
+                craftBtn.disabled = false;
 
-        const newCraftBtn = craftBtn.cloneNode(true);
-        craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+                const newCraftBtn = craftBtn.cloneNode(true);
+                craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
 
-        newCraftBtn.addEventListener('click', () => {
-          document.querySelector('.custom-message-box')?.remove();
-          startCraftingSession(context);
-        });
-      }
+                newCraftBtn.addEventListener('click', () => {
+                    document.querySelector('.custom-message-box')?.remove();
+                    startCraftingSession(context);
+                });
+            }
+        }
+    } catch (err) {
+        resultDiv.innerHTML = '<span style="color:red;">⚠️ Mining operation failed. Try again later.</span>';
+
+        const finishBtn = document.querySelector('#finish-btn');
+        const claimBtn = document.querySelector('#claim-btn');
+        const craftBtn = document.querySelector('#craft-btn');
+
+        if (finishBtn) finishBtn.style.display = 'none';
+        if (claimBtn) claimBtn.style.display = 'none';
+
+        if (craftBtn) {
+            craftBtn.style.display = 'block';
+            craftBtn.textContent = 'Try Again';
+            craftBtn.disabled = false;
+
+            const newCraftBtn = craftBtn.cloneNode(true);
+            craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
+
+            newCraftBtn.addEventListener('click', () => {
+                document.querySelector('.custom-message-box')?.remove();
+                startCraftingSession(context);
+            });
+        }
     }
-  } catch (err) {
-    resultDiv.innerHTML = '<span style="color:red;">⚠️ Mining operation failed. Try again later.</span>';
-
-    const finishBtn = document.querySelector('#finish-btn');
-    const claimBtn = document.querySelector('#claim-btn');
-    const craftBtn = document.querySelector('#craft-btn');
-
-    if (finishBtn) finishBtn.style.display = 'none';
-    if (claimBtn) claimBtn.style.display = 'none';
-
-    if (craftBtn) {
-      craftBtn.style.display = 'block';
-      craftBtn.textContent = 'Try Again';
-      craftBtn.disabled = false;
-
-      const newCraftBtn = craftBtn.cloneNode(true);
-      craftBtn.parentNode.replaceChild(newCraftBtn, craftBtn);
-
-      newCraftBtn.addEventListener('click', () => {
-        document.querySelector('.custom-message-box')?.remove();
-        startCraftingSession(context);
-      });
-    }
-  }
 }
 
 function handleAdjustment(rowIdx, direction, resultDiv) {
-  if (miningState.adjustmentCount >= miningState.maxAdjustments) {
-    resultDiv.textContent = `No more adjustments available (${miningState.maxAdjustments}/${miningState.maxAdjustments}).`;
-    return;
-  }
+    if (miningState.adjustmentCount >= miningState.maxAdjustments) {
+        resultDiv.textContent = `No more adjustments available (${miningState.maxAdjustments}/${miningState.maxAdjustments}).`;
+        return;
+    }
 
-  const props = miningState.randomizedProperties[rowIdx];
+    const props = miningState.randomizedProperties[rowIdx];
 
-  if (!miningState.adjustments[rowIdx]) {
-    miningState.adjustments[rowIdx] = { left: 0, right: 0 };
-  }
+    if (!miningState.adjustments[rowIdx]) {
+        miningState.adjustments[rowIdx] = { left: 0, right: 0 };
+    }
 
-  if (direction === 'left') {
-    props.push(props.shift());
-    miningState.adjustments[rowIdx].left++;
-  } else if (direction === 'right') {
-    props.unshift(props.pop());
-    miningState.adjustments[rowIdx].right++;
-  }
+    if (direction === 'left') {
+        props.push(props.shift());
+        miningState.adjustments[rowIdx].left++;
+    } else if (direction === 'right') {
+        props.unshift(props.pop());
+        miningState.adjustments[rowIdx].right++;
+    }
 
-  updateMiningRow(rowIdx);
-  miningState.adjustmentCount++;
-  updateAdjustmentCounter();
+    updateMiningRow(rowIdx);
+    miningState.adjustmentCount++;
+    updateAdjustmentCounter();
 
-  if (miningState.adjustmentCount >= miningState.maxAdjustments) {
-    disableAdjustmentButtons();
-  }
+    if (miningState.adjustmentCount >= miningState.maxAdjustments) {
+        disableAdjustmentButtons();
+    }
 }
 
 function updateMiningRow(rowIdx) {
-  const props = miningState.randomizedProperties[rowIdx];
-  const rowsArea = document.querySelector('#mining-rows');
-  const row = rowsArea.children[rowIdx];
-  const propertySlots = row.querySelectorAll('.property-slot');
-  const rockFormation = row.querySelector('.rock-formation');
-  
-  gsap.to(propertySlots, {
-    x: '+=20',
-    duration: 0.15,
-    ease: "power2.out",
-    yoyo: true,
-    repeat: 1,
-    onComplete: () => {
-      propertySlots[0].textContent = props[0];
-      propertySlots[1].textContent = props[1];
-      propertySlots[2].textContent = props[2];
-    }
-  });
-  
-  gsap.to(rockFormation, {
-    y: '+=2',
-    duration: 0.1,
-    ease: "power2.inOut",
-    yoyo: true,
-    repeat: 3
-  });
-  
-  createImpactParticles(row);
-  
-  gsap.to(propertySlots[1], {
-    backgroundColor: 'rgba(255,215,0,0.5)',
-    duration: 0.2,
-    ease: "power2.out",
-    yoyo: true,
-    repeat: 1
-  });
+    const props = miningState.randomizedProperties[rowIdx];
+    const rowsArea = document.querySelector('#mining-rows');
+    const row = rowsArea.children[rowIdx];
+    const propertySlots = row.querySelectorAll('.property-slot');
+    const rockFormation = row.querySelector('.rock-formation');
+    
+    gsap.to(propertySlots, {
+        x: '+=20',
+        duration: 0.15,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 1,
+        onComplete: () => {
+            propertySlots[0].textContent = props[0];
+            propertySlots[1].textContent = props[1];
+            propertySlots[2].textContent = props[2];
+        }
+    });
+    
+    gsap.to(rockFormation, {
+        y: '+=2',
+        duration: 0.1,
+        ease: "power2.inOut",
+        yoyo: true,
+        repeat: 3
+    });
+    
+    createImpactParticles(row);
+    
+    gsap.to(propertySlots[1], {
+        backgroundColor: 'rgba(255,215,0,0.5)',
+        duration: 0.2,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 1
+    });
 }
 
 function createImpactParticles(row) {
-  const rockFormation = row.querySelector('.rock-formation');
-  
-  for (let i = 0; i < 5; i++) {
-    setTimeout(() => {
-      const particle = document.createElement('div');
-      particle.style.cssText = `
+    const rockFormation = row.querySelector('.rock-formation');
+    
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
         position: absolute;
         width: ${Math.random() * 4 + 2}px;
         height: ${Math.random() * 4 + 2}px;
@@ -1135,46 +1230,46 @@ function createImpactParticles(row) {
         pointer-events: none;
         z-index: 25;
       `;
-      
-      rockFormation.appendChild(particle);
-      
-      gsap.to(particle, {
-        y: Math.random() * 30 - 15,
-        x: Math.random() * 40 - 20,
-        opacity: 0,
-        duration: Math.random() * 0.8 + 0.5,
-        ease: "power2.out",
-        onComplete: () => particle.remove()
-      });
-    }, i * 50);
-  }
+            
+            rockFormation.appendChild(particle);
+            
+            gsap.to(particle, {
+                y: Math.random() * 30 - 15,
+                x: Math.random() * 40 - 20,
+                opacity: 0,
+                duration: Math.random() * 0.8 + 0.5,
+                ease: "power2.out",
+                onComplete: () => particle.remove()
+            });
+        }, i * 50);
+    }
 }
 
 function animateMiningSuccess() {
-  document.querySelectorAll('.prop-center').forEach((slot, index) => {
-    setTimeout(() => createSuccessSparkles(slot), index * 200);
-  });
+    document.querySelectorAll('.prop-center').forEach((slot, index) => {
+        setTimeout(() => createSuccessSparkles(slot), index * 200);
+    });
 }
 
 function animateMiningFailure() {
-  document.querySelectorAll('.rock-formation').forEach((rock, index) => {
-    setTimeout(() => {
-      gsap.to(rock, {
-        x: '+=5',
-        duration: 0.1,
-        ease: "power2.inOut",
-        yoyo: true,
-        repeat: 5
-      });
-      createDebrisParticles(rock);
-    }, index * 100);
-  });
+    document.querySelectorAll('.rock-formation').forEach((rock, index) => {
+        setTimeout(() => {
+            gsap.to(rock, {
+                x: '+=5',
+                duration: 0.1,
+                ease: "power2.inOut",
+                yoyo: true,
+                repeat: 5
+            });
+            createDebrisParticles(rock);
+        }, index * 100);
+    });
 }
 
 function createSuccessSparkles(element) {
-  for (let i = 0; i < 8; i++) {
-    const sparkle = document.createElement('div');
-    sparkle.style.cssText = `
+    for (let i = 0; i < 8; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.style.cssText = `
       position: absolute;
       width: 6px;
       height: 6px;
@@ -1185,28 +1280,28 @@ function createSuccessSparkles(element) {
       pointer-events: none;
       z-index: 30;
     `;
-    
-    element.appendChild(sparkle);
-    
-    const angle = (i / 8) * Math.PI * 2;
-    const distance = 40;
-    
-    gsap.to(sparkle, {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-      opacity: 0,
-      scale: 0,
-      duration: 1,
-      ease: "power2.out",
-      onComplete: () => sparkle.remove()
-    });
-  }
+        
+        element.appendChild(sparkle);
+        
+        const angle = (i / 8) * Math.PI * 2;
+        const distance = 40;
+        
+        gsap.to(sparkle, {
+            x: Math.cos(angle) * distance,
+            y: Math.sin(angle) * distance,
+            opacity: 0,
+            scale: 0,
+            duration: 1,
+            ease: "power2.out",
+            onComplete: () => sparkle.remove()
+        });
+    }
 }
 
 function createDebrisParticles(rockFormation) {
-  for (let i = 0; i < 10; i++) {
-    const debris = document.createElement('div');
-    debris.style.cssText = `
+    for (let i = 0; i < 10; i++) {
+        const debris = document.createElement('div');
+        debris.style.cssText = `
       position: absolute;
       width: ${Math.random() * 6 + 3}px;
       height: ${Math.random() * 6 + 3}px;
@@ -1217,59 +1312,59 @@ function createDebrisParticles(rockFormation) {
       pointer-events: none;
       z-index: 25;
     `;
-    
-    rockFormation.appendChild(debris);
-    
-    gsap.to(debris, {
-      y: Math.random() * 50 + 20,
-      x: Math.random() * 60 - 30,
-      rotation: Math.random() * 360,
-      opacity: 0,
-      duration: Math.random() * 1.5 + 1,
-      ease: "power2.out",
-      onComplete: () => debris.remove()
-    });
-  }
+        
+        rockFormation.appendChild(debris);
+        
+        gsap.to(debris, {
+            y: Math.random() * 50 + 20,
+            x: Math.random() * 60 - 30,
+            rotation: Math.random() * 360,
+            opacity: 0,
+            duration: Math.random() * 1.5 + 1,
+            ease: "power2.out",
+            onComplete: () => debris.remove()
+        });
+    }
 }
 
 function updateAdjustmentCounter() {
-  const counter = document.querySelector('#adjustment-counter');
-  if (counter) {
-    counter.textContent = `Adjustments: ${miningState.adjustmentCount}/${miningState.maxAdjustments}`;
-    if (miningState.adjustmentCount >= miningState.maxAdjustments) {
-      counter.style.color = '#ff6b6b';
+    const counter = document.querySelector('#adjustment-counter');
+    if (counter) {
+        counter.textContent = `Adjustments: ${miningState.adjustmentCount}/${miningState.maxAdjustments}`;
+        if (miningState.adjustmentCount >= miningState.maxAdjustments) {
+            counter.style.color = '#ff6b6b';
+        }
     }
-  }
 }
 
 function disableAdjustmentButtons() {
-  const buttons = document.querySelectorAll('.adjust-left, .adjust-right');
-  buttons.forEach(btn => {
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.style.cursor = 'not-allowed';
-  });
+    const buttons = document.querySelectorAll('.adjust-left, .adjust-right');
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+    });
 }
 
 function getOreColor(oreName) {
-  const colors = {
-    'Iron Ore': 'rgba(139, 69, 19, 1)',
-    'Copper Ore': 'rgba(184, 115, 51, 1)',
-    'Silver Ore': 'rgba(192, 192, 192, 1)',
-    'Gold Ore': 'rgba(255, 215, 0, 1)',
-    'Coal': 'rgba(64, 64, 64, 1)',
-    'Gemstone': 'rgba(138, 43, 226, 1)',
-    'default': 'rgba(139, 115, 85, 1)'
-  };
+    const colors = {
+        'Iron Ore': 'rgba(139, 69, 19, 1)',
+        'Copper Ore': 'rgba(184, 115, 51, 1)',
+        'Silver Ore': 'rgba(192, 192, 192, 1)',
+        'Gold Ore': 'rgba(255, 215, 0, 1)',
+        'Coal': 'rgba(64, 64, 64, 1)',
+        'Gemstone': 'rgba(138, 43, 226, 1)',
+        'default': 'rgba(139, 115, 85, 1)'
+    };
 
-  const oreKey = Object.keys(colors).find(key => oreName.toLowerCase().includes(key.toLowerCase()));
-  return oreKey ? colors[oreKey] : colors.default;
+    const oreKey = Object.keys(colors).find(key => oreName.toLowerCase().includes(key.toLowerCase()));
+    return oreKey ? colors[oreKey] : colors.default;
 }
 
 function injectMiningAnimationsCSS() {
-  if (document.getElementById('mining-animations-css')) return;
-  
-  const additionalCSS = `
+    if (document.getElementById('mining-animations-css')) return;
+    
+    const additionalCSS = `
     @keyframes rock-pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.02); }
@@ -1359,7 +1454,7 @@ function injectMiningAnimationsCSS() {
       border-color: #4CAF50 !important;
     }
 
-        .filter-btn {
+    .filter-btn {
       background: rgba(139,69,19,0.3) !important;
       border: 1px solid #8B4513 !important;
       color: #FFD700 !important;
@@ -1371,6 +1466,24 @@ function injectMiningAnimationsCSS() {
       border-color: #FFD700 !important;
       color: #8B4513 !important;
       font-weight: bold;
+    }
+
+    .ore[draggable="true"] {
+      cursor: grab;
+    }
+
+    .ore[draggable="true"]:active {
+      cursor: grabbing;
+    }
+
+    .ore-input-slot.drag-over {
+      border: 2px solid #00FF00 !important;
+      background: rgba(0,255,0,0.2) !important;
+    }
+
+    .ore.dragging {
+      opacity: 0.5 !important;
+      cursor: grabbing !important;
     }
 
     @media (max-width: 768px) {
@@ -1396,16 +1509,16 @@ function injectMiningAnimationsCSS() {
     }
   `;
 
-  const style = document.createElement('style');
-  style.id = 'mining-animations-css';
-  style.textContent = additionalCSS;
-  document.head.appendChild(style);
+    const style = document.createElement('style');
+    style.id = 'mining-animations-css';
+    style.textContent = additionalCSS;
+    document.head.appendChild(style);
 }
 
 export function clearOreCache() {
-  oreCache.clear();
+    oreCache.clear();
 }
 
 export function preloadOres(oreNames) {
-  return batchEnrichOres(oreNames.map(name => ({ item: name, amount: 1 })));
+    return batchEnrichOres(oreNames.map(name => ({ item: name, amount: 1 })));
 }
