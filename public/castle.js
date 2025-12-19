@@ -2,8 +2,8 @@ let _main;
 let _getCurrentProfile;
 let _profile;
 let _playerCharacters = [];
-let _currentErrand = null;
-let _bankItems = [];
+// COMMENTED OUT: let _currentErrand = null;
+// COMMENTED OUT: let _bankItems = [];
 
 export async function loadModule(main, {refreshTranslations, getCurrentProfile }) {
     _main = main;
@@ -26,7 +26,7 @@ export async function loadModule(main, {refreshTranslations, getCurrentProfile }
                 <button class="fantasy-button settings-btn" data-action="settings">Settings</button>
             </div>
 
-            <div id="errand-display"></div>
+            <!-- COMMENTED OUT: <div id="errand-display"></div> -->
 
             <div class="castle-scene">
                 <img src="assets/art/castle/main_castle.png" alt="Main Castle" class="castle-image">
@@ -51,9 +51,9 @@ export async function loadModule(main, {refreshTranslations, getCurrentProfile }
     createParticles();
 
     await fetchPlayerCharacters();
-    await fetchErrand();
+    // COMMENTED OUT: await fetchErrand();
     renderCastleScene();
-    renderErrand();
+    // COMMENTED OUT: renderErrand();
     setupInteractions();
 
     if (typeof refreshTranslations === 'function') {
@@ -61,6 +61,8 @@ export async function loadModule(main, {refreshTranslations, getCurrentProfile }
     }
 }
 
+// COMMENTED OUT ENTIRE FUNCTION:
+/*
 async function fetchErrand() {
     try {
         const response = await fetch(`/api/errand/${_profile.id}`);
@@ -79,7 +81,10 @@ async function fetchErrand() {
         console.error("fetchErrand error:", error);
     }
 }
+*/
 
+// COMMENTED OUT ENTIRE FUNCTION:
+/*
 function renderErrand() {
     const errandDisplay = _main.querySelector('#errand-display');
     if (!errandDisplay) return;
@@ -158,7 +163,10 @@ function renderErrand() {
         completeBtn.addEventListener('click', handleCompleteErrand);
     }
 }
+*/
 
+// COMMENTED OUT ENTIRE FUNCTION:
+/*
 async function handleCompleteErrand() {
     const completeBtn = _main.querySelector('.errand-complete-btn');
     if (completeBtn) {
@@ -192,6 +200,7 @@ async function handleCompleteErrand() {
         }
     }
 }
+*/
 
 async function fetchPlayerCharacters() {
     try {
@@ -483,6 +492,7 @@ function addCastleStyles() {
             height: 13%;
         }
 
+        /* COMMENTED OUT ALL ERRAND STYLES:
         #errand-display {
             position: absolute;
             top: 60px;
@@ -631,6 +641,7 @@ function addCastleStyles() {
             opacity: 0.5;
             cursor: not-allowed;
         }
+        */
 
         @keyframes floatAndFade {
             0% {

@@ -1,4 +1,3 @@
-// Fixed Herbalism profession module
 let context = null;
 let herbalismState = null;
 let ingredientCache = new Map(); // Cache ingredient data
@@ -118,7 +117,6 @@ async function batchEnrichIngredients(bankItems) {
 
     if (!response.ok) {
       console.error('[HERBALISM] Enrich API failed:', response.status);
-      // return fallbackEnrichIngredients(bankItems);
     }
 
     const { ingredientMap } = await response.json();
@@ -151,57 +149,9 @@ async function batchEnrichIngredients(bankItems) {
 
   } catch (err) {
     console.warn('[HERBALISM] Batch enrichment failed:', err);
-    // return fallbackEnrichIngredients(bankItems);
   }
 }
 
-// Fallback method for individual ingredient requests
-// async function fallbackEnrichIngredients(bankItems) {
-//   console.log('[HERBALISM] Using fallback enrichment method');
-//   const enriched = [];
-//   const BATCH_SIZE = 5;
-  
-//   for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-//     const batch = bankItems.slice(i, i + BATCH_SIZE);
-    
-//     const batchPromises = batch.map(async (item) => {
-//       try {
-//         const res = await context.apiCall(
-//           `/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`
-//         );
-        
-//         if (!res.ok) {
-//           console.warn('[HERBALISM] Fallback fetch failed for:', item.item, res.status);
-//           return null;
-//         }
-        
-//         const [ingredient] = await res.json();
-        
-//         if (ingredient) {
-//           return {
-//             name: item.item,
-//             amount: item.amount,
-//             properties: ingredient.properties,
-//             sprite: ingredient.sprite,
-//           };
-//         }
-//       } catch (error) {
-//         console.warn(`[HERBALISM] Failed to fetch ingredient ${item.item}:`, error);
-//       }
-//       return null;
-//     });
-    
-//     const batchResults = await Promise.all(batchPromises);
-//     enriched.push(...batchResults.filter(Boolean));
-    
-//     if (i + BATCH_SIZE < bankItems.length) {
-//       await new Promise(resolve => setTimeout(resolve, 50));
-//     }
-//   }
-  
-//   console.log('[HERBALISM] Fallback enrichment result:', enriched);
-//   return enriched;
-// }
 
 // Create the 3x3 garden grid (with bottom-right empty) - Made smaller
 function createGardenGridHTML() {
@@ -1108,15 +1058,10 @@ function showRecipeDetails(recipe) {
 // Get seed-specific colors for growth effects
 function getSeedColor(seedName) {
   const colors = {
-    'Wheat Seed': 'rgba(218, 165, 32, 0.8)',        // Golden Rod
-    'Carrot Seed': 'rgba(255, 140, 0, 0.8)',        // Dark Orange
-    'Tomato Seed': 'rgba(255, 99, 71, 0.8)',        // Tomato Red
-    'Lettuce Seed': 'rgba(144, 238, 144, 0.8)',     // Light Green
-    'Potato Seed': 'rgba(160, 82, 45, 0.8)',        // Saddle Brown
-    'Corn Seed': 'rgba(255, 215, 0, 0.8)',          // Gold
+    'Green Seed': 'rgba(51, 207, 30, 0.8)',        // Saddle Brown
+    'Yellow Seed': 'rgba(255, 215, 0, 0.8)',          // Gold
     'Blue Seed': 'rgba(30, 144, 255, 0.8)',         // Dodger Blue
     'Red Seed': 'rgba(220, 20, 60, 0.8)',           // Crimson
-    'default': 'rgba(76, 175, 80, 0.8)'             // Green
   };
 
   const seedKey = Object.keys(colors).find(key => {

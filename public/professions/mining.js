@@ -110,43 +110,6 @@ async function batchEnrichOres(bankItems) {
   });
 }
 
-// async function fallbackEnrichOres(bankItems) {
-//   const enriched = [];
-//   const BATCH_SIZE = 5;
-  
-//   for (let i = 0; i < bankItems.length; i += BATCH_SIZE) {
-//     const batch = bankItems.slice(i, i + BATCH_SIZE);
-    
-//     const batchPromises = batch.map(async (item) => {
-//       try {
-//         const res = await context.apiCall(`/api/supabase/rest/v1/ingridients?name=eq.${encodeURIComponent(item.item)}&select=properties,sprite`);
-//         const [ore] = await res.json();
-        
-//         if (ore) {
-//           return {
-//             name: item.item,
-//             amount: item.amount,
-//             properties: ore.properties,
-//             sprite: ore.sprite,
-//           };
-//         }
-//       } catch (error) {
-//         // Silently continue on error
-//       }
-//       return null;
-//     });
-    
-//     const batchResults = await Promise.all(batchPromises);
-//     enriched.push(...batchResults.filter(Boolean));
-    
-//     if (i + BATCH_SIZE < bankItems.length) {
-//       await new Promise(resolve => setTimeout(resolve, 50));
-//     }
-//   }
-  
-//   return enriched;
-// }
-
 function createMiningRowHTML(rowIndex) {
   return `
     <div class="mining-row" data-row="${rowIndex}" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; justify-content: center; position: relative;">
