@@ -180,7 +180,7 @@ function handleDrop(e) {
         return;
     }
     
-    miningState.selectedOres[rowIdx] = dragState.dragging.ere;
+    miningState.selectedOres[rowIdx] = dragState.dragging.ore;
     
     slot.innerHTML = `
         <img src="assets/art/ingridients/${dragState.dragging.ore.sprite}.png" 
@@ -840,7 +840,19 @@ async function startMiningAnimation(resultDiv, modal) {
     const rowsArea = modal.querySelector('#mining-rows');
     resultDiv.textContent = 'Analyzing ore composition...';
 
-    const selectedOreNames = miningState.selectedOres.map(o => o.name);
+    const selectedOreNames = miningState.selectedOres.map(o => o?.name).filter(name => name);
+
+    if (selectedOreNames.length !== 3) {
+        resultDiv.textContent = 'Please ensure all 3 ore slots are filled before mining.';
+        
+        const craftBtn = modal.querySelector('#craft-btn');
+        const finishBtn = modal.querySelector('#finish-btn');
+        craftBtn.style.display = 'block';
+        craftBtn.disabled = false;
+        finishBtn.style.display = 'none';
+        miningState.isCraftingStarted = false;
+        return;
+    }
 
     try {
         const reserveRes = await fetch('/api/crafting/reserve-alchemy-ingredients', {
