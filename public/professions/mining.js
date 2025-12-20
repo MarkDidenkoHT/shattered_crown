@@ -6,6 +6,16 @@ let dragState = {
     draggedFrom: null
 };
 
+let tutorialState = {
+    active: false,
+    currentStep: 0,
+    steps: [
+        { element: '.mining-row', title: 'Mining Rows', description: 'This is where you place ores to create recipes. Drag 3 different ores here to start mining.', position: 'bottom-right' },
+        { element: '#available-ores', title: 'Available Ores', description: 'These are the ores from your inventory. Drag and drop them into the mining rows above.', position: 'bottom-left' },
+        { element: '#available-recipes', title: 'Recipes', description: 'Here you can see available recipes. Click the "i" icon to see which ores are needed for each recipe.', position: 'top-left' }
+    ]
+};
+
 export async function startCraftingSession(ctx) {
     context = ctx;
     const { loadingModal, loadingStartTime, updateLoadingProgress, finishLoading } = context;
@@ -55,6 +65,7 @@ export async function startCraftingSession(ctx) {
         
         renderCraftingModal();
         injectMiningAnimationsCSS();
+        injectMiningTutorialCSS();
         setupGlobalDragDrop();
         
     } catch (error) {
@@ -296,6 +307,7 @@ function renderCraftingModal() {
         <span id="alignment-text">Align center column for successful extraction!</span>
       </div>
       
+      <h3>Mining Rows</h3>
       <div id="mining-rows">
         ${[0,1,2].map(i => createMiningRowHTML(i)).join('')}
       </div>
@@ -324,24 +336,6 @@ function renderCraftingModal() {
     </div>
 
     <button id="helpBtn" class="help-tutorial-fantasy-button">?</button>
-
-    <div id="helpModal" class="help-tutorial-modal">
-        <div class="help-tutorial-modal-content">
-            <span class="help-tutorial-close-btn">&times;</span>
-            <h3 class="help-tutorial-modal-title">Tutorial</h3>
-            <div class="help-tutorial-modal-body">
-                <p class="mb-4">
-                    Drag ores from your inventory into the mining slots.
-                </p>
-                <p class="mb-4">
-                    After placing 3 ores, click "Mine" to shatter them and reveal their components.
-                </p>
-                <p>
-                    Use the arrow buttons to adjust component positions. Align matching components in the center column for successful extraction!
-                </p>
-            </div>
-        </div>
-    </div>
   `;
     document.body.appendChild(modal);
     setupModalEventListeners(modal);
@@ -626,45 +620,14 @@ function setupModalEventListeners(modal) {
     const resultDiv = modal.querySelector('#craft-result');
     const adjustmentCounter = modal.querySelector('#adjustment-counter');
 
-    const helpModal = modal.querySelector('#helpModal');
     const helpBtn = modal.querySelector('#helpBtn');
-    const closeBtn = modal.querySelector('.help-tutorial-close-btn');
 
-    function openHelpModal() {
-        helpModal.style.display = 'flex';
-        setTimeout(() => {
-            helpModal.classList.add('open');
-        }, 10);
-    }
-
-    function closeHelpModal() {
-        helpModal.classList.remove('open');
-        setTimeout(() => {
-            helpModal.style.display = 'none';
-        }, 300);
-    }
-
-    if (helpBtn) {
-        helpBtn.addEventListener('click', openHelpModal);
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeHelpModal);
-    }
-
-    window.addEventListener('click', (event) => {
-        if (event.target === helpModal) {
-            closeHelpModal();
-        }
-    });
-
-    window.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && helpModal && helpModal.style.display === 'flex') {
-            closeHelpModal();
-        }
-    });
+    helpBtn.addEventListener('click', startMiningTutorial);
 
     modal.querySelector('.message-ok-btn').addEventListener('click', () => {
+        if (tutorialState.active) {
+            cleanupTutorial();
+        }
         removeBackground(modal);
         modal.remove();
         miningState = null;
@@ -753,6 +716,230 @@ function setupModalEventListeners(modal) {
             }
         }
     });
+}
+
+function startMiningTutorial() {
+    tutorialState.active = true;
+    tutorialState.currentStep = 0;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'mining-tutorial-overlay';
+    overlay.id = 'miningTutorialOverlay';
+    document.body.appendChild(overlay);
+    
+    showTutorialStep();
+}
+
+function showTutorialStep() {
+    const step = tutorialState.steps[tutorialState.currentStep];
+    const element = document.querySelector(step.element);
+    
+    if (!element) {
+        nextTutorialStep();
+        return;
+    }
+    
+    const rect = element.getBoundingClientRect();
+    
+    const highlight = document.createElement('div');
+    highlight.className = 'mining-tutorial-highlight';
+    highlight.style.cssText = `
+        position: fixed;
+        left: ${rect.left - 10}px;
+        top: ${rect.top - 10}px;
+        width: ${rect.width + 20}px;
+        height: ${rect.height + 20}px;
+    `;
+    
+    document.getElementById('miningTutorialOverlay').appendChild(highlight);
+    
+    const content = document.createElement('div');
+    content.className = `mining-tutorial-content mining-tutorial-${step.position}`;
+    content.innerHTML = `
+        <div class="mining-tutorial-header">
+            <div class="mining-tutorial-title">${step.title}</div>
+        </div>
+        <div class="mining-tutorial-description">${step.description}</div>
+        <div class="mining-tutorial-controls">
+            <div class="mining-tutorial-progress">${tutorialState.currentStep + 1}/${tutorialState.steps.length}</div>
+            <div style="display: flex; gap: 10px;">
+                ${tutorialState.currentStep > 0 ? '<button class="mining-tutorial-button mining-tutorial-prev">Previous</button>' : ''}
+                <button class="mining-tutorial-button mining-tutorial-next">${tutorialState.currentStep === tutorialState.steps.length - 1 ? 'Finish' : 'Next'}</button>
+                <button class="mining-tutorial-button mining-tutorial-skip">Skip Tutorial</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('miningTutorialOverlay').appendChild(content);
+    
+    content.querySelector('.mining-tutorial-next').addEventListener('click', nextTutorialStep);
+    content.querySelector('.mining-tutorial-prev')?.addEventListener('click', prevTutorialStep);
+    content.querySelector('.mining-tutorial-skip').addEventListener('click', cleanupTutorial);
+}
+
+function nextTutorialStep() {
+    const overlay = document.getElementById('miningTutorialOverlay');
+    if (!overlay) return;
+    
+    overlay.innerHTML = '';
+    
+    tutorialState.currentStep++;
+    
+    if (tutorialState.currentStep >= tutorialState.steps.length) {
+        cleanupTutorial();
+        return;
+    }
+    
+    showTutorialStep();
+}
+
+function prevTutorialStep() {
+    const overlay = document.getElementById('miningTutorialOverlay');
+    if (!overlay) return;
+    
+    overlay.innerHTML = '';
+    
+    tutorialState.currentStep--;
+    
+    if (tutorialState.currentStep < 0) {
+        tutorialState.currentStep = 0;
+    }
+    
+    showTutorialStep();
+}
+
+function cleanupTutorial() {
+    tutorialState.active = false;
+    const overlay = document.getElementById('miningTutorialOverlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+function injectMiningTutorialCSS() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .mining-tutorial-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 10000; 
+            pointer-events: none; 
+        }
+        
+        .mining-tutorial-content { 
+            position: absolute; 
+            background: linear-gradient(145deg, rgba(139,69,19,0.95), rgba(101,67,33,0.95)); 
+            border: 3px solid #c4975a; 
+            border-radius: 12px; 
+            padding: 1.5rem; 
+            max-width: 400px; 
+            color: #e8e8e8; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); 
+            pointer-events: auto; 
+            z-index: 10001; 
+        }
+        
+        .mining-tutorial-bottom-right { 
+            bottom: 120px; 
+            right: 20px; 
+            left: auto; 
+            transform: none; 
+        }
+        
+        .mining-tutorial-top-left { 
+            top: 20px; 
+            left: 20px; 
+            right: auto; 
+            transform: none; 
+        }
+        
+        .mining-tutorial-bottom-left { 
+            bottom: 120px; 
+            left: 20px; 
+            right: auto; 
+            transform: none; 
+        }
+        
+        .mining-tutorial-header { 
+            text-align: center; 
+            margin-bottom: 1rem; 
+        }
+        
+        .mining-tutorial-title { 
+            color: #c4975a; 
+            font-size: 1.3rem; 
+            margin-bottom: 0.5rem; 
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); 
+        }
+        
+        .mining-tutorial-description { 
+            font-size: 0.9rem; 
+            line-height: 1.4; 
+            margin-bottom: 1.5rem; 
+            text-align: center; 
+        }
+        
+        .mining-tutorial-highlight { 
+            position: absolute; 
+            border: 3px solid #ffd700; 
+            border-radius: 8px; 
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); 
+            z-index: 10002; 
+            pointer-events: none; 
+            animation: tutorialPulse 2s infinite; 
+        }
+        
+        .mining-tutorial-controls { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-top: 1rem;
+            gap: 10px;
+        }
+        
+        .mining-tutorial-progress { 
+            color: #b8b3a8; 
+            font-size: 0.8rem; 
+        }
+        
+        .mining-tutorial-button { 
+            background: linear-gradient(145deg, #c4975a, #a67c52); 
+            border: 2px solid #d4af37; 
+            border-radius: 6px; 
+            color: #1a120b; 
+            padding: 0.5rem 1rem; 
+            font-family: 'Cinzel', serif; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-size: 0.8rem; 
+        }
+        
+        .mining-tutorial-button:hover { 
+            background: linear-gradient(145deg, #d4af37, #c4975a); 
+            transform: translateY(-2px); 
+        }
+        
+        .mining-tutorial-skip { 
+            background: transparent; 
+            border: 1px solid #666; 
+            color: #b8b3a8; 
+        }
+        
+        .mining-tutorial-skip:hover { 
+            background: rgba(102, 102, 102, 0.3); 
+            color: #e8e8e8; 
+        }
+        
+        @keyframes tutorialPulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.7; } 
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 function handleOreSelection(ore, modal) {
