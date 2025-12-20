@@ -911,6 +911,9 @@ async function animateOreBreaking(row, properties, rowIndex) {
     createOreBreakingEffect(oreInputSlot);
     await new Promise(resolve => setTimeout(resolve, 800));
     
+    const imagePromises = properties.map(prop => getComponentImage(prop));
+    const imageHTMLs = await Promise.all(imagePromises);
+    
     gsap.to(oreInputSlot, {
         scale: 0.8,
         opacity: 0,
@@ -927,9 +930,9 @@ async function animateOreBreaking(row, properties, rowIndex) {
         ease: "back.out(1.4)",
         delay: 0.3,
         onStart: () => {
-            propertySlots[0].innerHTML = `<img src="assets/art/ingridients/${properties[0]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${properties[0]}">`;
-            propertySlots[1].innerHTML = `<img src="assets/art/ingridients/${properties[1]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${properties[1]}">`;
-            propertySlots[2].innerHTML = `<img src="assets/art/ingridients/${properties[2]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${properties[2]}">`;
+            propertySlots[0].innerHTML = imageHTMLs[0];
+            propertySlots[1].innerHTML = imageHTMLs[1];
+            propertySlots[2].innerHTML = imageHTMLs[2];
         }
     });
     
@@ -951,6 +954,28 @@ async function animateOreBreaking(row, properties, rowIndex) {
     });
 
     createRockDustEffect(row);
+}
+
+async function getComponentImage(componentName) {
+    const cleanName = componentName.replace(/\s+/g, '');
+    
+    const imageNames = [cleanName, cleanName + 'Bar'];
+    
+    for (const imageName of imageNames) {
+        try {
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = `assets/art/ingridients/${imageName}.png`;
+            });
+            return `<img src="assets/art/ingridients/${imageName}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${componentName}">`;
+        } catch {
+            continue;
+        }
+    }
+    
+    return `<div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center;">${componentName}</div>`;
 }
 
 function createOreBreakingEffect(oreInputSlot) {
@@ -1174,12 +1199,15 @@ function handleAdjustment(rowIdx, direction, resultDiv) {
     }
 }
 
-function updateMiningRow(rowIdx) {
+async function updateMiningRow(rowIdx) {
     const props = miningState.randomizedProperties[rowIdx];
     const rowsArea = document.querySelector('#mining-rows');
     const row = rowsArea.children[rowIdx];
     const propertySlots = row.querySelectorAll('.property-slot');
     const rockFormation = row.querySelector('.rock-formation');
+    
+    const imagePromises = props.map(prop => getComponentImage(prop));
+    const imageHTMLs = await Promise.all(imagePromises);
     
     gsap.to(propertySlots, {
         x: '+=20',
@@ -1188,9 +1216,9 @@ function updateMiningRow(rowIdx) {
         yoyo: true,
         repeat: 1,
         onComplete: () => {
-            propertySlots[0].innerHTML = `<img src="assets/art/ingridients/${props[0]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${props[0]}">`;
-            propertySlots[1].innerHTML = `<img src="assets/art/ingridients/${props[1]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${props[1]}">`;
-            propertySlots[2].innerHTML = `<img src="assets/art/ingridients/${props[2]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${props[2]}">`;
+            propertySlots[0].innerHTML = imageHTMLs[0];
+            propertySlots[1].innerHTML = imageHTMLs[1];
+            propertySlots[2].innerHTML = imageHTMLs[2];
         }
     });
     
