@@ -301,7 +301,7 @@ function renderCraftingModal() {
       </div>
       
       <h3>Available Ores</h3>
-      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
+      <div id="available-ores" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; margin-bottom: 5px; border: 1px solid #8B4513; border-radius: 8px; scrollbar-width: none; min-height: 100px;">
         ${renderOresHTML()}
       </div>
       
@@ -312,7 +312,7 @@ function renderCraftingModal() {
         <button id="filter-powders" class="fantasy-button filter-btn" data-filter="powders" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Powders</button>
         <button id="filter-gems" class="fantasy-button filter-btn" data-filter="gems" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Gems</button>
       </div>
-      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; border: 1px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.5); scrollbar-width: none; max-height: 100px; min-height: 100px;">
+      <div id="available-recipes" style="display: flex; overflow-x: auto; gap: 0.5rem; padding: 5px; border: 1px solid #8B4513; border-radius: 8px; scrollbar-width: none; max-height: 100px; min-height: 100px;">
         ${renderRecipesHTML()}
       </div>
       
@@ -350,7 +350,7 @@ function renderCraftingModal() {
 
 function renderOresHTML() {
     return miningState.availableOres.map((ore, idx) => `
-    <div class="ore" data-index="${idx}" draggable="true" style="flex: 0 0 auto; cursor: grab; position: relative; border-radius: 4px; padding: 4px; background: rgba(139,69,19,0.05); user-select: none;">
+    <div class="ore" data-index="${idx}" draggable="true" style="flex: 0 0 auto; cursor: grab; position: relative; border-radius: 4px; padding: 4px; background: #5f2b06; user-select: none; border: 1px solid #8B4513;">
       <img src="assets/art/ingridients/${ore.sprite}.png" draggable="false" title="${ore.name} (${ore.amount})" style="width: 48px; height: 48px; pointer-events: none;">
       <div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center; margin-top: 2px; pointer-events: none;">${ore.name}</div>
       <div style="font-size: 0.8rem; pointer-events: none;">x${ore.amount}</div>
@@ -365,7 +365,7 @@ function renderRecipesHTML() {
     }
     
     return miningState.recipes.map((recipe, idx) => `
-    <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: rgba(139,69,19,0.2); border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
+    <div class="recipe-card" data-recipe="${idx}" style="flex: 0 0 auto; cursor: pointer; border-radius: 8px; padding: 8px; background: #5f2b06; border: 1px solid #8B4513; min-width: 80px; text-align: center; position: relative;">
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 48px; height: 48px; border-radius: 4px;">
       <div style="font-size: 0.8rem; color: #FFD700; font-weight: bold;">${recipe.name}</div>
       <div class="info-icon" data-recipe="${idx}" style="position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: #8B4513; border-radius: 50%; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;">i</div>
