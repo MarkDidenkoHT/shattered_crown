@@ -840,7 +840,7 @@ async function startMiningAnimation(resultDiv, modal) {
     const rowsArea = modal.querySelector('#mining-rows');
     resultDiv.textContent = 'Analyzing ore composition...';
 
-    const selectedOreNames = miningState.selectedOres.map(o => o?.name).filter(name => name);
+    const selectedOreNames = miningState.selectedOres.map(o => o.name);
 
     if (selectedOreNames.length !== 3) {
         resultDiv.textContent = 'Please ensure all 3 ore slots are filled before mining.';
