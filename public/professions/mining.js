@@ -919,8 +919,6 @@ async function animateOreBreaking(row, properties, rowIndex) {
         onComplete: () => oreInputSlot.style.display = 'none'
     });
     
-    const componentImages = await getComponentImages(properties);
-    
     gsap.to(propertySlots, {
         opacity: 1,
         scale: 1,
@@ -929,9 +927,9 @@ async function animateOreBreaking(row, properties, rowIndex) {
         ease: "back.out(1.4)",
         delay: 0.3,
         onStart: () => {
-            propertySlots[0].innerHTML = componentImages[0];
-            propertySlots[1].innerHTML = componentImages[1];
-            propertySlots[2].innerHTML = componentImages[2];
+            propertySlots[0].innerHTML = `<img src="assets/art/ingridients/${properties[0]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${properties[0]}">`;
+            propertySlots[1].innerHTML = `<img src="assets/art/ingridients/${properties[1]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${properties[1]}">`;
+            propertySlots[2].innerHTML = `<img src="assets/art/ingridients/${properties[2]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${properties[2]}">`;
         }
     });
     
@@ -953,26 +951,6 @@ async function animateOreBreaking(row, properties, rowIndex) {
     });
 
     createRockDustEffect(row);
-}
-
-async function getComponentImages(componentNames) {
-    const images = [];
-    
-    for (const component of componentNames) {
-        try {
-            const response = await fetch(`/api/crafting/component-image/${encodeURIComponent(component)}`);
-            if (response.ok) {
-                const data = await response.json();
-                images.push(`<img src="assets/art/ingridients/${data.sprite}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${component}">`);
-            } else {
-                images.push(`<div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center;">${component}</div>`);
-            }
-        } catch {
-            images.push(`<div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center;">${component}</div>`);
-        }
-    }
-    
-    return images;
 }
 
 function createOreBreakingEffect(oreInputSlot) {
@@ -1174,16 +1152,6 @@ function handleAdjustment(rowIdx, direction, resultDiv) {
     }
 
     const props = miningState.randomizedProperties[rowIdx];
-    const componentImages = props.map(async prop => {
-        try {
-            const response = await fetch(`/api/crafting/component-image/${encodeURIComponent(prop)}`);
-            if (response.ok) {
-                const data = await response.json();
-                return `<img src="assets/art/ingridients/${data.sprite}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${prop}">`;
-            }
-        } catch {}
-        return `<div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center;">${prop}</div>`;
-    });
 
     if (!miningState.adjustments[rowIdx]) {
         miningState.adjustments[rowIdx] = { left: 0, right: 0 };
@@ -1197,7 +1165,7 @@ function handleAdjustment(rowIdx, direction, resultDiv) {
         miningState.adjustments[rowIdx].right++;
     }
 
-    updateMiningRow(rowIdx, Promise.all(componentImages));
+    updateMiningRow(rowIdx);
     miningState.adjustmentCount++;
     updateAdjustmentCounter();
 
@@ -1206,14 +1174,12 @@ function handleAdjustment(rowIdx, direction, resultDiv) {
     }
 }
 
-async function updateMiningRow(rowIdx, componentImagesPromise) {
+function updateMiningRow(rowIdx) {
     const props = miningState.randomizedProperties[rowIdx];
     const rowsArea = document.querySelector('#mining-rows');
     const row = rowsArea.children[rowIdx];
     const propertySlots = row.querySelectorAll('.property-slot');
     const rockFormation = row.querySelector('.rock-formation');
-    
-    const componentImages = await componentImagesPromise;
     
     gsap.to(propertySlots, {
         x: '+=20',
@@ -1222,9 +1188,9 @@ async function updateMiningRow(rowIdx, componentImagesPromise) {
         yoyo: true,
         repeat: 1,
         onComplete: () => {
-            propertySlots[0].innerHTML = componentImages[0];
-            propertySlots[1].innerHTML = componentImages[1];
-            propertySlots[2].innerHTML = componentImages[2];
+            propertySlots[0].innerHTML = `<img src="assets/art/ingridients/${props[0]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${props[0]}">`;
+            propertySlots[1].innerHTML = `<img src="assets/art/ingridients/${props[1]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${props[1]}">`;
+            propertySlots[2].innerHTML = `<img src="assets/art/ingridients/${props[2]}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${props[2]}">`;
         }
     });
     
