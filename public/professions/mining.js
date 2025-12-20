@@ -230,11 +230,11 @@ function createMiningRowHTML(rowIndex) {
           <span style="color: #FFD700; font-size: 0.8rem; text-align: center; line-height: 1.2;">Drag<br>Ore</span>
         </div>
         
-        <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">-</div>
+        <div class="property-slot prop-left" data-row="${rowIndex}" data-position="0" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);"></div>
 
-        <div class="property-slot prop-center" data-row="${rowIndex}" data-position="1" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 50px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #8B4513; font-weight: bold; z-index: 10; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translate(-50%, -50%) scale(0.8);">-</div>
+        <div class="property-slot prop-center" data-row="${rowIndex}" data-position="1" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 50px; border: 3px solid #FFD700; border-radius: 8px; background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.7) 100%); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 10; box-shadow: 0 0 15px rgba(255,215,0,0.5), inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translate(-50%, -50%) scale(0.8);"></div>
 
-        <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #FFD700; font-weight: bold; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);">-</div>
+        <div class="property-slot prop-right" data-row="${rowIndex}" data-position="2" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); width: 60px; height: 50px; border: 2px solid #8B4513; border-radius: 8px; background: rgba(139,69,19,0.8); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 5; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-50%) scale(0.8);"></div>
       </div>
       
       <div class="arrow-right">
@@ -319,8 +319,7 @@ function renderCraftingModal() {
       <div style="display: flex; justify-content: center; gap: 0.5rem;">
         <button class="help-tutorial-close-button message-ok-btn">X</button>
         <button id="craft-btn" class="help-tutorial-craft-button" disabled>Mine</button>
-        <button id="finish-btn" class="help-tutorial-craft-button" disabled style="display: none;">Extract</button>
-        <button id="claim-btn" class="help-tutorial-craft-button" style="display: none;">Claim</button>
+        <button id="finish-btn" class="help-tutorial-craft-button" disabled style="display: none;">Finish</button>
       </div>
     </div>
 
@@ -335,10 +334,10 @@ function renderCraftingModal() {
                     Drag ores from your inventory into the mining slots.
                 </p>
                 <p class="mb-4">
-                    After placing 3 ores, click "Mine" to shatter them and reveal their properties.
+                    After placing 3 ores, click "Mine" to shatter them and reveal their components.
                 </p>
                 <p>
-                    Use the arrow buttons to adjust property positions. Align matching properties in the center column for successful extraction!
+                    Use the arrow buttons to adjust component positions. Align matching components in the center column for successful extraction!
                 </p>
             </div>
         </div>
@@ -448,7 +447,7 @@ function generateIngredientMatching(recipe) {
     <div style="background: rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
       <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Ore Matching Guide</h4>
       <div style="font-size: 0.85rem; color: #ccc; text-align: center; margin-bottom: 1rem; font-style: italic;">
-        Find ores with these properties (all three must align vertically in the center):
+        Find ores with these components (all three must align vertically in the center):
       </div>
   `;
 
@@ -460,7 +459,7 @@ function generateIngredientMatching(recipe) {
         matchingHTML += `
       <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 0.8rem; margin-bottom: 0.8rem;">
         <div style="color: #FFD700; font-weight: bold; margin-bottom: 0.5rem;">
-          Property ${result.position}: "${result.property}"
+          Component ${result.position}: "${result.property}"
         </div>
     `;
 
@@ -484,7 +483,7 @@ function generateIngredientMatching(recipe) {
         } else {
             matchingHTML += `
         <div style="color: #ff6b6b; font-size: 0.8rem; font-style: italic;">
-          ❌ No available ores have this property
+          ❌ No available ores have this component
         </div>
       `;
         }
@@ -495,7 +494,7 @@ function generateIngredientMatching(recipe) {
     matchingHTML += `
     <div style="background: rgba(255,215,0,0.1); border: 1px solid #FFD700; border-radius: 6px; padding: 0.6rem; margin-top: 1rem;">
       <div style="color: #FFD700; font-size: 0.8rem; text-align: center;">
-        <strong>Mining Tip:</strong> Use adjustments to align all three <strong>center properties</strong> vertically for successful extraction!
+        <strong>Mining Tip:</strong> Use adjustments to align all three <strong>center components</strong> vertically for successful extraction!
       </div>
     </div>
   `;
@@ -526,7 +525,7 @@ function showRecipeDetails(recipe) {
       <img src="assets/art/recipes/${recipe.sprite}.png" alt="${recipe.name}" style="width: 96px; height: 96px; border-radius: 8px; margin-bottom: 1rem;">
       
       <div style="background:rgba(139,69,19,0.5); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: #FFD700; margin-bottom: 0.5rem;">Required Properties:</h4>
+        <h4 style="color: #FFD700; margin-bottom: 0.5rem;">Required Components:</h4>
         <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${ingredientsList}</div>
       </div>
       
@@ -561,7 +560,7 @@ function showOreProperties(oreIndex) {
         if (Array.isArray(ore.properties)) {
             propertiesDisplay = ore.properties.map((prop, idx) => 
                 `<div class="property-item" style="background: rgba(139,69,19,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.3rem;">
-          <strong>Property ${idx + 1}:</strong> ${prop}
+          <strong>Component ${idx + 1}:</strong> ${prop}
         </div>`
             ).join('');
         } else {
@@ -572,7 +571,7 @@ function showOreProperties(oreIndex) {
             ).join('');
         }
     } else {
-        propertiesDisplay = '<div style="color: #999; font-style: italic;">No properties available</div>';
+        propertiesDisplay = '<div style="color: #999; font-style: italic;">No components available</div>';
     }
     
     propsModal.innerHTML = `
@@ -581,7 +580,7 @@ function showOreProperties(oreIndex) {
       <img src="assets/art/ingridients/${ore.sprite}.png" alt="${ore.name}" style="width: 80px; height: 80px; border-radius: 8px; margin-bottom: 1rem;">
       
       <div style="background: rgba(139,69,19,0.3); border: 1px solid #8B4513; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: left;">
-        <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Properties:</h4>
+        <h4 style="color: #FFD700; margin-bottom: 0.8rem; text-align: center;">Components:</h4>
         ${propertiesDisplay}
       </div>
       
@@ -731,7 +730,7 @@ function setupModalEventListeners(modal) {
 
     finishBtn.addEventListener('click', async () => {
         finishBtn.disabled = true;
-        await patchAndSendCraftRequest(resultDiv);
+        await finishMiningOperation(resultDiv);
     });
 
     const rowsContainer = modal.querySelector('#mining-rows');
@@ -920,6 +919,8 @@ async function animateOreBreaking(row, properties, rowIndex) {
         onComplete: () => oreInputSlot.style.display = 'none'
     });
     
+    const componentImages = await getComponentImages(properties);
+    
     gsap.to(propertySlots, {
         opacity: 1,
         scale: 1,
@@ -928,9 +929,9 @@ async function animateOreBreaking(row, properties, rowIndex) {
         ease: "back.out(1.4)",
         delay: 0.3,
         onStart: () => {
-            propertySlots[0].textContent = properties[0];
-            propertySlots[1].textContent = properties[1];
-            propertySlots[2].textContent = properties[2];
+            propertySlots[0].innerHTML = componentImages[0];
+            propertySlots[1].innerHTML = componentImages[1];
+            propertySlots[2].innerHTML = componentImages[2];
         }
     });
     
@@ -952,6 +953,26 @@ async function animateOreBreaking(row, properties, rowIndex) {
     });
 
     createRockDustEffect(row);
+}
+
+async function getComponentImages(componentNames) {
+    const images = [];
+    
+    for (const component of componentNames) {
+        try {
+            const response = await fetch(`/api/crafting/component-image/${encodeURIComponent(component)}`);
+            if (response.ok) {
+                const data = await response.json();
+                images.push(`<img src="assets/art/ingridients/${data.sprite}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${component}">`);
+            } else {
+                images.push(`<div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center;">${component}</div>`);
+            }
+        } catch {
+            images.push(`<div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center;">${component}</div>`);
+        }
+    }
+    
+    return images;
 }
 
 function createOreBreakingEffect(oreInputSlot) {
@@ -1042,7 +1063,7 @@ function createRockDustEffect(row) {
     return dustInterval;
 }
 
-async function patchAndSendCraftRequest(resultDiv) {
+async function finishMiningOperation(resultDiv) {
     try {
         const adjustments = [];
 
@@ -1081,7 +1102,6 @@ async function patchAndSendCraftRequest(resultDiv) {
             return; 
         }
 
-        const claimBtn = document.querySelector('#claim-btn');
         const finishBtn = document.querySelector('#finish-btn');
         const craftBtn = document.querySelector('#craft-btn');
 
@@ -1092,30 +1112,22 @@ async function patchAndSendCraftRequest(resultDiv) {
             animateMiningSuccess();
 
             if (finishBtn) finishBtn.style.display = 'none';
-            if (claimBtn) {
-                claimBtn.style.display = 'block';
-                claimBtn.disabled = false;
-
-                const newClaimBtn = claimBtn.cloneNode(true);
-                claimBtn.parentNode.replaceChild(newClaimBtn, claimBtn);
-
-                newClaimBtn.addEventListener('click', () => {
-                    context.displayMessage(`${json.crafted.name} added to your bank!`);
-                    document.querySelector('.custom-message-box')?.remove();
-                    miningState = null;
-                });
-            }
+            
+            setTimeout(() => {
+                context.displayMessage(`${json.crafted.name} added to your bank!`);
+                document.querySelector('.custom-message-box')?.remove();
+                miningState = null;
+            }, 1500);
         } else {
             miningState.result = 'Failed';
             resultDiv.innerHTML = `
         <span style="color:red;">💥 Mining failed — ores crumbled to dust.</span>
-        <br><small style="color:#999;">${json.message || 'Properties not properly aligned'}</small>
+        <br><small style="color:#999;">${json.message || 'Components not properly aligned'}</small>
       `;
 
             animateMiningFailure();
 
             if (finishBtn) finishBtn.style.display = 'none';
-            if (claimBtn) claimBtn.style.display = 'none';
 
             if (craftBtn) {
                 craftBtn.style.display = 'block';
@@ -1135,11 +1147,9 @@ async function patchAndSendCraftRequest(resultDiv) {
         resultDiv.innerHTML = '<span style="color:red;">⚠️ Mining operation failed. Try again later.</span>';
 
         const finishBtn = document.querySelector('#finish-btn');
-        const claimBtn = document.querySelector('#claim-btn');
         const craftBtn = document.querySelector('#craft-btn');
 
         if (finishBtn) finishBtn.style.display = 'none';
-        if (claimBtn) claimBtn.style.display = 'none';
 
         if (craftBtn) {
             craftBtn.style.display = 'block';
@@ -1164,6 +1174,16 @@ function handleAdjustment(rowIdx, direction, resultDiv) {
     }
 
     const props = miningState.randomizedProperties[rowIdx];
+    const componentImages = props.map(async prop => {
+        try {
+            const response = await fetch(`/api/crafting/component-image/${encodeURIComponent(prop)}`);
+            if (response.ok) {
+                const data = await response.json();
+                return `<img src="assets/art/ingridients/${data.sprite}.png" style="width: 40px; height: 40px; border-radius: 4px;" title="${prop}">`;
+            }
+        } catch {}
+        return `<div style="font-size: 0.7rem; color: #FFD700; font-weight: bold; text-align: center;">${prop}</div>`;
+    });
 
     if (!miningState.adjustments[rowIdx]) {
         miningState.adjustments[rowIdx] = { left: 0, right: 0 };
@@ -1177,7 +1197,7 @@ function handleAdjustment(rowIdx, direction, resultDiv) {
         miningState.adjustments[rowIdx].right++;
     }
 
-    updateMiningRow(rowIdx);
+    updateMiningRow(rowIdx, Promise.all(componentImages));
     miningState.adjustmentCount++;
     updateAdjustmentCounter();
 
@@ -1186,12 +1206,14 @@ function handleAdjustment(rowIdx, direction, resultDiv) {
     }
 }
 
-function updateMiningRow(rowIdx) {
+async function updateMiningRow(rowIdx, componentImagesPromise) {
     const props = miningState.randomizedProperties[rowIdx];
     const rowsArea = document.querySelector('#mining-rows');
     const row = rowsArea.children[rowIdx];
     const propertySlots = row.querySelectorAll('.property-slot');
     const rockFormation = row.querySelector('.rock-formation');
+    
+    const componentImages = await componentImagesPromise;
     
     gsap.to(propertySlots, {
         x: '+=20',
@@ -1200,9 +1222,9 @@ function updateMiningRow(rowIdx) {
         yoyo: true,
         repeat: 1,
         onComplete: () => {
-            propertySlots[0].textContent = props[0];
-            propertySlots[1].textContent = props[1];
-            propertySlots[2].textContent = props[2];
+            propertySlots[0].innerHTML = componentImages[0];
+            propertySlots[1].innerHTML = componentImages[1];
+            propertySlots[2].innerHTML = componentImages[2];
         }
     });
     
