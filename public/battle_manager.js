@@ -1729,12 +1729,7 @@ const handleTurnLogic = () => {
         const availablePlayerChars = BattleState.characters.filter(c => 
             c.isPlayerControlled && (!c.has_moved || !c.has_acted)
         );
-        
-        if (availablePlayerChars.length === 0 && !BattleState.isProcessingAITurn) {
-            handleAITurn();
-        } else {
-            BattleState.currentTurnCharacter = availablePlayerChars[0] || null;
-        }
+        BattleState.currentTurnCharacter = availablePlayerChars[0] || null;
     } else {
         BattleState.currentTurnCharacter = null;
         if (!BattleState.isProcessingAITurn) {
@@ -1760,6 +1755,7 @@ const handleAITurn = async () => {
   }, 8000);
 
   try {
+    await new Promise(res => setTimeout(res, 1000));
     const aiTurnRes = await BattleState.apiCall('/functions/v1/ai-turn', 'POST', {
       battleId: BattleState.battleId
     });
@@ -2570,11 +2566,12 @@ const handleOptimizedBattleUpdate = async (newBattleState) => {
 const updateGameStateFromRealtimeOptimized = async () => {
     if (!BattleState.battleState) return;
     
-    if (BattleState.battleState.status === 'victory' || BattleState.battleState.status === 'defeat') {
-        await assignLoot(BattleState.battleState);
-        showBattleResultModal(BattleState.battleState.status);
-        return; 
-    }
+    // const status = BattleState.battleState.status;
+    // if (status === 'victory' || status === 'defeat') {
+    //     await assignLoot(BattleState.battleState);
+    //     showBattleResultModal(status);
+    //     return; 
+    // }
         
     if (!BattleState.battleState.characters_state) {
         console.warn('Battle state missing characters_state:', BattleState.battleState);
@@ -2967,7 +2964,7 @@ const handleRefreshOptimized = async () => {
             
         if (error) throw error;
         
-        await updateGameStateFromRealtimeOptimized();
+        await handleOptimizedBattleUpdate(battleState);
         
         displayMessage('Battle state refreshed successfully.', 'success');
         BattleState.isMoveQueued = false;
