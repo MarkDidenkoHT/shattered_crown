@@ -36,6 +36,20 @@ export async function loadModule(main, { getCurrentProfile }) {
                 </div>
                 
                 <div class="setting-section">
+                    <h2>Music</h2>
+                    <div class="toggle-options">
+                        <button class="toggle-btn ${getCurrentMusicSetting() === 'on' ? 'active' : ''}" data-setting="music" data-value="on">
+                            <span class="toggle-icon">🎵</span>
+                            <span class="toggle-label">On</span>
+                        </button>
+                        <button class="toggle-btn ${getCurrentMusicSetting() === 'off' ? 'active' : ''}" data-setting="music" data-value="off">
+                            <span class="toggle-icon">🔇</span>
+                            <span class="toggle-label">Off</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="setting-section">
                     <h2 data-i18n="settings.other">Other Settings</h2>
                     <p data-i18n="settings.coming_soon">More settings coming soon...</p>
                 </div>
@@ -51,31 +65,68 @@ function getCurrentLanguage() {
     return window.gameAuth.getCurrentLanguage();
 }
 
+function getCurrentMusicSetting() {
+    return _profile?.settings?.music || 'on';
+}
+
 function setupSettingsInteractions() {
-    // Back button
     _main.querySelector('.back-btn').addEventListener('click', () => {
         window.gameAuth.loadModule('castle');
     });
 
-    // Language selection
     _main.querySelectorAll('.language-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const selectedLang = e.currentTarget.dataset.lang;
             
-            // Update UI immediately
             _main.querySelectorAll('.language-btn').forEach(b => b.classList.remove('active'));
             e.currentTarget.classList.add('active');
             
-            // Switch language
             window.gameAuth.switchLanguage(selectedLang);
             
-            // Show confirmation message
             const message = selectedLang === 'ru' ? 
                 'Язык изменён на русский' : 
                 'Language changed to English';
             displayMessage(message);
         });
     });
+
+    _main.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const setting = e.currentTarget.dataset.setting;
+            const value = e.currentTarget.dataset.value;
+            
+            if (setting === 'music') {
+                _main.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                
+                await updateProfileMusicSetting(value);
+                window.gameAuth.setMusicEnabled(value === 'on');
+                
+                const message = value === 'on' ? 
+                    'Music enabled' : 
+                    'Music disabled';
+                displayMessage(message);
+            }
+        });
+    });
+}
+
+async function updateProfileMusicSetting(musicSetting) {
+    try {
+        const response = await fetch(`/api/profile/music/${_profile.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ music: musicSetting })
+        });
+
+        if (response.ok) {
+            _profile.settings = {
+                ...(_profile.settings || {}),
+                music: musicSetting
+            };
+            localStorage.setItem('profile', JSON.stringify(_profile));
+        }
+    } catch (error) {}
 }
 
 function displayMessage(message) {
@@ -153,13 +204,13 @@ function addSettingsStyles() {
             text-shadow: 1px 1px 0px #3d2914;
         }
 
-        .language-options {
+        .language-options, .toggle-options {
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
         }
 
-        .language-btn {
+        .language-btn, .toggle-btn {
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -175,7 +226,7 @@ function addSettingsStyles() {
             min-width: 120px;
         }
 
-        .language-btn.active {
+        .language-btn.active, .toggle-btn.active {
             background: linear-gradient(135deg, #c4975a, #8b6914);
             border-color: #c4975a;
             color: #ffffff;
@@ -190,7 +241,14 @@ function addSettingsStyles() {
             font-weight: bold;
         }
 
-        /* Message box styles */
+        .toggle-btn .toggle-icon {
+            font-size: 1.2rem;
+        }
+
+        .toggle-btn .toggle-label {
+            font-weight: bold;
+        }
+
         .custom-message-box {
             position: fixed;
             top: 0;
@@ -232,11 +290,11 @@ function addSettingsStyles() {
                 padding: 1rem;
             }
 
-            .language-options {
+            .language-options, .toggle-options {
                 flex-direction: column;
             }
 
-            .language-btn {
+            .language-btn, .toggle-btn {
                 justify-content: center;
                 min-width: auto;
             }

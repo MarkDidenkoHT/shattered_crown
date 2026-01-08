@@ -112,6 +112,14 @@ function setMainThemeVolume(volume) {
   }
 }
 
+function setMusicEnabled(enabled) {
+  if (enabled) {
+    playMainTheme();
+  } else {
+    pauseMainTheme();
+  }
+}
+
 function debugAudioState() {
   console.log({
     audioInitialized,
@@ -163,16 +171,18 @@ async function updateProfileLanguageSetting(language) {
   } catch (error) {}
 }
 
-async function loadUserLanguageFromProfile(profile) {
+async function loadUserSettingsFromProfile(profile) {
   try {
     if (profile?.settings?.language) {
       switchLanguage(profile.settings.language);
-      return profile.settings.language;
     }
-    return null;
-  } catch (error) {
-    return null;
-  }
+    
+    if (profile?.settings?.music === 'off') {
+      setMusicEnabled(false);
+    } else {
+      setMusicEnabled(true);
+    }
+  } catch (error) {}
 }
 
 function initializeLanguageDetection() {
@@ -258,7 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       localStorage.setItem('profile', JSON.stringify(currentProfile));
       localStorage.setItem('chatId', chatId);
       
-      await loadUserLanguageFromProfile(currentProfile);
+      await loadUserSettingsFromProfile(currentProfile);
       
       if (!currentProfile.tutorial) {
         showTutorial();
@@ -750,5 +760,6 @@ window.gameAuth = {
   playMainTheme,
   pauseMainTheme,
   setMainThemeVolume,
+  setMusicEnabled,
   debugAudioState
 };

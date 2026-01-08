@@ -2227,6 +2227,60 @@ app.patch('/api/profile/language/:playerId', async (req, res) => {
     }
 });
 
+app.patch('/api/profile/music/:playerId', async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        const { music } = req.body;
+
+        if (!playerId || !music) {
+            return res.status(400).json({ error: 'Missing playerId or music setting' });
+        }
+
+        const fetchResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}&select=settings`,
+            {
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+                }
+            }
+        );
+
+        if (!fetchResponse.ok) {
+            return res.status(fetchResponse.status).json({ error: 'Failed to load current settings' });
+        }
+
+        const profiles = await fetchResponse.json();
+        const currentSettings = (profiles[0] && profiles[0].settings) || {};
+
+        const updatedSettings = {
+            ...currentSettings,
+            music
+        };
+
+        const updateResponse = await fetch(
+            `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${playerId}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ settings: updatedSettings })
+            }
+        );
+
+        const result = await updateResponse.json();
+        res.status(updateResponse.status).json(result);
+
+    } catch (error) {
+        console.error('[PROFILE MUSIC UPDATE]', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get character count for a player
 app.get('/api/characters/count/:playerId', async (req, res) => {
     try {
